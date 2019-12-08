@@ -118,10 +118,28 @@ module Eth2Types {
      *  @param  signature
      */
     datatype IndexedAttestation = IndexedAttestation(
-    custody_bit_0_indices: seq<ValidatorIndex>,
-    custody_bit_1_indices: seq<ValidatorIndex>,
-    data: AttestationData,
-    signature: BLSSignature
+        custody_bit_0_indices: seq<ValidatorIndex>,
+        custody_bit_1_indices: seq<ValidatorIndex>,
+        data: AttestationData,
+        signature: BLSSignature
     )
 
+    /**
+     *  Pending attestation (What is that?)
+     *
+     *  @param  aggregation_bits
+     *  @param  data
+     *  @param  inclusion_delay
+     *  @param  proposer_index
+     */
+    datatype PendingAttestation = PendingAttestation(
+        aggregation_bits: seq<bool>,
+        data: AttestationData,
+        inclusion_delay: int,
+        proposer_index: ValidatorIndex
+    )    
+
+    /**
+     *  Eth1Data
+     */
 }
