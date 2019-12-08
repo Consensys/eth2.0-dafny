@@ -16,6 +16,7 @@ module Eth2Types {
     type Hash = String
 
     type BLSPubkey = String
+    type BLSSignature = String      //a BLS12-381 signature
 
     /* syntax Fork ::= ".Fork"
     syntax BlockHeader ::= ".BlockHeader" | BeaconBlockHeader
@@ -34,28 +35,31 @@ module Eth2Types {
 
     /**
      *  A fork.
+     *
      *  @param  version         The version.
      *  @param  currentVersion  The current version.
      *  @param  epoch           The epoch of the latest fork.
      */
-    class Fork {
-        var version: int
-        var currentVersion : int
-        var epoch: int
-    }
+    datatype Fork = Fork(
+        version: int,
+        currentVersion : int,
+        epoch: int
+    )
 
     /** 
-    *   A Checkpoint. 
+     *  A Checkpoint. 
+     *
      *  @param  epoch   The epoch.
      *  @param  hash    The hash.
      */
-    class CheckPoint {
-        var epoch: int
-        var hash: Hash
-    }
+    datatype CheckPoint = CheckPoint(
+        epoch: int,
+        hash: Hash
+    )
 
     /**
      *  A Validator.
+     *
      *  @param  pubkey                          BLSPubkey
      *  @param  withdrawal_credentials          Commitment to pubkey for withdrawals
      *  @param  effective_balance               Balance at stake
@@ -65,14 +69,59 @@ module Eth2Types {
      *  @param  exit_epoch: Epoch
      *  @param  withdrawable_epoch              When validator can withdraw funds
      */
-     class Validator {
-        var pubkey: BLSPubkey
-        var withdrawalCredentials: Hash
-        var effectiveBalance: int
-        var slashed: bool
-        var activationEligibilityEpoch: int
-        var activationEpoch: int
-        var exitEpoch: int
-        var withdrawableEpoch: int
-     }
+    datatype Validator = Validator(
+        pubkey: BLSPubkey,
+        withdrawalCredentials: Hash,
+        effectiveBalance: int,
+        slashed: bool,
+        activationEligibilityEpoch: int,
+        activationEpoch: int,
+        exitEpoch: int,
+        withdrawableEpoch: int
+    )
+    
+    /**
+     *  Attestation data (what is that?)
+     *
+     *  @param  slot
+     *  @param  index               LMD GHOST vote (what is that?)
+     *  @param  beacon_block_root   FFG vote (what is that?)
+     *  @param  source
+     *  @param  target
+     */
+    datatype AttestationData = AttestationData(
+        slot: int,
+        index: int,
+        beacon_block_root: Hash,
+        source: CheckPoint,
+        target: CheckPoint
+    )
+
+    /**
+     *  AttestationData and custody bit (what is that?)
+     *  
+     *  @param  data            The data.
+     *  @param  custody_bit     Challengeable bit (SSZ-bool, 1 byte) for the custody 
+     *                          of sharddata
+     */
+    datatype AttestationDataAndCustodyBit =  AttestationDataAndCustodyBit(
+        data: AttestationData,
+        custody_bit: bool
+    )
+
+    /**
+     *  Indexed Attestation data. Should probably be inheriting from attestation data ...
+     *
+     *  @param  custody_bit_0_indices   Indices with custody bit equal to 0
+     *  @param  custody_bit_1_indices:  Indices with custody bit equal to 1
+     *  @param  data
+     *  @param  signature
+     */
+    datatype IndexedAttestation = IndexedAttestation(
+    custody_bit_0_indices: seq<ValidatorIndex>,
+    custody_bit_1_indices: seq<ValidatorIndex>,
+    data: AttestationData,
+    signature: BLSSignature
+    )
+
 }
