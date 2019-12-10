@@ -30,18 +30,19 @@ module Eth2Types {
     */
 
     // Custom types
+
     /* Validator registry index. */
     type ValidatorIndex = Option<int>
 
     // List types
-    // Readily available in Dafny as List<T>
+    // Readily available in Dafny as seq<T>
 
     // Containers
 
     /**
      *  A fork.
      *
-     *  @param  version         The version.
+     *  @param  version         The version. (it was forked at?)
      *  @param  currentVersion  The current version.
      *  @param  epoch           The epoch of the latest fork.
      */
@@ -154,7 +155,7 @@ module Eth2Types {
     )
 
     /**
-     * HistoricalBatch.
+     * Historical Batch.
      * 
      *  @param      block_roots
      *  @paran      state_roots
