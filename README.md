@@ -10,15 +10,15 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Dafny](https://github.com/dafny-lang/dafny)
 
- * [IronClad project](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
+* [IronClad project](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
 ## Expected results
 
-
 The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/blob/master/report/bck-report.pdf) describes how the K-framework can be used to:
-- provide a formal semantics to Eth2.0 spec (phase 0)
-- derive an executabkle model from it
-- provide some insight into test coverage (using the current test suites).
+
+* provide a formal semantics to Eth2.0 spec (phase 0)
+* derive an executabkle model from it
+* provide some insight into test coverage (using the current test suites).
 
 This is a very nice work in terms of formalising the Eth2.0 specs.
 However, the current state of the K-framework is limited to testing, and testing can find bugs but cannot prove the absence of bugs.
