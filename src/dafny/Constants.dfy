@@ -3,7 +3,7 @@
   * constants-minimal.k in the K spec.
   *
   */
-module Eth2Constants {
+module Eth2Constants {  
   //  Powers of 2
   const TWO_UP_0 := 1;
   const TWO_UP_2 := 2 * TWO_UP_0;
@@ -105,7 +105,7 @@ module Eth2Constants {
   const DOMAIN_VOLUNTARY_EXIT := 0x04000000  ;
 
     //  HashTree constants
-  const BYTES_PER_CHUNK := 32        ;
+  const BYTES_PER_CHUNK := 32        ;  
   const BYTES_PER_LENGTH_OFFSET := 4 ;
   const BITS_PER_BYTE := 8           ;
 
