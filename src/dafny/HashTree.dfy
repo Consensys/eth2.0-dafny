@@ -14,9 +14,12 @@ module HashTree {
     Takes a String and returns a 64-character hex-encoded string of the 32-byte SHA2-256 hash of the string.
 Input `String` is interpreted as byte array, e.g. it is NOT hex-encoded.
 */
-    method Main() {
-        var a:int := TWO_UP_0;
-    }
+    
+    /**
+     *  
+     */
+    function hash_tree_root_state
+
     
 
 
