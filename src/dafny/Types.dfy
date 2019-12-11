@@ -20,6 +20,8 @@ module Eth2Types {
     /* Hash. (Should probably be a fix-sized bytes. */
     type Hash = String
 
+    //  TODO: change the Bytes type
+    type Bytes = String 
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
 
