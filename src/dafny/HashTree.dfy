@@ -16,7 +16,7 @@ Input `String` is interpreted as byte array, e.g. it is NOT hex-encoded.
 */
     
     /**
-     *  
+     *  Extract something from the current configuration which is a BeaconState. 
      */
     function hash_tree_root_state
 
