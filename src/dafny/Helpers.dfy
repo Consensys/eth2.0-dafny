@@ -25,4 +25,8 @@
   //====================================================
   some of it need not be implemented ... I guess ...
 
+  1. figure out what beacon chain is supposed to
+  2. try to find out the main entry point
+  3. refine ...
+
   */
