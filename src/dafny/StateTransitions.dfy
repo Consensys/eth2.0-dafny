@@ -172,6 +172,7 @@ module StateTransition {
         //  Process slots
 
         //  Process block
+        
         //  Validate state block
     }
 
