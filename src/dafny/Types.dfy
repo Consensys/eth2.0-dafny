@@ -9,13 +9,23 @@ module Eth2Types {
 
     import opened Native__NativeTypes_s
 
+    /** Simple Serialisable types. */
+    trait SSZ {
+        /** An SSZ must offer an encoding into array of bytes. */
+        function hash_tree_root () : HashTreeRoot 
+    }
+
     /* A String type. */
     type String = seq<char>
 
    
     /* Option type */
-    datatype Option<T> = Nil | Some(T)
+    datatype Option<T> = None | Some(T)
 
+    /* Either type */
+    datatype Either<T> = Left(T) | Right(T)
+
+    type HashTreeRoot = Option<array<byte>>
     // Basic Python (SSZ) types.
     /* Hash. (Should probably be a fix-sized bytes. */
     type Hash = String
@@ -51,11 +61,16 @@ module Eth2Types {
      *  @param  currentVersion  The current version.
      *  @param  epoch           The epoch of the latest fork.
      */
-    datatype Fork = Fork(
-        version: int,
-        currentVersion : int,
-        epoch: int
-    )
+    class Fork extends SSZ {
+        var version: int
+        var currentVersion : int
+        var epoch: int
+
+        /** Generate a hash tree root.  */
+        function hash_tree_root() : HashTreeRoot {
+            None
+        }
+    }
 
     /** 
      *  A Checkpoint. 
@@ -63,10 +78,15 @@ module Eth2Types {
      *  @param  epoch   The epoch.
      *  @param  hash    The hash.
      */
-    datatype CheckPoint = CheckPoint(
-        epoch: int,
-        hash: Hash
-    )
+    class CheckPoint {
+        var epoch: int
+        var hash: Hash
+
+        /** Generate a hash tree root.  */
+        function hash_tree_root() : HashTreeRoot {
+            None
+        }
+    }
 
  
    

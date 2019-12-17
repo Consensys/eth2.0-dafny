@@ -12,6 +12,8 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [IronClad project](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
+* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md)
+
 ## Expected results
 
 The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/blob/master/report/bck-report.pdf) describes how the K-framework can be used to:

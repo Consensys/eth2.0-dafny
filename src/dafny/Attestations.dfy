@@ -31,13 +31,18 @@ module Attestations {
      *  @param  target              The Checkpoint the attesters are attempting to 
      *                              justify (the current epoch and epoch boundary block)
      */
-    datatype AttestationData = AttestationData(
-        slot: int,
-        index: int,
-        beacon_block_root: Hash,
-        source: CheckPoint,
-        target: CheckPoint
-    )
+    class AttestationData extends SSZ {
+        var slot: int
+        var index: int
+        var beacon_block_root: Hash
+        var source: CheckPoint
+        var target: CheckPoint
+
+        /** Generate a hash tree root.  */
+        function hash_tree_root() : HashTreeRoot {
+            None
+        }
+    }
 
     /**
      *  AttestationData and custody bit (what is that?)

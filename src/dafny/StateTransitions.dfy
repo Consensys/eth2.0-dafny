@@ -166,7 +166,7 @@ module StateTransition {
     )
 
     function state_transition(s: BeaconState, b: BeaconBlock ) : BeaconState 
-    requires b.state_root == hash_tree_root_state()
+    // requires b.state_root == hash_tree_root_state()
     {
         s
         //  Process slots
@@ -175,5 +175,10 @@ module StateTransition {
         
         //  Validate state block
     }
+
+    /**
+     * 
+     */
+    function process_slots(s: BeaconState, slot: Slot) : () 
 
 }

@@ -29,4 +29,8 @@
   2. try to find out the main entry point
   3. refine ...
 
+
+  for now we do need to model merkle trees, but just the fact that Tx
+  can be check to belomng to a tree (interface).
+  How this is done should be left to implementation.
   */
