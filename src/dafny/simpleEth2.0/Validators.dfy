@@ -25,13 +25,13 @@ module Validators {
      */
     datatype Validator = Validator(
         pubkey: BLSPubkey,
-        withdrawalCredentials: Hash,
-        effectiveBalance: int,
-        slashed: bool,
-        activationEligibilityEpoch: int,
-        activationEpoch: int,
-        exitEpoch: int,
-        withdrawableEpoch: int
+        // withdrawalCredentials: Hash,
+        effectiveBalance: Gwei
+        // slashed: bool,
+        // activationEligibilityEpoch: int,
+        // activationEpoch: int,
+        // exitEpoch: int,
+        // withdrawableEpoch: int
     )
     
      /**
