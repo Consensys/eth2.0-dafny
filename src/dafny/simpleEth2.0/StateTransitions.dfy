@@ -1,3 +1,4 @@
+include "Constants.dfy"
 include "BeaconChain.dfy"
 include "NativeTypes.dfy"
 include "Types.dfy"
@@ -9,6 +10,7 @@ include "Validators.dfy"
 module StateTransition {
 
     //  Import some constants and types
+    import opened Eth2Constants
     import opened Native__NativeTypes_s
     import opened Eth2Types
     import opened BeaconChain
@@ -160,6 +162,10 @@ module StateTransition {
      */
     function process_slots(s: BeaconState, slot: Slot) : () 
 
+    function method min(x : Gwei, y : Gwei) : Gwei {
+        if x <= y then x else y
+    } 
+
     /** Retrieve validator index from a public key.  */
     function method getValidatorIndexFromPubKey( s : BeaconState, p : BLSPubkey ) : Option<nat> 
 
@@ -180,21 +186,24 @@ module StateTransition {
      */
     method process_deposit( s : BeaconState, d : Deposit ) returns ( s' : BeaconState ) 
 
+    //  In the spec, the amount is rounded down to nearest multiple of eff. bal. inc.
+    //  We require the amount to be a multiple of the increment.
+    requires d.data.amount % EFFECTIVE_BALANCE_INCREMENT == 0
     requires |s.validators| == |s.balances|
 
     ensures |s'.validators| == |s'.balances|
 
     ensures match getValidatorIndexFromPubKey(s, d.data.pubkey) {
         case None => 
-                s'.validators == s.validators + [Validator(d.data.pubkey, d.data.amount)] &&
-                s'.balances == s.balances + [d.data.amount]
+                s'.validators == s.validators + [Validator(d.data.pubkey, min(d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
+                s'.balances == s.balances + [min(d.data.amount,MAX_EFFECTIVE_BALANCE)]
 
         case Some(i) => 
                 0 <= i < |s.validators| &&
                 |s'.validators| == |s.validators| &&
                 |s'.balances| == |s.balances| &&
-                s'.validators == s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)] &&
-                s'.balances == s.balances[i := s.balances[i] + d.data.amount]
+                s'.validators == s.validators[i := Validator(s.validators[i].pubkey, min(s.balances[i] + d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
+                s'.balances == s.balances[i := min(s.balances[i] + d.data.amount, MAX_EFFECTIVE_BALANCE)]
         }
 
     {
@@ -202,14 +211,16 @@ module StateTransition {
     match getValidatorIndexFromPubKey(s, d.data.pubkey)  {
         case None => 
             //  Not found, Create and append validator
+            var newBalance := min(d.data.amount,MAX_EFFECTIVE_BALANCE);
             s' := BeaconState(
-            s.validators + [Validator(d.data.pubkey, d.data.amount)],
-            s.balances + [d.data.amount]);
+            s.validators + [Validator(d.data.pubkey, newBalance)],
+            s.balances + [min(d.data.amount,MAX_EFFECTIVE_BALANCE)]);
         case Some(i) => 
             //  Found art index i, Update the balance at index i
+            var newBalance := min(s.balances[i] + d.data.amount, MAX_EFFECTIVE_BALANCE);
             s':= BeaconState(
-            s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)],
-            s.balances[i  := s.balances[i] + d.data.amount]);
+            s.validators[i := Validator(s.validators[i].pubkey,newBalance)],
+            s.balances[i  := newBalance]);
         }
     } 
 
