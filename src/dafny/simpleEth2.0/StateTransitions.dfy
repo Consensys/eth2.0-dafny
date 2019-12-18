@@ -160,23 +160,15 @@ module StateTransition {
      */
     function process_slots(s: BeaconState, slot: Slot) : () 
 
-
     /** Retrieve validator index from a public key.  */
-    function method getValidatorIndexFromPubKey( s : BeaconState, p : BLSPubkey ) : nat 
-        //  Should we require only one exists?
-        requires exists i :: 0 <= i < |s.validators| && s.validators[i].pubkey == p
-        //  The returned value is in range and the validator at index matches the key 
-        ensures 0 <= getValidatorIndexFromPubKey(s,p) < |s.validators|
-        ensures s.validators[getValidatorIndexFromPubKey(s,p)].pubkey == p 
+    function method getValidatorIndexFromPubKey( s : BeaconState, p : BLSPubkey ) : Option<nat> 
 
-function method getValidatorIndexFromPubKey2( s : BeaconState, p : BLSPubkey ) : Option<nat> 
-        //  Should we require only one exists?
-        // requires exists i :: 0 <= i < |s.validators| && s.validators[i].pubkey == p
-        //  Returns the index of a matching validator or None if not in.
         ensures 
-            (exists i :: 0 <= i < |s.validators| && (s.validators[i].pubkey == p) &&                   getValidatorIndexFromPubKey2(s,p) == Some(i)  && 
-                    s.validators[i].pubkey == p)
-                || getValidatorIndexFromPubKey2(s,p) == None
+            (   exists i :: 0 <= i < |s.validators| && (s.validators[i].pubkey == p) &&                   getValidatorIndexFromPubKey(s,p) == Some(i)  && 
+                        s.validators[i].pubkey == p
+            )
+            || 
+            getValidatorIndexFromPubKey(s,p) == None
 
     /**
      *  Process a deposit.
@@ -187,58 +179,38 @@ function method getValidatorIndexFromPubKey2( s : BeaconState, p : BLSPubkey ) :
      *  balance given by the deposit.
      */
     method process_deposit( s : BeaconState, d : Deposit ) returns ( s' : BeaconState ) 
-        requires |s.validators| == |s.balances|
-        requires exists i :: 0 <= i < |s.validators| && s.validators[i].pubkey == d.data.pubkey
-        ensures |s'.validators| == |s.validators| && |s'.balances| == |s.balances|
-        ensures s'.validators == s.validators 
-        ensures forall k :: 0 <= k < |s.validators| ==> 
-            (k != getValidatorIndexFromPubKey(s, d.data.pubkey) ==> s'.balances[k] == s.balances[k]) &&
-            (k == getValidatorIndexFromPubKey(s, d.data.pubkey) ==> s'.balances[k] == s.balances[k] + d.data.amount)
-        {
-            //  Find the index i of the validator from its pubkey
-            var i := getValidatorIndexFromPubKey(s, d.data.pubkey);
-            //  Update the balance at index i
-            s' := BeaconState(
-                    s.validators,
-                    s.balances[i  := s.balances[i] + d.data.amount]);
-        } 
 
+    requires |s.validators| == |s.balances|
 
+    ensures |s'.validators| == |s'.balances|
 
-    method process_deposit2( s : BeaconState, d : Deposit ) returns ( s' : BeaconState ) 
-        requires |s.validators| == |s.balances|
+    ensures match getValidatorIndexFromPubKey(s, d.data.pubkey) {
+        case None => 
+                s'.validators == s.validators + [Validator(d.data.pubkey, d.data.amount)] &&
+                s'.balances == s.balances + [d.data.amount]
 
-        ensures |s'.validators| == |s'.balances|
-
-        ensures match getValidatorIndexFromPubKey2(s, d.data.pubkey) {
-            case None => 
-                    s'.validators == s.validators + [Validator(d.data.pubkey, d.data.amount)] &&
-                    s'.balances == s.balances + [d.data.amount]
-
-            case Some(i) => 
-                    0 <= i < |s.validators| &&
-                    |s'.validators| == |s.validators| &&
-                    |s'.balances| == |s.balances| &&
-                    s'.validators == s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)] &&
-                    s'.balances == s.balances[i := s.balances[i] + d.data.amount]
+        case Some(i) => 
+                0 <= i < |s.validators| &&
+                |s'.validators| == |s.validators| &&
+                |s'.balances| == |s.balances| &&
+                s'.validators == s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)] &&
+                s'.balances == s.balances[i := s.balances[i] + d.data.amount]
         }
 
-            
-        {
-            //  Find the index i of the validator from its pubkey
-            match getValidatorIndexFromPubKey2(s, d.data.pubkey)  {
-                case None => 
-                    //  Create and append validator
-                    s' := BeaconState(
-                    s.validators + [Validator(d.data.pubkey, d.data.amount)],
-                    s.balances + [d.data.amount]);
-                case Some(i) => 
-                    //  Update the balance at index i
-                    s':= BeaconState(
-                    s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)],
-                    s.balances[i  := s.balances[i] + d.data.amount]);
-            }
-            
-        } 
+    {
+    //  Find the index i of the validator from its pubkey
+    match getValidatorIndexFromPubKey(s, d.data.pubkey)  {
+        case None => 
+            //  Not found, Create and append validator
+            s' := BeaconState(
+            s.validators + [Validator(d.data.pubkey, d.data.amount)],
+            s.balances + [d.data.amount]);
+        case Some(i) => 
+            //  Found art index i, Update the balance at index i
+            s':= BeaconState(
+            s.validators[i := Validator(s.validators[i].pubkey, s.balances[i] + d.data.amount)],
+            s.balances[i  := s.balances[i] + d.data.amount]);
+        }
+    } 
 
 }
