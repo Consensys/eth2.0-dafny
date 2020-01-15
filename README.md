@@ -2,17 +2,25 @@
 
 The objective of this project is to write a specification of the Eth2.0 spec in Dafny.
 
-## Useful Repositories
+## Useful Repositories - Eth 2.0 Spec
 
-* [The2.0 spec](https://github.com/ethereum/eth2.0-specs)
+* [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs)
 
 * [Becon chain spec in K](https://github.com/runtimeverification/beacon-chain-spec)
 
+* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md)
+
+## Useful Repositories - Dafny
+
 * [Dafny](https://github.com/dafny-lang/dafny)
 
-* [IronClad project](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
+* [VSCode](https://code.visualstudio.com)
 
-* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md)
+* [Dafny-extension-for-VSCode](https://marketplace.visualstudio.com/items?itemName=correctnessLab.dafny-vscode)
+
+* [Verification Corner](https://www.youtube.com/channel/UCP2eLEql4tROYmIYm5mA27A)
+
+* [IronClad project](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
 ## Expected results
 
