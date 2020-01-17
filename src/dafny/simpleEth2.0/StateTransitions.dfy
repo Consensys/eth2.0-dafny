@@ -3,6 +3,8 @@ include "BeaconChain.dfy"
 include "NativeTypes.dfy"
 include "Types.dfy"
 include "Validators.dfy"
+include "Helpers.dfy"
+include "Merkle.dfy"
 
 /**
  * State transition function for the Beacon Chain.
@@ -15,6 +17,9 @@ module StateTransition {
     import opened Eth2Types
     import opened BeaconChain
     import opened Validators
+    import opened Helpers
+    import opened Merkle
+
 
     /** From config.k.
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
@@ -143,6 +148,9 @@ module StateTransition {
      */
     datatype BeaconState = BeaconState(
         validators: seq<Validator>,
+        // ghost validators_pubkeys : set<BLSPubkey>,
+        eth1_data: Eth1Data,
+        eth1_deposit_index: uint64,
         balances: seq<Gwei>
     )
 
@@ -162,9 +170,7 @@ module StateTransition {
      */
     function process_slots(s: BeaconState, slot: Slot) : () 
 
-    function method min(x : Gwei, y : Gwei) : Gwei {
-        if x <= y then x else y
-    } 
+    
 
     /** Retrieve validator index from a public key.  */
     function method getValidatorIndexFromPubKey( s : BeaconState, p : BLSPubkey ) : Option<nat> 
@@ -175,6 +181,10 @@ module StateTransition {
             )
             || 
             getValidatorIndexFromPubKey(s,p) == None
+
+
+    
+      
 
     /**
      *  Process a deposit.
@@ -190,23 +200,36 @@ module StateTransition {
     //  We require the amount to be a multiple of the increment.
     requires d.data.amount % EFFECTIVE_BALANCE_INCREMENT == 0
     requires |s.validators| == |s.balances|
+    //  The updated index must be a uint64 and not overflow
+    requires 0 <= s.eth1_deposit_index < 0x1000000000000000 - 1
+    //  Sizes of these should be preserved.
+    ensures |s'.validators| == |s'.balances| 
 
-    ensures |s'.validators| == |s'.balances|
+    //  Following is not part of the Python/K specs.
+    // ensures match getValidatorIndexFromPubKey(s, d.data.pubkey) {
+    //     case None => 
+    //             s'.validators == s.validators + [Validator(d.data.pubkey, min(d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
+    //             s'.balances == s.balances + [min(d.data.amount,MAX_EFFECTIVE_BALANCE)]
 
-    ensures match getValidatorIndexFromPubKey(s, d.data.pubkey) {
-        case None => 
-                s'.validators == s.validators + [Validator(d.data.pubkey, min(d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
-                s'.balances == s.balances + [min(d.data.amount,MAX_EFFECTIVE_BALANCE)]
-
-        case Some(i) => 
-                0 <= i < |s.validators| &&
-                |s'.validators| == |s.validators| &&
-                |s'.balances| == |s.balances| &&
-                s'.validators == s.validators[i := Validator(s.validators[i].pubkey, min(s.balances[i] + d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
-                s'.balances == s.balances[i := min(s.balances[i] + d.data.amount, MAX_EFFECTIVE_BALANCE)]
-        }
+    //     case Some(i) => 
+    //             0 <= i < |s.validators| &&
+    //             |s'.validators| == |s.validators| &&
+    //             |s'.balances| == |s.balances| &&
+    //             s'.validators == s.validators[i := Validator(s.validators[i].pubkey, min(s.balances[i] + d.data.amount,MAX_EFFECTIVE_BALANCE))] &&
+    //             s'.balances == s.balances[i := min(s.balances[i] + d.data.amount, MAX_EFFECTIVE_BALANCE)]
+    //     }
 
     {
+        //FIXME: should be hash_tree_root(d.data)
+        var htrdata : Hash := ""; 
+    var r := is_valid_merkle_branch(
+        htrdata,
+        d.proof,
+        DEPOSIT_CONTRACT_TREE_DEPTH + 1,
+        s.eth1_deposit_index,
+        s.eth1_data.deposit_root
+    );
+    assert (r);
     //  Find the index i of the validator from its pubkey
     match getValidatorIndexFromPubKey(s, d.data.pubkey)  {
         case None => 
@@ -214,14 +237,18 @@ module StateTransition {
             var newBalance := min(d.data.amount,MAX_EFFECTIVE_BALANCE);
             s' := BeaconState(
             s.validators + [Validator(d.data.pubkey, newBalance)],
+            s.eth1_data,
+            s.eth1_deposit_index + 1,
             s.balances + [min(d.data.amount,MAX_EFFECTIVE_BALANCE)]);
         case Some(i) => 
             //  Found art index i, Update the balance at index i
             var newBalance := min(s.balances[i] + d.data.amount, MAX_EFFECTIVE_BALANCE);
             s':= BeaconState(
             s.validators[i := Validator(s.validators[i].pubkey,newBalance)],
+            s.eth1_data,
+            s.eth1_deposit_index,
+            // s.validators,
             s.balances[i  := newBalance]);
         }
     } 
-
 }
