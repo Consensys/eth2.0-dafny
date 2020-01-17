@@ -87,13 +87,4 @@ module Eth2Types {
             None
         }
     }
-
- 
-   
-   
-
-    
-
-    
-   
 }
