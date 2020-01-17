@@ -107,7 +107,7 @@ module BeaconChain {
      * Historical Batch.
      * 
      *  @param      block_roots
-     *  @paran      state_roots
+     *  @param      state_roots
      */
      /* datatype HistoricalBatch = HistoricalBatch(
             block_roots: array<Hash>,
@@ -115,5 +115,7 @@ module BeaconChain {
         ) 
      */
 
-      
+    //  Some useful methods
+
+    
 }
