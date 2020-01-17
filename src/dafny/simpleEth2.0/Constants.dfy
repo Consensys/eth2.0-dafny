@@ -1,9 +1,15 @@
+include "NativeTypes.dfy"
+
 /** 
   * Define the constants used in the Eth2.0 spec.
   * constants-minimal.k in the K spec.
   *
   */
 module Eth2Constants {  
+
+  import opened Native__NativeTypes_s
+
+
   //  Powers of 2
   const TWO_UP_0 := 1;
   const TWO_UP_2 := 2 * TWO_UP_0;
@@ -31,7 +37,7 @@ module Eth2Constants {
 
   //  (Non-configurable) constants
   const BASE_REWARDS_PER_EPOCH := 4 ;
-  const DEPOSIT_CONTRACT_TREE_DEPTH := 2 * 2 * 2 * 2 * 2 ; // 2^5
+  const DEPOSIT_CONTRACT_TREE_DEPTH : uint64 := 2 * 2 * 2 * 2 * 2 ; // 2^5
   const SECONDS_PER_DAY := 86400  ;
   const JUSTIFICATION_BITS_LENGTH := 2.0 ;
   const ENDIANNESS := "little" ;
