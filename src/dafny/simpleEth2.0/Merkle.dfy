@@ -109,10 +109,10 @@ module Merkle {
                     get_next_power_of_two((n + 1)/2) > (n + 1)/2;
                         ==> { k1( get_next_power_of_two((n + 1)/2), n + 1); }
                     (2 * get_next_power_of_two((n + 1)/2)) > (n + 1);
-                        ==> { power2_monotonic(2 * get_next_power_of_two((n + 1)/2), n + 1 ); } 
-                    power2(2 * get_next_power_of_two((n + 1)/2)) > power2(n + 1); 
+                        ==> { power2_monotonic(2 * get_next_power_of_two((n + 1) / 2), n + 1 ); } 
+                    power2(2 * get_next_power_of_two((n + 1) / 2)) > power2(n + 1); 
                         ==> { lb(n); }
-                    power2(2 * get_next_power_of_two((n + 1)/2)) > n  ;
+                    power2(2 * get_next_power_of_two((n + 1) / 2)) > n  ;
                         ==>
                     power2(get_next_power_of_two(n)) > n ;
                     true;
