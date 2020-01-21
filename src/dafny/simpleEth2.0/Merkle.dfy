@@ -78,6 +78,21 @@ module Merkle {
         // else if n <= 2 then n
         else 2 * get_next_power_of_two( (n + 1) / 2)
         }
+    
+     /** Get the previous power of two.
+     *
+     *  @param  n   A positive integer. 
+     *  @return     The largest power of 2 that is larger than n.
+     */
+    function get_prev_power_of_two(n : nat) : nat 
+    ensures get_prev_power_of_two(n) >= 1
+    ensures get_prev_power_of_two(n) <= n
+    ensures n >= 1 ==> (get_prev_power_of_two(n) / 2) < n
+        {
+        if n <= 1 then 1
+        // else if n <= 2 then n
+        else 2 * get_prev_power_of_two( n / 2)
+        }
 
     /** Some desirable properties of get_next_power_of_two.  */
     lemma lem1(n: nat) 
@@ -96,6 +111,7 @@ module Merkle {
     requires n >= 2;
     ensures 2 * (n - 1) >= n 
         {
+        /* n >=2 && 2 * n - 2 >= n <==> n >= 2 && n - 2 >= 0 <==> true */
         }
 
     /** Power of two is monotonic. */
@@ -103,7 +119,7 @@ module Merkle {
     requires n > n'
     ensures n > n' ==> power2(n) > power2(n') 
         {
-        }
+        } 
 
     /** Lower bound for power2. */
     lemma lowerBoundPower2(n : nat) 
@@ -123,7 +139,7 @@ module Merkle {
             }
         }
 
-     lemma rule3(n: nat, k : nat)
+    lemma rule3(n: nat, k : nat)
     ensures power2( n + k ) == power2(n) * power2(k) 
         {
             if k == 0 {
