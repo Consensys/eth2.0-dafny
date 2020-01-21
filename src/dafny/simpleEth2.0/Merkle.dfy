@@ -40,7 +40,7 @@ module Merkle {
             b := value == root ;
         } 
 
-    /** Compute 2^n.  */
+    /** Compute 2^n. */
     function power2(n : nat): nat 
     ensures power2(n) >= 1
     {
@@ -67,35 +67,75 @@ module Merkle {
     /** Arithmetic 1. */
     lemma la(n: nat) 
         requires n >= 2;
-        ensures 2 * (n - 1) >= n {
+        ensures 2 * (n - 1) >= n 
+        {
         }
 
     /** Power of two is monotonic. */
     lemma power2_monotonic(n: nat, n': nat) 
         requires n > n'
-        ensures n > n' ==> power2(n) > power2(n') {
-
+        ensures n > n' ==> power2(n) > power2(n') 
+        {
         }
 
     /** Lower bound for power2. */
-    lemma lb(n : nat) 
-        ensures power2(n + 1) >= n {
+    lemma lowerBoundPower2(n : nat) 
+        ensures power2(n + 1) >= n 
+        {
             if n <= 1 {
                 //  Dafny can infer the proof
             } else {
                 calc >= {
                     power2(n + 1) ; 
+                    //  Use definition of pwer2(n), n >= 1
                     2 * power2(n)  ;
-                        { lb(n - 1); }
+                        { lowerBoundPower2(n - 1); }
                     2 * (n - 1);
                         { la(n) ;}  //  not necessary
                 }
             }
         }
 
-    /** Arithmetic equivalence. */
-    lemma k1(x: int, y: int) 
-        ensures x > y / 2 <==> 2 * x > y 
+     lemma rule3(n: nat, k : nat)
+        ensures power2( n + k ) == power2(n) * power2(k) 
+        {
+            if k == 0 {
+                //  Dafny can figure it out
+            } else {
+                calc {:induction k} {
+                    power2( n + k );
+                    2 * power2( n + (k - 1) );
+                        calc {
+                            power2( n + (k - 1) );
+                            power2(n) * power2(k - 1);
+                        }
+                    2 * power2(n) * power2(k - 1);
+                    //  And Dafny can work out the simplifications
+                }
+            }
+        }
+
+    lemma rule4(n : nat)
+        requires n >= 1 
+        ensures power2(n) >= 2 
+        {
+            // Dafny can guess the proof.
+        }
+
+     lemma rule2(n: nat) 
+        requires n >= 1
+        ensures power2( 2 * n ) >= 2 * power2(n)
+        {
+                calc {
+                    power2( 2 * n );
+                        calc { 2 * n == n + n ;} 
+                    power2(n + n);
+                        { rule3(n, n) ;}
+                    power2(n) * power2(n);
+                        >= { rule4(n) ;}
+                    2 * power2(n);
+                }  
+        }
 
     /** get_next_power_of_two(x) = i, then x < 2^i */
     lemma lem2(n: nat) 
@@ -106,17 +146,20 @@ module Merkle {
             }  
             else { 
                 calc {
-                    get_next_power_of_two((n + 1)/2) > (n + 1) / 2;
-                        ==> { k1( get_next_power_of_two((n + 1) / 2), n + 1); }
-                    (2 * get_next_power_of_two((n + 1) / 2)) > (n + 1);
-                        ==> { power2_monotonic(2 * get_next_power_of_two((n + 1) / 2), n + 1 ); } 
-                    power2(2 * get_next_power_of_two((n + 1) / 2)) > power2(n + 1); 
-                        ==> { lb(n); }
-                    power2(2 * get_next_power_of_two((n + 1) / 2)) > n  ;
-                        ==>
-                    power2(get_next_power_of_two(n)) > n ;
-                    true;
-                } 
+                    power2(get_next_power_of_two(n));
+                        //  Rewrite the def.
+                    power2(2 * get_next_power_of_two((n + 1) / 2)) ;
+                        >= { rule2( get_next_power_of_two((n + 1) / 2)) ; }
+                    2 * power2(get_next_power_of_two((n + 1) / 2))  ;
+                        //  Use the induction hypothesis on (n + 1) / 2 that Dafny implicitly creates
+                        > 
+                    2 * (n + 1) / 2;
+                        >= 
+                    n ;
+                }
             }
         }
+
+    // lemma foo(n: nat)
+    //     ensures n >= 4 {}
 }
