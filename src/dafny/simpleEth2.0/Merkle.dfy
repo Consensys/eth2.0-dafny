@@ -43,44 +43,71 @@ module Merkle {
     /** Compute 2^n. */
     function power2(n : nat): nat 
     ensures power2(n) >= 1
-    {
-        if n == 0 then 1 else 2 * power2(n - 1)
+        {
+            if n == 0 then 1 else 2 * power2(n - 1)
+        }
+
+    /** get_next_power_of_two returns a power of 2. */
+    lemma lem4(n: nat)
+    ensures exists k:nat :: get_next_power_of_two(n) == power2(k) {
+        if n <= 1 {
+            //  Dafny figures it out.
+            assert(get_next_power_of_two(n) == power2(0)) ;
+        } else {
+            var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
+            calc {
+                get_next_power_of_two(n);
+                2 * get_next_power_of_two( (n + 1) / 2);
+                2 * power2(k) ;
+                power2(k + 1);
+            }
+        }
     }
 
-    /** Get the next power of two. */
+    /** Get the next power of two.
+     *
+     *  @param  n   A positive integer. 
+     *  @return     The smallest power of 2 that is larger than n.
+     */
     function get_next_power_of_two(n : nat) : nat 
-    {
-        if n == 0 then 0
-        else if n <= 2 then n
+    ensures get_next_power_of_two(n) >= 1
+    ensures get_next_power_of_two(n) >= n
+    ensures n >= 1 ==> (get_next_power_of_two(n) / 2) < n
+        {
+        if n <= 1 then 1
+        // else if n <= 2 then n
         else 2 * get_next_power_of_two( (n + 1) / 2)
-    }
+        }
 
     /** Some desirable properties of get_next_power_of_two.  */
     lemma lem1(n: nat) 
-        ensures get_next_power_of_two(0) == 1 
-        ensures get_next_power_of_two(1) == 1 
-        ensures get_next_power_of_two(2) == 2 
-        ensures get_next_power_of_two(3) == 2 
-        ensures get_next_power_of_two(8) == 4 
-        ensures get_next_power_of_two(15) == 5 
+    ensures get_next_power_of_two(0) == 1 
+    ensures get_next_power_of_two(1) == 1 
+    ensures get_next_power_of_two(2) == 2 
+    ensures get_next_power_of_two(3) == 4 
+    ensures get_next_power_of_two(8) == 8 
+    ensures get_next_power_of_two(15) == 16
+    ensures get_next_power_of_two(121) == 128
+        {
+        }
         
     /** Arithmetic 1. */
     lemma la(n: nat) 
-        requires n >= 2;
-        ensures 2 * (n - 1) >= n 
+    requires n >= 2;
+    ensures 2 * (n - 1) >= n 
         {
         }
 
     /** Power of two is monotonic. */
     lemma power2_monotonic(n: nat, n': nat) 
-        requires n > n'
-        ensures n > n' ==> power2(n) > power2(n') 
+    requires n > n'
+    ensures n > n' ==> power2(n) > power2(n') 
         {
         }
 
     /** Lower bound for power2. */
     lemma lowerBoundPower2(n : nat) 
-        ensures power2(n + 1) >= n 
+    ensures power2(n + 1) >= n 
         {
             if n <= 1 {
                 //  Dafny can infer the proof
@@ -97,7 +124,7 @@ module Merkle {
         }
 
      lemma rule3(n: nat, k : nat)
-        ensures power2( n + k ) == power2(n) * power2(k) 
+    ensures power2( n + k ) == power2(n) * power2(k) 
         {
             if k == 0 {
                 //  Dafny can figure it out
@@ -116,15 +143,15 @@ module Merkle {
         }
 
     lemma rule4(n : nat)
-        requires n >= 1 
-        ensures power2(n) >= 2 
+    requires n >= 1 
+    ensures power2(n) >= 2 
         {
             // Dafny can guess the proof.
         }
 
-     lemma rule2(n: nat) 
-        requires n >= 1
-        ensures power2( 2 * n ) >= 2 * power2(n)
+    lemma rule2(n: nat) 
+    requires n >= 1
+    ensures power2( 2 * n ) >= 2 * power2(n)
         {
                 calc {
                     power2( 2 * n );
@@ -139,7 +166,7 @@ module Merkle {
 
     /** get_next_power_of_two(x) = i, then x < 2^i */
     lemma lem2(n: nat) 
-        ensures power2(get_next_power_of_two(n)) > n
+    ensures power2(get_next_power_of_two(n)) > n
         {
             if n <= 2 { 
                 //  Proof can be infered by Dafny
@@ -159,6 +186,17 @@ module Merkle {
                 }
             }
         }
+
+    // lemma lem3(n: nat) 
+    // requires n >= 1 
+    // ensures (get_next_power_of_two(n) / 2) < n {
+    //         // if n == 0 {
+    //         //     //  Dafny figures it out.
+    //         // }
+    //         // else {
+
+    //         // }
+    //     }
 
     // lemma foo(n: nat)
     //     ensures n >= 4 {}
