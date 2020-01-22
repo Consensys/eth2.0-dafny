@@ -47,6 +47,10 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Verification Corner (tutorials)](https://www.youtube.com/channel/UCP2eLEql4tROYmIYm5mA27A)
 
+* [Tutorial paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml220.pdf)
+
+* [Solutions to exercies in previous tutorials](https://github.com/bor0/dafny-tutorial)
+
 * [IronClad project (2015, Dafny spec)](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
 ## Expected results
