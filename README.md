@@ -16,12 +16,16 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Eth2.0 spec blob](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md)
 
+* [Artemis (full java client that implements the actual state transitions of the beacon chain spec)](https://github.com/PegaSysEng/artemis/)
+
+* [Tuweni (may be used in Artemis), basic SSZ functionality](https://tuweni.apache.org)
+
 ### Phase 0 Resources
 
-* [R1](https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view)
-* [R2](https://notes.ethereum.org/@vbuterin/HkiULaluS)
-* [R3](<https://github.com/protolambda/eth2-docs>)
-* [R4](https://notes.ethereum.org/@vbuterin/rkhCgQteN)
+* [djrtwo docs](https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view)
+* [V. Buterin docs](https://notes.ethereum.org/@vbuterin/HkiULaluS)
+* [Protolambda docs](<https://github.com/protolambda/eth2-docs>)
+* [V. Buterin notes](https://notes.ethereum.org/@vbuterin/rkhCgQteN)
 
 ### Phase 1&2 Resources
 
@@ -41,15 +45,15 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Dafny github repo](https://github.com/dafny-lang/dafny)
 
-* [VSCode](https://code.visualstudio.com)
+* [VSCode](https://code.visualstudio.com), to use DAfmy on MacOS and Linux
 
 * [Dafny-extension-for-VSCode](https://marketplace.visualstudio.com/items?itemName=correctnessLab.dafny-vscode)
 
-* [Verification Corner (tutorials)](https://www.youtube.com/channel/UCP2eLEql4tROYmIYm5mA27A)
+* [Verification Corner](https://www.youtube.com/channel/UCP2eLEql4tROYmIYm5mA27A), tutorials by Rustan Leino.
 
 * [Tutorial paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml220.pdf)
 
-* [Solutions to exercies in previous tutorials](https://github.com/bor0/dafny-tutorial)
+* [Solutions to exercises in previous tutorials](https://github.com/bor0/dafny-tutorial)
 
 * [IronClad project (2015, Dafny spec)](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
