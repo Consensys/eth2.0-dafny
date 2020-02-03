@@ -8,6 +8,8 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 ## Useful Repositories - Eth 2.0 Spec
 
+* [What's new in Ethereumn? by Ben Edgington](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book)
+ 
 * [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs)
 
 * [Becon chain spec in K](https://github.com/runtimeverification/beacon-chain-spec)
