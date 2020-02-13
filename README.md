@@ -47,6 +47,8 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Dafny github repo](https://github.com/dafny-lang/dafny)
 
+* [Dafny Wiki](https://github.com/dafny-lang/dafny/wiki)
+
 * [VSCode](https://code.visualstudio.com), to use DAfmy on MacOS and Linux
 
 * [Dafny-extension-for-VSCode](https://marketplace.visualstudio.com/items?itemName=correctnessLab.dafny-vscode)
