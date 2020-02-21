@@ -61,6 +61,10 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [IronClad project (2015, Dafny spec)](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
+## K-framework resources
+
+* [WIP reference manual/documentation](https://github.com/kframework/k/blob/master/pending-documentation.md)
+
 ## Expected results
 
 The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/blob/master/report/bck-report.pdf) describes how the K-framework can be used to:
