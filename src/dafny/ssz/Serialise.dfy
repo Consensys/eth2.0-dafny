@@ -36,7 +36,6 @@ include "../utils/Eth2Types.dfy"
         }
 
     lemma injectiveSerialise( n: uint16, m : uint16) 
-        requires n != m
-        ensures serialise(n) != serialise(m)
+        ensures serialise(n) == serialise(m) ==> n == m
 
  }
