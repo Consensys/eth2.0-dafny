@@ -70,8 +70,9 @@ module Merkle {
      *  @return     The smallest power of 2 that is larger than n.
      */
     function get_next_power_of_two(n : nat) : nat 
+    requires true
     ensures get_next_power_of_two(n) >= 1
-    ensures get_next_power_of_two(n) >= n
+    ensures get_next_power_of_two(n) >= n + 1
     ensures n >= 1 ==> (get_next_power_of_two(n) / 2) < n
         {
         if n <= 1 then 1
@@ -86,7 +87,7 @@ module Merkle {
      */
     function get_prev_power_of_two(n : nat) : nat 
     ensures get_prev_power_of_two(n) >= 1
-    ensures get_prev_power_of_two(n) <= n
+    // ensures get_prev_power_of_two(n) <= n
     ensures n >= 1 ==> (get_prev_power_of_two(n) / 2) < n
         {
         if n <= 1 then 1
@@ -95,7 +96,7 @@ module Merkle {
         }
 
     /** Some desirable properties of get_next_power_of_two.  */
-    lemma lem1(n: nat) 
+    lemma test_get_next_power_of_two(n: nat) 
     ensures get_next_power_of_two(0) == 1 
     ensures get_next_power_of_two(1) == 1 
     ensures get_next_power_of_two(2) == 2 
@@ -103,6 +104,18 @@ module Merkle {
     ensures get_next_power_of_two(8) == 8 
     ensures get_next_power_of_two(15) == 16
     ensures get_next_power_of_two(121) == 128
+        {
+        }
+
+    /** Some desirable properties of get_prev_power_of_two.  */
+    lemma test_get_prev_power_of_two(n: nat) 
+    ensures get_prev_power_of_two(0) == 1 
+    ensures get_prev_power_of_two(1) == 1 
+    ensures get_prev_power_of_two(2) == 2 
+    ensures get_prev_power_of_two(3) == 2 
+    ensures get_prev_power_of_two(8) == 8 
+    ensures get_prev_power_of_two(15) == 8
+    ensures get_prev_power_of_two(121) == 64
         {
         }
         
@@ -216,4 +229,6 @@ module Merkle {
 
     // lemma foo(n: nat)
     //     ensures n >= 4 {}
+
+   
 }

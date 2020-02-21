@@ -168,7 +168,9 @@ module StateTransition {
     /**
      * 
      */
-    function process_slots(s: BeaconState, slot: Slot) : () 
+    function method process_slots(s: BeaconState, slot: Slot) : BeaconState {
+        s
+    }
 
     
 
@@ -229,7 +231,7 @@ module StateTransition {
         s.eth1_deposit_index,
         s.eth1_data.deposit_root
     );
-    assert (r);
+    // assert (r);
     //  Find the index i of the validator from its pubkey
     match getValidatorIndexFromPubKey(s, d.data.pubkey)  {
         case None => 
