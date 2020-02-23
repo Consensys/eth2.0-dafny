@@ -1,3 +1,4 @@
+
 # eth2.0-dafny
 
 The objective of this project is to write a specification of the Eth2.0 spec in Dafny.
@@ -6,13 +7,13 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Search engine](https://ethsear.ch/)
 
-## Useful Repositories - Eth 2.0 Spec
+## Useful Repositories -- Eth 2.0 Spec
 
 * [What's new in Ethereum? by Ben Edgington](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book)
 
 * [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs)
 
-* [Becon chain spec in K](https://github.com/runtimeverification/beacon-chain-spec)
+* [Beacon in K](https://github.com/runtimeverification/beacon-chain-spec)
 
 * [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md)
 
@@ -20,7 +21,7 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Artemis (full java client that implements the actual state transitions of the beacon chain spec)](https://github.com/PegaSysEng/artemis/)
 
-* [Tuweni (may be used in Artemis), basic SSZ functionality](https://tuweni.apache.org)
+* [Tuweni (used in Artemis?), basic SSZ functionality](https://tuweni.apache.org)
 
 ### Phase 0 Resources
 
