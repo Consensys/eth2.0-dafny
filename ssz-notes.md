@@ -27,4 +27,3 @@ In the Eth2 specification, SSZ provides serialisation and deserialisation for
 * Basic types (integers, Booleans)
 * arrays, vectors, lists of basic types,
 * record types.
-
