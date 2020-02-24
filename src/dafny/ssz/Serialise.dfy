@@ -1,6 +1,8 @@
 
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
+include "IntSeDes.dfy"
+include "BoolSeDes.dfy"
 
 /**
  *  SSZ library.
@@ -11,31 +13,43 @@ include "../utils/Eth2Types.dfy"
 
     import opened NativeTypes
     import opened Eth2Types
+    import opened IntSeDes
+    import opened BoolSeDes
 
-    function method as_uint16(s: seq<Byte>) : uint16 
-        requires |s| == 2
+    /** The serialisable objects. */
+    datatype Serialisable = 
+            Uint8(n: uint8)
+        |   Bool(b: bool)
 
-    function method as_Bytes(k : uint16) : seq<Byte> 
-        ensures |as_Bytes(k)| == 2
-        ensures as_uint16(as_Bytes(k)) == k
-
-    /* Serialise an Byte. */
-    function method serialise(k : uint16) : seq<Byte> {
-        as_Bytes(k)
+    function method length(s: Serialisable) : nat {
+        match s
+        case Uint8(x) => 1
+        case Bool(b) => 1
     }
 
-    function method deserialise(s : seq<Byte>) : uint16 
-        requires |s| == 2
+    /** Encode/decode Uint8 yields Identity. */
+    lemma uint8AsBytesInvolutive(n : uint8) 
+        ensures bytesToUint8(uint8ToBytes(n)) == n
+
+ 
+    function method serialise(s : Serialisable) : seq<Byte> 
     {
-        as_uint16(s)
-    } 
+        match s 
+            case Bool(b) => boolToBytes(b)
 
-    lemma serialiseIsInvolutive(k : uint16) 
-        ensures deserialise(serialise(k)) == k {
+            case Uint8(n) => uint8ToBytes(n)
+    }
 
-        }
+    function method deserialise(xs : seq<Byte>, t : Serialisable) : Serialisable 
+        /* The lengths must match ... for now. */
+        requires length(t) == |xs|
+    {
+        match t
 
-    lemma injectiveSerialise( n: uint16, m : uint16) 
-        ensures serialise(n) == serialise(m) ==> n == m
+            case Bool(_) => Bool(bytesToBool(xs))
+
+            case Uint8(_) => Uint8(bytesToUint8(xs[0..1]))
+    }
+
 
  }
