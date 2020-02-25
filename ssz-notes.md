@@ -27,3 +27,31 @@ In the Eth2 specification, SSZ provides serialisation and deserialisation for
 * Basic types (integers, Booleans)
 * arrays, vectors, lists of basic types,
 * record types.
+
+## Notes
+
+Current Dafny SSZ module does not constraint the length of serialised object to be deserialised.
+Deserialise may fail if the object cannot be unpacked into the target type.
+We have to account for this behaviour.
+
+Two solutions:
+
+* We accept that this can happen at runtime, and we want to prove that in that case we return a Failure (e.g. Try type in Scala) or Option type (or Either type).
+This is what is currently implemented.
+* We only deal with the happy case in the first specification.
+
+We may also check that the sequence of bytes to be decoded has been fully consumed at the end of the decoding process.
+
+## Dafny notes
+
+Match can only be used on datatype not on classes.
+Use of bitvectors is not ideal:
+
+* Seems the cast from/to int is not properly inlined in some proofs
+* Z3 is not very good at bitvector and proofs take ages (when the solver can do it).
+
+For instance Dafny can work out the proof of seDesInvolutive without hints with uint8 but needs a full proof for bv8.
+
+## Todo list
+
+* deserialise: add the non processed part of the sequence to decode to the returned result.
