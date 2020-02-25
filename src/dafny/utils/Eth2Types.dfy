@@ -1,5 +1,5 @@
 include "NativeTypes.dfy"
-
+include "../utils/Helpers.dfy"
 /** 
  * Define the types used in the Eth2.0 spec.
  * From types.k in the Eth2 spec.
@@ -8,6 +8,40 @@ include "NativeTypes.dfy"
 module Eth2Types {
 
     import opened NativeTypes
+    import opened Helpers
+
+    //  The Eth2 basic types.
+
+    /** The serialisable objects. */
+    datatype Serialisable = 
+            Uint8(n: uint8, ghost tipe: Tipe)
+        |   Bool(b: bool, ghost tipe: Tipe)
+
+    /** Some type tags.
+     * 
+     *  In Dafny we cannot extract the type of a given object.
+     *  In the proofs, we need to specify the type when deserialise is called
+     *  and also to prove some lemmas.
+     *  The `Tipe` tag should match the actual type of a serialisable.
+     *  This can be enforced by invoking the predicate [[wellTyped]].
+     */
+    datatype Tipe =
+            Uint8_
+        |   Bool_
+
+    /** Whether a serialisable has its Tipe field matching its type. 
+     *
+     *  @param  s   A serialisable.
+     *  @returns    True iff s.tipe is s.tipe_.
+     */
+    predicate wellTyped(s : Serialisable) {
+            match s 
+                case Bool(_, b) => s.tipe == Bool_
+        
+                case Uint8(_, t) => s.tipe == Uint8_
+    }
+
+    //  Old section
 
     /** Simple Serialisable types. */
     trait SSZ {
@@ -19,11 +53,7 @@ module Eth2Types {
     type String = seq<char>
 
    
-    /* Option type */
-    datatype Option<T> = None | Some(T)
-
-    /* Either type */
-    datatype Either<T> = Left(T) | Right(T)
+   
 
     type HashTreeRoot = Option<array<byte>>
     // Basic Python (SSZ) types.
@@ -32,7 +62,7 @@ module Eth2Types {
 
     //  TODO: change the Bytes type
     type Bytes = String 
-    type Byte = bv8 
+    type Byte = uint8
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
 
