@@ -26,5 +26,4 @@ include "../utils/Eth2Types.dfy"
        (xs[0] as nat) > 0
     }
 
-
  }
