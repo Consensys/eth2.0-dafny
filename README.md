@@ -15,7 +15,7 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [Beacon in K](https://github.com/runtimeverification/beacon-chain-spec)
 
-* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/specs/simple-serialize.md)
+* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/ssz/simple-serialize.md)
 
 * [Eth2.0 spec blob](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md)
 
