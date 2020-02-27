@@ -42,6 +42,18 @@ This is what is currently implemented.
 
 We may also check that the sequence of bytes to be decoded has been fully consumed at the end of the decoding process.
 
+### Py-ssz
+
+The tests for bitvectors seem to assume that every encoded bitvector has a size which is a multiple of 8.
+
+### Java implementation
+
+The java implementation (Cava) does not seem to encode vectors (nor bitvectors).
+It does not support bitList neither.
+It provides encoding for String that are not in simple-serilise.md.
+The encoding does not seem to be recursively defined. For instance there methods
+for encoding List of int8, list of int16 and so on.
+
 ## Dafny notes
 
 Match can only be used on datatype not on classes.
@@ -55,3 +67,8 @@ For instance Dafny can work out the proof of seDesInvolutive without hints with 
 ## Todo list
 
 * deserialise: add the non processed part of the sequence to decode to the returned result.
+
+## Reported issues
+
+* [Tuweni encoding of bitlists](https://github.com/apache/incubator-tuweni/issues/49#issue-571773400)
+* [SSZ bitlists/variable parts](https://github.com/ethereum/eth2.0-specs/issues/1630#issue-571003824)
