@@ -16,7 +16,7 @@ include "../utils/Eth2Types.dfy"
     function method list8BitsTouint8(l : seq<bool>) : Byte    
         requires |l| == 8 
 
-    function method uint8ToList8Bits( n : uint8 ) : seq<bool>
+    function method uint8ToList8Bits( n : Byte ) : seq<bool>
         ensures |uint8ToList8Bits(n)| == 8
 
     //  We assume some properties of the previous functions with l1 and l2 below.
@@ -90,4 +90,44 @@ include "../utils/Eth2Types.dfy"
             //  the first i elements dropped. When i ommitted it defaults to 0.
             [list8BitsTouint8(l[..8])] + bitListToBytes(l[8..])    
     }
+
+    /**  */
+    function bytesToBitList(l : seq<Byte>) : seq<bool> 
+        ensures | bytesToBitList(l) | % 8 == 0
+        decreases l
+    {
+        if ( l == [] ) then
+            []
+        else 
+            uint8ToList8Bits(l[0]) + bytesToBitList(l[1..])
+    }
+
+    //  Proof of involutive
+
+    lemma {:induction m} lemmaHelper1(b : Byte, m : seq<Byte>) 
+        ensures bytesToBitList([b] + m) == 
+            uint8ToList8Bits(b) + bytesToBitList(m) 
+    {
+        //  Dafny proves it.
+    }
+
+    lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
+        requires | l | % 8 == 0
+        ensures bytesToBitList( bitListToBytes (l) ) == l 
+        {
+            if ( l == [] ) {
+                //  Dafny figures it out.
+            } else {
+                calc == {
+                    bytesToBitList( bitListToBytes (l) ) ; 
+                    == 
+                    bytesToBitList([list8BitsTouint8(l[..8])] + bitListToBytes(l[8..]));
+                    == { lemmaHelper1(list8BitsTouint8(l[..8]),bitListToBytes(l[8..])) ; }
+                     uint8ToList8Bits(list8BitsTouint8(l[..8])) + 
+                                bytesToBitList(bitListToBytes(l[8..]));
+                    == { l2(l[..8]); }
+                    l[0..8] +  bytesToBitList(bitListToBytes(l[8..]));
+                }
+            }
+        }
  }
