@@ -51,14 +51,14 @@ include "../utils/Eth2Types.dfy"
     function method list8BitsToByte(l : seq<bool>) : Byte    
         requires |l| == 8 
     {
-        128 * boolToByte(l[0]) +
-        64 * boolToByte(l[1]) +
-        32 * boolToByte(l[2]) +
-        16 * boolToByte(l[3]) +
-        8 * boolToByte(l[4]) +
-        4 * boolToByte(l[5]) +
-        2 * boolToByte(l[6]) +
-        1 * boolToByte(l[7])
+        128 * boolToByte(l[7]) +
+        64 * boolToByte(l[6]) +
+        32 * boolToByte(l[5]) +
+        16 * boolToByte(l[4]) +
+        8 * boolToByte(l[3]) +
+        4 * boolToByte(l[2]) +
+        2 * boolToByte(l[1]) +
+        1 * boolToByte(l[0])
     }
 
     /**
@@ -71,12 +71,9 @@ include "../utils/Eth2Types.dfy"
         ensures |byteToList8Bits(n)| == 8 
     {
         [
-            byteToBool((n / 128) % 2),
-            byteToBool((n / 64) % 2),
-            byteToBool((n / 32) % 2), 
-            byteToBool((n / 16) % 2),
-            byteToBool((n / 8) % 2),
-            byteToBool((n / 4) % 2),
+            byteToBool((n / 1) % 2),
+            byteToBool((n / 2) % 2),
+            byteToBool((n / 4) % 2), 
             byteToBool((n / 2) % 2),
             byteToBool((n / 1) % 2)
         ]
