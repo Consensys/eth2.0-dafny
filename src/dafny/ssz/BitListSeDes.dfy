@@ -82,17 +82,17 @@ include "../utils/Eth2Types.dfy"
         ]
     }
 
-    //  Some properties of the previous functions with lemmas l1 and l2 below.
+    //  Some properties of the previous functions with lemmas 
+    //  encodeOfDecodeIsIdentity and decodeOfEncodeIsIdentity below.
 
     /** Encode(decode(n)) = Identity(n).
      *  
      *  @param  n   a number.
      *  @returns    Encoding (as a Byte) the decoded version of `n` yields `n`.
      */
-    lemma l1(n: Byte)  
+    lemma encodeOfDecodeIsIdentity(n: Byte)  
         ensures list8BitsToByte(byteToList8Bits(n)) == n 
-    {
-        //  Thansk Dafny.
+    {   //  Thanks Dafny.
     }
 
     /** Decode(encode(l)) = Identity(l).
@@ -101,10 +101,10 @@ include "../utils/Eth2Types.dfy"
      *  @returns    Decoding (as a list of bits) the encoded version of `l` yields `l`.
      *
      */    
-     lemma l2(l : seq<bool>) 
+     lemma decodeOfEncodeIsIdentity(l : seq<bool>) 
         requires |l| == 8
         ensures byteToList8Bits(list8BitsToByte(l)) == l 
-    {
+    {   //  Thanks Dafny.
     }
 
     // function method bitList8ToByte(l : seq<bool>) : Byte 
@@ -172,12 +172,19 @@ include "../utils/Eth2Types.dfy"
 
     //  Proof of involution
 
-    lemma {:induction m} lemmaHelper1(b : Byte, m : seq<Byte>) 
+    /** Simplify  bytesToBitList.
+     *
+     *  For seq of length >= 1, bytesToBitList can be simplified.
+     */
+    lemma {:induction m} simplifyByteToListFirstArg(b : Byte, m : seq<Byte>) 
         ensures bytesToBitList([b] + m) == 
             byteToList8Bits(b) + bytesToBitList(m) 
     { //  Dafny proves it.
     }
 
+    /**
+     *  Decoding and encoded l : seq<bool> returns l. 
+     */
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
         requires | l | % 8 == 0
         ensures bytesToBitList( bitListToBytes (l) ) == l 
@@ -189,12 +196,22 @@ include "../utils/Eth2Types.dfy"
                     bytesToBitList( bitListToBytes (l) ) ; 
                     == 
                     bytesToBitList([list8BitsToByte(l[..8])] + bitListToBytes(l[8..]));
-                    == { lemmaHelper1(list8BitsToByte(l[..8]),bitListToBytes(l[8..])) ; }
+                    == { simplifyByteToListFirstArg(
+                            list8BitsToByte(l[..8]),
+                            bitListToBytes(l[8..])
+                            ) ; 
+                        }
                      byteToList8Bits(list8BitsToByte(l[..8])) + 
                                 bytesToBitList(bitListToBytes(l[8..]));
-                    == { l2(l[..8]); }
+                    == { decodeOfEncodeIsIdentity(l[..8]); }
                     l[0..8] +  bytesToBitList(bitListToBytes(l[8..]));
                 }
             }
         }
+
+    //  Tests
+    lemma bitListTests() {
+        assert bitListToBytes([]) == [];
+        assert bitListToBytes([true,true,true,true,true,true,true,true]) == [0xff];
+    }
  }
