@@ -8,6 +8,7 @@
 *.elf
 *.dll.*
 *.exe
+*.mdb
 
 # Linker output
 *.ilk
