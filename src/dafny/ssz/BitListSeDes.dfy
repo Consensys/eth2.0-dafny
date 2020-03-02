@@ -92,6 +92,7 @@ include "../utils/Eth2Types.dfy"
     lemma l1(n: Byte)  
         ensures list8BitsToByte(byteToList8Bits(n)) == n 
     {
+        //  Thansk Dafny.
     }
 
     /** Decode(encode(l)) = Identity(l).
