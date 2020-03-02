@@ -74,8 +74,11 @@ include "../utils/Eth2Types.dfy"
             byteToBool((n / 1) % 2),
             byteToBool((n / 2) % 2),
             byteToBool((n / 4) % 2), 
-            byteToBool((n / 2) % 2),
-            byteToBool((n / 1) % 2)
+            byteToBool((n / 8) % 2),
+            byteToBool((n / 16) % 2),
+            byteToBool((n / 32) % 2),
+            byteToBool((n / 64) % 2),
+            byteToBool((n / 128) % 2)
         ]
     }
 
