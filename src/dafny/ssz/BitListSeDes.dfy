@@ -13,6 +13,11 @@ include "../utils/Eth2Types.dfy"
 
     // Functions to convert list of bits into uint8 and back
 
+    /** Convert a bool into a Byte.
+     *
+     *  @param      b   A boolean.
+     *  @returns        A Byte (uint8) such that b?1:0. 
+     */
     function method boolToByte(b : bool) : Byte
         ensures 0 <= boolToByte(b) <= 1
     {
@@ -22,6 +27,12 @@ include "../utils/Eth2Types.dfy"
             0 as Byte
     }
 
+    /**
+     *  Convert a Byte into a boolean.
+     *
+     *  @param      b   A byte between 0 and 1.
+     *  @returns        The corresponding boolean (b == 1)?true:false.
+     */
     function method byteToBool(b : Byte) : bool
         requires 0 <= b <= 1
     {
@@ -118,8 +129,8 @@ include "../utils/Eth2Types.dfy"
          *  3. append |l'| modulo 8 zeros to l'
          *      l'' = l' + [0] * (|l'| modulo 8)
          *  |l''| is a multiple of 8 and can be seen as a sequence of Bytes
-         *  4. Encode the first 8 bits into a Byte, and recursively encode the 
-         *      tail i.e. the bits after the first 8 bits.
+         *  4. Encode the first 8 bits into a Byte (`list8BitsToByte`), 
+         *      and recursively encode the tail i.e. the bits after the first 8 bits.
          *
          *  @example: l = [0,1,0,0] yields l' = [0,1,0,0] + [1]
          *  l'' = [0,1,0,0,1] + [0,0,0] (add 3 0's to ensure the size of l'' is 
