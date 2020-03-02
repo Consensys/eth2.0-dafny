@@ -71,12 +71,12 @@ include "../utils/Eth2Types.dfy"
         ]
     }
 
-    //  We assume some properties of the previous functions with l1 and l2 below.
+    //  Some properties of the previous functions with lemmas l1 and l2 below.
 
     /** Encode(decode(n)) = Identity(n).
      *  
      *  @param  n   a number.
-     *  @proof      Encoding (as a Byte) the decoded version of `n` yields `n`.
+     *  @returns    Encoding (as a Byte) the decoded version of `n` yields `n`.
      */
     lemma {:axiom} l1(n: Byte)  
         ensures list8BitsToByte(byteToList8Bits(n)) == n 
@@ -84,7 +84,7 @@ include "../utils/Eth2Types.dfy"
     /** Decode(encode(l)) = Identity(l).
      *  
      *  @param  l   a list of 8 bits.
-     *  @proof      Decoding (as a list of bits) the encoded version of `l` yields `l`.
+     *  @returns    Decoding (as a list of bits) the encoded version of `l` yields `l`.
      *
      */    
      lemma {:axiom} l2(l : seq<bool>) 
@@ -159,8 +159,7 @@ include "../utils/Eth2Types.dfy"
     lemma {:induction m} lemmaHelper1(b : Byte, m : seq<Byte>) 
         ensures bytesToBitList([b] + m) == 
             byteToList8Bits(b) + bytesToBitList(m) 
-    {
-        //  Dafny proves it.
+    { //  Dafny proves it.
     }
 
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
