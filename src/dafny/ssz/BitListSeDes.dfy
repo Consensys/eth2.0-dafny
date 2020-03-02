@@ -13,11 +13,11 @@ include "../utils/Eth2Types.dfy"
 
     // Functions to convert list of bits into uint8 and back
 
-    function method list8BitsTouint8(l : seq<bool>) : Byte    
+    function method list8BitsToByte(l : seq<bool>) : Byte    
         requires |l| == 8 
 
-    function method uint8ToList8Bits( n : Byte ) : seq<bool>
-        ensures |uint8ToList8Bits(n)| == 8
+    function method byteToList8Bits( n : Byte ) : seq<bool>
+        ensures |byteToList8Bits(n)| == 8
 
     //  We assume some properties of the previous functions with l1 and l2 below.
 
@@ -27,7 +27,7 @@ include "../utils/Eth2Types.dfy"
      *  @proof      Encoding (as a Byte) the decoded version of `n` yields `n`.
      */
     lemma {:axiom} l1(n: Byte)  
-        ensures list8BitsTouint8(uint8ToList8Bits(n)) == n 
+        ensures list8BitsToByte(byteToList8Bits(n)) == n 
 
     /** Decode(encode(l)) = Identity(l).
      *  
@@ -37,7 +37,7 @@ include "../utils/Eth2Types.dfy"
      */    
      lemma {:axiom} l2(l : seq<bool>) 
         requires |l| == 8
-        ensures uint8ToList8Bits(list8BitsTouint8(l)) == l
+        ensures byteToList8Bits(list8BitsToByte(l)) == l
 
     // function method bitList8ToByte(l : seq<bool>) : Byte 
     //     requires |l| == 8
@@ -88,7 +88,7 @@ include "../utils/Eth2Types.dfy"
             //  Encode first 8 bits, and concatenate encoding of the tail.
             //  Note: l[i..j] returns a sequence of the first j elements with
             //  the first i elements dropped. When i ommitted it defaults to 0.
-            [list8BitsTouint8(l[..8])] + bitListToBytes(l[8..])    
+            [list8BitsToByte(l[..8])] + bitListToBytes(l[8..])    
     }
 
     /**  */
@@ -99,14 +99,14 @@ include "../utils/Eth2Types.dfy"
         if ( l == [] ) then
             []
         else 
-            uint8ToList8Bits(l[0]) + bytesToBitList(l[1..])
+            byteToList8Bits(l[0]) + bytesToBitList(l[1..])
     }
 
-    //  Proof of involutive
+    //  Proof of involution
 
     lemma {:induction m} lemmaHelper1(b : Byte, m : seq<Byte>) 
         ensures bytesToBitList([b] + m) == 
-            uint8ToList8Bits(b) + bytesToBitList(m) 
+            byteToList8Bits(b) + bytesToBitList(m) 
     {
         //  Dafny proves it.
     }
@@ -121,9 +121,9 @@ include "../utils/Eth2Types.dfy"
                 calc == {
                     bytesToBitList( bitListToBytes (l) ) ; 
                     == 
-                    bytesToBitList([list8BitsTouint8(l[..8])] + bitListToBytes(l[8..]));
-                    == { lemmaHelper1(list8BitsTouint8(l[..8]),bitListToBytes(l[8..])) ; }
-                     uint8ToList8Bits(list8BitsTouint8(l[..8])) + 
+                    bytesToBitList([list8BitsToByte(l[..8])] + bitListToBytes(l[8..]));
+                    == { lemmaHelper1(list8BitsToByte(l[..8]),bitListToBytes(l[8..])) ; }
+                     byteToList8Bits(list8BitsToByte(l[..8])) + 
                                 bytesToBitList(bitListToBytes(l[8..]));
                     == { l2(l[..8]); }
                     l[0..8] +  bytesToBitList(bitListToBytes(l[8..]));
