@@ -78,8 +78,10 @@ include "../utils/Eth2Types.dfy"
      *  @param  n   a number.
      *  @returns    Encoding (as a Byte) the decoded version of `n` yields `n`.
      */
-    lemma {:axiom} l1(n: Byte)  
+    lemma l1(n: Byte)  
         ensures list8BitsToByte(byteToList8Bits(n)) == n 
+    {
+    }
 
     /** Decode(encode(l)) = Identity(l).
      *  
@@ -87,9 +89,11 @@ include "../utils/Eth2Types.dfy"
      *  @returns    Decoding (as a list of bits) the encoded version of `l` yields `l`.
      *
      */    
-     lemma {:axiom} l2(l : seq<bool>) 
+     lemma l2(l : seq<bool>) 
         requires |l| == 8
-        ensures byteToList8Bits(list8BitsToByte(l)) == l
+        ensures byteToList8Bits(list8BitsToByte(l)) == l 
+    {
+    }
 
     // function method bitList8ToByte(l : seq<bool>) : Byte 
     //     requires |l| == 8
