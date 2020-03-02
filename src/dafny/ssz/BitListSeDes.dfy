@@ -13,11 +13,63 @@ include "../utils/Eth2Types.dfy"
 
     // Functions to convert list of bits into uint8 and back
 
+    function method boolToByte(b : bool) : Byte
+        ensures 0 <= boolToByte(b) <= 1
+    {
+        if b then 
+            1 as Byte
+        else 
+            0 as Byte
+    }
+
+    function method byteToBool(b : Byte) : bool
+        requires 0 <= b <= 1
+    {
+        if b >= 1 then 
+            true
+        else 
+            false
+    }
+
+    /**
+     *  Convert a list of 8 bits into a number.
+     *
+     *  @param  l   A sequence of bits.
+     *  @returns    A byte the binary encoding of which is reverse(l).
+     */
     function method list8BitsToByte(l : seq<bool>) : Byte    
         requires |l| == 8 
+    {
+        128 * boolToByte(l[0]) +
+        64 * boolToByte(l[1]) +
+        32 * boolToByte(l[2]) +
+        16 * boolToByte(l[3]) +
+        8 * boolToByte(l[4]) +
+        4 * boolToByte(l[5]) +
+        2 * boolToByte(l[6]) +
+        1 * boolToByte(l[7])
+    }
 
+    /**
+     *  Compute a list of bits given a number.
+     *
+     *  @param  n   A byte, i.e. a number that can be represented with 8 bits.
+     *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
+     */
     function method byteToList8Bits( n : Byte ) : seq<bool>
-        ensures |byteToList8Bits(n)| == 8
+        ensures |byteToList8Bits(n)| == 8 
+    {
+        [
+            byteToBool((n / 128) % 2),
+            byteToBool((n / 64) % 2),
+            byteToBool((n / 32) % 2), 
+            byteToBool((n / 16) % 2),
+            byteToBool((n / 8) % 2),
+            byteToBool((n / 4) % 2),
+            byteToBool((n / 2) % 2),
+            byteToBool((n / 1) % 2)
+        ]
+    }
 
     //  We assume some properties of the previous functions with l1 and l2 below.
 
