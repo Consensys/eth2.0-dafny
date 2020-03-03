@@ -66,7 +66,7 @@ include "../utils/Eth2Types.dfy"
         }
 
     /**
-     *  Compute a list of bits given a number.
+     *  Compute a list of bits given a Byte.
      *
      *  @param  n   A byte, i.e. a number that can be represented with 8 bits.
      *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
@@ -136,12 +136,12 @@ include "../utils/Eth2Types.dfy"
 
     /**
      *   The result sequence of the encoding encodes successive 
-     *   chunks of size 8 into a Byte.
+     *   chunks of 8 bits into a Byte.
      */
     lemma {:induction l,k} l7(l: seq<bool>, k : nat) 
         requires |l| == 8 * k
         ensures forall i : nat | 0 <= i < k :: 
-            bitListToBytes(l)[i] == list8BitsToByte(l[i*8..i*8+8])
+            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
         decreases l, k
         {
             if ( l == [] ) {
@@ -160,30 +160,6 @@ include "../utils/Eth2Types.dfy"
                 }
             }
         }
-
-    /**
-     *  The first byte of the encoding must be >= 1 if one of the bits is true.
-     *  @note: thjis is an exercise and not used in the spec.
-     */
-    lemma {:induction l} l3(l: seq<bool>)
-        requires |l| % 8 == 0
-        ensures |l| > 0 && (exists i : nat | 0 <= i < 8 :: l[i] == true) ==>   bitListToBytes(l)[0] >= 1 
-    {
-        if ( l == [] ) {
-            //  Holds trivially
-        } else {
-            var i : nat :| 0 <= i < 8 ;
-            if (l[i] == true) {
-                calc == {
-                    bitListToBytes(l)[0] ;
-                    == 
-                    list8BitsToByte(l[..8]);
-                    >= { l5(l[..8]) ;}
-                    1;
-                }
-            }
-        }
-    }
 
     /**
      *  Encode a list of 8*n bits into a sequence of bytes.
