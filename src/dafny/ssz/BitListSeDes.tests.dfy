@@ -6,7 +6,7 @@ include "../utils/DafTests.dfy"
 *  Tests for BitListSeDes.
 *
 */
-module TT {
+module BitListSeDesTests {
     
     import opened BitListSeDes
     import opened test 
