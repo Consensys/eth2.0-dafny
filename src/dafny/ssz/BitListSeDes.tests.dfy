@@ -11,15 +11,6 @@ module BitListSeDesTests {
     import opened BitListSeDes
     import opened DafTest 
     
-    /** Create Sequences with same element. */
-    function method timeSeq<T>(t : T, k : nat) : seq<T> 
-        ensures |timeSeq(t,k)| == k
-        decreases k
-    {
-        if k == 0 then []
-        else [t] + timeSeq(t, k - 1)
-    }
-
     /**
      *  Dafny compiles the Main method if it finds one.
      */
