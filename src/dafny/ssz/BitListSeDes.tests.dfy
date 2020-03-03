@@ -10,7 +10,7 @@ module BitListSeDesTests {
     
     import opened BitListSeDes
     import opened DafTest 
-
+    
     /** Create Sequences with same element. */
     function method timeSeq<T>(t : T, k : nat) : seq<T> 
         ensures |timeSeq(t,k)| == k
@@ -28,7 +28,7 @@ module BitListSeDesTests {
         var r := [
             TestItem(
                 //  Name of test
-                "Serialise empty BitList is empty seq<Byte>",
+                "Serialise [] is []",
                 //  Body of test in the form () => something that evaluates to bool
                 () => bitListToBytes([]) == []
             ),
@@ -85,4 +85,3 @@ module BitListSeDesTests {
         executeTests(r);
     }
 }
- 
