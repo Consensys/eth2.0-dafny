@@ -4,7 +4,7 @@
 *  Provide testing framework.
 *
 */
-module test {
+module DafTest {
 
     datatype TestResult = Pass | Fail
 

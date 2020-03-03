@@ -9,7 +9,7 @@ include "../utils/DafTests.dfy"
 module BitListSeDesTests {
     
     import opened BitListSeDes
-    import opened test 
+    import opened DafTest 
 
     /** Create Sequences with same element. */
     function method timeSeq<T>(t : T, k : nat) : seq<T> 
