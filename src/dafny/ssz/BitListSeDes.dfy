@@ -134,13 +134,6 @@ include "../utils/Eth2Types.dfy"
         bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
     }
 
-    lemma {:induction l} l6(l: seq<bool>) 
-        requires |l| % 8 == 0
-        requires |l| > 0
-        ensures bitListToBytes(l)[0] == list8BitsToByte(l[0..8]) {
-
-        }
-
     /**
      *   The result sequence of the encoding encodes successive 
      *   chunks of size 8 into a Byte.
