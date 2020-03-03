@@ -87,7 +87,6 @@ include "../utils/Eth2Types.dfy"
     }
 
     //  Some properties of the previous functions with lemmas 
-    //  encodeOfDecodeIsIdentity and decodeOfEncodeIsIdentity below.
 
     /** Encode(decode(n)) = Identity(n).
      *  
