@@ -72,8 +72,11 @@ module BitListSeDesTests {
                     ) == [0x2b, 0x01]
             ),
             TestItem(
-                "Serialise [1] + [0] * 15 is [0x01,0x00,0x01]",
-                () => bitListToBytes([true] + timeSeq(false,15)) ==
+                "Serialise [1] + [0] * 15 + [1] + [0] * 7 is [0x01,0x00,0x01]",
+                () => bitListToBytes([true] + 
+                    timeSeq(false,15) + [true] +
+                    timeSeq(false,7)
+                    ) ==
                     [0x01, 0x00, 0x01]
             )
         ];
