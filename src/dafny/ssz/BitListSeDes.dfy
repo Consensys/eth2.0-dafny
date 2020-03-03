@@ -11,7 +11,7 @@ include "../utils/Eth2Types.dfy"
     import opened NativeTypes
     import opened Eth2Types
 
-    // Functions to convert list of bits into uint8 and back
+    // Helpers to convert list of bits into uint8 and back
 
     /** Convert a bool into a Byte.
      *
@@ -36,10 +36,7 @@ include "../utils/Eth2Types.dfy"
     function method byteToBool(b : Byte) : bool
         requires 0 <= b <= 1
     {
-        if b >= 1 then 
-            true
-        else 
-            false
+        b == 1
     }
 
     /**
@@ -50,6 +47,7 @@ include "../utils/Eth2Types.dfy"
      */
     function method list8BitsToByte(l : seq<bool>) : Byte    
         requires |l| == 8 
+        ensures (exists i : nat | 0 <= i < |l| :: l[i] == true) ==> list8BitsToByte(l) >= 1
     {
         128 * boolToByte(l[7]) +
         64 * boolToByte(l[6]) +
@@ -60,6 +58,12 @@ include "../utils/Eth2Types.dfy"
         2 * boolToByte(l[1]) +
         1 * boolToByte(l[0])
     }
+
+    lemma l5(l : seq<bool>) 
+        requires |l| == 8 
+        ensures (exists i : nat | 0 <= i < |l| :: l[i] == true) ==> list8BitsToByte(l) >= 1 {
+
+        }
 
     /**
      *  Compute a list of bits given a number.
@@ -107,12 +111,90 @@ include "../utils/Eth2Types.dfy"
     {   //  Thanks Dafny.
     }
 
-    // function method bitList8ToByte(l : seq<bool>) : Byte 
-    //     requires |l| == 8
-    //     ensures 
+    /** Create Sequences with same element. */
+    function method timeSeq<T>(t : T, k : nat) : seq<T> 
+        ensures |timeSeq(t,k)| == k
+        decreases k
+    {
+        if k == 0 then []
+        else [t] + timeSeq(t, k - 1)
+    }
 
     /**
      *  Encode a list of bits into a sequence of bytes.
+     */
+    function method realBitlistToBytes(l : seq<bool>) : seq<Byte> 
+        ensures | realBitlistToBytes(l) | == (|l| + 1) / 8 + 1
+        //  First byte of the encoding should not be 0
+        // ensures  |l| > 0 ==> |realBitlistToBytes(l)| > 0
+        //  &&  realBitlistToBytes(l)[0] >= 1 
+        //  The bits higher than |l| + 1 are zeros 
+        ensures true
+    {
+        //  Add a 1 at the end of l, then pad with 0's to get a multiple of 8 length
+        bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
+    }
+
+    lemma {:induction l} l6(l: seq<bool>) 
+        requires |l| % 8 == 0
+        requires |l| > 0
+        ensures bitListToBytes(l)[0] == list8BitsToByte(l[0..8]) {
+
+        }
+
+    /**
+     *   The result sequence of the encoding encodes successive 
+     *   chunks of size 8 into a Byte.
+     */
+    lemma {:induction l,k} l7(l: seq<bool>, k : nat) 
+        requires |l| == 8 * k
+        ensures forall i : nat | 0 <= i < k :: 
+            bitListToBytes(l)[i] == list8BitsToByte(l[i*8..i*8+8])
+        decreases l, k
+        {
+            if ( l == [] ) {
+                //  Thanks Dafny
+            } else {
+                forall (i : nat) 
+                    ensures 0 <= i < k ==> 
+                        bitListToBytes(l)[i] == list8BitsToByte(l[i*8..i*8+8]) {
+                    if ( i > 0 ) {
+                        //  for 0 < i < k: 
+                        //  Induction assumption on the smaller element l[8..], k - 1
+                        l7(l[8..], k - 1);
+                    } else {
+                        //  for i == 0, thanks Dafny 
+                    }
+                }
+            }
+        }
+
+    /**
+     *  The first byte of the encoding must be >= 1 if one of the bits is true.
+     *  @note: thjis is an exercise and not used in the spec.
+     */
+    lemma {:induction l} l3(l: seq<bool>)
+        requires |l| % 8 == 0
+        ensures |l| > 0 && (exists i : nat | 0 <= i < 8 :: l[i] == true) ==>   bitListToBytes(l)[0] >= 1 
+    {
+        if ( l == [] ) {
+            //  Holds trivially
+        } else {
+            var i : nat :| 0 <= i < 8 ;
+            if (l[i] == true) {
+                calc == {
+                    bitListToBytes(l)[0] ;
+                    == 
+                    list8BitsToByte(l[..8]);
+                    >= { l5(l[..8]) ;}
+                    1;
+                }
+            }
+        }
+    }
+
+    /**
+     *  Encode a list of 8*n bits into a sequence of bytes.
      *
      *  @param  l       The list of bits to encode such that |l| modulo 8 == 0.
      *  @return         The encoding of the list of bits `l`.
@@ -121,11 +203,13 @@ include "../utils/Eth2Types.dfy"
     function method bitListToBytes(l: seq<bool>) : seq<Byte> 
         requires |l| % 8 == 0
         ensures | bitListToBytes(l) | == | l | / 8 
+        ensures |l| > 0 ==> | bitListToBytes(l) | > 0 
+       
         decreases l
     {
         /*
          *  The algorithm to encode list of bits works as follows:
-         *  1. given a list of bits l
+         *  1. given a list of bits l, 
          *  2. let l' = l + [1] (append 1 to l, this is a sentinnelle)
          *  3. append |l'| modulo 8 zeros to l'
          *      l'' = l' + [0] * (|l'| modulo 8)
@@ -153,13 +237,17 @@ include "../utils/Eth2Types.dfy"
             //  If l is empty we have completed the encoding.
             []
         else 
-            //  Encode first 8 bits, and concatenate encoding of the tail.
-            //  Note: l[i..j] returns a sequence of the first j elements with
-            //  the first i elements dropped. When i ommitted it defaults to 0.
+            /*   
+             *  Encode first 8 bits, and concatenate encoding of the tail.
+             *  Note: l[i..j] returns a sequence of the first j elements with
+             *  the first i elements dropped. When i ommitted it defaults to 0.
+             */
             [list8BitsToByte(l[..8])] + bitListToBytes(l[8..])    
     }
 
-    /**  */
+    /** 
+     *  Convert a list of bytes into the corresponding BitList.
+     */
     function bytesToBitList(l : seq<Byte>) : seq<bool> 
         ensures | bytesToBitList(l) | % 8 == 0
         decreases l
@@ -209,9 +297,4 @@ include "../utils/Eth2Types.dfy"
             }
         }
 
-    //  Tests
-    lemma bitListTests() {
-        assert bitListToBytes([]) == [];
-        assert bitListToBytes([true,true,true,true,true,true,true,true]) == [0xff];
-    }
  }
