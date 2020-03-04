@@ -120,46 +120,81 @@ include "../utils/Eth2Types.dfy"
     }
 
     /**
+     *  Ceiling function.
+     *
+     *  @param  n   Numerator
+     *  @param  d   Denominator
+     *  @returns    The smallest integer last than float(n / d).
+     */
+    function ceil(n: nat, d: nat) : nat
+        requires d != 0
+    {
+        if (n % d == 0) then 
+            n / d
+        else 
+            n / d + 1
+    }       
+
+    /**
      *  Encode a list of bits into a sequence of bytes.
      */
     function method realBitlistToBytes(l : seq<bool>) : seq<Byte> 
-        ensures | realBitlistToBytes(l) | == (|l| + 1) / 8 + 1
+        //  Length of encoded object is ceil( (|l| + 1) / 8).
+        ensures | realBitlistToBytes(l) | == ceil( |l| + 1, 8)
+        ensures forall i : nat | 0 <= i < ceil ( |l| + 1 , 8) - 1 ::
+            realBitlistToBytes(l)[i] == bitListToBytes(l[.. 8 * ( |l| / 8 )])[i]
+        // ensures (|l| + 1) % 8 == 0 ==> realBitlistToBytes(l) == bitListToBytes( l + [true])
+        // ensures (|l| + 1) % 8 != 0 ==> realBitlistToBytes(l) ==  bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
         //  First byte of the encoding should not be 0
         // ensures  |l| > 0 ==> |realBitlistToBytes(l)| > 0
         //  &&  realBitlistToBytes(l)[0] >= 1 
         //  The bits higher than |l| + 1 are zeros 
-        ensures true
+        // ensures true
     {
-        //  Add a 1 at the end of l, then pad with 0's to get a multiple of 8 length
-        bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
+        //  Add a 1 at the end of l, then pad with 0's to get 
+        //  a multiple of 8 length and encode as seq<Byte>
+        if ( (|l| + 1) % 8 == 0) then
+            bitListToBytes(l[.. 8 * ( |l| / 8 )])  
+                + bitListToBytes( l[8 * ( |l| / 8 )..] + 
+                                    [true])
+        else 
+            // bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
+            bitListToBytes( l[.. 8 * ( |l| / 8 )] ) + 
+                bitListToBytes( l[8 * ( |l| / 8 )..] + 
+                                [true] + 
+                                timeSeq(false, 8 - (|l| + 1) % 8))
     }
 
-    /**
-     *   The result sequence of the encoding encodes successive 
-     *   chunks of 8 bits into a Byte.
-     */
-    lemma {:induction l,k} l7(l: seq<bool>, k : nat) 
-        requires |l| == 8 * k
-        ensures forall i : nat | 0 <= i < k :: 
-            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
-        decreases l, k
+    lemma l1(l : seq<bool>, k : nat)
+        requires k == |l| / 8 
+        ensures forall i : nat | 0 <= i < ceil ( |l| + 1 , 8) - 1 ::
+            realBitlistToBytes(l)[i] == bitListToBytes(l[.. 8 * k])[i]
+        ensures forall i : nat | 0 <= i <  ceil ( |l| + 1 , 8) - 1 :: 
+            realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
+    {
+        // forall (i : nat) 
+        //     ensures 0 <= i < ceil ( |l| + 1 , 8) - 1  ==> 
+        //         realBitlistToBytes(l)[i] == bitListToBytes(l[.. 8 * k])[i] 
+        //     {
+        //     // if ( |l| % 8 == 7)  {
+
+        //     // } else {
+        //     //     //  for i == 0, thanks Dafny 
+        //     // }
+        // }
+        forall ( i : nat ) 
+            ensures 0 <= i < ceil ( |l| + 1 , 8) - 1 ==> realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
         {
-            if ( l == [] ) {
-                //  Thanks Dafny
-            } else {
-                forall (i : nat) 
-                    ensures 0 <= i < k ==> 
-                        bitListToBytes(l)[i] == list8BitsToByte(l[i*8..i*8+8]) {
-                    if ( i > 0 ) {
-                        //  for 0 < i < k: 
-                        //  Induction assumption on the smaller element l[8..], k - 1
-                        l7(l[8..], k - 1);
-                    } else {
-                        //  for i == 0, thanks Dafny 
-                    }
+            if ( 0 <= i < ceil ( |l| + 1 , 8) - 1 ) {
+                calc == {
+                    realBitlistToBytes(l)[i] ;
+                    == bitListToBytes(l[.. 8 * k])[i];
+                    == { lm(l[.. 8 * k], i);}
+                    list8BitsToByte( (l[.. 8 * k])[ (i * 8).. (i * 8 + 8)] );
                 }
             }
         }
+    }
 
     /**
      *  Encode a list of 8*n bits into a sequence of bytes.
@@ -250,7 +285,7 @@ include "../utils/Eth2Types.dfy"
             } else {
                 calc == {
                     bytesToBitList( bitListToBytes (l) ) ; 
-                    == 
+                    == //   Definition of bitListToBytes
                     bytesToBitList([list8BitsToByte(l[..8])] + bitListToBytes(l[8..]));
                     == { simplifyByteToListFirstArg(
                             list8BitsToByte(l[..8]),
@@ -265,4 +300,43 @@ include "../utils/Eth2Types.dfy"
             }
         }
 
+    /**
+     *  The result sequence of the encoding encodes successive 
+     *  chunks of 8 bits into a Byte.
+     *
+     *  @requires   A list of bits of size multiple of 8.
+     *  @note:      The second parameter k is introduced to make it easier
+     *              to reason by induction simultaneously on l and k.
+     */
+    lemma {:induction l,k} encodeChunks8BitsAsBytes(l: seq<bool>, k : nat) 
+        requires |l| == 8 * k
+        ensures forall i : nat | 0 <= i < k :: 
+            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
+        decreases l, k
+    {
+        if ( l == [] ) {
+            //  Thanks Dafny
+        } else {
+            forall (i : nat) 
+                ensures 0 <= i < k ==> 
+                    bitListToBytes(l)[i] == list8BitsToByte(l[ i * 8.. i * 8 + 8]) {
+                if ( i > 0 ) {
+                    //  for 0 < i < k: 
+                    //  Induction assumption on the smaller element l[8..], k - 1
+                    encodeChunks8BitsAsBytes(l[8..], k - 1);
+                } else {
+                    //  for i == 0, thanks Dafny 
+                }
+            }
+        }
+    }
+
+    lemma {:induction l} lm(l: seq<bool>, i : nat) 
+        requires |l| % 8 == 0
+        requires 0 <= i < |l| / 8
+        ensures 
+            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)]) 
+    {
+        encodeChunks8BitsAsBytes(l, |l| / 8);
+    }
  }
