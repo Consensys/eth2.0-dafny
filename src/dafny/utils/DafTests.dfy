@@ -1,15 +1,32 @@
-
-
 /**
-*  Provide testing framework.
+*  Provide testing framework for Dafny code
 *
 */
 module DafTest {
 
+    /** Enum type for test results. */
     datatype TestResult = Pass | Fail
 
+    /** A test case.
+     *    
+     *  @param  name    The textual description of the test.
+     *  @param  code    A function literal from unit to bool.
+     *
+     *  @example: 
+     *  TestItem("Double 2 * 4 is 8", () => 2 * 4 == 8)
+     *  TestItem("An example using a function to compute result", () => f())
+     *      where f returns a bool.
+     */
     datatype TestItem = TestItem(name: string, code: () -> bool)
 
+    /** An assertEqual operator. 
+     *
+     *  @tparam T   A type that supports equality.
+     *  @param  f   A function from unit to T.
+     *  @param  g   A function from unit to T.
+     *
+     *  @returns    The result of the test f() == g().
+     */
     method assertEqual<T(==)>( f : () -> T, g : () -> T) returns (res:TestResult) {
         if ( f() == g() ) {
             return Pass;
@@ -18,6 +35,12 @@ module DafTest {
         }
     } 
 
+    /**
+     *  Build a `TesResult` for a test.
+     *  
+     *  @param  t   A test case.
+     *  @returns    Pass if t() evaluates to true and Fail otherwise.
+     */
     function method runTest(t:   () -> bool) : TestResult {
         if ( t() ) then 
             Pass
@@ -25,7 +48,15 @@ module DafTest {
             Fail
     }
 
-    method {:tailrecursion true} executeRecTests(
+    /**
+     *  Execute a sequence of test cases and summarise results.
+     *
+     *  @param  xl  A sequewnce of test cases.
+     *  @param  s   Previous number of successful (Pass) test cases.
+     *  @param  f   Previous number of failures (Fail) test cases.
+     *  @returns    unit, side effects is to execute and print test results.
+     */
+    method {:tailrecursion} executeRecTests(
             xl : seq<TestItem>, 
             s: nat, 
             f: nat) returns () 
@@ -44,6 +75,12 @@ module DafTest {
         }
     } 
 
+    /**
+     *  Execute a sequence of tests.
+     *
+     *  @param  xt  A sequence of test cases.
+     *  @returns    Print out the tets results and summary.
+     */
     method executeTests(xt : seq<TestItem>) {
         executeRecTests(xt, 0, 0);
     }
