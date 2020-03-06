@@ -59,7 +59,7 @@ include "../utils/Eth2Types.dfy"
      */
     function method list8BitsToByte(l : seq<bool>) : Byte    
         requires |l| == 8 
-        ensures (exists i : nat | 0 <= i < |l| :: l[i] == true) ==> list8BitsToByte(l) >= 1
+        ensures isNull(l) <==> list8BitsToByte(l) == 0
     {
         128 * boolToByte(l[7]) +
         64 * boolToByte(l[6]) +
@@ -190,10 +190,11 @@ include "../utils/Eth2Types.dfy"
     /**
      *  Decode a sequence of bytes into seq<bool>.
      */
-    function method realBytesTiBitList(xb : seq<Byte>) : seq<bool> 
+    function method realBytesToBitList(xb : seq<Byte>) : seq<bool> 
         requires |xb| >= 1
-        requires exists i:nat | 8 * (|xb| - 1) <= i < 8 * |xb| :: bytesToBitList(xb)[i]
-        // ensures 
+        requires xb[|xb|-1] >= 1
+        requires !isNull(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])
+        ensures 8 * (|xb| - 1) >= 0
     {
         //  compute the list of bits including padding
         //  resukt of size 8 * |xb|
