@@ -92,7 +92,13 @@ include "../utils/Eth2Types.dfy"
         ]
     }
 
-    /** Create Sequences with same element. */
+    /** Create Sequences with same element. 
+     *
+     *  @tparam T   A type.
+     *  @param  t   An value.
+     *  @param  k   A non-negative integer.
+     *  @returns    A seq [t,t, ..., t] of size k.
+     */
     function method timeSeq<T>(t : T, k : nat) : seq<T> 
         ensures |timeSeq(t,k)| == k
         decreases k
@@ -169,6 +175,13 @@ include "../utils/Eth2Types.dfy"
 
     /**
      *  Compute largest index in l with a true value.
+     *
+     *  @param      l   A sequence of 8 bits, containign at least one true bit.
+     *  @returns        The largest index with a true bit.
+     *
+     *  @example        0100_0001 returns 7, 1000_1000 returns 4,
+     *                  1110_1010 returns 6.
+     *  
      */
     function method largestIndexOfOne(l : seq<bool>) : nat 
         requires |l| == 8
@@ -189,6 +202,10 @@ include "../utils/Eth2Types.dfy"
    
     /**
      *  Decode a sequence of bytes into seq<bool>.
+     *
+     *  @param  xb  A non-empty sequence of bytes, the last element
+     *              of which is >= 1.
+     *  @returns    The sequence of bits upto (and except) the last true bit. 
      */
     function method realBytesToBitList(xb : seq<Byte>) : seq<bool> 
         requires |xb| >= 1
@@ -196,11 +213,10 @@ include "../utils/Eth2Types.dfy"
         requires !isNull(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])
         ensures 8 * (|xb| - 1) >= 0
     {
-        //  compute the list of bits including padding
-        //  resukt of size 8 * |xb|
-        bytesToBitList(xb)[..(8 * (|xb| - 1))] + 
-            bytesToBitList(xb)[(8 * (|xb| - 1))..][..largestIndexOfOne(bytesToBitList(xb)[(8 * (|xb| - 1))..])]
-        // + bytesToBitList(xb[|xb| / 8 ..])
+        //  compute the first 8 * (|xb| - 1) bits
+        bytesTo8BitList(xb)[..(8 * (|xb| - 1))] + 
+        //  compute binary representation of last byte, and drop suffix 1.0*
+            bytesTo8BitList(xb)[(8 * (|xb| - 1))..][..largestIndexOfOne(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])]
     }
 
     /**
@@ -229,9 +245,13 @@ include "../utils/Eth2Types.dfy"
              */
             [list8BitsToByte(l[..8])] + bitListToBytes(l[8..])    
     }
-
+        
     /** 
-     *  Convert a list of bytes into the corresponding BitList.
+     *  Convert a list of bytes into a BitList.
+     *  
+     *  @param  l   A list of Bytes.
+     *  @returns    A list of bits that correspond to the binary encoding
+     *              of each byte and has size |l| * 8.
      */
     function method bytesTo8BitList(l : seq<Byte>) : seq<bool> 
         ensures | bytesTo8BitList(l) | % 8 == 0
