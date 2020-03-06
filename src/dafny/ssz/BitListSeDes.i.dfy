@@ -1,4 +1,3 @@
-
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 
