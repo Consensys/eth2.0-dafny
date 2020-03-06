@@ -1,4 +1,3 @@
-
 include "./BitListSeDes.i.dfy"
 include "../utils/Eth2Types.dfy"
 
@@ -10,19 +9,6 @@ include "../utils/Eth2Types.dfy"
 
     import opened Eth2Types
     import opened BitListSeDes__i
-
-    /**
-     *  Non null 8-bit lists encode positive Bytes.
-     *  
-     *  @param  l   A list of 8 bits 
-     *  @returns    If l[i]=1 for some 0 <= i < 8, then the Byte
-     *              that is represented by bitvector l is positive.
-     */
-    lemma nonNullList8BitsYieldPositiveByte(l : seq<bool>) 
-        requires |l| == 8 
-        ensures (exists i : nat | 0 <= i < |l| :: l[i] == true) ==> list8BitsToByte(l) >= 1 
-    {
-    }
 
     /** Encode(decode(n)) = Identity(n).
      *  
