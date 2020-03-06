@@ -78,7 +78,7 @@ include "../utils/Eth2Types.dfy"
      *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
      */
     function method byteToList8Bits( n : Byte ) : seq<bool>
-        ensures |byteToList8Bits(n)| == 8 
+        ensures | byteToList8Bits(n) | == 8 
     {
         [
             byteToBool((n / 1) % 2),
@@ -177,13 +177,13 @@ include "../utils/Eth2Types.dfy"
         ensures l[largestIndexOfOne(l)] == true
         ensures forall i : nat | largestIndexOfOne(l) < i < |l| :: l[i] == false
     {
-        if ( l[7] ) then 7
-        else if (l[6]) then 6
-        else if (l[5]) then 5
-        else if (l[4]) then 4
-        else if (l[3]) then 3
-        else if (l[2]) then 2
-        else if (l[1]) then 1
+        if l[7] then 7
+        else if l[6] then 6
+        else if l[5] then 5
+        else if l[4] then 4
+        else if l[3] then 3
+        else if l[2] then 2
+        else if l[1] then 1
         else 0
     }
    
@@ -233,17 +233,16 @@ include "../utils/Eth2Types.dfy"
     /** 
      *  Convert a list of bytes into the corresponding BitList.
      */
-    function method bytesToBitList(l : seq<Byte>) : seq<bool> 
-        ensures | bytesToBitList(l) | % 8 == 0
-        ensures |bytesToBitList(l)| == 8 * |l|
-        // ensures exists i:nat | 8 * (|l| - 1) <= i < 8 * |l| :: bytesToBitList(l)[i]
+    function method bytesTo8BitList(l : seq<Byte>) : seq<bool> 
+        ensures | bytesTo8BitList(l) | % 8 == 0
+        ensures | bytesTo8BitList(l) | == 8 * |l|
 
         decreases l
     {
         if ( l == [] ) then
             []
         else 
-            byteToList8Bits(l[0]) + bytesToBitList(l[1..])
+            byteToList8Bits(l[0]) + bytesTo8BitList(l[1..])
     }
 
  }
