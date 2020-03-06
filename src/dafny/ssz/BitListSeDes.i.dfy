@@ -40,6 +40,18 @@ include "../utils/Eth2Types.dfy"
     }
 
     /**
+     *
+     *  @param  l   A sequence of bits.
+     *  @returns    true iff all the bits in l are false. 
+     *
+     *  @note       isNull([]) is vacuously true (the forall trivially holds).
+     */
+    predicate isNull(l : seq<bool>) 
+    {
+        forall i | 0 <= i < |l| :: !l[i]
+    }
+
+    /**
      *  Convert a list of 8 bits into a number.
      *
      *  @param  l   A sequence of bits.
