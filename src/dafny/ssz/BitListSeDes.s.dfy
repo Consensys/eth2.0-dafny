@@ -74,7 +74,27 @@ include "../utils/Eth2Types.dfy"
         }
     }
 
-    /** Last element of encoding. */
+    /**
+     *  Each bitListToBytes(l)[i] of encoding corresponds to the binary reprersentation
+     *  of l[ i * 8 + 0], l[ i * 8 + 1], ... l[i * 8 + 7].
+     */
+    lemma {:induction l} mapByteTo8Bits(l: seq<bool>, i : nat) 
+        requires |l| % 8 == 0
+        requires 0 <= i < |l| / 8
+        ensures 
+            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)]) 
+    {
+        encodeChunks8BitsAsBytes(l, |l| / 8);
+    }
+
+    /** Property of last Byte of encoding. 
+     *  
+     *  @param  l   A list of bits.
+     *  @param  k   A (fake) parameter which must be |l| / 8.
+     *  
+     *  @ensures    Last Byte is the encoding of last |l| - (k - 1) * 8 bits
+     *              padded with [true, false, ... false].
+     */
     lemma {:induction l} lastChunk(l : seq<bool>, k : nat, padding: seq<bool>)
         requires (|l| + 1) % 8 == 0 ==> |padding| == 0
         requires (|l| + 1) % 8 != 0 ==> |padding| == 8 - ((|l| + 1) % 8) 
@@ -86,10 +106,88 @@ include "../utils/Eth2Types.dfy"
         ensures |l[(k - 1) * 8 ..]| + 1 + |padding| == 8
         ensures realBitlistToBytes(l)[k - 1] == 
                         list8BitsToByte(l[(k - 1) * 8 ..] + [true] + padding)
-    {
-        //  Thanks Dafny
+    {   //  Thanks Dafny
     }
 
+    /** The last Byte of the encoding is always larger than 1. 
+     *  
+     *  @param  l   A list of bits.
+     *
+     *  @ensures    Encoding has at least one byte.
+     *  @ensures    The last byte of the encoding is >= 1.
+     *
+     *  @note: This is because whatever `l` is a 1 or true bit is appended before
+     *  the encoding is computed.
+     */
+    lemma lastChunkLargerNotNull(l : seq<bool>)
+        ensures |realBitlistToBytes(l)| >= 1
+        ensures realBitlistToBytes(l)[|realBitlistToBytes(l)|-1] >= 1
+    {   //  Thanks Dafny
+    }
+
+    lemma {:induction xb} last8BitsSameOnSuffix(xb: seq<Byte>, b : Byte) 
+        requires |xb| >= 1
+        ensures bytesTo8BitList([b] + xb)[8 * |xb|..] == bytesTo8BitList(xb)[8 * (|xb| - 1)..] 
+    {   //  Thanks Dafny
+    }
+
+    /** Simplify concatenation with [].  
+     *
+     *  @tparam T   A type.
+     *  @param  xb  A sequence of elements.
+     *  
+     *  @ensures    [] is a nuetral element for Concatenation (left or right) .
+     */
+    lemma simplifyEmptyConcat<T>(xb: seq<T>) 
+        ensures xb + [] == xb 
+        ensures [] + xb == xb 
+    {   //  Thanks Dafny
+    }
+    
+    /**
+     *  Decoding of sequence of Bytes with last Byte >= 1.
+     *
+     *  @param  xb  A sequence of al least one Byte, such that last one >= 1
+     *  
+     *  @ensures    One of the last 8 bits of the conversion of `xb` with bytesTo8BitList
+     *              is true.
+     */
+    lemma {:induction xb} lastNonNull(xb: seq<Byte>) 
+        requires |xb| >= 1
+        requires xb[|xb| - 1] >= 1
+        ensures !isNull(bytesTo8BitList(xb)[8 * (|xb| - 1)..])
+        
+        decreases |xb|
+    {
+        if ( |xb| == 1 ) {
+            //  Base case
+            calc <== {
+                !isNull(bytesTo8BitList(xb)[8 * (|xb| - 1)..]);
+                == 
+                !isNull(bytesTo8BitList(xb)[0..]);
+                == 
+                !isNull(bytesTo8BitList([xb[0]])[0..]);
+                ==
+                !isNull(byteToList8Bits(xb[0])[0..] + bytesTo8BitList([]));
+                //  As bytesTo8BitList([]) == [] it can be simplified
+                == { simplifyEmptyConcat(byteToList8Bits(xb[0])[0..]); }
+                !isNull(byteToList8Bits(xb[0])[0..]);
+                //  For xb[0] a byte, byteToList8Bits(xb[0])[0..] can be simplified.
+                == calc == { 
+                    byteToList8Bits(xb[0])[0..];
+                     == byteToList8Bits(xb[0]);
+                }
+                !isNull(byteToList8Bits(xb[0])) ;
+                == { byteIsZeroIffBinaryIsNull(xb[0]) ; }
+                true ;
+            }
+        } else {
+            //  Induction
+            lastNonNull(xb[1..]);
+            last8BitsSameOnSuffix(xb[1..], xb[0]);
+        }
+    }
+    
     /**
      *  Complete specification of encoding for BitLists.
      *
