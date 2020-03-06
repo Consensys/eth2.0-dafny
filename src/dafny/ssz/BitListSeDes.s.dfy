@@ -32,6 +32,19 @@ include "../utils/Eth2Types.dfy"
     {   //  Thanks Dafny.
     }
 
+    /** Binary representation of a Byte n is [0] * 8 iff n == 0. */
+    lemma byteIsZeroIffBinaryIsNull(n : Byte) 
+        ensures n == 0 <==> isNull(byteToList8Bits(n))
+    {
+        calc <==> {
+            n == 0;
+            <==>
+            list8BitsToByte(byteToList8Bits(n)) == 0;
+            <==>  
+            isNull(byteToList8Bits(n));
+        }
+    }
+
     /**
      *  The spec of the encoding.
      *  
