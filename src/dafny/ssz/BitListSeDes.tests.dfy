@@ -151,15 +151,15 @@ module BitListSeDesTests2 {
         executeTests(r);
 
         //  Deserialise tests
-        var r2 := [
-            TestItem(
-                "Deserialise [1] is []",
-                () => realBytesToBitList([1]) == []
-            )
+        // var r2 := [
+        //     TestItem(
+        //         "Deserialise [1] is []",
+        //         () => realBytesToBitList([1]) == []
+        //     )
             
-        ];
+        // ];
 
          //  run the deserialise tests.
-        executeTests(r2);
+        // executeTests(r2);
     }
 }
