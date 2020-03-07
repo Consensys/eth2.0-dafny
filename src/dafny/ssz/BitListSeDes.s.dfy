@@ -289,4 +289,75 @@ include "../utils/Eth2Types.dfy"
             }
         }
     }
+
+    /**
+     *  Encode a list of bits into a sequence of bytes.
+     *
+     *  @ensures:   Lenght of encoded(l) is smallest integer >= (|l| + 1) / 8.
+     *
+     *  The algorithm to encode list of bits works as follows:
+     *  1. given a list of bits l, 
+     *  2. append 1 to l, this is a sentinnelle, and let l' = l + [1] 
+     *  3. if |l'| * 8 is not 0, append 8 - (|l| + 1) % 8 zeros to l' 
+     *     to obtain a list of size
+     *      multiplw of 8
+     *      let l'' = l' + possibly some [0]
+     *      This ensures that |l''| % 8 == 0 and can be seen as a sequence of Bytes
+     *  4. Encode l'' with the `bitListToBytes` algorithm.
+     *
+     *  @example: l = [0,1,0,0] yields l' = [0,1,0,0] + [1]
+     *  l'' = [0,1,0,0,1] + [0,0,0] (add 3 0's to ensure the size of l'' is 
+     *  multiple of 8).
+     *  l'' is a Byte and is encoded as a uint8 `n` as follows: the bitvector 
+     *  representation of n is reverse(l''). `n` in hexadecimal is thus: 0001.0010 
+     *  which is the uint8 0x12.
+     *
+     *  @example: with more than one byte needed l = [0] * 8 and |l| == 8.
+     *  l' = [0] * 8 + [1], l'' = [0] * 8 + [1] + [0] * 7
+     *  Reverse(l'') = [0] * 7 + [1] + [0] * 8
+     *  and the encoding of l is: [1000.0000, 0000.0000] i.e. [0x01 , 0x00] 
+     *  
+     *  @note: the actual encoding of 8 bits by reversing the order seems unimportant
+     *  as long as the decoding uses the same assumption and reverse the list of bits
+     *  obtained from the binary encoding of a Byte.
+     */
+    function method realBitlistToBytes(l : seq<bool>) : seq<Byte> 
+        ensures | realBitlistToBytes(l) | == ceil( |l| + 1, 8)
+    {
+        //  Add a 1 at the end of l, then pad with 0's to get 
+        //  a multiple of 8 length and encode as seq<Byte>
+        if ( (|l| + 1) % 8 == 0) then
+            bitListToBytes(l[.. 8 * ( |l| / 8 )])  
+                + bitListToBytes( l[8 * ( |l| / 8 )..] + 
+                                    [true])
+        else 
+            // bitListToBytes( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8))
+            bitListToBytes( l[.. 8 * ( |l| / 8 )] ) + 
+                bitListToBytes( l[8 * ( |l| / 8 )..] + 
+                                [true] + 
+                                timeSeq(false, 8 - (|l| + 1) % 8))
+    }
+    
+     /**
+     *  Decode a sequence of bytes into seq<bool>.
+     *
+     *  @param  xb  A non-empty sequence of bytes, the last element
+     *              of which is >= 1.
+     *  @returns    The sequence of bits upto (and except) the last true bit. 
+     */
+    function method realBytesToBitList(xb : seq<Byte>) : seq<bool> 
+        requires |xb| >= 1
+        requires xb[|xb|-1] >= 1
+        // ensures !isNull(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])
+        ensures 8 * (|xb| - 1) >= 0
+    {
+        //  If last of xb >= 1 then !isNull(bytesTo8BitList(xb)[(8 * (|xb| - 1))..]) 
+        lastNonNull(xb);
+        assert !isNull(bytesTo8BitList(xb)[(8 * (|xb| - 1))..]) ;
+        //  compute the first 8 * (|xb| - 1) bits
+        bytesTo8BitList(xb)[..(8 * (|xb| - 1))] + 
+        //  compute binary representation of last byte, and drop suffix 1.0*
+            bytesTo8BitList(xb)[(8 * (|xb| - 1))..][..largestIndexOfOne(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])]
+    }
+
  }
