@@ -2,7 +2,7 @@ include "./BitListSeDes.i.dfy"
 include "../utils/DafTests.dfy"
 
 /**
-*  Tests for BitListSeDes.
+*  Tests for serialise/deserialise BitListSeDes.
 *
 */
 module BitListSeDesTests {
