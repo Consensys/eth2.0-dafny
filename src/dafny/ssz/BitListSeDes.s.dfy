@@ -46,12 +46,12 @@ include "../utils/Eth2Types.dfy"
     }
 
     /**
-     *  The spec of the encoding.
+     *  Property of initial part of encoding.
      *  
      *  @param  l   A list of bits.
      *  @param  k   A (fake) parameter which must be |l| / 8.
      *  
-     *  @enures     Every byte of the encoding except last one
+     *  @ensures    Every byte of the encoding except last one (init part)
      *              corresponds to a chunk of 8 bits in `l`.
      *  
      */
@@ -194,7 +194,8 @@ include "../utils/Eth2Types.dfy"
      *  @param  l           The bitlist to encode.
      *  @param  k           Not really needed as it is fixed but makes the proof 
      *                      easier to read.
-     *  @param  pad     
+     *  @param  pad         A padding with zeros (possibly empty).
+     *  
      */
     lemma {:induction pad} bitListEncodingSpec(l : seq<bool>, k : nat, pad : seq<bool>) 
 
@@ -204,8 +205,10 @@ include "../utils/Eth2Types.dfy"
         requires pad == timeSeq(false, |pad|)
 
         ensures | realBitlistToBytes(l) | == k
+        //  All bytes except last
         ensures forall i : nat | 0 <= i <  k - 1 :: 
             realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
+        //  Last byte.
         ensures realBitlistToBytes(l)[k - 1] == 
                         list8BitsToByte(l[(k - 1) * 8 ..] + [true] + pad)
     {
