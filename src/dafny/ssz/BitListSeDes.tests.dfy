@@ -74,7 +74,7 @@ module BitListSeDesTests {
         ];
 
         //  run the tests.
-        var t1 := TestSuite("t1", r);
+        var t1 := TestSuite("Serialise BitLists", r);
         executeTests(t1);
 
         //  Deserialise tests
@@ -86,7 +86,7 @@ module BitListSeDesTests {
             
         ];
 
-        var t2 := TestSuite("t2", r2);
+        var t2 := TestSuite("Deserialise bytes into BitList", r2);
          //  run the deserialise tests.
         executeTests(t2);
     }
