@@ -67,7 +67,7 @@ include "../utils/Eth2Types.dfy"
                 calc == {
                     realBitlistToBytes(l)[i] ;
                     == bitListToBytes(l[.. 8 * k])[i];
-                    == { lm(l[.. 8 * k], i);}
+                    == { mapByteTo8Bits(l[.. 8 * k], i);}
                     list8BitsToByte( (l[.. 8 * k])[ (i * 8).. (i * 8 + 8)] );
                 }
             }
