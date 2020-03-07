@@ -281,18 +281,9 @@ include "../utils/Eth2Types.dfy"
                     //  Induction assumption on the smaller element l[8..], k - 1
                     encodeChunks8BitsAsBytes(l[8..], k - 1);
                 } else {
-                    //  for i == 0, thanks Dafny 
+                    //  case i == 0, thanks Dafny 
                 }
             }
         }
-    }
-
-    lemma {:induction l} lm(l: seq<bool>, i : nat) 
-        requires |l| % 8 == 0
-        requires 0 <= i < |l| / 8
-        ensures 
-            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)]) 
-    {
-        encodeChunks8BitsAsBytes(l, |l| / 8);
     }
  }
