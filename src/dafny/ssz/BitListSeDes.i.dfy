@@ -18,7 +18,7 @@ include "../utils/Eth2Types.dfy"
      *  @returns        A Byte (uint8) such that b?1:0. 
      */
     function method boolToByte(b : bool) : Byte
-        ensures 0 <= boolToByte(b) <= 1
+        ensures 0 <= boolToByte(b) <= 1  
     {
         if b then 
             1 as Byte
