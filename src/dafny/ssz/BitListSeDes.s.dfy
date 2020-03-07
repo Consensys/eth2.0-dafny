@@ -219,13 +219,13 @@ include "../utils/Eth2Types.dfy"
 
     //  Proof of involution
 
-    /** Simplify  bytesToBitList.
+    /** Simplify  bytesTo8BitList.
      *
-     *  For seq of length >= 1, bytesToBitList can be simplified.
+     *  For seq of length >= 1, bytesTo8BitList can be simplified.
      */
     lemma {:induction m} simplifyByteToListFirstArg(b : Byte, m : seq<Byte>) 
-        ensures bytesToBitList([b] + m) == 
-            byteToList8Bits(b) + bytesToBitList(m) 
+        ensures bytesTo8BitList([b] + m) == 
+            byteToList8Bits(b) + bytesTo8BitList(m) 
     { //  Dafny proves it.
     }
 
@@ -234,24 +234,24 @@ include "../utils/Eth2Types.dfy"
      */
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
         requires | l | % 8 == 0
-        ensures bytesToBitList( bitListToBytes (l) ) == l 
+        ensures bytesTo8BitList( bitListToBytes (l) ) == l 
         {
             if ( l == [] ) {
                 //  Dafny figures it out.
             } else {
                 calc == {
-                    bytesToBitList( bitListToBytes (l) ) ; 
+                    bytesTo8BitList( bitListToBytes (l) ) ; 
                     == //   Definition of bitListToBytes
-                    bytesToBitList([list8BitsToByte(l[..8])] + bitListToBytes(l[8..]));
+                    bytesTo8BitList([list8BitsToByte(l[..8])] + bitListToBytes(l[8..]));
                     == { simplifyByteToListFirstArg(
                             list8BitsToByte(l[..8]),
                             bitListToBytes(l[8..])
                             ) ; 
                         }
                      byteToList8Bits(list8BitsToByte(l[..8])) + 
-                                bytesToBitList(bitListToBytes(l[8..]));
+                                bytesTo8BitList(bitListToBytes(l[8..]));
                     == { decodeOfEncodeIsIdentity(l[..8]); }
-                    l[0..8] +  bytesToBitList(bitListToBytes(l[8..]));
+                    l[0..8] +  bytesTo8BitList(bitListToBytes(l[8..]));
                 }
             }
         }
