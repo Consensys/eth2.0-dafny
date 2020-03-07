@@ -60,7 +60,7 @@ include "../utils/Eth2Types.dfy"
         ensures forall i : nat | 0 <= i <  ceil ( |l| + 1 , 8) - 1 :: 
             realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
     {
-        forall ( i : nat ) 
+        forall ( i : nat )  
             ensures 0 <= i < ceil ( |l| + 1 , 8) - 1 ==> realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
         {
             if ( 0 <= i < ceil ( |l| + 1 , 8) - 1 ) {
