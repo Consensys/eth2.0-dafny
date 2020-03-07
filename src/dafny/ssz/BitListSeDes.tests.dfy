@@ -1,5 +1,4 @@
 include "./BitListSeDes.s.dfy"
-// include "./BitListSeDes.i.dfy"
 include "../utils/DafTests.dfy"
 
 /**
