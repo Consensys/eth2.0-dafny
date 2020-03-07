@@ -281,7 +281,7 @@ include "../utils/Eth2Types.dfy"
                     bitListToBytes(l)[i] == list8BitsToByte(l[ i * 8.. i * 8 + 8]) {
                 if ( i > 0 ) {
                     //  for 0 < i < k: 
-                    //  Induction assumption on the smaller element l[8..], k - 1
+                    //  Induction assumption on the smaller pair l[8..], k - 1
                     encodeChunks8BitsAsBytes(l[8..], k - 1);
                 } else {
                     //  case i == 0, thanks Dafny 
