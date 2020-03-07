@@ -7,6 +7,17 @@ module DafTest {
     /** Enum type for test results. */
     datatype TestResult = Pass | Fail
 
+    function method displayRes(x : TestResult) : string 
+    {
+        //  coloring does not work ...
+        // match x 
+        //     case Pass =>  "\\033[31mPassed\\033[0m"
+        //     case Fail =>  "\\033[31mFailed\\033[31m"
+        match x 
+            case Pass =>  "Passed"
+            case Fail =>  "Failed"
+    }
+
     /** A test case.
      *    
      *  @param  name    The textual description of the test.
@@ -19,6 +30,8 @@ module DafTest {
      */
     datatype TestItem = TestItem(name: string, code: () -> bool)
 
+    datatype TestSuite = TestSuite(name: string, testCases : seq<TestItem>)
+    
     /** An assertEqual operator. 
      *
      *  @tparam T   A type that supports equality.
@@ -56,18 +69,20 @@ module DafTest {
      *  @param  f   Previous number of failures (Fail) test cases.
      *  @returns    unit, side effects is to execute and print test results.
      */
-    method {:tailrecursion} executeRecTests(
+    method {:tailrecursion true} executeRecTests(
             xl : seq<TestItem>, 
             s: nat, 
-            f: nat) returns () 
+            f: nat
+    ) returns () 
         decreases xl
     {
         if (|xl| == 0) {
             //  print summary
-            print "Test suite: Pass [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\n";
+            // print "--", "Test suite:", testSuiteName, "\n";
+            print "-- Results:  Pass [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\n";
         } else {
             var res := runTest(xl[0].code);
-            print "result of ", xl[0].name, " :", res, "\n";
+            print xl[0].name, " [", displayRes(res), "]\n";
             match res {
                 case Pass => executeRecTests(xl[1..], s + 1, f);
                 case Fail => executeRecTests(xl[1..], s, f + 1);
@@ -81,8 +96,9 @@ module DafTest {
      *  @param  xt  A sequence of test cases.
      *  @returns    Print out the tets results and summary.
      */
-    method executeTests(xt : seq<TestItem>) {
-        executeRecTests(xt, 0, 0);
+    method executeTests(xt : TestSuite) {
+        print "-- ", "Test suite:", xt.name, " --\n";
+        executeRecTests(xt.testCases, 0, 0);
     }
 }
  
