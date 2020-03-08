@@ -57,13 +57,13 @@ include "../utils/Eth2Types.dfy"
      */
     lemma allChunksExceptLast(l : seq<bool>, k : nat)
         requires k == |l| / 8 
-        ensures forall i : nat | 0 <= i <  ceil ( |l| + 1 , 8) - 1 :: 
+        ensures forall i : nat | 0 <= i <  k  ::  
             realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
     {
         forall ( i : nat )  
-            ensures 0 <= i < ceil ( |l| + 1 , 8) - 1 ==> realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
+            ensures 0 <= i < k  ==> realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
         {
-            if ( 0 <= i < ceil ( |l| + 1 , 8) - 1 ) {
+            if ( 0 <= i < k ) {
                 calc == {
                     realBitlistToBytes(l)[i] ;
                     == bitListToBytes(l[.. 8 * k])[i];
@@ -81,32 +81,9 @@ include "../utils/Eth2Types.dfy"
     lemma {:induction l} mapByteTo8Bits(l: seq<bool>, i : nat) 
         requires |l| % 8 == 0
         requires 0 <= i < |l| / 8
-        ensures 
-            bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)]) 
+        ensures bitListToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)]) 
     {
         encodeChunks8BitsAsBytes(l, |l| / 8);
-    }
-
-    /** Property of last Byte of encoding. 
-     *  
-     *  @param  l   A list of bits.
-     *  @param  k   A (fake) parameter which must be |l| / 8.
-     *  
-     *  @ensures    Last Byte is the encoding of last |l| - (k - 1) * 8 bits
-     *              padded with [true, false, ... false].
-     */
-    lemma {:induction l} lastChunk(l : seq<bool>, k : nat, padding: seq<bool>)
-        requires (|l| + 1) % 8 == 0 ==> |padding| == 0
-        requires (|l| + 1) % 8 != 0 ==> |padding| == 8 - ((|l| + 1) % 8) 
-        requires k ==  ceil ( |l| + 1, 8) 
-        requires padding == timeSeq(false, |padding|)
-
-        ensures k >= 1
-        ensures (|l| + 1 + |padding|) % 8 == 0 
-        ensures |l[(k - 1) * 8 ..]| + 1 + |padding| == 8
-        ensures realBitlistToBytes(l)[k - 1] == 
-                        list8BitsToByte(l[(k - 1) * 8 ..] + [true] + padding)
-    {   //  Thanks Dafny
     }
 
     /** The last Byte of the encoding is always larger than 1. 
@@ -205,8 +182,9 @@ include "../utils/Eth2Types.dfy"
         requires pad == timeSeq(false, |pad|)
 
         ensures | realBitlistToBytes(l) | == k
+
         //  All bytes except last
-        ensures forall i : nat | 0 <= i <  k - 1 :: 
+        ensures forall i : nat | 0 <= i <  k - 1 ::  
             realBitlistToBytes(l)[i] == list8BitsToByte(l[ (i * 8).. (i * 8 + 8)])
         //  Last byte.
         ensures realBitlistToBytes(l)[k - 1] == 
@@ -233,7 +211,7 @@ include "../utils/Eth2Types.dfy"
     }
 
     /**
-     *  Decoding and encoded l : seq<bool> returns l. 
+     *  Decoding and encoded l with |l| % 8 == 0  returns l. 
      */
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
         requires | l | % 8 == 0
@@ -337,7 +315,7 @@ include "../utils/Eth2Types.dfy"
                                 [true] + 
                                 timeSeq(false, 8 - (|l| + 1) % 8))
     }
-    
+
      /**
      *  Decode a sequence of bytes into seq<bool>.
      *
@@ -359,5 +337,15 @@ include "../utils/Eth2Types.dfy"
         //  compute binary representation of last byte, and drop suffix 1.0*
             bytesTo8BitList(xb)[(8 * (|xb| - 1))..][..largestIndexOfOne(bytesTo8BitList(xb)[(8 * (|xb| - 1))..])]
     }
+
+    //  Main proof 
+
+    /**
+     *  Decoding and encoded l : seq<bool> returns l. 
+     */
+    // lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
+    // {
+
+    // }
 
  }
