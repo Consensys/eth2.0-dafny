@@ -67,9 +67,9 @@ module DafTest {
     {
         if (|xl| == 0) {
             if ( f >= 1) {
-                print "-- Results:  \u001b[31mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
+                print "-- Results: \u001b[31mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
             } else {
-                print "-- Results:  \u001b[32mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
+                print "-- Results: \u001b[32mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
             }
             
         } else {
