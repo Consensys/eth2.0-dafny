@@ -6,18 +6,7 @@ module DafTest {
 
     /** Enum type for test results. */
     datatype TestResult = Pass | Fail
-
-    function method displayRes(x : TestResult) : string 
-    {
-        //  coloring does not work ...
-        // match x 
-        //     case Pass =>  "\\033[31mPassed\\033[0m"
-        //     case Fail =>  "\\033[31mFailed\\033[31m"
-        match x 
-            case Pass =>  "Passed"
-            case Fail =>  "Failed"
-    }
-
+    
     /** A test case.
      *    
      *  @param  name    The textual description of the test.
@@ -77,15 +66,17 @@ module DafTest {
         decreases xl
     {
         if (|xl| == 0) {
-            //  print summary
-            // print "--", "Test suite:", testSuiteName, "\n";
-            print "-- Results:  Pass [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\n";
+            print "-- Results:  \u001b[35m[Passed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
         } else {
             var res := runTest(xl[0].code);
-            print xl[0].name, " [", displayRes(res), "]\n";
+            // print xl[0].name, " [", displayRes(res), "]\n";
             match res {
-                case Pass => executeRecTests(xl[1..], s + 1, f);
-                case Fail => executeRecTests(xl[1..], s, f + 1);
+                case Pass => 
+                    print "\u001b[32m[", "Passed", "]\u001b[0m ", xl[0].name, "\n";
+                    executeRecTests(xl[1..], s + 1, f);
+                case Fail => 
+                    print "\u001b[31m[", "Failed", "]\u001b[0m ", xl[0].name, "\n";
+                    executeRecTests(xl[1..], s, f + 1);
             }
         }
     } 
