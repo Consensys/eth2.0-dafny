@@ -6,7 +6,7 @@ module DafTest {
 
     /** Enum type for test results. */
     datatype TestResult = Pass | Fail
-    
+
     /** A test case.
      *    
      *  @param  name    The textual description of the test.
@@ -66,7 +66,12 @@ module DafTest {
         decreases xl
     {
         if (|xl| == 0) {
-            print "-- Results:  \u001b[35m[Passed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
+            if ( f >= 1) {
+                print "-- Results:  \u001b[31mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
+            } else {
+                print "-- Results:  \u001b[32mPassed [", s, "/", (s + f), "] Failed [", f, "/", (s + f), "]\u001b[0m\n";
+            }
+            
         } else {
             var res := runTest(xl[0].code);
             // print xl[0].name, " [", displayRes(res), "]\n";
