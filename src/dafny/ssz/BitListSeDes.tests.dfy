@@ -101,8 +101,9 @@ module BitListSeDesTests {
             
         ];
 
-
+        //  Deserialise test suite.
         var t2 := TestSuite("Deserialise bytes into BitList", r2);
+
          //  run the deserialise tests.
         executeTests(t2);
     }
