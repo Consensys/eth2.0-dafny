@@ -79,11 +79,28 @@ module BitListSeDesTests {
         //  Deserialise tests
         var r2 := [
             TestItem(
-                "Deserialise [1] is []",
+                "Deserialise [0x01] is []",
                 () => realBytesToBitList([1]) == []
+            ),
+            TestItem(
+                "Deserialise [0x03] is [true]",
+                () => realBytesToBitList([3]) == [true]
+            ),
+            TestItem(
+                "Deserialise [0x05] is [true, false]",
+                () => realBytesToBitList([0x05]) == [true, false]
+            ),
+            TestItem(
+                "Deserialise [0xff,0x01] is [true] * 8",
+                () => realBytesToBitList([0xff,0x01]) == timeSeq(true,8)
+            ),
+            TestItem(
+                "Deserialise [0x01,0x00,0x01] is [true] +  [false] * 15",
+                () => realBytesToBitList([0x01,0x00,0x01]) == [true] + timeSeq(false,15)
             )
             
         ];
+
 
         var t2 := TestSuite("Deserialise bytes into BitList", r2);
          //  run the deserialise tests.
