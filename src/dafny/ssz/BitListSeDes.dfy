@@ -7,7 +7,7 @@ include "BytesAndBits.dfy"
  *  list<Boolean> serialisation, desrialisation.
  *
  */
- module BitListSeDes__i {
+ module BitListSeDes {
 
     import opened NativeTypes
     import opened Eth2Types
