@@ -1,5 +1,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
+include "../utils/Helpers.dfy"
+include "BytesAndBits.dfy"
 
 /**
  *  list<Boolean> serialisation, desrialisation.
@@ -9,87 +11,8 @@ include "../utils/Eth2Types.dfy"
 
     import opened NativeTypes
     import opened Eth2Types
-
-    // Helpers to convert list of bits into uint8 and back
-
-    /** Convert a bool into a Byte.
-     *
-     *  @param      b   A boolean.
-     *  @returns        A Byte (uint8) such that b?1:0. 
-     */
-    function method boolToByte(b : bool) : Byte
-        ensures 0 <= boolToByte(b) <= 1  
-    {
-        if b then 
-            1 as Byte
-        else 
-            0 as Byte
-    }
-
-    /**
-     *  Convert a Byte into a boolean.
-     *
-     *  @param      b   A byte between 0 and 1.
-     *  @returns        The corresponding boolean (b == 1)?true:false.
-     */
-    function method byteToBool(b : Byte) : bool
-        requires 0 <= b <= 1
-    {
-        b == 1
-    }
-
-    /**
-     *
-     *  @param  l   A sequence of bits.
-     *  @returns    true iff all the bits in l are false. 
-     *
-     *  @note       isNull([]) is vacuously true (the forall trivially holds).
-     */
-    predicate isNull(l : seq<bool>) 
-    {
-        forall i | 0 <= i < |l| :: !l[i]
-    }
-
-    /**
-     *  Convert a list of 8 bits into a number.
-     *
-     *  @param  l   A sequence of bits.
-     *  @returns    A byte the binary encoding of which is reverse(l).
-     */
-    function method list8BitsToByte(l : seq<bool>) : Byte    
-        requires |l| == 8 
-        ensures isNull(l) <==> list8BitsToByte(l) == 0
-    {
-        128 * boolToByte(l[7]) +
-        64 * boolToByte(l[6]) +
-        32 * boolToByte(l[5]) +
-        16 * boolToByte(l[4]) +
-        8 * boolToByte(l[3]) +
-        4 * boolToByte(l[2]) +
-        2 * boolToByte(l[1]) +
-        1 * boolToByte(l[0])
-    }
-
-    /**
-     *  Compute a list of bits given a Byte.
-     *
-     *  @param  n   A byte, i.e. a number that can be represented with 8 bits.
-     *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
-     */
-    function method byteToList8Bits( n : Byte ) : seq<bool>
-        ensures | byteToList8Bits(n) | == 8 
-    {
-        [
-            byteToBool((n / 1) % 2),
-            byteToBool((n / 2) % 2),
-            byteToBool((n / 4) % 2), 
-            byteToBool((n / 8) % 2),
-            byteToBool((n / 16) % 2),
-            byteToBool((n / 32) % 2),
-            byteToBool((n / 64) % 2),
-            byteToBool((n / 128) % 2)
-        ]
-    }
+    import opened BytesAndBits
+    import opened Helpers
 
     /** Create Sequences with same element. 
      *
@@ -105,24 +28,6 @@ include "../utils/Eth2Types.dfy"
         if k == 0 then []
         else [t] + timeSeq(t, k - 1)
     }
-
-    /**
-     *  Ceiling function.
-     *
-     *  @param  n   Numerator
-     *  @param  d   Denominator
-     *  @returns    The smallest integer last than float(n / d).
-     */
-    function ceil(n: nat, d: nat) : nat
-        requires d != 0
-        ensures n >= 1 ==> ceil(n , d) >= 1
-        ensures ceil(n ,d) == 0 <==> n == 0
-    {
-        if (n % d == 0) then 
-            n / d
-        else 
-            n / d + 1
-    }       
 
     /**
      *  Compute largest index in l with a true value.
@@ -150,51 +55,125 @@ include "../utils/Eth2Types.dfy"
         else if l[1] then 1
         else 0
     }
-   
-    /**
-     *  Encode a list of 8*n bits into a sequence of bytes.
-     *
-     *  @param  l       The list of bits to encode such that |l| modulo 8 == 0.
-     *  @return         The encoding of the list of bits `l`.
-     *
-     */
-    function method bitListToBytes(l: seq<bool>) : seq<Byte> 
-        requires |l| % 8 == 0
-        ensures | bitListToBytes(l) | == | l | / 8 
-        ensures |l| > 0 ==> | bitListToBytes(l) | > 0 
-       
-        decreases l
-    {
-        if ( l == [] ) then
-            //  If l is empty we have completed the encoding.
-            []
-        else 
-            /*   
-             *  Encode first 8 bits, and concatenate with encoding of the tail.
-             *  Note: l[i..j] returns a sequence of the first j elements with
-             *  the first i elements dropped. When i ommitted it defaults to 0
-             *  and when j is ommitted it default to |l|.
-             */
-            [list8BitsToByte(l[..8])] + bitListToBytes(l[8..])    
-    }
-        
-    /** 
-     *  Convert a list of bytes into a BitList.
+ 
+     /** Simplify neutral element [] when concatenating sequence.
      *  
-     *  @param  l   A list of Bytes.
-     *  @returns    A list of bits that correspond to the binary encoding
-     *              of each byte and has size |l| * 8.
+     *  @tparam     T   A type.
+     *  @param      xb  A sequence of elements of type `T`.
      */
-    function method bytesTo8BitList(l : seq<Byte>) : seq<bool> 
-        ensures | bytesTo8BitList(l) | % 8 == 0
-        ensures | bytesTo8BitList(l) | == 8 * |l|
-
+    lemma simplifyEmptyConcat<T>(xb: seq<T>) 
+        ensures xb + [] == xb 
+        ensures [] + xb == xb 
+    {   //  Thanks Dafny
+    }
+    
+    /**
+     *  Encode a list of bits into a sequence of bytes.
+     *
+     *  This is the inductive specification of serialise for bitlists.
+     *  The `method` attribute makes it executable.
+     *
+     *  The algorithm to encode list of bits works as follows:
+     *  1. given a list of bits l, 
+     *  2. append 1 to l, this is a sentinnelle, and let l' = l + [1] 
+     *  3. if |l'| * 8 is not 0, append 8 - (|l| + 1) % 8 zeros to l' 
+     *     to obtain a list of size multiplw of 8
+     *     let l'' = l' + possibly some [0]
+     *     This ensures that |l''| % 8 == 0 and can be seen as a sequence of Bytes
+     *  4. Encode l'' with the `list8BitsToByte` algorithm.
+     *
+     *  @example: l = [0,1,0,0] yields l' = [0,1,0,0] + [1]
+     *  l'' = [0,1,0,0,1] + [0,0,0] (add 3 0's to ensure the size of l'' is 
+     *  multiple of 8).
+     *  l'' is a Byte and is encoded as a uint8 `n` as follows: the bitvector 
+     *  representation of n is reverse(l''). `n` in hexadecimal is thus: 0001.0010 
+     *  which is the uint8 0x12.
+     *
+     *  @example: with more than one byte needed l = [0] * 8 and |l| == 8.
+     *  l' = [0] * 8 + [1], l'' = [0] * 8 + [1] + [0] * 7
+     *  Reverse(l'') = [0] * 7 + [1] + [0] * 8
+     *  and the encoding of l is: [1000.0000, 0000.0000] i.e. [0x01 , 0x00] 
+     *  
+     */
+    function method fromBitlistToBytes(l : seq<bool>) : seq<Byte> 
+        ensures | fromBitlistToBytes(l) | == ceil( |l| + 1, 8)
+        ensures fromBitlistToBytes(l)[|fromBitlistToBytes(l)| - 1] >= 1
+        
         decreases l
     {
-        if ( l == [] ) then
-            []
-        else 
-            byteToList8Bits(l[0]) + bytesTo8BitList(l[1..])
+        if ( |l| < 7 ) then 
+            //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we treat it separately.
+            [ list8BitsToByte( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8)) ]
+        else if ( |l| == 7 ) then
+            //  No need to pad.
+            [ list8BitsToByte( l + [true]) ]
+        else  
+            [ list8BitsToByte(l[..8]) ] + fromBitlistToBytes(l[8..])
     }
 
+    /**
+     *  Decode a sequence of bytes into seq<bool>.
+     *  
+     *  This is the inductive specification of deserialsie for bitlists.
+     *  The `method` attribute turns it into an executable function.
+     *
+     *  @param  xb  A non-empty sequence of bytes, the last element
+     *              of which is >= 1.
+     *  @returns    The sequence of bits upto (and except) the last true bit. 
+     */
+    function method fromBytesToBitList(xb : seq<Byte>) : seq<bool> 
+        requires |xb| >= 1
+        requires xb[|xb|-1] >= 1
+        ensures 8 * (|xb| - 1) >= 0
+
+        decreases xb
+    {
+        //  Last element e = xb[|xb| - 1] >= 1 implies byteTo8Bits(e) != [0] * 8
+        byteIsZeroIffBinaryIsNull(xb[|xb| - 1]);
+        assert !isNull(byteTo8Bits(xb[|xb| - 1])) ;
+        if ( |xb| == 1 ) then 
+            //  Remove suffix 1 0*.
+            byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))] 
+        else 
+            //  Recursive decoding.
+            byteTo8Bits(xb[0]) + fromBytesToBitList(xb[1..])
+    }
+
+    //  Main proofs 
+
+    lemma {:induction m} simplifyFromByteToListFirstArg(b : Byte, m : seq<Byte>) 
+        requires |m| >= 1
+        requires m[|m| - 1] >= 1
+        ensures fromBytesToBitList([b] + m) == 
+            byteTo8Bits(b) + fromBytesToBitList(m) 
+    { //  Dafny proves it.
+    }
+
+    /**
+     *  Decoding of encoded l : seq<bool> returns l. 
+     */
+    lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
+        ensures fromBytesToBitList( fromBitlistToBytes (l) ) == l 
+    {
+        if ( |l| < 7 ) {
+            //  Thanks Dafny
+        } else if ( |l| == 7 ) {
+            //  Thanks Dafny
+        } else {
+            calc == {
+                fromBytesToBitList( fromBitlistToBytes (l) );
+                == 
+                fromBytesToBitList([list8BitsToByte(l[..8])] + fromBitlistToBytes(l[8..]));
+                == { simplifyFromByteToListFirstArg(
+                        list8BitsToByte(l[..8]), 
+                        fromBitlistToBytes(l[8..])
+                        ) ;  
+                    }
+                    byteTo8Bits(list8BitsToByte(l[..8])) + 
+                    fromBytesToBitList(fromBitlistToBytes(l[8..]));
+                == { decodeOfEncode8BitsIsIdentity(l[..8]); }
+                l[0..8] + fromBytesToBitList(fromBitlistToBytes(l[8..]));
+            }
+        }
+    }
  }
