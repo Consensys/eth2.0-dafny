@@ -74,7 +74,6 @@ module DafTest {
             
         } else {
             var res := runTest(xl[0].code);
-            // print xl[0].name, " [", displayRes(res), "]\n";
             match res {
                 case Pass => 
                     print "\u001b[32m[", "Passed", "]\u001b[0m ", xl[0].name, "\n";
