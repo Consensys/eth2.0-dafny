@@ -249,7 +249,7 @@ include "BytesAndBits.dfy"
     lemma {:induction xl} simplifyFromBitListToByteFirstArg(e: Byte, xl : seq<bool>) 
         ensures fromBitlistToBytes(byteTo8Bits(e) + xl) == 
             [ e ] + fromBitlistToBytes(xl) 
-    { //  Dafny proves it.
+    { 
         calc == {
             fromBitlistToBytes(byteTo8Bits(e) + xl);
             == 
@@ -257,6 +257,37 @@ include "BytesAndBits.dfy"
                 fromBitlistToBytes((byteTo8Bits(e) + xl)[8..]) ; 
             == 
             [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[8..]) ;
+        }
+    }
+
+    /**
+     *  fromBitlistToBytes surjective on |xb| >= 1 && xb[|xb| - 1] >= 1
+     */
+    lemma {:induction xb} surjective(xb : seq<Byte>) 
+        requires |xb| >= 1 
+        requires xb[|xb| - 1] >= 1
+        ensures exists l : seq<bool> :: xb == fromBitlistToBytes(l) 
+
+        decreases xb
+    {
+        if ( |xb| == 1 ) {
+            var l : seq<bool> := fromBytesToBitList(xb);
+            encodeDecodeIsIdentity(xb);
+        } else {
+            //  Induction assumption on xb[1..]
+            var xl : seq<bool> :| fromBitlistToBytes(xl) == xb[1..];
+            calc == {
+                fromBitlistToBytes(byteTo8Bits(xb[0]) + xl) ;
+                == {
+                    simplifyFromBitListToByteFirstArg(
+                        xb[0],
+                        xl
+                    ) ;
+                }
+                [xb[0]] + fromBitlistToBytes(xl);
+                == 
+                xb;
+            }
         }
     }
 
