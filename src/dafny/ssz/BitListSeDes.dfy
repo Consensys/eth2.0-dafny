@@ -64,7 +64,7 @@ include "BytesAndBits.dfy"
     lemma simplifyEmptyConcat<T>(xb: seq<T>) 
         ensures xb + [] == xb 
         ensures [] + xb == xb 
-    {   //  Thanks Dafny
+    {   //  Thanks Dafny.
     }
     
     /**
@@ -72,6 +72,7 @@ include "BytesAndBits.dfy"
      *
      *  This is the inductive specification of serialise for bitlists.
      *  The `method` attribute makes it executable.
+     *  This recursive function always terninates (decreases l).
      *
      *  The algorithm to encode list of bits works as follows:
      *  1. given a list of bits l, 
@@ -105,9 +106,10 @@ include "BytesAndBits.dfy"
             //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we treat it separately.
             [ list8BitsToByte( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8)) ]
         else if ( |l| == 7 ) then
-            //  No need to pad.
+            //  No need to pad as |l + [true]| % 8 == 0.
             [ list8BitsToByte( l + [true]) ]
         else  
+            //  Encode first element and recursively encode the rest.
             [ list8BitsToByte(l[..8]) ] + fromBitlistToBytes(l[8..])
     }
 
@@ -115,7 +117,8 @@ include "BytesAndBits.dfy"
      *  Decode a sequence of bytes into seq<bool>.
      *  
      *  This is the inductive specification of deserialsie for bitlists.
-     *  The `method` attribute turns it into an executable function.
+     *  The `method` attribute turns it into an executable recursive function
+     *  and always terminates (decreases xb).
      *
      *  @param  xb  A non-empty sequence of bytes, the last element
      *              of which is >= 1.
@@ -150,7 +153,7 @@ include "BytesAndBits.dfy"
     }
 
     /**
-     *  Decoding of encoded l : seq<bool> returns l. 
+     *  Decoding of encoded l returns l. 
      */
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
         ensures fromBytesToBitList( fromBitlistToBytes (l) ) == l 
