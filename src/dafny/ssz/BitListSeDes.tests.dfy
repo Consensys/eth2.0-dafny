@@ -59,6 +59,7 @@ module BitListSeDesTests {
 
         //  run the tests.
         var t1b := TestSuite("Serialise BitLists [add sentinelle and padding]", rb);
+        
         executeTests(t1b);
 
         //  Deserialise tests
