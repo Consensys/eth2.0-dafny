@@ -266,7 +266,7 @@ include "BytesAndBits.dfy"
     lemma {:induction xb} surjective(xb : seq<Byte>) 
         requires |xb| >= 1 
         requires xb[|xb| - 1] >= 1
-        ensures exists l : seq<bool> :: xb == fromBitlistToBytes(l) 
+        ensures exists l : seq<bool> {:induction l} :: xb == fromBitlistToBytes(l) 
 
         decreases xb
     {
