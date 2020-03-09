@@ -143,7 +143,7 @@ include "BytesAndBits.dfy"
             byteTo8Bits(xb[0]) + fromBytesToBitList(xb[1..])
     }
 
-    //  Main proofs 
+    //  Main proofs  
 
     /**
      *  Decoding of encoded l returns l. 
