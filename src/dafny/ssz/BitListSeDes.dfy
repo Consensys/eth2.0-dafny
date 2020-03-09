@@ -171,8 +171,8 @@ include "BytesAndBits.dfy"
                         list8BitsToByte(l[..8]), 
                         fromBitlistToBytes(l[8..])
                         ) ;  
-                    }
-                    byteTo8Bits(list8BitsToByte(l[..8])) + 
+                }
+                byteTo8Bits(list8BitsToByte(l[..8])) + 
                     fromBytesToBitList(fromBitlistToBytes(l[8..]));
                 == { decodeOfEncode8BitsIsIdentity(l[..8]); }
                 l[0..8] + fromBytesToBitList(fromBitlistToBytes(l[8..]));
