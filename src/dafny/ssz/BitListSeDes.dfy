@@ -230,7 +230,7 @@ include "BytesAndBits.dfy"
         }
     }
 
-    //  Helpers
+    //  Simplifications in first argument.
 
     /**
      *  Rewriting (simplification) rule for fromBytesToBitList.
