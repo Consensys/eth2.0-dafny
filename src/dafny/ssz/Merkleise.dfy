@@ -128,13 +128,13 @@ include "BoolSeDes.dfy"
      *              be returned. It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
      *
      */
-    /* function toChunks(b: Bytes): seq<chunk>
+    function toChunks(b: Bytes): seq<chunk>
         ensures |toChunks(b)| > 0
     {
         if |b| < 32 then [rightPadZeros(b)]
         else    if |b| == 32 then [b] 
                 else [b[..32]] + toChunks(b[32..])
-    }     */ 
+    }    
 
 
     /** toChunks (py-ssz version).
@@ -147,14 +147,14 @@ include "BoolSeDes.dfy"
      *              doesn't satisfy the toChunksProp1 and toChunksProp2 lemmas. It also causes
      *              an error in the Pack function, which should reutrn at least one chunk.
      */
-    function toChunks(b: Bytes): seq<chunk>
-        //ensures |toChunks(b)| > 0
-    {
-        var full_chunks := |b| / BYTES_PER_CHUNK;
-        if |b| == 0 then []
-        else if |b| % BYTES_PER_CHUNK == 0 then [b[..32]] + toChunks(b[32..])
-            else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
-    }   
+    // function toChunks(b: Bytes): seq<chunk>
+    //     //ensures |toChunks(b)| > 0
+    // {
+    //     var full_chunks := |b| / BYTES_PER_CHUNK;
+    //     if |b| == 0 then []
+    //     else if |b| % BYTES_PER_CHUNK == 0 then [b[..32]] + toChunks(b[32..])
+    //         else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
+    // }   
     
     lemma toChunksProp1(b: Bytes)
         requires |b| == 0
