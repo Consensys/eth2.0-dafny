@@ -142,7 +142,8 @@ include "BoolSeDes.dfy"
      *  @param  b   A sequence of bytes i.e. a Bytes object.
      *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if b % 32 != 0 
      *
-     *  @note       The py-ssz implementation can result in a 0 chunk output and therefore 
+     *  @note       The py-ssz implementation can result in a 0 chunk output (empty seq)
+     *              and therefore 
      *              doesn't satisfy the toChunksProp1 and toChunksProp2 lemmas. It also causes
      *              an error in the Pack function, which should reutrn at least one chunk.
      */
@@ -169,7 +170,7 @@ include "BoolSeDes.dfy"
 
     /** Pack.
      *
-     *  @param  s  A sequence of serialised objects (seq<Byte>).
+     *  @param  s   A sequence of serialised objects (seq<Byte>).
      *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
      *              bytes if necessary. It is implied that at least one chunk is returned???
      *
