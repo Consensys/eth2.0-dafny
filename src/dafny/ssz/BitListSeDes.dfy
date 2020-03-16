@@ -116,7 +116,7 @@ include "BytesAndBits.dfy"
     /**
      *  Decode a sequence of bytes into seq<bool>.
      *  
-     *  This is the inductive specification of deserialsie for bitlists.
+     *  This is the inductive specification of deserialise for bitlists.
      *  The `method` attribute turns it into an executable recursive function
      *  and always terminates (decreases xb).
      *
