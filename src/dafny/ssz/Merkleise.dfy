@@ -85,6 +85,7 @@ include "BoolSeDes.dfy"
      *
      */
     function bytesInSequenceOfBytes(s: seq<Bytes>): nat
+        decreases  s
     {
         if |s| == 0 then 0
         else |s[0]|+bytesInSequenceOfBytes(s[1..])
@@ -99,6 +100,7 @@ include "BoolSeDes.dfy"
      */
     function concatSerialisedElements(s: seq<Bytes>): Bytes
         ensures |concatSerialisedElements(s)| == bytesInSequenceOfBytes(s)
+        decreases  s
     {
         if |s| == 0 then []
         else s[0]+concatSerialisedElements(s[1..])
