@@ -18,7 +18,7 @@ module Helpers {
      *  @param  d   Denominator
      *  @returns    The smallest integer last than float(n / d).
      */
-    function ceil(n: nat, d: nat) : nat
+    function method ceil(n: nat, d: nat) : nat
         requires d != 0
         ensures n >= 1 ==> ceil(n , d) >= 1
         ensures ceil(n ,d) == 0 <==> n == 0
