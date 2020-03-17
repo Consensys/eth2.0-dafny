@@ -130,6 +130,7 @@ include "BoolSeDes.dfy"
      */
     function toChunks(b: Bytes): seq<chunk>
         ensures |toChunks(b)| > 0
+        decreases b
     {
         if |b| < 32 then [rightPadZeros(b)]
         else    if |b| == 32 then [b] 
@@ -156,13 +157,13 @@ include "BoolSeDes.dfy"
     //         else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
     // }   
     
-    lemma toChunksProp1(b: Bytes)
+    lemma {:induction b} toChunksProp1(b: Bytes)
         requires |b| == 0
         ensures |toChunks(b)| == 1
     {
     }
 
-    lemma toChunksProp2(b: Bytes)
+    lemma  {:induction b} toChunksProp2(b: Bytes)
         requires |b| > 0
         ensures 0 <= |toChunks(b)| == ceil(|b|, 32) 
     {
