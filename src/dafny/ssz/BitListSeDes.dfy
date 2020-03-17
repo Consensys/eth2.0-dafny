@@ -14,6 +14,8 @@ include "BytesAndBits.dfy"
     import opened BytesAndBits
     import opened Helpers
 
+    const FALSE_BYTE := [false, false, false, false, false, false, false, false]
+
     /** Create Sequences with same element. 
      *
      *  @tparam T   A type.
@@ -104,7 +106,7 @@ include "BytesAndBits.dfy"
     {
         if ( |l| < 7 ) then 
             //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we treat it separately.
-            [ list8BitsToByte( l + [true] + timeSeq(false, 8 - (|l| + 1) % 8)) ]
+            [ list8BitsToByte( l + [true] + FALSE_BYTE[.. (8 - (|l| + 1) % 8)])]
         else if ( |l| == 7 ) then
             //  No need to pad as |l + [true]| % 8 == 0.
             [ list8BitsToByte( l + [true]) ]
