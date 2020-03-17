@@ -21,13 +21,14 @@ include "BoolSeDes.dfy"
     /** Encode/decode Uint8 yields Identity. */
     lemma uint8AsBytesInvolutive(n : uint8) 
         ensures bytesToUint8(uint8ToBytes(n)) == n
+    {}
 
     /** SizeOf.
      *
      *  @param  s   A serialisable object of type uintN or bool.
      *  @returns    The number of bytes used by a serialised form of this type.
      */
-    function sizeOf(s: Serialisable): nat
+    function method sizeOf(s: Serialisable): nat
         requires wellTyped(s) && s.tipe in {Uint8_, Bool_}
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
@@ -41,7 +42,7 @@ include "BoolSeDes.dfy"
      *  @param  s   The object to serialise.
      *  @returns    A sequence of bytes encoding `s`.
      */
-    function serialise(s : Serialisable) : seq<Byte> 
+    function method serialise(s : Serialisable) : seq<Byte> 
     {
         match s 
             case Bool(b, _) => boolToBytes(b)
@@ -59,7 +60,7 @@ include "BoolSeDes.dfy"
      *  @note       It would probabaly be good to return the suffix of `xs`
      *              that has not been used in the deserialisation as well.
      */
-    function deserialise(xs : seq<Byte>, s : Tipe) : Try<Serialisable>
+    function method deserialise(xs : seq<Byte>, s : Tipe) : Try<Serialisable>
     {
         match s
             case Bool_ => if |xs| == 1 then
