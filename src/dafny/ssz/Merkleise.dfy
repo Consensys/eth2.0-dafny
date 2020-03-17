@@ -21,7 +21,7 @@ include "BoolSeDes.dfy"
     import opened SSZ
     import opened Helpers
 
-    predicate validChunk(c : chunk) 
+    predicate is32BytesChunk(c : chunk) 
     {
         |c| == 32
     }
@@ -61,7 +61,7 @@ include "BoolSeDes.dfy"
                             0 as Byte,0 as Byte,0 as Byte,0 as Byte]
 
     lemma emptyChunkIs32BytesOfZeros()
-        ensures validChunk(EMPTY_CHUNK) 
+        ensures is32BytesChunk(EMPTY_CHUNK) 
         ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 as Byte 
     {   //  Thanks Dafny
     }
@@ -102,7 +102,7 @@ include "BoolSeDes.dfy"
      */
     function method rightPadZeros(b: Bytes): chunk
         requires |b| < 32
-        ensures validChunk(rightPadZeros(b)) 
+        ensures is32BytesChunk(rightPadZeros(b)) 
     {
         b + EMPTY_CHUNK[|b|..]
     }
@@ -119,7 +119,7 @@ include "BoolSeDes.dfy"
      */
     function toChunks(b: Bytes): seq<chunk>
         ensures |toChunks(b)| > 0
-        ensures forall i :: 0 <= i < |toChunks(b)| ==> validChunk(toChunks(b)[i]) 
+        ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
         if |b| < 32 then [rightPadZeros(b)]
@@ -177,7 +177,7 @@ include "BoolSeDes.dfy"
      function pack(s: seq<Bytes>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
         ensures |pack(s)| >= 1 
-        ensures forall i :: 0 <= i < |pack(s)| ==> validChunk(pack(s)[i])
+        ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
     {
         if |s| == 0 then [EMPTY_CHUNK]
         else toChunks(concatSerialisedElements(s))  
@@ -192,7 +192,7 @@ include "BoolSeDes.dfy"
      */
     function merkleiseBool(c: seq<chunk>): chunk
         requires |c| == 1 && |c[0]| == 32
-        ensures validChunk(merkleiseBool(c))
+        ensures is32BytesChunk(merkleiseBool(c))
     {
         c[0]
     }
@@ -204,8 +204,8 @@ include "BoolSeDes.dfy"
      *
      */
     function method merkleiseUint8(c: seq<chunk>): chunk
-        requires |c| == 1 && validChunk(c[0])
-        ensures validChunk(merkleiseUint8(c))
+        requires |c| == 1 && is32BytesChunk(c[0])
+        ensures is32BytesChunk(merkleiseUint8(c))
     {
         c[0]
     }
@@ -217,7 +217,7 @@ include "BoolSeDes.dfy"
      *  @returns    A 32-byte chunk representing the root node of the merkle tree.
      */
     function getHashTreeRoot(s : Serialisable) : chunk
-        ensures validChunk(getHashTreeRoot(s))
+        ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
             case Bool(_, _) => merkleiseBool(pack([serialise(s)]))
