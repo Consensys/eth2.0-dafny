@@ -32,6 +32,8 @@ include "../utils/Eth2Types.dfy"
     /** Encode/decode Uint8 yields Identity. */
     lemma uint8AsBytesInvolutive(n : uint8) 
         ensures bytesToUint8(uint8ToBytes(n)) == n
+    {   //  Thanks Dafny
+    }
 
     /** Uint16. */
     // function method bytesToUint16(xs: seq<Byte>) : uint16 
