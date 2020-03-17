@@ -29,9 +29,9 @@ include "BoolSeDes.dfy"
      *  @note       For composite types and containers, a helper function may be required
      *              to complete the calculation?
      */
-     function chunkCount(s: Serialisable): int
+     function chunkCount(s: Serialisable): nat
         requires wellTyped(s)
-        ensures 1 <= chunkCount(s) // && chunkCount(s) == |pack([serialise(s)])|
+        ensures 1 <= chunkCount(s) && chunkCount(s) == |pack([serialise(s)])|
         {
             match s
                 case Bool(_,_) => 1
