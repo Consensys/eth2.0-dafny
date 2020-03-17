@@ -22,6 +22,20 @@ include "BoolSeDes.dfy"
     lemma uint8AsBytesInvolutive(n : uint8) 
         ensures bytesToUint8(uint8ToBytes(n)) == n
 
+    /** SizeOf.
+     *
+     *  @param  s   A serialisable object of type uintN or bool.
+     *  @returns    The number of bytes used by a serialised form of this type.
+     */
+    function sizeOf(s: Serialisable): nat
+        requires wellTyped(s) && s.tipe in {Uint8_, Bool_}
+        ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
+    {
+        match s
+            case Bool(_,_) => 1
+            case Uint8(_,_) => 1  
+    }
+
     /** Serialise.
      *
      *  @param  s   The object to serialise.
