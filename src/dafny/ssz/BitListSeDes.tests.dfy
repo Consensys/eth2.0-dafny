@@ -1,5 +1,6 @@
 include "./BitListSeDes.dfy"
 include "../utils/DafTests.dfy"
+include "../utils/Helpers.dfy"
 
 /**
 *  Tests for serialise/deserialise BitListSeDes.
@@ -9,6 +10,7 @@ module BitListSeDesTests {
     
     import opened BitListSeDes
     import opened DafTest 
+    import opened Helpers
     
     /**
      *  Dafny compiles the Main method if it finds one.

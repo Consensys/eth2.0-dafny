@@ -29,4 +29,19 @@ module Helpers {
             n / d + 1
     }       
 
+    /** Create Sequences with same element. 
+     *
+     *  @tparam T   A type.
+     *  @param  t   An value.
+     *  @param  k   A non-negative integer.
+     *  @returns    A seq [t,t, ..., t] of size k.
+     */
+    function method timeSeq<T>(t : T, k : nat) : seq<T> 
+        ensures |timeSeq(t,k)| == k
+        decreases k
+    {
+        if k == 0 then []
+        else [t] + timeSeq(t, k - 1)
+    }
+
 }

@@ -16,21 +16,6 @@ include "BytesAndBits.dfy"
 
     const FALSE_BYTE := [false, false, false, false, false, false, false, false]
 
-    /** Create Sequences with same element. 
-     *
-     *  @tparam T   A type.
-     *  @param  t   An value.
-     *  @param  k   A non-negative integer.
-     *  @returns    A seq [t,t, ..., t] of size k.
-     */
-    function method timeSeq<T>(t : T, k : nat) : seq<T> 
-        ensures |timeSeq(t,k)| == k
-        decreases k
-    {
-        if k == 0 then []
-        else [t] + timeSeq(t, k - 1)
-    }
-
     /**
      *  Compute largest index in l with a true value.
      *
