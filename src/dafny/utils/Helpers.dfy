@@ -53,6 +53,7 @@ module Helpers {
      */
     function sumSubLength<T>(s : seq<seq<T>>) : nat 
         ensures sumSubLength(s) >= 0 
+        decreases s
     {
         if s == [] then 0
         else |s[0]| + sumSubLength(s[1..])
