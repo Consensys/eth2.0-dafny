@@ -59,10 +59,51 @@ module Helpers {
         else |s[0]| + sumSubLength(s[1..])
     }
 
-    lemma {:induction s} foo2<T>(s: seq<seq<T>>, x : seq<T>)
-        ensures flatten([x] + s) == x + flatten(s)
-    {   //  Thanks Dafny
+    //  sumSublength properties.
+
+    lemma {:induction s} sumSubLengthCommutes<T>(s: seq<seq<T>>, x : seq<T>)
+        ensures sumSubLength(s + [x]) == sumSubLength([x] + s)
+    {   
+        if ( |s| == 0 ) {
+            //  Thanks Dafny
+        } else {
+            calc == {
+                sumSubLength(s + [x]) ;
+                == calc == {
+                    s;
+                    ==
+                    [s[0]] + s[1..]; 
+                }
+                sumSubLength([s[0]] + s[1..] + [x]);
+                == calc == {
+                    [s[0]] + s[1..] + [x];
+                    ==
+                    [s[0]] + (s[1..] + [x]);
+                }
+                sumSubLength([s[0]] + (s[1..] + [x]));
+                == 
+                |s[0]| + sumSubLength(s[1..] + [x]);
+            }
+        }
+
     }
+
+    lemma subLengthProp1<T>(s: seq<seq<T>>, x : seq<T>) 
+        ensures sumSubLength(s + [x]) == sumSubLength(s) + |x|
+        ensures sumSubLength([x] + s) == sumSubLength(s) + |x|
+    // {   
+    //     calc {
+    //         sumSubLength(s + [x]);
+    //         ==
+    //         sumSubLength([x] + s);        
+    //     }
+    // }
+
+    lemma foo1<T>(s: seq<seq<T>>, i : nat, j : nat)
+        requires 0 <= i <= j < |s|
+        ensures sumSubLength(s[..i]) <= sumSubLength(s[..j])
+    // {}
+
 
     /**
      *  Flatten dsitributes over append element.
@@ -71,6 +112,8 @@ module Helpers {
      */
     lemma {:induction s} distribFlatten<T>(s: seq<seq<T>>, x : seq<T>)
         ensures flatten(s + [x]) == flatten(s) + x
+        ensures flatten([x] + s) == x + flatten(s)
+
         decreases s
     {
         if (|s| == 0) {
@@ -90,13 +133,12 @@ module Helpers {
                     [s[0]] + (s[1..] + [x]);
                 }
                 flatten([s[0]] + (s[1..] + [x]));
-                == { foo2( s[1..] + [x], s[0]); }
+                == // Definition of flatten
                 s[0] + flatten(s[1..] + [x]);
                 == { distribFlatten(s[1..], x); }
                 s[0] + flatten(s[1..]) + x;
             }
         }
-
     }
 
     /**
@@ -117,7 +159,6 @@ module Helpers {
                 flatten(s1) ;
             }
         } else {
-            assert |s2| >= 1;
             calc == {
                 flatten(s1 + s2);
                 == calc == {
@@ -140,6 +181,22 @@ module Helpers {
         }
     }
 
+    /** 
+     * Length distributes over flatten of concatenation.
+     */
+    lemma {:induction s1, s2} length<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
+        ensures |flatten(s1 + s2)| == |flatten(s1)| + |flatten(s2)|
+    {
+        calc == {
+            |flatten(s1 + s2)|;
+            == { flattenDistributes(s1, s2) ; }
+            |flatten(s1) + flatten(s2)|;
+            == //   length distributes over seq
+            |flatten(s1)| + |flatten(s2)|;
+        }
+    }
+
+    
     /** .
      *  Flatten seqs of seqs.
      *
@@ -148,7 +205,8 @@ module Helpers {
      *  @returns    The flattened sequence which is concatenation of the sequences of
      *              each element.
      *
-     *  @example    flatten([]) = [], flatten [ [], [] ] = [], flatten [ [1,2], [3]] = [1,2,3],
+     *  @example    flatten([]) = [], flatten [ [], [] ] = [], 
+     *              flatten [ [1,2], [3]] = [1,2,3],
      *              flatten([], [1,2]) = [1,2].
      */
     function flatten<T>(s: seq<seq<T>>): seq<T>
@@ -166,13 +224,29 @@ module Helpers {
      */
     lemma {:induction s} lem1<T>(s : seq<seq<T>>, x : T)
         ensures x in flatten(s) <==> exists i :: 0 <= i < |s| && x in s[i]
-    {}
+    {   //  Thanks Dafny.
+    }
 
-   lemma lem3<T>(s : seq<seq<T>>)
+    lemma {:induction s} lem3<T>(s : seq<seq<T>>, j : nat)
         requires |s| >= 1
-        ensures sumSubLength(s) == sumSubLength(s[..|s| - 1]) + |s[|s| - 1]|
-//    {
+        requires 0 <= j < |s[0]|
+        ensures flatten(s)[j] == s[0][j]
+    {   //  Thanks Dafny
+    } 
 
-//    } 
+    lemma {:induction i} lem4<T>(s : seq<seq<T>>, i: nat)
+        requires |s| >= 1
+        requires 0 <= i < |s| 
+        // requires k == sumSubLength(s[..i - 1])
+        // requires 0 <= j < |s[i]|
+        ensures 0 <= sumSubLength(s[..i]) <= |flatten(s)| 
+        // ensures flatten(s)[k + j] == s[i][j]
+    // {   
+    //     calc {
+    //         sumSubLength(s[..i]);
+    //         <=
+    //         sumSubLength(s[..i] + s[i..]);
+    //     }
+    // } 
     
 }
