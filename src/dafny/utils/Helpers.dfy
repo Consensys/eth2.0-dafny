@@ -67,15 +67,15 @@ module Helpers {
         if ( |s| == 0 ) {
             //  Thanks Dafny
         } else {
-            calc == {
+            calc {
                 flattenLength(s + [x]) ;
-                == calc == {
+                == calc {
                     s;
                     ==
                     [s[0]] + s[1..]; 
                 }
                 flattenLength([s[0]] + s[1..] + [x]);
-                == calc == {
+                == calc {
                     [s[0]] + s[1..] + [x];
                     ==
                     [s[0]] + (s[1..] + [x]);
@@ -88,22 +88,47 @@ module Helpers {
 
     }
 
-    lemma subLengthProp1<T>(s: seq<seq<T>>, x : seq<T>) 
+    lemma {:induction s} subLengthProp1<T>(s: seq<seq<T>>, x : seq<T>) 
         ensures flattenLength(s + [x]) == flattenLength(s) + |x|
         ensures flattenLength([x] + s) == flattenLength(s) + |x|
-    // {   
-    //     calc {
-    //         flattenLength(s + [x]);
-    //         ==
-    //         flattenLength([x] + s);        
-    //     }
-    // }
+    {   
+        calc {
+            flattenLength(s + [x]);
+            == { flattenLengthCommutes(s, x); }
+            flattenLength([x] + s);        
+        }
+    }
+
+    lemma subLengthProp2<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
+        ensures flattenLength(s1 + s2) == flattenLength(s1) + flattenLength(s2)
+    {
+        calc {
+            flattenLength(s1 + s2);
+            ==
+            |flatten(s1 + s2)|;
+            == { flattenDistributes(s1, s2); }
+            |flatten(s1)| +  |flatten(s2)|;
+            == 
+            flattenLength(s1) + flattenLength(s2);
+        }
+    }
 
     lemma foo1<T>(s: seq<seq<T>>, i : nat, j : nat)
         requires 0 <= i <= j < |s|
         ensures flattenLength(s[..i]) <= flattenLength(s[..j])
-    // {}
-
+    {
+        calc >= {
+            flattenLength(s[..j]);
+            == calc {
+                s[..j] ;
+                ==
+                s[..i] + s[i..j];
+            }
+            flattenLength(s[..i] + s[i..j]);
+            == { subLengthProp2(s[..i], s[i..j]) ; }
+            flattenLength(s[..i]) +  flattenLength(s[i..j]);
+        }
+    }
 
     /**
      *  Flatten dsitributes over append element.
@@ -119,15 +144,15 @@ module Helpers {
         if (|s| == 0) {
             //  Thansk Dafny
         } else {
-            calc == {
+            calc {
                 flatten(s + [x]);
-                == calc == {
+                == calc {
                     s ;
                     ==
                     [s[0]] + s[1..];
                 }
                 flatten([s[0]] + s[1..] + [x]);
-                == calc == {
+                == calc {
                     [s[0]] + s[1..] + [x];
                     ==
                     [s[0]] + (s[1..] + [x]);
@@ -149,9 +174,9 @@ module Helpers {
         decreases |s2|
     {   
         if (|s2| == 0) {
-            calc == {
+            calc {
                 flatten(s1 + s2);
-                == calc == {
+                == calc {
                     s1 + s2 ;
                     == 
                     s1;
@@ -159,15 +184,15 @@ module Helpers {
                 flatten(s1) ;
             }
         } else {
-            calc == {
+            calc {
                 flatten(s1 + s2);
-                == calc == {
+                == calc {
                     s2 ;
                     ==
                     [s2[0]] + s2[1..];
                 }
                 flatten(s1 + ([s2[0]] + s2[1..]));
-                == calc == {
+                == calc {
                     s1 + ([s2[0]] + s2[1..]);
                     ==
                     (s1 + [s2[0]]) + s2[1..];
@@ -182,12 +207,12 @@ module Helpers {
     }
 
     /** 
-     * Length distributes over flatten of concatenation.
+     * Length distributes over flatten of concatenations.
      */
-    lemma {:induction s1, s2} length<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
+    lemma {:induction s1, s2} lengthDistribFlattenConcat<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures |flatten(s1 + s2)| == |flatten(s1)| + |flatten(s2)|
     {
-        calc == {
+        calc {
             |flatten(s1 + s2)|;
             == { flattenDistributes(s1, s2) ; }
             |flatten(s1) + flatten(s2)|;
@@ -196,7 +221,25 @@ module Helpers {
         }
     }
 
-    
+    lemma flattenLengthMonotonic<T>(s: seq<seq<T>>, i : nat)
+        requires 0 <= i < |s|
+        ensures flattenLength(s[..i]) <= flattenLength(s)
+    {
+        calc {
+            flattenLength(s);
+            == calc {
+                s;
+                ==
+                s[..i] + s[i..];
+            }
+            flattenLength(s[..i] + s[i..]);
+            ==
+            |flatten(s[..i] + s[i..])|;
+            == { lengthDistribFlattenConcat(s[..i], s[i..]) ; }
+            |flatten(s[..i])| + |flatten(s[i..])|;
+        }
+    }
+
     /** .
      *  Flatten seqs of seqs.
      *
@@ -241,12 +284,12 @@ module Helpers {
         // requires 0 <= j < |s[i]|
         ensures 0 <= flattenLength(s[..i]) <= |flatten(s)| 
         // ensures flatten(s)[k + j] == s[i][j]
-    // {   
-    //     calc {
-    //         flattenLength(s[..i]);
-    //         <=
-    //         flattenLength(s[..i] + s[i..]);
-    //     }
-    // } 
+    {   
+        calc {
+            flattenLength(s);
+            >= { flattenLengthMonotonic(s,i) ;}
+            flattenLength(s[..i]);
+        }
+    } 
     
 }
