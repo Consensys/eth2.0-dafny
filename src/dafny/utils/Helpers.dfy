@@ -171,55 +171,10 @@ module Helpers {
 
      //  flattenLength properties.
 
-    lemma {:induction s} flattenLengthCommutes<T>(s: seq<seq<T>>, x : seq<T>)
-        ensures flattenLength(s + [x]) == flattenLength([x] + s)
-    {   
-        calc {
-            flattenLength(s + [x]) ;
-            ==
-            |flatten(s + [x])| ;
-            == { flattenElimLast(s, x) ;}
-            |flatten(s)| + |x|;
-        }
-    }
-
-    lemma {:induction s} lem5<T>(s : seq<seq<T>>, i:nat, j : nat)
-        requires 0 <= i < |s| - 1
-        requires 0 <= j < |s[i]|
-        ensures flattenLength(s[..i]) + j < flattenLength(s[..i + 1])
-        ensures flattenLength(s[..i]) + j < flattenLength(s)
-        ensures flattenLength(s[..i]) + j < |flatten(s)|
-    {   
-       calc {
-            flattenLength(s[..i]) + j ;
-            <
-            flattenLength(s[..i]) + |s[i]| ;
-            == { flattenLenghtElim(s[..i], s[i]); }
-            flattenLength(s[..i] + [s[i]]);
-            == { seqInitLast(s, i) ; }
-            flattenLength(s[..i + 1]);
-       }
-       calc {
-           flattenLength(s[..i]) + j ;
-           <
-           flattenLength(s[..i + 1]) ;
-           <= { flattenLengthMonotonic(s, i + 1) ; }
-           flattenLength(s);
-       }
-    } 
-    
-    lemma {:induction s} flattenLenghtElim<T>(s: seq<seq<T>>, x : seq<T>) 
-        ensures flattenLength(s + [x]) == flattenLength(s) + |x|
-        ensures flattenLength([x] + s) == flattenLength(s) + |x|
-    {   
-        calc {
-            flattenLength(s + [x]);
-            == { flattenLengthCommutes(s, x); }
-            flattenLength([x] + s);        
-        }
-    }
-
-    lemma flattenLengthDistributes<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
+    /**
+     *  flattenLength distributes over +.
+     */
+    lemma {:induction s1, s2} flattenLengthDistributes<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures flattenLength(s1 + s2) == flattenLength(s1) + flattenLength(s2)
     {
         calc {
@@ -233,7 +188,10 @@ module Helpers {
         }
     }
 
-    lemma flattenLengthMonotonic<T>(s: seq<seq<T>>, i : nat)
+    /**
+     *  flattenLength of prefix is less than length of sequence. 
+     */
+    lemma {:induction s} flattenLengthMonotonic<T>(s: seq<seq<T>>, i : nat)
         requires 0 <= i < |s|
         ensures flattenLength(s[..i]) <= flattenLength(s)
     {
