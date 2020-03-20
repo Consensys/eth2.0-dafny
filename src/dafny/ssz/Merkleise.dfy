@@ -60,38 +60,13 @@ include "BoolSeDes.dfy"
                             0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
                             0 as Byte,0 as Byte,0 as Byte,0 as Byte]
 
+    /** 
+     *  Properties of empty chunk.
+     */
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
         ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 as Byte 
     {   //  Thanks Dafny
-    }
-
-    /** bytesInSequenceOfBytes.
-     *
-     *  @param  s   A sequence of serialised objects (seq<Byte>).
-     *  @returns    The total number of bytes in a sequence of Bytes i.e. serialised values.
-     *
-     */
-    function bytesInSequenceOfBytes(s: seq<Bytes>): nat
-        decreases  s
-    {
-        if |s| == 0 then 0
-        else |s[0]|+bytesInSequenceOfBytes(s[1..])
-    }
-    
-    
-    /** concatSerialisedElements.
-     *
-     *  @param  s   A sequence of serialised objects (seq<Byte>).
-     *  @returns    The concatenation of the serialised objects as a single sequence of Bytes.
-     *
-     */
-    function concatSerialisedElements(s: seq<Bytes>): Bytes
-        ensures |concatSerialisedElements(s)| == bytesInSequenceOfBytes(s)
-        decreases  s
-    {
-        if |s| == 0 then []
-        else s[0]+concatSerialisedElements(s[1..])
     }
 
     /** rightPadZeros.
@@ -180,7 +155,8 @@ include "BoolSeDes.dfy"
         ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
     {
         if |s| == 0 then [EMPTY_CHUNK]
-        else toChunks(concatSerialisedElements(s))  
+        // else toChunks(concatSerialisedElements(s))  
+        else toChunks(flatten(s))  
     }
 
 
