@@ -206,30 +206,47 @@ module Helpers {
         }
     }
 
-    lemma foo1<T>(s: seq<seq<T>>, i : nat, j : nat)
-        requires 0 <= i <= j < |s|
-        ensures flattenLength(s[..i]) <= flattenLength(s[..j])
-    {
-        calc >= {
-            flattenLength(s[..j]);
-            == calc {
-                 s[..j] ;
-                 ==
-                 s[..i] + s[i..j];
+    /**
+     *  A nice lemma stating that:
+     *  Elements between indices k..k+|s[[i]] are exactly the elements of s[i].
+     */
+    lemma {:induction s} flattenOneToOneChunk<T>(s : seq<seq<T>>, i: nat, k : nat) 
+        requires |s| >= 1
+        requires 0 <= i < |s| - 1
+        requires k == flattenLength(s[..i])
+        ensures k + |s[i]| - 1 < |flatten(s)|
+        ensures flatten(s)[k..k + |s[i]|] == s[i]
+
+        decreases s, i, k
+    {   
+        if ( |s| == 1 ) {
+           //   Thanks Dafny
+        } else {
+            if ( i >= 1 ) {
+                //  Induction on s[1..], i - 1
+                subSeq(s, i, 1);
+                flattenOneToOneChunk(s[1..], i - 1, flattenLength(s[1..][..i - 1]));
+            } else {
+                //  i == 1 Thanks Dafny
             }
-            flattenLength(s[..i] + s[i..j]);
-            == { flattenLengthDistributes(s[..i], s[i..j]) ; }
-            flattenLength(s[..i]) +  flattenLength(s[i..j]);
         }
     }
 
-//     lemma foo13<T>(s : seq<seq<T>>, i:nat, j : nat)
-//         requires 0 <= i < |s| - 1
-//         requires 0 <= j < |s[i]|
-//         requires flattenLength(s[..i]) + j < |flatten(s)|
-//         ensures flatten(s)[flattenLength(s[..i]) + j] == s[i][j]
-//         {
-//         }        
-//    }
-
+    /**
+     *  The elements of a flattened list are in one-to-one
+     *  correspondence with the elements of the non-flattened.
+     *
+     *  As a consequence, the order of elements is preserved.
+     *
+     *  The proof simply uses toe one-to-one correspondence between
+     *  sections of flatten(s) and elements of s.
+     */
+    lemma {:induction s} flattenIsOneToOne<T>(s : seq<seq<T>>, i:nat, j : nat)
+        requires 0 <= i < |s| - 1
+        requires 0 <= j < |s[i]|
+        requires flattenLength(s[..i]) + j < |flatten(s)|
+        ensures flatten(s)[flattenLength(s[..i]) + j] == s[i][j]
+        {
+            flattenOneToOneChunk(s,i,flattenLength(s[..i]));
+        }        
 }
