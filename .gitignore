@@ -58,3 +58,4 @@ src/dafny/*.mdb
 model.bvd
 *.cfg
 *.dot
+**/tmp/**
