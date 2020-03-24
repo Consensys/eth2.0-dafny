@@ -56,3 +56,5 @@ dkms.conf
 src/dafny/*.mdb
 .vscode/settings.json
 model.bvd
+*.cfg
+*.dot
