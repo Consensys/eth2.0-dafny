@@ -90,20 +90,35 @@ def run_sloccount(iron_base, tmp_dir):
 #   executable = "ls"
 #   args = ["-al"]  
 
+  tab = PrettyTable(["Filename", "#LoC"])
+  tab.align["Filename"] = "l"
+  tab.align["#LoC"] = "r"
+
   sloc = -1
+  totalLoc = 0
 #   print ([executable] + args)
   output = subprocess.check_output([executable] + args)  #shell=True,
 #   print(output)
 #   print(output.stderr)
   output = output.decode("utf-8")
   for line in output.split('\n'):
-    print(line)
-    result = re.search("(\d+)\s+", line)
+    # print(line)
+    result = re.search("(\d+)\s+tmp/(\S+)", line)
     if result:
       sloc = result.group(1)
+      filename = result.group(2)
+      totalLoc += int(sloc)
+      tab.add_row([filename, sloc])
+
+      print(filename, sloc)
+
   if sloc == -1:
     raise Exception("Failed to find sloccount result!")
-  return sloc
+  else:
+    tab.add_row(["", ""])
+    tab.add_row(["Total ", totalLoc])
+    print(tab)
+    return totalLoc
 
 def compute_sloc(iron_base, show_ghost, dafny_file, tmp_dir):
   tmp_file = tmp_dir + dafny_file
