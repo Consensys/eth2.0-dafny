@@ -9,7 +9,11 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 ## Useful Repositories -- Eth 2.0 Spec
 
-* [What's new in Ethereum? by Ben Edgington](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book)
+* [Ethereum annotated specification ](https://gitcoin.co/grants/551/the-ethereum-20-annotated-specification?tab=description) by Ben Edgington
+
+* [What's new in Ethereum? ](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book) by Ben Edgington
+
+* [Who's working on what in Ethereum?](https://ethresear.ch/t/whos-working-on-what/7159/2)
 
 * [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs)
 
@@ -17,11 +21,13 @@ The objective of this project is to write a specification of the Eth2.0 spec in 
 
 * [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/ssz/simple-serialize.md)
 
+* [Prysm SSZ](https://docs.prylabs.network/docs/how-prysm-works/simple-serialize-ssz/)
+
 * [Eth2.0 spec blob](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md)
 
-* [Artemis (full java client that implements the actual state transitions of the beacon chain spec)](https://github.com/PegaSysEng/artemis/)
+* [Artemis](https://github.com/PegaSysEng/artemis/) full java client that implements the actual state transitions of the beacon chain spec
 
-* [Tuweni (used in Artemis?), basic SSZ functionality](https://tuweni.apache.org)
+* [Tuweni ](https://tuweni.apache.org) (used in Artemis?), basic SSZ functionality
 
 ### Phase 0 Resources
 
