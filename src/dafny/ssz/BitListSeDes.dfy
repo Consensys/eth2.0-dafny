@@ -10,7 +10,8 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
- include "../utils/NativeTypes.dfy"
+
+include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "BytesAndBits.dfy"
@@ -26,6 +27,7 @@ include "BytesAndBits.dfy"
     import opened BytesAndBits
     import opened Helpers
 
+    /** A 0 Byte, all bits set to false. */
     const FALSE_BYTE := [false, false, false, false, false, false, false, false]
 
     /**
@@ -289,5 +291,4 @@ include "BytesAndBits.dfy"
             }
         }
     }
-
- }
+}

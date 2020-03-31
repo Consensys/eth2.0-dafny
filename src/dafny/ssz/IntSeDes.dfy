@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
- 
+
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 
@@ -18,7 +18,7 @@ include "../utils/Eth2Types.dfy"
  *  Integers serialisation, desrialisation.
  *
  */
- module IntSeDes {
+module IntSeDes {
 
     import opened NativeTypes
     import opened Eth2Types
@@ -47,13 +47,4 @@ include "../utils/Eth2Types.dfy"
     {   //  Thanks Dafny
     }
 
-    /** Uint16. */
-    // function method bytesToUint16(xs: seq<Byte>) : uint16 
-    //     requires |xs| == 2
-
-    // function method uint16ToBytes(n : uint16) : seq<Byte> 
-    //     ensures |uint16ToBytes(n)| == 2
-    //     ensures bytesToUint16(uint16ToBytes(n)) == n
-
-   
- }
+}

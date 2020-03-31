@@ -17,7 +17,7 @@ include "../utils/Eth2Types.dfy"
  *  Helpers to convert list of bits into uint8 and back
  *
  */
- module BytesAndBits {
+module BytesAndBits {
 
     import opened Eth2Types
 
@@ -142,4 +142,4 @@ include "../utils/Eth2Types.dfy"
             isNull(byteTo8Bits(n));
         }
     }
- }
+}

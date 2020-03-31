@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
- 
+
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
@@ -22,7 +22,7 @@ include "BoolSeDes.dfy"
  *
  *  Serialise, deserialise
  */
- module SSZ {
+module SSZ {
 
     import opened NativeTypes
     import opened Eth2Types
@@ -106,4 +106,4 @@ include "BoolSeDes.dfy"
         ensures deserialise(serialise(s), s.tipe) == Success(s) {
             //  thanks Dafny.
         }
- }
+}

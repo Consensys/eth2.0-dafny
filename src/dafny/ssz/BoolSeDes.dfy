@@ -10,7 +10,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
- 
+
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 
@@ -18,11 +18,14 @@ include "../utils/Eth2Types.dfy"
  *  Boolean serialisation, desrialisation.
  *
  */
- module BoolSeDes {
+module BoolSeDes {
 
     import opened NativeTypes
     import opened Eth2Types
 
+    /**
+     *  Convert a bool into a byte.
+     */
     function method boolToBytes(b: bool) : seq<Byte> 
         ensures | boolToBytes(b) | == 1 
     {
@@ -32,10 +35,13 @@ include "../utils/Eth2Types.dfy"
             [0 as Byte]
     }
 
+    /** 
+     *  Convert a sequence of one Byte into a bool.
+     */
     function method bytesToBool(xs: seq<Byte>) : bool
         requires | xs | == 1 
     {
        (xs[0] as nat) > 0
     }
 
- }
+}

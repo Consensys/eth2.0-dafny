@@ -65,9 +65,6 @@ module Eth2Types {
     /* A String type. */
     type String = seq<char>
 
-   
-   
-
     type HashTreeRoot = Option<array<byte>>
     // Basic Python (SSZ) types.
     /* Hash. (Should probably be a fix-sized bytes. */
@@ -81,12 +78,6 @@ module Eth2Types {
 
     type Slot = int
     type Gwei = int
-
-    /* syntax Fork ::= ".Fork"
-    syntax BlockHeader ::= ".BlockHeader" | BeaconBlockHeader
-    syntax Eth1Data ::= ".Eth1Data"
-    syntax Checkpoint ::= ".Checkpoint"
-    */
 
     // Custom types
 
