@@ -48,3 +48,9 @@ Dafny provides extensive support for automated reasoning leveraging the power of
 
 We are gradually adding specifications, implementations and proofs.
 Our current focus in on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
+
+# How to install (and check the proofs)
+
+* install dafny (link)
+* Pull/clone repo
+* video with how to see verified or bugs.
