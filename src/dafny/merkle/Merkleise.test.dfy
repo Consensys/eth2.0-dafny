@@ -15,11 +15,10 @@ include "../utils/DafTests.dfy"
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
-include "../Constants.dfy"
-include "Serialise.dfy"
-include "IntSeDes.dfy"
-include "BoolSeDes.dfy"
-include "Merkleise.dfy"
+include "../ssz/Serialise.dfy"
+include "../ssz/IntSeDes.dfy"
+include "../ssz/BoolSeDes.dfy"
+include "./Merkleise.dfy"
 
 /**
  *  SSZ_Merkleise library.
@@ -30,7 +29,6 @@ include "Merkleise.dfy"
 
     import opened NativeTypes
     import opened Eth2Types
-    import opened Eth2Constants
     import opened IntSeDes
     import opened BoolSeDes
     import opened SSZ
