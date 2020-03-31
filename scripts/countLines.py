@@ -96,6 +96,8 @@ def run_sloccount(iron_base, tmp_dir):
 
   sloc = -1
   totalLoc = 0
+
+#   linesInFile = subprocess.checkoutput(["cat", ])
 #   print ([executable] + args)
   output = subprocess.check_output([executable] + args)  #shell=True,
 #   print(output)
