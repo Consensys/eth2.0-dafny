@@ -33,17 +33,15 @@ module IntSeDes {
     }
  
 
-    function method bytesToUint8(xs: seq<Byte>) : uint8
-        requires |xs| == 1
+    function method byteToUint8(b: Byte) : uint8
     {
-        (xs[0] as uint8)
-        
+        (b as uint8)
     }
 
 
     /** Encode/decode Uint8 yields Identity. */
     lemma uint8AsBytesInvolutive(n : uint8) 
-        ensures bytesToUint8(uint8ToBytes(n)) == n
+        ensures byteToUint8(uint8ToBytes(n)[0]) == n
     {   //  Thanks Dafny
     }
 

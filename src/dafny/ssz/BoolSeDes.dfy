@@ -38,7 +38,7 @@ module BoolSeDes {
     /** 
      *  Convert a Byte into a bool.
      */
-    function method bytesToBool(b: Byte) : bool
+    function method byteToBool(b: Byte) : bool
     {
        (b as nat) > 0
     }

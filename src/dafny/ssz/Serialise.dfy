@@ -32,7 +32,7 @@ module SSZ {
 
     /** Encode/decode Uint8 yields Identity. */
     lemma uint8AsBytesInvolutive(n : uint8) 
-        ensures bytesToUint8(uint8ToBytes(n)) == n
+        ensures byteToUint8(uint8ToBytes(n)[0]) == n
     {}
 
     /** SizeOf.
@@ -76,12 +76,12 @@ module SSZ {
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(Bool(bytesToBool(xs[0]), Bool_))
+                                Success(Bool(byteToBool(xs[0]), Bool_))
                             else 
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(bytesToUint8(xs[0..1]), Uint8_))
+                                Success(Uint8(byteToUint8(xs[0]), Uint8_))
                              else 
                                 Failure
     }
