@@ -3,11 +3,11 @@
 
 The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language **Dafny**.
 
-* [Eth resources](./eth2-specs.md)
+* [Eth resources](wiki/eth2-specs.md)
 
-* [Dafny resources](./dafny.md)
+* [Dafny resources](wiki/dafny.md)
 
-* [Other resources](./other-resources.md)
+* [Other resources](wiki/other-resources.md)
 
 # Background & Context
 
@@ -32,7 +32,6 @@ More recent audits have been performed including ...leastAuthority
 
 To complement these audits, we would like to provide some guarantees that the Eth2.0 specifications are bug-free.
 
-
 # Objective
 
 Our objectives in this project are many-fold:
@@ -44,7 +43,6 @@ This is written in terms of pre/post-conditions using the Hoare style proof.
 
 To do so, we use the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
 Dafny provides extensive support for automated reasoning leveraging the power of state-of-start SMT-solvers.
-
 
 # Expected results
 

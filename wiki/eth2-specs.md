@@ -1,4 +1,4 @@
-[[up]](README.md)
+[[up]](../README.md)
 
 # Ethereum Search Engine
 
@@ -47,4 +47,4 @@
 
 * [Single Secret Leader Election paper](https://eprint.iacr.org/2020/025.pdf)
 
-[[up]](README.md)
+[[up]](../README.md)

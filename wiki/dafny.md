@@ -1,5 +1,5 @@
 
-[[up]](README.md)
+[[up]](../README.md)
 
 # Useful Repositories - Dafny
 
@@ -19,4 +19,4 @@
 
 * [IronClad project (2015, Dafny spec)](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
 
-[[up]](README.md)
+[[up]](../README.md)
