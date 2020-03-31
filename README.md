@@ -1,78 +1,22 @@
 
 # eth2.0-dafny
 
-The objective of this project is to write a specification of the Eth2.0 spec in Dafny.
+The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language **Dafny**.
 
-## Ethereum Search Engine
+* [Eth resources](./eth2-specs.md)
 
-* [Search engine](https://ethsear.ch/)
+* [Dafny resources](./dafny.md)
 
-## Useful Repositories -- Eth 2.0 Spec
+* [Other resources](./other-resources.md)
 
-* [Ethereum annotated specification ](https://gitcoin.co/grants/551/the-ethereum-20-annotated-specification?tab=description) by Ben Edgington
+# Background & Context
 
-* [What's new in Ethereum? ](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book) by Ben Edgington
+The Eth2 specifications are rather complex.
+As a consequence bugs or glitches or inconsistencies can remain uncovered ... until then manifest, resulting in crashes, which in turn can exploited as security vulnerabilities.
+An example of critical vulnerability is the OutOfBounds exception where a non-existent index in an array is accessed. This is one of the most common _zero day_ attacks.
 
-* [Who's working on what in Ethereum?](https://ethresear.ch/t/whos-working-on-what/7159/2)
-
-* [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs)
-
-* [Beacon in K](https://github.com/runtimeverification/beacon-chain-spec)
-
-* [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/ssz/simple-serialize.md)
-
-* [Prysm SSZ](https://docs.prylabs.network/docs/how-prysm-works/simple-serialize-ssz/)
-
-* [Eth2.0 spec blob](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md)
-
-* [Artemis](https://github.com/PegaSysEng/artemis/) full java client that implements the actual state transitions of the beacon chain spec
-
-* [Tuweni ](https://tuweni.apache.org) (used in Artemis?), basic SSZ functionality
-
-### Phase 0 Resources
-
-* [djrtwo docs](https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view)
-* [V. Buterin docs](https://notes.ethereum.org/@vbuterin/HkiULaluS)
-* [Protolambda docs](<https://github.com/protolambda/eth2-docs>)
-* [V. Buterin notes](https://notes.ethereum.org/@vbuterin/rkhCgQteN)
-
-### Phase 1&2 Resources
-
-* [Phase 2 progress - William Villanueva](https://medium.com/@william.j.villanueva/ethereum-2-0-phase-2-progress-7673b57eabff)
-
-* [Relay networks, fee markets eth2.0 - John Adler](https://medium.com/@adlerjohn/relay-networks-and-fee-markets-in-eth-2-0-878e576f980b)
-
-* [Phase 1 fee and eth1-eth2 bridging](https://ethresear.ch/t/phase-1-fee-market-and-eth1-eth2-bridging/6775)
-
-* [State provider models](https://ethresear.ch/t/state-provider-models-in-ethereum-2-0/6750)
-
-* [Shards - Problem statement](https://ethresear.ch/t/moving-eth-between-shards-the-problem-statement/6597)
-
-* [Single Secret Leader Election paper](https://eprint.iacr.org/2020/025.pdf)
-
-## Useful Repositories - Dafny
-
-* [Dafny github repo](https://github.com/dafny-lang/dafny)
-
-* [Dafny Wiki](https://github.com/dafny-lang/dafny/wiki)
-
-* [VSCode](https://code.visualstudio.com), to use DAfmy on MacOS and Linux
-
-* [Dafny-extension-for-VSCode](https://marketplace.visualstudio.com/items?itemName=correctnessLab.dafny-vscode)
-
-* [Verification Corner](https://www.youtube.com/channel/UCP2eLEql4tROYmIYm5mA27A), tutorials by Rustan Leino.
-
-* [Tutorial paper](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/12/krml220.pdf)
-
-* [Solutions to exercises in previous tutorials](https://github.com/bor0/dafny-tutorial)
-
-* [IronClad project (2015, Dafny spec)](https://github.com/Microsoft/Ironclad/tree/master/ironfleet)
-
-## K-framework resources
-
-* [WIP reference manual/documentation](https://github.com/kframework/k/blob/master/pending-documentation.md)
-
-## Expected results
+Testing and code peer reviews can help keeping the bug count low.
+However, testing can find some bugs but in general cannot _guarantee the absence of bugs_.
 
 The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/blob/master/report/bck-report.pdf) describes how the K-framework can be used to:
 
@@ -81,11 +25,28 @@ The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specificat
 * provide some insight into test coverage (using the current test suites).
 
 This is a very nice work in terms of formalising the Eth2.0 specs.
-However, the current state of the K-framework is limited to testing, and testing can find bugs but cannot prove the absence of bugs.
+However, the current state of the K-framework is limited to testing, and as mentioned before "testing can find bugs but cannot prove the absence of bugs."
 
-To complement this work, we may try to provide some guarantees that the Eth2.0 spec is bug-free.
-We can try to do so by leveraging the power of verification-friendly languages like Dafny.
-The idea is to write a Dafny spec of Eth2.0 with the expected correstness properties embedded in it (annotations such a program invariants).
+Second, the audit performed in ... is based on manual code review and focusses on potential attacks.
+More recent audits have been performed including ...leastAuthority
 
-This work should be simplified thanks to the formal specification of Eth2.0 in K: this provides a solid formal basis for writing the Dafny code.
-The annotations however, are to be carefully inserted, and the invariants that enable Dafny to establish their correctness have to be manually written. This is what we plan to do in this project.
+To complement these audits, we would like to provide some guarantees that the Eth2.0 specifications are bug-free.
+
+
+# Objective
+
+Our objectives in this project are many-fold:
+
+1. to write a formal (non-ambiguous) specification of the Eth2 specification.
+This is written in terms of pre/post-conditions using the Hoare style proof.
+2. to write an implementation for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
+3. to formally prove (by establishing lemmas that can be automatically verified) that our implementation satisfies the specification.
+
+To do so, we use the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
+Dafny provides extensive support for automated reasoning leveraging the power of state-of-start SMT-solvers.
+
+
+# Expected results
+
+We are gradually adding specifications, implementations and proofs.
+Our current focus in on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
