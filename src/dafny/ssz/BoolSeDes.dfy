@@ -36,12 +36,11 @@ module BoolSeDes {
     }
 
     /** 
-     *  Convert a sequence of one Byte into a bool.
+     *  Convert a Byte into a bool.
      */
-    function method bytesToBool(xs: seq<Byte>) : bool
-        requires | xs | == 1 
+    function method bytesToBool(b: Byte) : bool
     {
-       (xs[0] as nat) > 0
+       (b as nat) > 0
     }
 
 }

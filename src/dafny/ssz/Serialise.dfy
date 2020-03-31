@@ -76,7 +76,7 @@ module SSZ {
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(Bool(bytesToBool(xs), Bool_))
+                                Success(Bool(bytesToBool(xs[0]), Bool_))
                             else 
                                 Failure
                             
