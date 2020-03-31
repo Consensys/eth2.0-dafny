@@ -3,6 +3,8 @@
 
 The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language **Dafny**.
 
+# Resources
+
 * [Eth resources](wiki/eth2-specs.md)
 
 * [Dafny resources](wiki/dafny.md)
