@@ -5,11 +5,11 @@ The objective of this project is to write a **formal specification** of the Eth2
 
 # Resources
 
-* [Eth resources](wiki/eth2-specs.md)
+* [Eth2.0](wiki/eth2-specs.md)
 
-* [Dafny resources](wiki/dafny.md)
+* [Dafny](wiki/dafny.md)
 
-* [Other resources](wiki/other-resources.md)
+* [Other](wiki/other-resources.md)
 
 # Background & Context
 
