@@ -4,13 +4,16 @@
 
 The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language **Dafny**.
 
-# Resources
+More specifically, our goals in this project are many-fold:
 
-* [Eth2.0](wiki/eth2-specs.md)
+1. to write a **formal (non-ambiguous) specification** of the Eth2 specification.
+This is written in terms of pre/post-conditions using the Hoare style proof.
+2. to write an **implementation** for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
+3. to **formally prove** (by establishing lemmas that can be automatically verified) that our implementation satisfies the specification.
 
-* [Dafny](wiki/dafny.md)
+To achieve this, we use the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
+Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasonign engines (SMT-solvers).
 
-* [Other](wiki/other-resources.md)
 
 # Background & Context
 
@@ -37,22 +40,18 @@ More recent audits have been performed including ...leastAuthority
 
 To complement these audits, we would like to provide some guarantees that the Eth2.0 specifications are bug-free.
 
-# Main goals of this project
-
-Our goals in this project are many-fold:
-
-1. to write a **formal (non-ambiguous) specification** of the Eth2 specification.
-This is written in terms of pre/post-conditions using the Hoare style proof.
-2. to write an **implementation** for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
-3. to **formally prove** (by establishing lemmas that can be automatically verified) that our implementation satisfies the specification.
-
-To achieve this, we use the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
-Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasonign engines (SMT-solvers).
-
 # Expected results
 
 We are gradually adding the specifications, implementations and proofs.
 Our current focus in on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
+
+# Useful Resources
+
+* [Eth2.0](wiki/eth2-specs.md)
+
+* [Dafny](wiki/dafny.md)
+
+* [Other](wiki/other-resources.md)
 
 # How to install (and check the proofs) [TODO]
 
