@@ -14,7 +14,6 @@ This is written in terms of pre/post-conditions using the Hoare style proof.
 To achieve this, we use the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
 Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasonign engines (SMT-solvers).
 
-
 # Background & Context
 
 The Eth2 specifications are rather complex.
