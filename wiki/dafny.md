@@ -7,7 +7,7 @@
 
 * [Dafny Wiki](https://github.com/dafny-lang/dafny/wiki)
 
-* [VSCode](https://code.visualstudio.com), to use DAfmy on MacOS and Linux
+* [VSCode](https://code.visualstudio.com), to use Dafny on MacOS and Linux
 
 * [Dafny-extension-for-VSCode](https://marketplace.visualstudio.com/items?itemName=correctnessLab.dafny-vscode)
 
