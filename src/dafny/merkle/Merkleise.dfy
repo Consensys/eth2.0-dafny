@@ -149,15 +149,18 @@ include "../ssz/BoolSeDes.dfy"
      *
      *  @param  s   A sequence of serialised objects (seq<Byte>).
      *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
-     *              bytes if necessary. It is implied that at least one chunk is returned???
+     *              bytes if necessary. It is implied by the spec that at least one chunk is 
+     *              returned (see note below).
      *
      *  @note       The pack function isn't type based.
-     *  @note       The spec ... 
+     *  @note       The spec (eth2.0-specs/ssz/simple-serialize.md) says 'Given ordered objects 
+     *              of the same basic type, serialize them, pack them into BYTES_PER_CHUNK-byte 
+     *              chunks, right-pad the last chunk with zero bytes, and return the chunks.'
      *  @note       The py-ssz implementation checks for |seq<Bytes>| == 0 for which it returns
-     *              the EMPTY_CHUNK.
-     *  @note       The py-ssz implementation doesn't allow for a single serialised object of 0 
-     *              bytes. Q: Is this possible? i.e. look to default values. Q: Should EMPTY_CHUNK
-     *              be returned in this case?            
+     *              the EMPTY_CHUNK. However, if the length of the input is greater than 0, i.e.
+     *              |seq<Bytes>| > 0, a toChunks function is called and the toChunks function in
+     *              the py-ssz implementation can return an empty seq and therefore a zero
+     *              chunk output.           
      */
      
      function pack(s: seq<Bytes>) : seq<chunk>
