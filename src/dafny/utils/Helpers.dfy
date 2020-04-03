@@ -253,7 +253,7 @@ module Helpers {
      *
      *  As a consequence, the order of elements is preserved.
      *
-     *  The proof simply uses toe one-to-one correspondence between
+     *  The proof simply uses the one-to-one correspondence between
      *  sections of flatten(s) and elements of s.
      */
     lemma {:induction s} flattenIsOneToOne<T>(s : seq<seq<T>>, i:nat, j : nat)
@@ -261,7 +261,7 @@ module Helpers {
         requires 0 <= j < |s[i]|
         requires flattenLength(s[..i]) + j < |flatten(s)|
         ensures flatten(s)[flattenLength(s[..i]) + j] == s[i][j]
-        {
-            flattenOneToOneChunk(s,i,flattenLength(s[..i]));
-        }        
+    {
+        flattenOneToOneChunk(s,i,flattenLength(s[..i]));
+    }        
 }

@@ -15,9 +15,9 @@
 include "../utils/DafTests.dfy"
 include "./MathHelpers.dfy"
 
- /**
-  * Some tests for checking power of 2.
-  */
+/**
+ * Some tests for checking power of 2.
+ */
 module MathHelpersTests {
 
     import opened DafTest 
@@ -77,7 +77,7 @@ module MathHelpersTests {
         
         executeTests(t1b);
 
-         //  Compute prev power of 2
+        //  Compute prev power of 2
         var rc := [
             TestItem(
                 "get_prev_power_of_two(1) == 1",
