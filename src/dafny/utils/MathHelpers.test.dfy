@@ -16,7 +16,7 @@ include "../utils/DafTests.dfy"
 include "./MathHelpers.dfy"
 
  /**
-  * Some tests for power of 2.
+  * Some tests for checking power of 2.
   */
 module MathHelpersTests {
 
