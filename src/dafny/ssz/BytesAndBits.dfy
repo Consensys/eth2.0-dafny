@@ -120,7 +120,7 @@ module BytesAndBits {
      *  @returns    Decoding (as a list of bits) the encoded version of `l` yields `l`.
      *
      */    
-     lemma decodeOfEncode8BitsIsIdentity(l : seq<bool>) 
+    lemma decodeOfEncode8BitsIsIdentity(l : seq<bool>) 
         requires |l| == 8
         ensures byteTo8Bits(list8BitsToByte(l)) == l 
     {   //  Thanks Dafny.
