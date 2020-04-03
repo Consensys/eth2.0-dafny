@@ -65,6 +65,10 @@ module MathHelpersTests {
             TestItem(
                 "get_next_power_of_two(7) == 8",
                 () => get_next_power_of_two(7) == 8
+            ),
+            TestItem(
+                "get_next_power_of_two(48) == 64",
+                () => get_next_power_of_two(48) == 64
             )
         ];
 
