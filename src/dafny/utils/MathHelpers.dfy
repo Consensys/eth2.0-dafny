@@ -69,7 +69,7 @@ module MathHelpers {
      *  @param  n   A positive integer. 
      *  @return     The largest power of 2 that is smaller than n.
      */
-    function get_prev_power_of_two(n : nat) : nat 
+    function method get_prev_power_of_two(n : nat) : nat 
         requires n > 0
         ensures 1 <= get_prev_power_of_two(n) <= n
         ensures 2 * get_prev_power_of_two(n) > n

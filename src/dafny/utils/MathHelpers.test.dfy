@@ -72,6 +72,47 @@ module MathHelpersTests {
         var t1b := TestSuite("get_next_power_of_two", rb);
         
         executeTests(t1b);
+
+         //  Compute prev power of 2
+        var rc := [
+            TestItem(
+                "get_prev_power_of_two(1) == 1",
+                () => get_prev_power_of_two(1) == 1
+            ),
+            TestItem(
+                "get_prev_power_of_two(2) == 2",
+                () => get_prev_power_of_two(2) == 2
+            ),
+            TestItem(
+                "get_prev_power_of_two(3) == 2",
+                () => get_prev_power_of_two(3) == 2
+            ),
+            TestItem(
+                "get_prev_power_of_two(14) == 8",
+                () => get_prev_power_of_two(14) == 8
+            ),
+            TestItem(
+                "get_prev_power_of_two(25) == 16",
+                () => get_prev_power_of_two(25) == 16
+            ),
+            TestItem(
+                "get_prev_power_of_two(1001) == 512",
+                () => get_prev_power_of_two(1001) == 512
+            ),
+            TestItem(
+                "get_prev_power_of_two(128) == 128",
+                () => get_prev_power_of_two(128) == 128
+            ),
+            TestItem(
+                "get_prev_power_of_two(7) == 4",
+                () => get_prev_power_of_two(7) == 4
+            )
+        ];
+
+        //  run the tests.
+        var t2 := TestSuite("get_next_power_of_two", rc);
+        
+        executeTests(t2);
     }
 
 }
