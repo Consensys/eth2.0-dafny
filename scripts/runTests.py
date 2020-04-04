@@ -11,7 +11,7 @@ import re
 import argparse
 import subprocess
 import pickle
-from prettytable import PrettyTable # Install via: easy_install PrettyTable
+# from prettytable import PrettyTable # Install via: easy_install PrettyTable
 
 import glob
 
