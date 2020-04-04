@@ -8,6 +8,5 @@ jobs:
       - checkout # check out the code in the project directory
       - run: ls -al
       - run: echo "hello world" # run the `echo` command
-      - run: cd dafny 
       - run: python3 scripts/runTests.py "test"
 
