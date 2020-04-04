@@ -1,7 +1,5 @@
 
-[![Build Status](https://circleci.com/gh/PegaSysEng/eth2.0-dafny.svg?style=svg)](https://circleci.com/gh/PegaSysEng/eth2.0-dafny)
-
-
+[![Build Status](https://circleci.com/gh/PegaSysEng/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/PegaSysEng/workflows/eth2.0-dafny) 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # eth2.0-dafny
