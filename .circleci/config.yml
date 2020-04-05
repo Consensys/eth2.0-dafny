@@ -9,5 +9,5 @@ jobs:
       - run: ls -al
       - run: echo "hello world" # run the `echo` command
       - run: python3 scripts/runTests.py "test"
-      - run: exit 1
+      - run: exit 0
 
