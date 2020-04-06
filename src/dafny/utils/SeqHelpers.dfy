@@ -14,7 +14,7 @@
 
  
 /**
- *  Som useful facts about sequences 
+ *  Some useful facts about sequences 
  *  and how to simplify/rewrite them. 
  */
 module SeqHelpers {
