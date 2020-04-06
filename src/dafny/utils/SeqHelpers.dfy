@@ -19,10 +19,6 @@
  */
 module SeqHelpers {
 
-    // lemma one<T>(s: seq<T>)
-    //     ensures s == s[..|s|]
-    // {}
-
     /** 
      *  Split head and tail.
      */
@@ -79,6 +75,7 @@ module SeqHelpers {
         requires |s| >= 1
         requires 0 <= k <= i < |s|
         ensures s[k..i] == s[k..][..i - k]
-    {}
+    {   //  Thanks Dafny.
+    }
     
 }
