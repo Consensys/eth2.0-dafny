@@ -40,7 +40,7 @@ However, testing can find some bugs but in general _cannot guarantee the absence
 These bugs remain uncovered ... until they manifest, resulting in crashes.
 Worse, they can be exploited as _security vulnerabilities_.
 An example of critical vulnerability is the OutOfBounds exception where a non-existent index in an array is accessed. This is one of the most common _zero day_ attacks, and can occur in heavily tested code bases
-[e.g. in the web brower Chromium](https://latesthackingnews.com/2020/02/26/google-patch-serious-chrome-bugs-including-a-zero-day-under-active-exploit/).
+[e.g. in the web browser Chromium](https://latesthackingnews.com/2020/02/26/google-patch-serious-chrome-bugs-including-a-zero-day-under-active-exploit/).
 
 # Related Work
 
