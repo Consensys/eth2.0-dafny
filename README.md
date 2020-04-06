@@ -4,7 +4,7 @@
 
 # Overview 
 
-## eth2.0-dafny
+## Objectives
 
 The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language [Dafny](https://github.com/dafny-lang/dafny/wiki).
 
@@ -44,8 +44,6 @@ An example of critical vulnerability is the OutOfBounds exception where a non-ex
 
 # Related Work
 
-
-
 Runtime Verification Inc. have reported some work on:
 <!-- 
 The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/blob/master/report/bck-report.pdf) describes how the K-framework can be used to:
@@ -74,11 +72,12 @@ Our work aims to complement the previous work by providing a thorough formal ver
 * [Dafny](wiki/dafny.md), install and learn.
 * [Other](wiki/other-resources.md), K-framework resources.
 
-# How check the proofs?
+# How to check the proofs?
 
 ## Using a Docker container
 
 Pre-requisites:
+
 1. a working installation of [Docker](https://docs.docker.com),
 2. a fork or clone of this repository.
 
@@ -105,10 +104,9 @@ root@749938cb155d:/eth2.0-dafny#
 ## Install Dafny on your computer
 
 Pre-requisites:
+
 * install Dafny, see [our Dafny wiki](wiki/dafny.md).
 * clone or fork this repository.
-
-## Checking the proofs
 
 Assuming you have a running Dafny compiler, you may use the following command line to check a `*.dfy` file:
 ```
@@ -117,8 +115,6 @@ Dafny 2.3.0.10506
 
 Dafny program verifier finished with 13 verified, 0 errors
 ```
-
-## Compiling and Running the code
 
 The [test folder](https://github.com/PegaSysEng/eth2.0-dafny/tree/master/test/dafny) contains some tests.
 The purpose of this directory is to demonstrate that we can extract an implementation and run it (indeed, once we have proved the code, there is no need to test it).
