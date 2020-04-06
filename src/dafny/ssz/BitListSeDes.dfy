@@ -58,7 +58,7 @@ include "BytesAndBits.dfy"
         else 0
     }
  
-     /** Simplify neutral element [] when concatenating sequence.
+    /** Simplify neutral element [] when concatenating sequence.
      *  
      *  @tparam     T   A type.
      *  @param      xb  A sequence of elements of type `T`.
