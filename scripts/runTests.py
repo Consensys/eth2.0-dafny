@@ -34,7 +34,7 @@ def process_dir(root_dir):
         compile_and_run_dafny(f)
     # process the sub directories
     x = [os.path.join(os.getcwd(),f) for f in os.scandir(root_dir) if f.is_dir() and not f.name.startswith('.')]
-    for d in x:
+    for d in x: 
             process_dir(d)
 
 def main(srcDir):
