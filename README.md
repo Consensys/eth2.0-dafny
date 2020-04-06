@@ -124,7 +124,7 @@ To run the tests, you can issue the following command from the root directory (i
 > ./scripts/runAllTests.sh
 ```
 
- For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](wiki/dafny.md).
+ For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](https://github.com/PegaSysEng/eth2.0-dafny/wiki/Eth2.0-verification-in-Dafny).
 
 
 <!-- * video with how to see verified or bugs. -->
