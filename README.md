@@ -57,14 +57,16 @@ The paper [An Executable K Model of Ethereum 2.0 Beacon Chain Phase 0 Specificat
 This is a very nice work in terms of formalising the Eth2.0 specs.
 However, the current state of the K-framework is limited to testing, and as mentioned before _testing can find bugs but cannot prove the absence of bugs._ -->
 
-* a [formal semantics of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/) using the K framework. 
+* a [formal semantics of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/) using the K framework.
+This work presents a formal semantics of the Eth2.0 specifications in the K-framework. 
+The semantcis is executable and can be used for testing e.g. symbolic execution. 
 * the [initial formal verification of the Casper protocol](https://runtimeverification.com/blog/runtime-verification-completes-formal-verification-of-ethereum-casper-protocol/).
 * the [verification of the deposit smart contract](https://blog.ethereum.org/2020/02/04/eth2-quick-update-no-8/)
 
 More recently, a [security audit](https://blog.ethereum.org/2020/03/31/eth2-quick-update-no-10/) was performed by LeastAuthority. 
+The code was manually reviewed and some potential security vulnerabilities highlighted.
 
-Our work aims to complement the previous work by providing a formal verification of the Eth2.0 phase 0 specifications. 
-
+Our work aims to complement the previous work by providing a thorough formal verification of the Eth2.0 phase 0 specifications.
 
 # Useful Resources
 
@@ -72,15 +74,43 @@ Our work aims to complement the previous work by providing a formal verification
 * [Dafny](wiki/dafny.md), install and learn.
 * [Other](wiki/other-resources.md), K-framework resources.
 
-# How to install (and check the proofs)
+# How check the proofs?
 
+## Using a Docker container
+
+Pre-requisites:
+1. a working installation of [Docker](https://docs.docker.com),
+2. a fork or clone of this repository.
+
+A simple way to check the proofs is to use a pre-configured installation of Dafny on a Docker container.
+
+On Unix-based system, `cd` to the root directory of your working copy of this repository.
+```
+/home/user1/ $ git clone git@github.com:PegaSysEng/eth2.0-dafny.git
+/home/user1/ $ cd eth2.0-dafny
+/home/user1/eth2.0-dafny $ 
+```
+
+The next commands will start a [Docker container](https://hub.docker.com/repository/docker/franck44/linux-dafny) with Dafny pre-installed, and mount your local working directory as a volume in the Docker machine (this way you can access it from the running Docker machine):
+```
+/home/user1/eth2.0-dafny $ docker run -v /home/user1/eth2.0-dafny:/eth2.0-dafny -it franck44/linux-dafny /bin/bash
+root@749938cb155d:/# cd eth2.0-dafny/
+root@749938cb155d:/eth2.0-dafny# dafny /dafnyVerify:1 /compile:0 src/dafny/utils/MathHelpers.dfy 
+Dafny 2.3.0.10506
+
+Dafny program verifier finished with 13 verified, 0 errors
+root@749938cb155d:/eth2.0-dafny# 
+```
+
+## Install Dafny on your computer
+
+Pre-requisites:
 * install Dafny, see [our Dafny wiki](wiki/dafny.md).
-* Pull/clone this repository.
+* clone or fork this repository.
 
 ## Checking the proofs
 
 Assuming you have a running Dafny compiler, you may use the following command line to check a `*.dfy` file:
-
 ```
 > dafny /dafnyVerify:1 /compile:0  /timeLimit:60 src/dafny/utils/MathHelpers.dfy
 Dafny 2.3.0.10506
@@ -90,15 +120,15 @@ Dafny program verifier finished with 13 verified, 0 errors
 
 ## Compiling and Running the code
 
-The [test folder](https://github.com/PegaSysEng/eth2.0-dafny/tree/master/test/dafny) contains some tests. 
+The [test folder](https://github.com/PegaSysEng/eth2.0-dafny/tree/master/test/dafny) contains some tests.
 The purpose of this directory is to demonstrate that we can extract an implementation and run it (indeed, once we have proved the code, there is no need to test it).
 To run the tests, you can issue the following command from the root directory (it collects all the files in the test folder, compile them and run them):
 
 ```
-> ./scripts/runAllTests.sh 
+> ./scripts/runAllTests.sh
 ```
 
-<!-- ## Compile into C#, Go, JS -->
+ For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](wiki/dafny.md).
 
 
 <!-- * video with how to see verified or bugs. -->
