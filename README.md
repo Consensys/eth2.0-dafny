@@ -70,7 +70,7 @@ Our work aims to complement the previous work by providing a formal verification
 
 * [Eth2.0](wiki/eth2-specs.md) resources, specifications and implementations.
 * [Dafny](wiki/dafny.md), install and learn.
-* [Other](wiki/other-resources.md), eth2.0 specifications audits.
+* [Other](wiki/other-resources.md), K-framework resources.
 
 # How to install (and check the proofs)
 
