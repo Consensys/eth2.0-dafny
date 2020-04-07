@@ -11,10 +11,10 @@ jobs:
       - run: python3 scripts/runTests.py "test"
       - run: 
           command: |
-           py.test scripts/pytesttests.py 
+           py.test scripts/pytesttests.py --junitxml=/tmp/test-results
       - store_test_results:
-          path: test-results
-      - store_artifacts:
-          path: test-results
-          destination: tr1
+          path: /tmp/test-results
+      # - store_artifacts:
+      #     path: test-results
+      #     destination: tr1
 
