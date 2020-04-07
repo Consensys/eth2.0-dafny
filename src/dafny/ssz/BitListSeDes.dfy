@@ -58,16 +58,6 @@ include "BytesAndBits.dfy"
         else 0
     }
  
-    /** Simplify neutral element [] when concatenating sequence.
-     *  
-     *  @tparam     T   A type.
-     *  @param      xb  A sequence of elements of type `T`.
-     */
-    lemma simplifyEmptyConcat<T>(xb: seq<T>) 
-        ensures xb + [] == xb 
-        ensures [] + xb == xb 
-    {   //  Thanks Dafny.
-    }
     
     /**
      *  Encode a list of bits into a sequence of bytes.
