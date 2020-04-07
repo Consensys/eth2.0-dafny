@@ -9,4 +9,15 @@ jobs:
       - run: ls -al
       - run: echo "hello world" # run the `echo` command
       - run: python3 scripts/runTests.py "test"
+      - run:
+          command: |
+            pipenv install
+      - run: 
+          command: |
+           pipenv run python scripts/pytesttests.py test
+      - store_test_results:
+          path: test-results
+      - store_artifacts:
+          path: test-results
+          destination: tr1
 
