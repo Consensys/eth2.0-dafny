@@ -17,7 +17,7 @@ def test_proof_result(file, result, expected):
     "file2, result, expected",
     (
         ("src/dafny/utils/MathHelpers.dfy", "passed", "passed"),
-        ("src/dafny/utils/Helpers.dfy", "passed", "failed"),
+        ("src/dafny/utils/Helpers.dfy", "failed", "failed"),
     ),
 )
 
