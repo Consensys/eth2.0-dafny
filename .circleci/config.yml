@@ -12,7 +12,6 @@ jobs:
       - run:
           name: run tests
           command: |
-            . venv/bin/activate
             mkdir test-results
             py.test scripts/pytesttests.py --junitxml=test-results/junit.xml
 
