@@ -13,7 +13,7 @@
  */
 
 /**
- *  Useful arithmnetic functions.
+ *  Useful arithmetic functions.
  */
 module MathHelpers {
 
