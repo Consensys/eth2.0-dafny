@@ -143,6 +143,9 @@ include "BytesAndBits.dfy"
     lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
         ensures fromBytesToBitList( fromBitlistToBytes (l) ) == l 
     {
+        //  The structure of the proof is split in 3 cases to
+        //  follow the definition of fromBitlistToBytes and makeit easier to
+        //  prove.
         if ( |l| < 7 ) {
             //  Thanks Dafny
         } else if ( |l| == 7 ) {
