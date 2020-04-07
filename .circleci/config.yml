@@ -4,19 +4,14 @@ jobs:
   build:
     docker: 
       - image: franck44/linux-dafny # the primary container, where your job's commands are run
-        environment: # environment variables for primary container
-          PIPENV_VENV_IN_PROJECT: true
     steps:
       - checkout # check out the code in the project directory
       - run: ls -al
       - run: echo "hello world" # run the `echo` command
       - run: python3 scripts/runTests.py "test"
-      - run:
-          command: |
-            pipenv install
       - run: 
           command: |
-           pipenv run python scripts/pytesttests.py test
+           py.test scripts/pytesttests.py 
       - store_test_results:
           path: test-results
       - store_artifacts:
