@@ -64,7 +64,7 @@ module MathHelpers {
         }
     }
 
-     /** Get the previous power of two.
+    /** Get the previous power of two.
      *
      *  @param  n   A positive integer. 
      *  @return     The largest power of 2 that is smaller than n.
