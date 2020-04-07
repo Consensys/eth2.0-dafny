@@ -1,7 +1,7 @@
 
 [![Build Status](https://circleci.com/gh/PegaSysEng/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/PegaSysEng/workflows/eth2.0-dafny) 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
-![GitHub commit activity](https://img.shields.io/github/commit-activity/w/pegasysEng/eth2.0-dafny?style=flat)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat)
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
 
  [![lemmas](https://img.shields.io/badge/Lemmas-54-yellow.svg)](https://shields.io/) 
