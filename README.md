@@ -32,7 +32,7 @@ All the proofs can be **mechanically verified** using theorem provers.
 ## Current State 
 
 We are gradually adding the specifications, implementations and proofs.
-Our current focus in on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
+Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
 
 # Background & Context
 
@@ -62,7 +62,7 @@ However, the current state of the K-framework is limited to testing, and as ment
 
 * a [formal semantics of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/) using the K framework.
 This work presents a formal semantics of the Eth2.0 specifications in the K-framework. 
-The semantcis is executable and can be used for testing e.g. symbolic execution. 
+The semantics are executable and can be used for testing e.g. symbolic execution. 
 * the [initial formal verification of the Casper protocol](https://runtimeverification.com/blog/runtime-verification-completes-formal-verification-of-ethereum-casper-protocol/).
 * the [verification of the deposit smart contract](https://blog.ethereum.org/2020/02/04/eth2-quick-update-no-8/)
 
