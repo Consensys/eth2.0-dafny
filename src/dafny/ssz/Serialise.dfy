@@ -92,7 +92,7 @@ module SSZ {
     //  Specifications and Proofs
     
     /** 
-     * Well typed deserialisation does fail. 
+     * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDesNotFailure(s : Serialisable) 
         requires wellTyped(s)
