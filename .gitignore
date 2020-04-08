@@ -62,3 +62,5 @@ model.bvd
 src/dafny/ssz/overview.pdf
 scripts/__pycache__/pytesttests.cpython-37-pytest-5.3.5.pyc
 scripts/__pycache__/pytesttests.cpython-37-pytest-5.4.1.pyc
+*.go
+*cs
