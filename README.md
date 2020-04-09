@@ -73,9 +73,9 @@ Our work aims to complement the previous work by providing a thorough formal ver
 
 # Useful Resources
 
-* [Eth2.0](wiki/eth2-specs.md) resources, specifications and implementations.
-* [Dafny](wiki/dafny.md), install and learn.
-* [Other](wiki/other-resources.md), K-framework resources.
+* [Eth2.0 resources](wiki/eth2-specs.md) resources, specifications and implementations.
+* [Dafny resources](wiki/dafny.md), install and learn.
+* [Other resources](wiki/other-resources.md), K-framework resources.
 
 # How to check the proofs?
 
@@ -131,5 +131,14 @@ To run the tests, you can issue the following command from the root directory (i
 
  For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](https://github.com/PegaSysEng/eth2.0-dafny/wiki/Eth2.0-verification-in-Dafny).
 
+## How to compile to C#, Go
+
+To compile to Go:
+
+```sh
+dafny /compileTarget:go /spillTargetCode:1 src/dafny/ssz/BitListSeDes.dfy
+```
+
+C# can be targeted by changing `compileTarget` to `cs`.
 
 <!-- * video with how to see verified or bugs. -->
