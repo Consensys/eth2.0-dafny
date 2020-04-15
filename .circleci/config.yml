@@ -9,4 +9,31 @@ jobs:
       - run: ls -al
       - run: echo "hello world" # run the `echo` command
       - run: python3 scripts/runTests.py "test"
+      - run:
+          name: run tests
+          command: |
+            mkdir test-results
+            py.test scripts/pytesttests.py --junitxml=test-results/junit.xml
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: test-results   
+      # - slack/status:
+      #     # fail_only: true
+      #     mentions: '@franck.cassez'
+      #     # only_for_branches: only_for_branches
+      #     webhook: https://hooks.slack.com/services/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
+      # - run: 
+      #     command: |
+      #      py.test scripts/pytesttests.py --junitxml=/tmp/test-results
+      # - store_test_results:
+      #     path: /tmp/test-results
+      # - store_artifacts:
+      #     path: test-results
+      #     destination: tr1
+orbs:
+  slack: circleci/slack@3.4.2
+
 

@@ -1,6 +1,11 @@
 
 [![Build Status](https://circleci.com/gh/PegaSysEng/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/PegaSysEng/workflows/eth2.0-dafny) 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
+<!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
+[![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
+
+ [![lemmas](https://img.shields.io/badge/Lemmas-54-yellow.svg)](https://shields.io/) 
+ [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
 
 # Overview 
 
@@ -27,7 +32,7 @@ All the proofs can be **mechanically verified** using theorem provers.
 ## Current State 
 
 We are gradually adding the specifications, implementations and proofs.
-Our current focus in on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
+Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
 
 # Background & Context
 
@@ -57,7 +62,7 @@ However, the current state of the K-framework is limited to testing, and as ment
 
 * a [formal semantics of Ethereum 2.0 Beacon Chain Phase 0 Specification](https://github.com/runtimeverification/beacon-chain-spec/) using the K framework.
 This work presents a formal semantics of the Eth2.0 specifications in the K-framework. 
-The semantcis is executable and can be used for testing e.g. symbolic execution. 
+The semantics are executable and can be used for testing e.g. symbolic execution. 
 * the [initial formal verification of the Casper protocol](https://runtimeverification.com/blog/runtime-verification-completes-formal-verification-of-ethereum-casper-protocol/).
 * the [verification of the deposit smart contract](https://blog.ethereum.org/2020/02/04/eth2-quick-update-no-8/)
 
@@ -68,9 +73,9 @@ Our work aims to complement the previous work by providing a thorough formal ver
 
 # Useful Resources
 
-* [Eth2.0](wiki/eth2-specs.md) resources, specifications and implementations.
-* [Dafny](wiki/dafny.md), install and learn.
-* [Other](wiki/other-resources.md), K-framework resources.
+* [Eth2.0 resources](wiki/eth2-specs.md) resources, specifications and implementations.
+* [Dafny resources](wiki/dafny.md), install and learn.
+* [Other resources](wiki/other-resources.md), K-framework resources.
 
 # How to check the proofs?
 
@@ -126,5 +131,14 @@ To run the tests, you can issue the following command from the root directory (i
 
  For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](https://github.com/PegaSysEng/eth2.0-dafny/wiki/Eth2.0-verification-in-Dafny).
 
+## How to compile to C#, Go
+
+To compile to Go:
+
+```sh
+dafny /compileTarget:go /spillTargetCode:1 src/dafny/ssz/BitListSeDes.dfy
+```
+
+C# can be targeted by changing `compileTarget` to `cs`.
 
 <!-- * video with how to see verified or bugs. -->

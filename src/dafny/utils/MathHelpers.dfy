@@ -21,6 +21,7 @@ module MathHelpers {
     function power2(n : nat): nat 
         ensures power2(n) >= 1
         ensures n >= 1 ==> power2(n) >= 2 
+
         decreases n
     {
         if n == 0 then 1 else 2 * power2(n - 1)
@@ -33,20 +34,23 @@ module MathHelpers {
      */
     function method get_next_power_of_two(n : nat) : nat 
         requires true
+
         ensures get_next_power_of_two(n) >= 1
         ensures get_next_power_of_two(n) >= n 
         ensures n >= 1 ==> (get_next_power_of_two(n) / 2) < n
+
         decreases n
     {
         if n <= 1 then 1
-        else 2 * get_next_power_of_two( (n + 1) / 2)
+        else 2 * get_next_power_of_two( (n + 1) / 2 )
     }
     
     /** 
      * get_next_power_of_two returns a power of 2. 
      */
     lemma {:induction n} getNextPow2isPower2(n: nat)
-    ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) {
+        ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
+    {
         if n <= 1 {
             assert(get_next_power_of_two(n) == power2(0)) ;
         } else {
