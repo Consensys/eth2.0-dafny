@@ -8,9 +8,9 @@ This section contains references to resources on Ethereum.
 
 # Useful Repositories -- Eth 2.0 Spec
 
-* [Ethereum annotated specification ](https://gitcoin.co/grants/551/the-ethereum-20-annotated-specification?tab=description) by Ben Edgington
+* [Ethereum annotated specification](https://gitcoin.co/grants/551/the-ethereum-20-annotated-specification?tab=description) by Ben Edgington
 
-* [What's new in Ethereum? ](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book) by Ben Edgington
+* [What's new in Ethereum?](https://notes.ethereum.org/@ChihChengLiang/Sk8Zs--CQ/https%3A%2F%2Fhackmd.io%2F%40benjaminion%2Fwnie2_200124?type=book) by Ben Edgington
 
 * [Who's working on what in Ethereum?](https://ethresear.ch/t/whos-working-on-what/7159/2)
 
@@ -26,7 +26,7 @@ This section contains references to resources on Ethereum.
 
 * [Artemis](https://github.com/PegaSysEng/artemis/) full java client that implements the actual state transitions of the beacon chain spec
 
-* [Tuweni ](https://tuweni.apache.org), basic SSZ functionality
+* [Tuweni](https://tuweni.apache.org), basic SSZ functionality
 
 ## Phase 0 Resources
 
