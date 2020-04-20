@@ -104,16 +104,57 @@ module SSZ {
      */
     lemma wellTypedDoesNotFailure(s : Serialisable) 
         requires wellTyped(s)
-        ensures deserialise(serialise(s), s.tipe) != Failure {
-            //  Thanks Dafny.
-        }
+        ensures deserialise(serialise(s), s.tipe) != Failure 
+    {   //  Thanks Dafny.
+    }
     
     /** 
      * Deserialise(seriliase()) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable, t: Tipe) 
         requires wellTyped(s)
-        ensures deserialise(serialise(s), s.tipe) == Success(s) {
-            //  thanks Dafny.
+        ensures deserialise(serialise(s), s.tipe) == Success(s) 
+        {   //  thanks Dafny.
+            match s 
+                case Bitlist(xl, Bitlist_) => 
+                    calc {
+                        deserialise(serialise(s), s.tipe);
+                        ==
+                        deserialise(serialise(Bitlist(xl, Bitlist_)), Bitlist_);
+                        == 
+                        deserialise(fromBitlistToBytes(xl), Bitlist_);
+                        == 
+                        Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)), Bitlist_));
+                        == { decodeEncodeIsIdentity(xl); } 
+                        Success(Bitlist(xl, Bitlist_));
+                    }
+
+                case Bool(_, _) => 
+
+                case Uint8(_, _) => 
+            
         }
+
+        /**
+     *  Serialise is injective for bitlists.
+     */
+    lemma {:induction s1, s2} SerialiseIsInjective(s1: Serialisable, s2 : Serialisable)
+        requires wellTyped(s1) 
+        requires wellTyped(s2) 
+        ensures s1.tipe == s2.tipe ==> serialise(s1) == serialise(s2) ==> s1 == s2 
+    {
+        //  Only hard case is Bitlist
+        if ( s1.tipe == Bitlist_ ) {
+            match s1 
+                case Bitlist(xl1, Bitlist_) =>
+                    if ( s1.tipe == s2.tipe ) {
+                        match s2 
+                            case Bitlist(xl2, Bitlist_) =>
+                                BitlistSerialiseIsInjective(xl1, xl2);
+                    } 
+        } 
+        else {
+            //  Thanks Dafny
+        }   
+    }
 }
