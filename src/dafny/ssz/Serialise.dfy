@@ -18,6 +18,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
 include "BoolSeDes.dfy"
+include "BitListSeDes.dfy"
 
 /**
  *  SSZ library.
@@ -30,6 +31,7 @@ module SSZ {
     import opened Eth2Types
     import opened IntSeDes
     import opened BoolSeDes
+    import opened BitListSeDes
     import opened Helpers
 
     /** Encode/decode Uint8 yields Identity. */
@@ -62,6 +64,8 @@ module SSZ {
             case Bool(b, _) => boolToBytes(b)
 
             case Uint8(n, _) => uint8ToBytes(n)
+
+            case Bitlist(xl , _ ) => fromBitlistToBytes(xl)
     }
 
     /** Deserialise. 
@@ -85,6 +89,10 @@ module SSZ {
             case Uint8_ => if |xs| == 1 then
                                 Success(Uint8(byteToUint8(xs[0]), Uint8_))
                              else 
+                                Failure
+            case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
+                                Success(Bitlist(fromBytesToBitList(xs), Bitlist_))
+                            else
                                 Failure
     }
 
