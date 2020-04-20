@@ -31,6 +31,7 @@ module Eth2Types {
     datatype Serialisable = 
             Uint8(n: uint8, ghost tipe: Tipe)
         |   Bool(b: bool, ghost tipe: Tipe)
+        |   Bitlist(xl: seq<bool>, ghost tipe: Tipe)
 
     /** Some type tags.
      * 
@@ -43,6 +44,7 @@ module Eth2Types {
     datatype Tipe =
             Uint8_
         |   Bool_
+        |   Bitlist_
 
     /** Whether a serialisable has its Tipe field matching its type. 
      *
@@ -51,9 +53,11 @@ module Eth2Types {
      */
     predicate wellTyped(s : Serialisable) {
             match s 
-                case Bool(_, b) => s.tipe == Bool_
+                case Bool(_, t) => t == Bool_
         
-                case Uint8(_, t) => s.tipe == Uint8_
+                case Uint8(_, t) => t == Uint8_
+
+                case Bitlist(_, t) => t == Bitlist_
     }
 
     //  Old section
@@ -73,7 +77,7 @@ module Eth2Types {
     type Hash = String
 
     //  TODO: change the Bytes type
-    // type Bytes = String 
+    // type SerialisedBytes = seq<Byte> 
     type Byte = uint8
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
