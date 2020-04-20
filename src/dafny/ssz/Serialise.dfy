@@ -130,7 +130,7 @@ module SSZ {
             
         }
 
-        /**
+    /**
      *  Serialise is injective for bitlists.
      */
     lemma {:induction s1, s2} SerialiseIsInjective(s1: Serialisable, s2 : Serialisable)
@@ -138,18 +138,20 @@ module SSZ {
         requires wellTyped(s2) 
         ensures s1.tipe == s2.tipe ==> serialise(s1) == serialise(s2) ==> s1 == s2 
     {
-        //  Only hard case is Bitlist
-        if ( s1.tipe == Bitlist_ ) {
-            match s1 
-                case Bitlist(xl1, Bitlist_) =>
-                    if ( s1.tipe == s2.tipe ) {
-                        match s2 
-                            case Bitlist(xl2, Bitlist_) =>
-                                BitlistSerialiseIsInjective(xl1, xl2);
-                    } 
-        } 
-        else {
-            //  Thanks Dafny
-        }   
+        //  The proof follows from involutive
+        if (s1.tipe == s2.tipe) {
+            if ( serialise(s1) == serialise(s2) ) {
+                calc {
+                    Success(s1) ;
+                    == { seDesInvolutive(s1, s1.tipe); }
+                    deserialise(serialise(s1), s1.tipe);
+                    ==
+                    deserialise(serialise(s2), s2.tipe);
+                    == { seDesInvolutive(s2, s2.tipe); }
+                    Success(s2);
+                }
+                
+            }
+        }
     }
 }
