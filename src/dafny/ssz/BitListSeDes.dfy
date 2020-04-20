@@ -196,7 +196,7 @@ include "BytesAndBits.dfy"
     /**
      *  Serialise is injective for bitlists.
      */
-    lemma {:induction l1, l2} SerialiseIsInjective(l1: seq<bool>, l2 : seq<bool>)
+    lemma {:induction l1, l2} BitlistSerialiseIsInjective(l1: seq<bool>, l2 : seq<bool>)
         ensures fromBitlistToBytes(l1) == fromBitlistToBytes(l2) ==> l1 == l2 
     {
         calc ==> {
@@ -209,7 +209,7 @@ include "BytesAndBits.dfy"
     /**
      *  Deserialise is injective for sequences of bytes.
      */
-    lemma {:induction xa, xb} DeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
+    lemma {:induction xa, xb} BitlistDeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
         requires |xa| >= 1
         requires xa[|xa| - 1] >= 1
         requires |xb| >= 1
