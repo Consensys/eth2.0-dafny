@@ -34,11 +34,6 @@ module SSZ {
     import opened BitListSeDes
     import opened Helpers
 
-    /** Encode/decode Uint8 yields Identity. */
-    lemma uint8AsBytesInvolutive(n : uint8) 
-        ensures byteToUint8(uint8ToBytes(n)[0]) == n
-    {}
-
     /** SizeOf.
      *
      *  @param  s   A serialisable object of type uintN or bool.
