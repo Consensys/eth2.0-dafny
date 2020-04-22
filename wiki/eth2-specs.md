@@ -34,6 +34,7 @@ This section contains references to resources on Ethereum.
 * [V. Buterin docs](https://notes.ethereum.org/@vbuterin/HkiULaluS)
 * [Protolambda docs](<https://github.com/protolambda/eth2-docs>)
 * [V. Buterin notes](https://notes.ethereum.org/@vbuterin/rkhCgQteN)
+* [The Beacon Chain Ethereum 2.0 explainer you need to read first](https://ethos.dev/beacon-chain/) 
 
 ## Phase 1&2 Resources
 
