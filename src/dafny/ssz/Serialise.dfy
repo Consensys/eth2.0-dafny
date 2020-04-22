@@ -106,7 +106,7 @@ module SSZ {
     /** 
      * Deserialise(seriliase()) = Identity for well typed objects.
      */
-    lemma seDesInvolutive(s : Serialisable, t: Tipe) 
+    lemma seDesInvolutive(s : Serialisable) 
         requires wellTyped(s)
         ensures deserialise(serialise(s), s.tipe) == Success(s) 
         {   //  thanks Dafny.
@@ -143,11 +143,11 @@ module SSZ {
             if ( serialise(s1) == serialise(s2) ) {
                 calc {
                     Success(s1) ;
-                    == { seDesInvolutive(s1, s1.tipe); }
+                    == { seDesInvolutive(s1); }
                     deserialise(serialise(s1), s1.tipe);
                     ==
                     deserialise(serialise(s2), s2.tipe);
-                    == { seDesInvolutive(s2, s2.tipe); }
+                    == { seDesInvolutive(s2); }
                     Success(s2);
                 }
             }
