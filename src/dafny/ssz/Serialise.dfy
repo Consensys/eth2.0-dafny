@@ -131,7 +131,7 @@ module SSZ {
         }
 
     /**
-     *  Serialise is injective for bitlists.
+     *  Serialise is injective.
      */
     lemma {:induction s1, s2} SerialiseIsInjective(s1: Serialisable, s2 : Serialisable)
         requires wellTyped(s1) 
@@ -150,7 +150,6 @@ module SSZ {
                     == { seDesInvolutive(s2, s2.tipe); }
                     Success(s2);
                 }
-                
             }
         }
     }
