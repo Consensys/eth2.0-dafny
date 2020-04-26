@@ -24,6 +24,10 @@ lemma lemma_small_div()
     ensures forall x, d {:trigger x / d} :: 0 <= x < d && d > 0 ==> x / d == 0;
 { }
 
+lemma LemmaSmallDivNotForall(x:int,d:int)
+ensures 0 <= x < d && d > 0 ==> x / d == 0
+{ }
+
 lemma lemma_mod_of_zero_is_zero(m:int)
     requires 0 < m;
     ensures 0 % m == 0;
