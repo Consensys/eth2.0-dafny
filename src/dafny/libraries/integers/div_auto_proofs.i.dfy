@@ -1,14 +1,18 @@
 include "mod_auto.i.dfy"
+include "mod_auto_proofs.i.dfy"
+include "div_nonlinear.i.dfy"
 
 module Math__div_auto_proofs_i {
 import opened Math__mod_auto_i
+import opened Math__mod_auto_proofs_i
+import opened Math__div_nonlinear_i
 
 lemma lemma_div_auto_basics(n:int)
     requires n > 0;
     ensures  (n / n == -((-n) / n) == 1)
-    ensures  (forall x:int {:trigger x / n} :: 0 <= x < n <==> x / n == 0)
-    ensures  forall x:int {:trigger (x + n) / n} :: (x + n) / n == x / n + 1;
-    ensures  forall x:int {:trigger (x - n) / n} :: (x - n) / n == x / n - 1;
+    ensures  (forall x:int :: 0 <= x < n <==> x / n == 0)
+    ensures  forall x:int  :: (x + n) / n == x / n + 1;
+    ensures  forall x:int  :: (x - n) / n == x / n - 1;
 {
     lemma_mod_auto(n);
     lemma_mod_auto_basics(n);

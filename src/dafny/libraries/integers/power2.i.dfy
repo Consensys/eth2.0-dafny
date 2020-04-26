@@ -2,12 +2,18 @@ include "power2s.i.dfy"
 include "powers.i.dfy"
 include "power.i.dfy"
 include "div.i.dfy"
+include "div_nonlinear.i.dfy"
+include "mul_auto.i.dfy"
+include "mul.i.dfy"
 
 module Math__power2_i {
 import opened Math__power2_s
 import opened Math__power_s
 import opened Math__power_i
 import opened Math__div_i
+import opened Math__mul_auto_i
+import opened Math__mul_i
+import opened Math__div_nonlinear_i
 
 /*
  * Real definition in spec directory (included above);
@@ -26,6 +32,8 @@ function {:opaque} power2(exp: nat) : nat
 lemma lemma_power2_is_power_2_general()
     ensures forall x:nat :: power2(x) == power(2,x);
 {
+    reveal_power();
+    reveal_power2();
     forall x:nat
         ensures power2(x) == power(2,x);
     {
@@ -46,12 +54,21 @@ lemma lemma_power2_is_power_2(x:nat)
 lemma lemma_power2_auto()
     ensures  power2(0) == 1;
     ensures  power2(1) == 2;
-    ensures  forall x:nat, y:nat {:trigger power2(x + y)} :: power2(x + y) == power2(x) * power2(y);
-    ensures  forall x:nat, y:nat {:trigger power2(x - y)} :: x >= y ==> power2(x - y) * power2(y) == power2(x);
-    ensures  forall x:nat, y:nat {:trigger x * y} :: y == 2 ==> x * y == x + x;
+    ensures  forall x:nat, y:nat :: power2(x + y) == power2(x) * power2(y);
+    ensures  forall x:nat, y:nat :: x >= y ==> power2(x - y) * power2(y) == power2(x);
+    ensures  forall x:nat, y:nat :: y == 2 ==> x * y == x + x;
 {
-    lemma_power2_is_power_2_general();
-    lemma_power_auto();
+    reveal_power2();
+
+    assert power2(0) == 1;
+
+    assert power2(1) == 2;
+
+    assert forall x:nat, y:nat :: power2(x + y) == power2(x) * power2(y);
+
+    assert forall x:nat, y:nat :: x >= y ==> power2(x - y) * power2(y) == power2(x);
+
+    assert forall x:nat :: x * 2 == x + x;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -60,32 +77,26 @@ lemma lemma_power2_strictly_increases(e1: int, e2: int)
     requires 0 <= e1 < e2;
     ensures power2(e1) < power2(e2);
 {
-    lemma_power2_auto();
-    lemma_mul_auto_induction(e2 - e1, imap e :: 0 < e ==> power2(e1) < power2(e1 + e));
+    reveal_power2();
 }
 
 lemma lemma_power2_increases(e1: int, e2: int)
     requires 0 <= e1 <= e2;
     ensures power2(e1) <= power2(e2);
 {
-    lemma_power2_auto();
-    lemma_mul_auto_induction(e2 - e1, imap e :: 0 <= e ==> power2(e1) <= power2(e1 + e));
+    reveal_power2();
 }
 
 lemma lemma_power2_positive()
     ensures forall e:nat :: 0 < power2(e);
 {
-    lemma_power2_auto();
-    lemma_mul_auto_induction_forall(imap e :: 0 <= e ==> 0 < power2(e));
+    reveal_power2();
 }
 
 lemma lemma_power2_nonzero_bigger_than_one()
     ensures forall e:nat :: 0<e ==> 1 < power2(e);
 {
-    lemma_power2_auto();
-    var f := imap e :: (0 < e ==> 1 < power2(e));
-    lemma_mul_auto_induction_forall(f);
-    assert forall e :: f[e] <==> (0 < e ==> 1 < power2(e)); // REVIEW: why isn't this obvious to Dafny?
+    reveal_power2();
 }
 
 lemma lemma_power2_strictly_increases_converse(e1: int, e2: int)
@@ -117,6 +128,7 @@ lemma lemma_power2_adds(e1:nat, e2:nat)
     decreases e2;
     ensures power2(e1 + e2) == power2(e1) * power2(e2);
 {
+    reveal_power2();
     lemma_power2_auto();
 }
 
@@ -428,6 +440,7 @@ lemma lemma_pull_out_powers_of_2(x:nat, y:nat, z:nat)
 lemma lemma_rebase_powers_of_2()
     ensures forall n:nat, e:nat {:trigger power(power2(n), e)} :: 0 <= n * e && power(power2(n), e) == power2(n * e);
 {
+    reveal_power2();
     forall n:nat, e:nat
         ensures 0 <= n * e && power(power2(n), e) == power2(n * e);
     {
@@ -441,8 +454,9 @@ lemma lemma_mask_div_2(c:nat)
     requires 0<c;
     ensures (power2(c)-1)/2 == power2(c-1)-1;
 {
+    reveal_power2();
     lemma_power2_auto();
-    lemma_mul_auto_induction(c, imap u :: 0 < u ==> (power2(u)-1)/2 == power2(u-1)-1);
+    lemma_mul_auto_induction(c, imap u {:trigger power2(u-1)-1,(power2(u)-1)/2} :: 0 < u ==> (power2(u)-1)/2 == power2(u-1)-1);
 }
 
 lemma lemma_power2_division_inequality(x:nat, p:nat, s:nat)

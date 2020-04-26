@@ -1,17 +1,25 @@
 include "power.i.dfy"
 include "mul.i.dfy"
 include "div_def.i.dfy"
-include "div_boogie.i.dfy"
 include "div_nonlinear.i.dfy"
 include "div_auto.i.dfy"
+include "mod_auto.i.dfy"
+include "mul_auto.i.dfy"
+include "powers.i.dfy"
+include "mul_nonlinear.i.dfy"
+include "mod_auto_proofs.i.dfy"
 
 module Math__div_i {
 import opened Math__power_i
 import opened Math__mul_i
 import opened Math__div_def_i
-import opened Math__div_boogie_i
 import opened Math__div_nonlinear_i
 import opened Math__div_auto_i
+import opened Math__mod_auto_i
+import opened Math__mul_auto_i
+import opened Math__power_s
+import opened Math__mul_nonlinear_i
+import opened Math__mod_auto_proofs_i
 
 //-////////////////////////////////////////////////////////////////////////////
 //-
@@ -34,7 +42,7 @@ lemma lemma_div_basics(x:int)
 
 
 lemma lemma_small_div_converse()
-    ensures forall x, d {:trigger x/d} :: 0<=x && 0<d && x/d==0 ==> x < d;
+    ensures forall x, d :: 0<=x && 0<d && x/d==0 ==> x < d;
 {
     forall x, d | 0<=x && 0<d && x/d==0 ensures x < d;
     {
@@ -133,10 +141,10 @@ lemma lemma_div_pos_is_pos(x:int, divisor:int)
 //-////////////////////////////////////////////////////////////////////////////
 
 lemma lemma_div_basics_forall()
-    ensures forall x {:trigger 0 / x} :: x != 0 ==> 0 / x == 0;
-    ensures forall x {:trigger x / 1} :: x / 1 == x;
-    ensures forall x, y {:trigger x/y} :: x >= 0 && y > 0 ==> x/y >= 0;
-    ensures forall x, y {:trigger x/y} :: x >= 0 && y > 0 ==> x/y <= x;
+    ensures forall x :: x != 0 ==> 0 / x == 0;
+    ensures forall x :: x / 1 == x;
+    ensures forall x, y :: x >= 0 && y > 0 ==> x/y >= 0;
+    ensures forall x, y :: x >= 0 && y > 0 ==> x/y <= x;
 {
     forall (x:int)
         ensures x != 0 ==> 0 / x == 0;
@@ -165,6 +173,46 @@ lemma lemma_div_neg_neg(x:int, d:int)
     ensures x/d == -((-x+d-1)/d);
 {
     lemma_div_auto(d);
+
+    calc == {
+        (-x+d-1)/d;
+        ((-x-1)+d)/d;
+        (-x-1)/d + 1;
+    }
+    if(x%d == 0)
+    {
+        calc == {
+            (-x-1)/d + 1;
+                {
+                    assert -1%d == d-1;
+                    lemma_div_auto(d);
+                }
+            (-x)/d;
+            (0 - x)/d;
+                { 
+                    assert 0%d - x%d == 0;
+                    lemma_div_auto(d);
+                }
+            0/d -(x/d);
+            -(x/d);
+        }
+    }
+    else
+    {
+        calc == {
+            (-x-1)/d +  1;
+            (-x)/d + (-1)/d + 2;
+            (0 -x)/d + (-1)/d + 2;
+                { 
+                  assert x%d > 0;
+                  assert 0%d - x%d < 0;
+                  lemma_div_auto(d);
+                  assert -1/d == -1;
+                }
+            0/d -(x/d);
+            -(x/d);
+        }
+    }
 }
 
 
@@ -196,8 +244,8 @@ lemma lemma_mod_remainder() {}
 ////////////////////////////////////////////////
 
 lemma lemma_mod_basics()
-    ensures forall m:int {:trigger m % m} :: m > 0 ==> m % m == 0;
-    ensures forall x:int, m:int {:trigger (x%m) % m} :: m > 0 ==> (x%m) % m == x%m;
+    ensures forall m:int :: m > 0 ==> m % m == 0;
+    ensures forall x:int, m:int :: m > 0 ==> (x%m) % m == x%m;
 {
     forall m:int | m > 0
         ensures m % m == 0;
@@ -212,9 +260,9 @@ lemma lemma_mod_basics()
 }
 
 lemma lemma_mod_properties()
-    ensures forall m:int {:trigger m % m} :: m > 0 ==> m % m == 0;
-    ensures forall x:int, m:int {:trigger (x%m) % m} :: m > 0 ==> (x%m) % m == x%m;
-    ensures forall x:int, m:int {:trigger x%m} :: m > 0 ==> 0 <= x%m < m;
+    ensures forall m:int :: m > 0 ==> m % m == 0;
+    ensures forall x:int, m:int :: m > 0 ==> (x%m) % m == x%m;
+    ensures forall x:int, m:int :: m > 0 ==> 0 <= x%m < m;
 {
     lemma_mod_basics();
 
@@ -260,6 +308,23 @@ lemma lemma_add_mod_noop(x:int, y:int, m:int)
     ensures ((x % m) + (y % m)) % m == (x+y) % m;
 {
     lemma_mod_auto(m);
+    if((x%m)+(y%m) < m)
+    {
+        calc == {
+            (x+y)%m;
+            (x%m) + (y%m);
+            ((x % m) + (y % m)) % m;
+        }
+    }
+    else
+    {
+        calc == {
+            ((x % m) + (y % m)) % m;
+            (x %  m) % m + (y % m) % m - m;
+            x %  m  + y % m - m;
+            (x + y)%m;
+        }
+    }
 }
 
 lemma lemma_add_mod_noop_right(x:int, y:int, m:int)
@@ -267,6 +332,23 @@ lemma lemma_add_mod_noop_right(x:int, y:int, m:int)
     ensures (x + (y % m)) % m == (x+y) % m;
 {
     lemma_mod_auto(m);
+    assert y%m == (y%m)%m;
+    if( x%m + (y%m) < m)
+    {
+        calc == {
+            (x + (y % m)) % m;
+            x%m + (y%m);
+        }
+    }
+    else
+    {
+        calc == {
+            (x  + (y % m)) % m;
+            x % m + (y % m) % m - m;
+            x %  m  + y % m - m;
+            (x + y) % m;
+        }
+    }
 }
 
 lemma lemma_mod_equivalence(x:int, y:int, m:int)
@@ -281,6 +363,23 @@ lemma lemma_sub_mod_noop(x:int, y:int, m:int)
     ensures ((x % m) - (y % m)) % m == (x-y) % m;
 {
     lemma_mod_auto(m);
+    if(0 <= (x%m)-(y%m) < m)
+    {
+        calc == {
+            (x-y)%m;
+            (x%m) - (y%m);
+            ((x % m) - (y % m)) % m;
+        }
+    }
+    else
+    {
+        calc == {
+            ((x % m) - (y % m)) % m;
+            (x %  m) % m - (y % m) % m + m;
+            x %  m  - y % m + m;
+            (x - y)%m;
+        }
+    }
 }
 
 lemma lemma_sub_mod_noop_right(x:int, y:int, m:int)
@@ -288,6 +387,23 @@ lemma lemma_sub_mod_noop_right(x:int, y:int, m:int)
     ensures (x - (y % m)) % m == (x-y) % m;
 {
     lemma_mod_auto(m);
+    assert y%m == (y%m)%m;
+    if( 0 <= x%m - (y%m) < m)
+    {
+        calc == {
+            (x - (y % m)) % m;
+            (x - y) % m;
+        }
+    }
+    else
+    {
+        calc == {
+            (x  - (y % m)) % m;
+            x % m - (y % m) % m + m;
+            x %  m  - y % m + m;
+            (x - y) % m;
+        }
+    }
 }
 
 lemma lemma_mod_adds(a:int, b:int, d:int)
@@ -296,23 +412,43 @@ lemma lemma_mod_adds(a:int, b:int, d:int)
     ensures (a%d + b%d) < d ==> a%d + b%d == (a+b)%d;
 {
     lemma_mul_auto();
-    lemma_div_auto(d);
+    lemma_mod_auto(d);
+    if(a%d + b%d < d)
+    {
+        calc == {
+            a%d + b%d;
+            (a+b)%d;
+            (a+b)%d + 0;
+                calc == {
+                    (a%d + b%d)/d;
+                    0;
+                }
+            (a+b)%d + d*((a%d + b%d)/d);
+        }
+    }
+    else if(d <= a%d + b%d < 2*d )
+    {
+        calc == {
+            a%d + b%d;
+            (a+b)%d + d;
+                calc == {
+                    (a%d + b%d)/d;
+                    1;
+                }
+            (a+b)%d + d*((a%d + b%d)/d);
+        }
+    }
 }
 
-lemma {:timeLimitMultiplier 2} lemma_mod_neg_neg(x:int, d:int)
+lemma lemma_mod_neg_neg(x:int, d:int)
     requires d > 0;
     ensures x%d == (x*(1-d))%d;
 {
-    forall ensures (x - x * d) % d == x % d;
+    assert (x - x * d) % d == x % d by
     {
         lemma_mod_auto(d);
-        var f := imap i :: (x - i * d) % d == x % d;
-        assert  MulAuto() ==> f[0]
-                        && (forall i {:trigger TMulAutoLe(0, i)} :: TMulAutoLe(0, i) && f[i] ==> f[i + 1])
-                        && (forall i {:trigger TMulAutoLe(i, 0)} :: TMulAutoLe(i, 0) && f[i] ==> f[i - 1]);
-        lemma_mul_auto_induction(x, imap i :: (x - i * d) % d == x % d);
+        lemma_mod_multiples_basic(x,d);
     }
-    lemma_mul_auto();
 }
 
 lemma lemma_fundamental_div_mod_converse(x:int, d:int, q:int, r:int)
@@ -346,7 +482,39 @@ lemma lemma_mul_mod_noop_left(x:int, y:int, m:int)
     ensures (x % m)*y % m == x*y % m;
 {
     lemma_mod_auto(m);
-    lemma_mul_auto_induction(y, imap u :: (x % m)*u % m == x*u % m);
+    var f:= imap u :: (x % m)*u % m == x*u % m;
+    assert f[0];
+
+    forall u:int | u>=0 && f[u]
+    ensures f[u+1]
+    {
+        var zero_or_m := if x*u % m + x%m < m then 0 else m;
+        calc == {
+                (x % m)*(u+1) % m;
+                    // {lemma_mul_is_distributive(u,1,x % m);}
+                ((x % m)*u + (x % m)) % m;
+                ((x%m)*u)%m + (x%m)%m - zero_or_m;
+                ((x%m)*u)%m + (x%m) - zero_or_m;
+                x*u%m + x%m - zero_or_m;
+                x*(u+1) % m;
+            }
+    }
+
+    forall u:int | u<=0 && f[u]
+    ensures f[u-1]
+    {
+        var zero_or_m := if 0<=  x*u % m - x%m < m then 0 else m;
+        calc == {
+            (x % m)*(u-1) % m;
+            ((x % m)*u - (x % m)) % m;
+            ((x%m)*u)%m - (x%m)%m + zero_or_m;
+            ((x%m)*u)%m - (x%m) + zero_or_m;
+            x*u%m - x%m + zero_or_m;
+            x*(u-1) % m;
+        }                                             
+    }        
+
+    lemma_mul_auto_induction(y, f);
 }
 
 lemma lemma_mul_mod_noop_right(x:int, y:int, m:int)
@@ -354,8 +522,47 @@ lemma lemma_mul_mod_noop_right(x:int, y:int, m:int)
     ensures x*(y % m) % m == (x*y) % m;
 {
     lemma_mod_auto(m);
-    lemma_mul_auto_induction(x, imap u :: u*(y % m) % m == (u*y) % m);
-}
+    var f:= imap u :: u*(y % m) % m == (u*y) % m;
+    assert f[0];
+
+    forall u:int | u>=0 && f[u]
+    ensures f[u+1]
+    {
+        var zero_or_m := if u*y % m + y%m < m then 0 else m;
+        calc == {
+            (u+1)*(y % m) % m;
+                //{lemma_mul_is_distributive(u,1,(y % m));}
+            (u*(y % m)+ (y % m) ) % m;
+                //{lemma_mod_auto(m);}
+            (u*(y%m))%m + (y%m)%m - zero_or_m;
+                // {assert (y%m)%m == y%m by {lemma_mod_auto_double2(y,m);}} Adding this increases the proving time significantly
+            (u*(y%m))%m + (y%m) - zero_or_m;
+            u*y%m + y%m  - zero_or_m;
+                    //{lemma_mod_auto(m);}
+            (u+1)*y % m;
+        }
+    }
+
+    forall u:int | u<=0 && f[u]
+    ensures f[u-1]
+    {
+        var zero_or_m := if 0<= u*y % m - y%m < m then 0 else m;
+        calc == {
+            (u-1)*(y % m) % m;
+                //{lemma_mul_is_distributive(u,1,(y % m));}
+            (u*(y % m)- (y % m) ) % m;
+                // {lemma_mod_auto(m);}
+            (u*(y%m))%m - (y%m)%m + zero_or_m;
+                // {assert (y%m)%m == y%m by {lemma_mod_auto_double2(y,m);}} Adding this increases the proving time significantly
+            (u*(y%m))%m - (y%m) + zero_or_m;
+            u*y%m - y%m  + zero_or_m;
+                // {lemma_mod_auto(m);}
+            (u-1)*y % m;
+        }
+    }
+
+    lemma_mul_auto_induction(x, f);
+} 
 
 lemma lemma_mul_mod_noop_general(x:int, y:int, m:int)
     requires 0 < m;
@@ -592,7 +799,7 @@ lemma lemma_mod_is_mod_recursive_forall()
 
 lemma lemma_basic_div(d:int)
     requires d > 0;
-    ensures forall x {:trigger x / d} :: 0 <= x < d ==> x / d == 0;
+    ensures forall x :: 0 <= x < d ==> x / d == 0;
 {
     lemma_div_auto(d);
 }
@@ -602,7 +809,34 @@ lemma lemma_div_is_ordered(x:int, y:int, z:int)
     requires z > 0;
     ensures x / z <= y / z;
 {
-    lemma_div_auto_induction(z, x - y, imap xy :: xy <= 0 ==> (xy + y) / z <= y / z);
+    var f:= imap xmy {:trigger (xmy + y) / z,y/z } :: xmy <= 0 ==> (xmy + y) / z <= y / z;
+
+    assert forall xmy | 0 <= xmy <z :: f[xmy];
+
+    assert forall xmy | 0 <= xmy  :: f[xmy] ==> f[xmy+z];
+    
+
+    forall xmy | xmy + 1 <= z && f[xmy]
+    ensures f[xmy-z]
+    {
+        assert xmy -z <= 0;
+
+        calc <= {
+            (xmy -z + y) / z;
+            ==
+            ((xmy-z)+y)/z;
+            <= {lemma_div_auto(z);}
+            (xmy-z)/z + y/z + 1;
+            == {lemma_div_auto(z);}
+            xmy/z -1 +y/z+1;
+            ==
+            xmy/z + y/z;
+            <=
+            y/z;
+        }                
+    }
+
+    lemma_div_auto_induction(z, x - y, f);
 }
 
 lemma lemma_div_decreases(x:int, d:int)
@@ -719,7 +953,9 @@ lemma lemma_div_denominator(x:int,c:nat,d:nat)
     ensures c * d != 0;
     ensures (x/c)/d == x / (c*d);
 {
-    lemma_mul_strictly_positive_forall();
+    lemma_mul_strictly_positive(c,d);
+    assert c*d != 0;
+
     //-assert 0 < c*d;
     var R := x % (c*d);
     lemma_mod_properties();
@@ -767,8 +1003,7 @@ lemma lemma_div_denominator(x:int,c:nat,d:nat)
         c*(((x+(-(k*d*c)))/c) % d) + x%c;
         c*(((x-k*d*c)/c) % d) + x%c;
             {
-                lemma_mul_is_associative_forall();
-                lemma_mul_is_commutative_forall();
+                lemma_mul_is_associative(k,d,c);
             }
         c*((R/c) % d) + x%c;
         c*(R/c) + x%c;
@@ -798,7 +1033,7 @@ lemma lemma_div_denominator(x:int,c:nat,d:nat)
         c*(d*((x/c)/d)) == c*(x/c - ((x/c)%d));
             { lemma_mul_is_associative_forall(); }
         (c*d)*((x/c)/d) == c*(x/c - ((x/c)%d));
-            { lemma_mul_is_distributive_forall(); }
+            { lemma_mul_is_distributive(c*d,x/c,(x/c)%d); }
         (c*d)*((x/c)/d) == c*(x/c) - c*((x/c)%d);
         (c*d)*((x/c)/d) == x - R;
             { lemma_fundamental_div_mod(x, c*d); }
@@ -833,12 +1068,63 @@ lemma lemma_mul_hoist_inequality(x:int, y:int, z:int)
     }
 }
 
+lemma lemma_sub_mod_div_noop(x:int, n:int)
+requires n>0
+ensures (x - x%n)/n == x/n;
+{
+    lemma_div_auto(n);
+    assert (x%n)%n == x%n;   
+}
+
 lemma lemma_indistinguishable_quotients(a:int, b:int, d:int)
     requires 0<d;
     requires 0 <= a - a%d <= b < a + d - a%d;
     ensures a/d == b/d;
 {
-    lemma_div_auto_induction(d, a - b, imap ab :: var u := ab + b; 0 <= u - u%d <= b < u + d - u%d ==> u/d == b/d);
+    assert a/d <= b/d by
+    {
+        calc <= {
+            a/d;
+            == {lemma_sub_mod_div_noop(a,d);}
+            (a - a%d)/d;
+            <= {lemma_div_is_ordered(a-a%d,b,d);}
+            b/d;
+        }
+    }
+
+    assert a/d + 1 > b/d  by
+    {
+        calc >= {
+            a/d + 1;
+            == {lemma_sub_mod_div_noop(a,d);}
+            (a-a%d)/d + 1;
+            ==
+            (a-a%d)/d + d/d;
+            == {lemma_div_auto(d);}
+            ((a - a%d) + d)/d;
+            ==
+            (a + d - a%d)/d;
+            > {
+                calc == {
+                    a + d - a%d;
+                    (a - a%d) + d;
+                        calc == {
+                            a - a%d;
+                                {
+                                lemma_sub_mod_div_noop(a,d);
+                                assert (a%d)%d == a%d by {lemma_mod_auto(d);}
+                            }
+                            a/d * d;
+                        }
+                    a/d * d + d;
+                    (a/d + 1) * d;
+                }
+                lemma_div_by_multiple_is_strongly_ordered(b,a + d - a%d,a/d+1,d);
+            }
+            b/d;
+        }
+    }
+
 }
 
 lemma lemma_truncate_middle(x:int, b:int, c:int)
@@ -931,31 +1217,22 @@ lemma lemma_div_by_multiple_is_strongly_ordered(x:int, y:int, m:int, z:int)
     requires x < y;
     requires y == m * z;
     requires z > 0;
-    ensures     x / z < y / z;
+    ensures  x / z < y / z;
 {
-    lemma_mod_multiples_basic(m, z);
-    lemma_div_auto_induction(z, y - x, imap yx :: var u := yx + x; x < u && u % z == 0 ==> x / z < u / z);
+    lemma_fundamental_div_mod_converse(y,z,m,0);
 }
 
 lemma lemma_multiply_divide_le(a:int, b:int, c:int)
     requires 0 < b;
     requires a <= b * c;
     ensures  a / b <= c;
-{
-    lemma_mod_multiples_basic(c, b);
-    lemma_div_auto_induction(b, b * c - a, imap i :: 0 <= i && (i + a) % b == 0 ==> a / b <= (i + a) / b);
-    lemma_div_multiples_vanish(c, b);
-}
+{ }
 
 lemma lemma_multiply_divide_lt(a:int, b:int, c:int)
     requires 0 < b;
     requires a < b * c;
     ensures  a / b < c;
-{
-    lemma_mod_multiples_basic(c, b);
-    lemma_div_auto_induction(b, b * c - a, imap i :: 0 < i && (i + a) % b == 0 ==> a / b < (i + a) / b);
-    lemma_div_multiples_vanish(c, b);
-}
+{ }
 
 lemma lemma_hoist_over_denominator(x:int, j:int, d:nat)
     requires 0<d;
@@ -1068,12 +1345,12 @@ lemma lemma_mod_breakdown(a:int, b:int, c:int)
 
 
 lemma lemma_div_denominator_forall()
-    ensures forall c:nat,d:nat {:trigger c * d} :: 0 < c && 0 < d ==> c * d != 0;
-    ensures forall x:int,c:nat,d:nat {:trigger (x/c)/d} :: 0 <= x && 0 < c && 0 < d
+    ensures forall c:nat,d:nat :: 0 < c && 0 < d ==> c * d != 0;
+    ensures forall x:int,c:nat,d:nat :: 0 <= x && 0 < c && 0 < d
         ==> (x/c)/d == x/(c*d);
 {
     lemma_mul_nonzero_forall();
-    forall (x:int,c:nat,d:nat | 0 <= x && 0 < c && 0 < d)
+    forall (x:int,c:nat,d:nat {:trigger c*d,x/(c*d)} | 0 <= x && 0 < c && 0 < d)
         ensures c * d != 0;
         ensures (x/c)/d == x/(c*d);
     {

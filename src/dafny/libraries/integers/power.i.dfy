@@ -4,6 +4,8 @@ include "mul.i.dfy"
 module Math__power_i {
 import opened Math__power_s
 import opened Math__mul_i
+import opened Math__mul_auto_i
+import opened Math__mul_auto_proofs_i
 
 //-lemma lemma_mul_passes_harmlessly_through_mod(
 //-    ensures mul(x,y) % m == mul(x
@@ -146,16 +148,17 @@ lemma lemma_power_distributes(a:int, b:int, e:nat)
 }
 
 lemma lemma_power_auto()
-    ensures  forall x:int {:trigger power(x, 0)} :: power(x, 0) == 1;
-    ensures  forall x:int {:trigger power(x, 1)} :: power(x, 1) == x;
-    ensures  forall x:int, y:int {:trigger power(x, y)} :: y == 0 ==> power(x, y) == 1; // REVIEW: because of Dafny's LitInt special treatment, these are not the same as the two ensures above
-    ensures  forall x:int, y:int {:trigger power(x, y)} :: y == 1 ==> power(x, y) == x; // ...
-    ensures  forall x:int, y:int {:trigger x * y} :: 0 < x && 0 < y ==> x <= x * y;
-    ensures  forall x:int, y:int {:trigger x * y} :: 0 < x && 1 < y ==> x < x * y;
-    ensures  forall x:int, y:nat, z:nat {:trigger power(x, y + z)} :: power(x, y + z) == power(x, y) * power(x, z);
-    ensures  forall x:int, y:nat, z:nat {:trigger power(x, y - z)} :: y >= z ==> power(x, y - z) * power(x, z) == power(x, y);
-    ensures  forall x:int, y:int, z:nat {:trigger power(x * y, z)} :: power(x * y, z) == power(x, z) * power(y, z);
+ensures  forall x:int :: power(x, 0) == 1;
+ensures  forall x:int :: power(x, 1) == x;
+ensures  forall x:int, y:int :: y == 0 ==> power(x, y) == 1; // REVIEW: because of Dafny's LitInt special treatment, these are not the same as the two ensures above
+ensures  forall x:int, y:int  :: y == 1 ==> power(x, y) == x; // ...
+ensures  forall x:int, y:int  :: 0 < x && 0 < y ==> x <= x * y;
+ensures  forall x:int, y:int  :: 0 < x && 1 < y ==> x < x * y;
+ensures  forall x:int, y:nat, z:nat  :: power(x, y + z) == power(x, y) * power(x, z);
+ensures  forall x:int, y:nat, z:nat  :: y >= z ==> power(x, y - z) * power(x, z) == power(x, y);
+ensures  forall x:int, y:int, z:nat  :: power(x * y, z) == power(x, z) * power(y, z);        
 {
+    reveal_power();
     forall x:int
         ensures power(x, 0) == 1;
         ensures power(x, 1) == x;
@@ -163,6 +166,20 @@ lemma lemma_power_auto()
         lemma_power_0(x);
         lemma_power_1(x);
     }
+
+    forall x:int, y:int
+    ensures y == 0 ==> power(x,y) == 1;
+    {
+        lemma_power_0(x);
+    }
+
+    forall x:int, y:int
+    ensures y == 1 ==> power(x,y) == x;
+    {
+        lemma_power_1(x);
+    }
+    
+
     forall x:int, y:int, z:nat
         ensures power(x * y, z) == power(x, z) * power(y, z);
     {
@@ -173,26 +190,73 @@ lemma lemma_power_auto()
     {
         lemma_power_adds(x, y, z);
     }
-    lemma_mul_auto();
-    lemma_mul_increases_forall();
-    lemma_mul_strictly_increases_forall();
+
+    forall x:int, y:nat, z:nat  |  y >= z
+    ensures power(x, y - z) * power(x, z) == power(x, y)
+    {
+        lemma_power_adds(x,y-z,z);
+    }        
+
+    forall (x:int, y:int | 0 < x && 0 < y)
+        ensures x <= x*y;
+    {
+        lemma_mul_increases(y,x);
+    }        
+
+    forall (x:int, y:int | 0 < x && 1 < y)
+        ensures x < x*y;
+    {
+        lemma_mul_strictly_increases(y,x);
+    }        
 }
 
 lemma lemma_power_positive(b:int, e:nat)
     requires 0<b;
     ensures 0<power(b,e);
 {
-    lemma_power_auto();
-    lemma_mul_auto_induction(e, imap u :: 0 <= u ==> 0 < power(b, u));
+    reveal_power();
 }
 
-lemma lemma_power_increases(b:nat,e1:nat,e2:nat)
+lemma lemma_power_non_strict_positive(b:int, e:nat)
+    requires 0<=b;
+    ensures 0<=power(b,e);
+{
+    reveal_power();
+}    
+
+lemma lemma_exponential_increases(b:nat,e1:nat,e2:nat)
     requires 0<b;
     requires e1 <= e2;
     ensures power(b,e1) <= power(b,e2);
 {
-    lemma_power_auto();
-    lemma_mul_auto_induction(e2 - e1, imap e :: 0 <= e ==> power(b, e1) <= power(b, e1 + e));
+    reveal_power();
+    var d:= e2-e1;
+    lemma_power_adds(b,e1,d);
+    lemma_power_positive(b,d);
+    lemma_power_positive(b,e1);
+    lemma_mul_increases(power(b,e1),power(b,d));
+}
+
+lemma lemma_power_increases(b1:nat,b2:nat,e:nat)
+requires 0 <= b1 <= b2;
+requires e >= 0
+ensures power(b1,e) <= power(b2,e);
+{
+    reveal_power();
+
+    var f:= imap exp :: exp >= 0 ==> 0 <= power(b1,exp) <= power(b2,exp);
+
+    forall exp:int | exp >= 0
+    ensures f[exp] ==> f[exp+1]
+    {
+        if(f[exp])
+        {
+            lemma_mul_inequality_extended(power(b1,exp),power(b2,exp),b1,b2);
+            assume f[exp+1];
+        }
+    }
+
+    lemma_mul_auto_induction(e,f);
 }
 
 lemma lemma_power_strictly_increases(b:nat,e1:nat,e2:nat)
@@ -200,8 +264,7 @@ lemma lemma_power_strictly_increases(b:nat,e1:nat,e2:nat)
     requires e1 < e2;
     ensures power(b,e1) < power(b,e2);
 {
-    lemma_power_auto();
-    lemma_mul_auto_induction(e2 - e1, imap e :: 0 < e ==> power(b, e1) < power(b, e1 + e));
+    reveal_power();
 }
 
 lemma lemma_square_is_power_2(x:nat)

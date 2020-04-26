@@ -57,7 +57,7 @@ lemma lemma_real_div_gt(x:real, y:real)
     requires x > y;
     requires x >= 0.0;
     requires y > 0.0;
-    ensures  x / y > real(1);
+    ensures  x / y > (1 as real);
 { }
 
 } 
