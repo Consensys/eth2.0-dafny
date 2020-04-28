@@ -38,6 +38,9 @@ module SSZ {
      *
      *  @param  s   A serialisable object of type uintN or bool.
      *  @returns    The number of bytes used by a serialised form of this type.
+     *
+     *  @note       This function needs only to be defined for basic types
+     *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
         requires wellTyped(s) && s.tipe in {Uint8_, Bool_}
