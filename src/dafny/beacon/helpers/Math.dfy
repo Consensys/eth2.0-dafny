@@ -23,45 +23,62 @@ module  Math
     import opened MathHelperLemmas
     import opened NativeTypes
 
+    lemma l1(x:uint64, n:uint64)
+    requires n < 0xFFFFFFFFFFFFFFFF;
+    requires x as nat * x as nat > n as nat
+    ensures x as nat + n as nat / x as nat <= 0xFFFFFFFFFFFFFFFF;
+    {}
+
+
+    lemma l2(y:nat,n:nat)
+    requires y > 0;
+    requires (y+1)*(y+1) > n;
+    ensures y + 3 >=n/y;
+
+
     /**
      *  Return the largest integer `x` such that `x**2 <= n`
      *
      *  @param       n   A natural number
      *  @return     `x` 
      */    
-    method  integer_squareroot(n:nat) returns (x:nat)
-    ensures power(x,2) <= n;
-    ensures !(exists x' :: x'>x && power(x',2) <= n)
+    method  integer_squareroot(n:uint64) returns (x:uint64)
+    requires n < 0xFFFFFFFFFFFFFFFF;
+    ensures power(x as nat,2) <= n as nat;
+    ensures !(exists x' {:trigger power(x' as nat,2)} :: x'>x && power(x' as nat,2) <= n as nat)
     {
         reveal_power();
         x:=n;    
-        var y:nat :=(x+1)/2;
+        var y :=(x+1)/2;
 
         while(y<x)
             decreases x
-            invariant y >= x <==> x*x <= n;
-            invariant power(y+1,2) > n as nat;
-            invariant power(x+1,2) > n as nat;
+            invariant y >= x <==> x as nat *x as nat <= n as nat;
+            invariant power(y as nat +1,2) > n as nat;
+            invariant power(x as nat +1,2) > n as nat;
+            invariant y <= 0x7FFFFFFFFFFFFFFF;
         {
-            x:=y;
+            LemmaMaxForYDivByX(y as nat,n as nat);
+            
+            x := y;          
 
             y:=(x+n/x)/2;
             
-            assert power(x,2) > n <==> y < x by 
+            assert power(x as nat,2) > n as nat <==> y < x by 
             {
-                LemmaYStrictlyLessThanXIff(x,n);
+                LemmaYStrictlyLessThanXIff(x as nat,n as nat);
             }
 
-            assert power(y+1,2) > n by
+            assert power((y+1) as nat,2) > n as nat by
             {
-                LemmaSquareYPlusOneGreaterThanX(x,n);
+                LemmaSquareYPlusOneGreaterThanX(x as nat,n as nat);
             }
         }
 
-        forall i | i > x
-        ensures power(i,2) > n
+        forall i {:trigger power(i as nat,2)} | i > x
+        ensures power(i as nat,2) > n as nat
         {
-            lemma_power_increases(x + 1,i,2);
+            lemma_power_increases((x + 1) as nat,i as nat,2);
         }
 
         return x;
