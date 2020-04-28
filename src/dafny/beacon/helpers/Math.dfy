@@ -12,16 +12,12 @@
  * under the License.
  */
 
-// include "../../libraries/integers/mul.i.dfy"
 include "../../libraries/integers/power.i.dfy"
-// include "../../libraries/integers/powers.i.dfy"
 include "../../utils/NativeTypes.dfy"
 include "helper_lemmas/MathHelper.dfy"
 
 module  Math
 {
-
-    // import opened Math__mul_i
     import opened Math__power_i
     import opened Math__power_s
     import opened MathHelperLemmas
@@ -34,11 +30,8 @@ module  Math
      *  @return     `x` 
      */    
     method  integer_squareroot(n:nat) returns (x:nat)
-    // ensures x*x <= n
     ensures power(x,2) <= n;
     ensures !(exists x' :: x'>x && power(x',2) <= n)
-    //ensures forall x':nat ::  power(x',2) <= n ==> x' <= x
-    //ensures is_largest_nat2(x, x => power(x,2) <= n)
     {
         reveal_power();
         x:=n;    
