@@ -32,6 +32,7 @@ module MathHelperLemmas {
 
     export MathHelperLemmas provides LemmaYStrictlyLessThanXIff, 
                                      LemmaSquareYPlusOneGreaterThanX, 
+                                     LemmaMaxForYDivByX,
                                      Math__power_s
 
 
@@ -198,7 +199,35 @@ module MathHelperLemmas {
             >= {lemma_div_auto(x);}
             x; 
         }
-    }    
+    }   
+
+
+    lemma LemmaMaxForYDivByX(y:nat,n:nat)
+    requires y > 0;
+    requires (y+1)*(y+1) > n;
+    ensures y + 3 >=n/y;
+    {
+
+        calc ==> {
+            (y+1)*(y+1) > n;
+              calc == {
+                (y+1)*(y+1);
+                y*y + 2*y + 1;
+            }
+            y*y + 2*y + 1 > n;
+            y*(y + 2) + 1 > n;
+            y*(y + 2)  > n - 1;
+                {lemma_div_is_ordered(n - 1,y*(y + 2),y);}
+            y*(y + 2)/y  >= (n - 1)/y;
+                {lemma_fundamental_div_mod_converse(y*(y + 2),y,(y + 2),0);}
+            y + 2  >= (n - 1)/y;
+                {lemma_div_is_ordered(n - y,n-1,y);}
+            y + 2 >= (n-y)/y;
+                {lemma_div_auto(y);}
+            y + 2 >= n/y - 1;
+            y + 3 >= n/y;
+        }
+    }     
 
 
     lemma LemmaYNatStrictlyLargerThanN(x:nat,n:nat)
