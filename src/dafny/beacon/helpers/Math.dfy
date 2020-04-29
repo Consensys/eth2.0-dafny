@@ -69,7 +69,7 @@ module  Math
                 LemmaYStrictlyLessThanXIff(x as nat,n as nat);
             }
 
-            assert power((y+1) as nat,2) > n as nat by
+            assert power(y as nat +1,2) > n as nat by
             {
                 LemmaSquareYPlusOneGreaterThanX(x as nat,n as nat);
             }
