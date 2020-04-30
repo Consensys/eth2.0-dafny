@@ -49,9 +49,13 @@ include "../ssz/BytesAndBits.dfy"
       */
     const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE
 
+    /** 
+     *  Predicate used in checking chunk properties.
+     */
     predicate is32BytesChunk(c : chunk) 
+    // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
     {
-        |c| == 32
+        |c| == BYTES_PER_CHUNK
     }
 
     /** TODO: Move constants to a separate file
@@ -137,7 +141,7 @@ include "../ssz/BytesAndBits.dfy"
      *
      */
     function method rightPadZeros(b: Bytes): chunk
-        requires |b| < 32
+        requires |b| < BYTES_PER_CHUNK
         ensures is32BytesChunk(rightPadZeros(b)) 
     {
         b + EMPTY_CHUNK[|b|..]
@@ -158,9 +162,9 @@ include "../ssz/BytesAndBits.dfy"
         ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
-        if |b| < 32 then [rightPadZeros(b)]
-        else    if |b| == 32 then [b] 
-                else [b[..32]] + toChunks(b[32..])
+        if |b| < BYTES_PER_CHUNK then [rightPadZeros(b)]
+        else    if |b| == BYTES_PER_CHUNK then [b] 
+                else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
 
@@ -183,6 +187,9 @@ include "../ssz/BytesAndBits.dfy"
     //         else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
     // }   
     
+    /** 
+     *  Properties of chunk.
+     */
     lemma {:induction b} toChunksProp1(b: Bytes)
         requires |b| == 0
         ensures |toChunks(b)| == 1
@@ -191,9 +198,11 @@ include "../ssz/BytesAndBits.dfy"
 
     lemma  {:induction b} toChunksProp2(b: Bytes)
         requires |b| > 0
-        ensures 0 <= |toChunks(b)| == ceil(|b|, 32) 
+        ensures 1 <= |toChunks(b)| == ceil(|b|, 32) 
     {
     }
+
+    
 
     /** Pack.
      *
@@ -215,9 +224,10 @@ include "../ssz/BytesAndBits.dfy"
      
      function pack(s: seq<Bytes>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
-        ensures |pack(s)| >= 1 
         ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
-    {
+        ensures 1 <= |pack(s)| 
+        //ensures |pack(s)| == max(1, ceil(flattenLength(s),32))      
+     {        
         if |s| == 0 then [EMPTY_CHUNK]
         // else toChunks(concatSerialisedElements(s))  
         else toChunks(flatten(s))  
@@ -263,6 +273,8 @@ include "../ssz/BytesAndBits.dfy"
             case Bool(_, _) => merkleiseBool(pack([serialise(s)]))
 
             case Uint8(_, _) => merkleiseUint8(pack([serialise(s)]))
+
+            //case Bitlist(xl , _ ) => 
     }
 
 
