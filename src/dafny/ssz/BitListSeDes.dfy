@@ -194,7 +194,7 @@ include "BytesAndBits.dfy"
                 }
                 [xb[0]] + fromBitlistToBytes(fromBytesToBitList(xb[1..])); 
                 ==  //  Induction on xb[1..]
-                    //  This lst step can be ommitted as Dafny figures it out.
+                    //  This last step can be ommitted as Dafny figures it out.
                  [xb[0]] + xb[1..];
             }
         }
