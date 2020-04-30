@@ -56,6 +56,7 @@ module Helpers {
      */
     function method timeSeq<T>(t : T, k : nat) : seq<T> 
         ensures |timeSeq(t,k)| == k
+        ensures forall i :: 0 <= i < k ==> timeSeq(t,k)[i] == t
         decreases k
     {
         if k == 0 then []
