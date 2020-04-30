@@ -233,6 +233,59 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(flatten(s))  
     }
 
+    /** TODO: Add documentation for fromBitsToBytes and move to appropriate file.
+     *  TODO: better name?
+     *  TODO: py-ssz issue - bitvectors of zero length are illegal, though not reflected in code!
+     *  TODO: check how to ensure bitvectors in this repo have N > 0 (well typed?)
+     */ 
+
+    function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
+        ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
+        
+        decreases l
+    {
+        if ( |l| == 0) then
+            []
+        else if ( |l| < 8 ) then 
+            //  pad to 1 byte
+            [ list8BitsToByte( l + FALSE_BYTE[.. (8 - |l| % 8)])]
+        else if ( |l| == 8 ) then
+            //  No need to pad as |l| % 8 == 0.
+            [ list8BitsToByte(l) ]
+        else  
+            //  Encode first element and recursively encode the rest.
+            [ list8BitsToByte(l[..8]) ] + fromBitsToBytes(l[8..])
+    }
+
+    /** bitfieldBytes.
+     *
+     *  @param  b   A sequence of bits (seq<bool>)
+     *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if |b| % 32 != 0
+     *
+     *  @note       This function is only applicable to a bitlist or bitvector. 
+     *
+     *  @note       Return the bits of the bitlist or bitvector, packed in bytes, aligned to the start. 
+     *              Length-delimiting bit for bitlists is excluded (Reference: simple-serialize.md)
+     *
+     *  @note       Although not explicitly stated in the spec, it is assumed that the bytes are also
+     *              packed into 32-byte chunks and that right padding is applied to ensure full chunks.
+     *              This assumption is supported by the subsequent use of the function within the 
+     *              merkleisation function, which expects input in the form of chunks.
+     *
+     *  @note       Unlike the pack function, it is not implied by the spec that at least one chunk is 
+     *              returned.
+     */
+    
+    function bitfieldBytes(b: seq<bool>) : seq<chunk>
+        // no upper bound on length of any individual serialised element???
+        ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
+        ensures 0 <= |bitfieldBytes(b)| 
+        //ensures |pack(s)| == max(1, ceil(flattenLength(s),32))      
+     {        
+        if |b| == 0 then []
+        else toChunks(fromBitsToBytes(b)) 
+    }
+
 
     /** merkleiseBool
      *
