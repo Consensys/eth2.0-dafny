@@ -53,6 +53,7 @@ include "../ssz/BytesAndBits.dfy"
      *  Predicate used in checking chunk properties.
      */
     predicate is32BytesChunk(c : chunk) 
+    // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
     {
         |c| == 32
     }
