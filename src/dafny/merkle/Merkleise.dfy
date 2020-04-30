@@ -202,8 +202,6 @@ include "../ssz/BytesAndBits.dfy"
     {
     }
 
-    
-
     /** Pack.
      *
      *  @param  s   A sequence of serialised objects (seq<Byte>).
@@ -221,7 +219,9 @@ include "../ssz/BytesAndBits.dfy"
      *              the py-ssz implementation can return an empty seq and therefore a zero
      *              chunk output.           
      */
-     
+    // Applicable to uintN, bool, or list/vector of uintN
+    // Can't be a list/vector of bool's as bitlists/bitvectors are dealth with separately
+    // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
      function pack(s: seq<Bytes>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
