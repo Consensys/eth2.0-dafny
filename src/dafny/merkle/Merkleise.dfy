@@ -38,6 +38,17 @@ include "../ssz/BytesAndBits.dfy"
     import opened SSZ
     import opened Helpers
 
+    /**
+     * Constants (reference: simple-serialize.md)
+     */
+     const BYTES_PER_CHUNK := 32
+     const BITS_PER_BYTE := 8
+
+     /**
+      * Create an additional constant to store the number of bits per chunk
+      */
+    const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE
+
     predicate is32BytesChunk(c : chunk) 
     {
         |c| == 32
