@@ -49,6 +49,9 @@ include "../ssz/BytesAndBits.dfy"
       */
     const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE
 
+    /** 
+     *  Predicate used in checking chunk properties.
+     */
     predicate is32BytesChunk(c : chunk) 
     {
         |c| == 32
