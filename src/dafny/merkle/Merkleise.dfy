@@ -70,13 +70,40 @@ include "../ssz/BytesAndBits.dfy"
      */
     function method chunkCount(s: Serialisable): nat
         requires wellTyped(s)
-        ensures 1 <= chunkCount(s) && chunkCount(s) == |pack([serialise(s)])|
+        ensures 0 <= chunkCount(s) // add upper limit 
     {
         match s
-            case Bool(_,_) => 1
-            case Uint8(_, _) => 1
+            case Bool(_,_) => chunkCountBool()
+            case Uint8(_, _) => chunkCountUintN()
+            case Bitlist(xl , _ ) => chunkCountBitlist(xl) 
     } 
 
+    /** 
+     * chunkCount functions for specific types
+     */
+    function method chunkCountBool(): nat
+        // all basic types require 1 leaf (reference: simple-serialize.md)
+        ensures chunkCountBool() == 1
+    {
+        1
+    }
+
+    function method chunkCountUintN(): nat
+        // all basic types require 1 leaf (reference: simple-serialize.md)
+        ensures chunkCountUintN() == 1
+    {
+        1
+    }
+
+    function method chunkCountBitlist(xl: seq<bool>): nat
+        // divide by chunk size (in bits), rounding up (reference: simple-serialize.md)
+        // the spec doesn't make reference to whether N can be zero for bitlist[N]
+        // the py-szz implementation of bitlists only raises an error if N is negative
+        // hence it will be assumed that N >= 0
+        ensures 0 <= chunkCountBitlist(xl) == ceil(|xl|, BITS_PER_CHUNK)
+    {
+        (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
+    }
     
     type Bytes = seq<Byte> // i.e. the output of serialisation
     //type serialisedElement = seq<Byte> // i.e. the output of serialisation
