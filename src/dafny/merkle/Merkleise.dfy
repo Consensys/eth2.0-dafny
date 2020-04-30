@@ -54,6 +54,9 @@ include "../ssz/BytesAndBits.dfy"
         |c| == 32
     }
 
+    /** TODO: Move constants to a separate file
+     */
+
     /** chunkCount.
      *
      *  @param  s   A serialisable object.
@@ -61,6 +64,9 @@ include "../ssz/BytesAndBits.dfy"
      *
      *  @note       For composite types and containers, a helper function may be required
      *              to complete the calculation?
+     *  @note       A leaf is 256 bits/32-bytes.
+     *  @note       The maximum tree depth for a depost contract is 32 
+     *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
         requires wellTyped(s)
