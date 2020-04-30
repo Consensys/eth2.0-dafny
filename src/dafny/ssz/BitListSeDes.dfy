@@ -15,6 +15,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/SeqHelpers.dfy"
 include "BytesAndBits.dfy"
 
 /**
@@ -27,6 +28,7 @@ include "BytesAndBits.dfy"
     import opened Eth2Types
     import opened BytesAndBits
     import opened Helpers
+    import opened SeqHelpers
 
     /** A 0 Byte, all bits set to false. */
     const FALSE_BYTE := [false, false, false, false, false, false, false, false]
@@ -34,7 +36,7 @@ include "BytesAndBits.dfy"
     /**
      *  Compute largest index in l with a true value.
      *
-     *  @param      l   A sequence of 8 bits, containign at least one true bit.
+     *  @param      l   A sequence of 8 bits, containing at least one true bit.
      *  @returns        The largest index with a true bit.
      *
      *  @example        0100_0001 returns 7, 1000_1000 returns 4,
@@ -143,9 +145,8 @@ include "BytesAndBits.dfy"
     lemma {:induction l} bitlistDecodeEncodeIsIdentity(l : seq<bool>) 
         ensures fromBytesToBitList( fromBitlistToBytes (l) ) == l 
     {
-        //  The structure of the proof is split in 3 cases to
-        //  follow the definition of fromBitlistToBytes and make it easier to
-        //  prove.
+        //  The structure of the proof is split in 3 cases to follow
+        //  the definition of fromBitlistToBytes and make it easier to prove
         if ( |l| < 7 ) {
             //  Thanks Dafny
         } else if ( |l| == 7 ) {
@@ -165,7 +166,7 @@ include "BytesAndBits.dfy"
                 == { decodeOfEncode8BitsIsIdentity(l[..8]); }
                 l[0..8] + fromBytesToBitList(fromBitlistToBytes(l[8..]));
                 ==  //  Induction on l[8..]. 
-                    //  This last step is not needed as Dafny figures it out.
+                    //  This last step can be ommitted as Dafny figures it out.
                 l[0..8] + l[8..];
             }
         }
@@ -193,7 +194,7 @@ include "BytesAndBits.dfy"
                 }
                 [xb[0]] + fromBitlistToBytes(fromBytesToBitList(xb[1..])); 
                 ==  //  Induction on xb[1..]
-                    //  This lst steo is not needed, Dafny figures it out.
+                    //  This lst step can be ommitted as Dafny figures it out.
                  [xb[0]] + xb[1..];
             }
         }
@@ -241,7 +242,30 @@ include "BytesAndBits.dfy"
         requires m[|m| - 1] >= 1
         ensures fromBytesToBitList([b] + m) == 
             byteTo8Bits(b) + fromBytesToBitList(m) 
-    { //  Thanks Dafny.
+    { 
+        if ( |m| == 0 ) {
+            calc {
+                fromBytesToBitList([b] + m) ;
+                == { seqElimEmpty([b]); }
+                fromBytesToBitList([b]);
+                == //   Definition of fromBytesToBitList
+                byteTo8Bits(b) ;
+                == { seqElimEmpty(byteTo8Bits(b)) ; }
+                byteTo8Bits(b) + [];
+                == calc {
+                    fromBytesToBitList([]);
+                    ==
+                    [];
+                }
+                byteTo8Bits(b) + fromBytesToBitList([]);
+            }
+        } else {
+            calc {
+                fromBytesToBitList([b] + m) ;
+                == //   Definition of fromBytesToBitList
+                byteTo8Bits(b) + fromBytesToBitList(m);
+            }
+        }
     }
 
     /**
