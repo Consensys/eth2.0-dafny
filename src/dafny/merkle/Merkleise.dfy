@@ -226,7 +226,6 @@ include "../ssz/BytesAndBits.dfy"
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
         ensures 1 <= |pack(s)| 
-        //ensures |pack(s)| == max(1, ceil(flattenLength(s),32))      
      {        
         if |s| == 0 then [EMPTY_CHUNK]
         // else toChunks(concatSerialisedElements(s))  
