@@ -95,13 +95,13 @@ include "BytesAndBits.dfy"
         decreases l
     {
         if ( |l| < 7 ) then 
-            //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we treat it separately.
+            //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we need to pad.
             [ list8BitsToByte( l + [true] + FALSE_BYTE[.. (8 - (|l| + 1) % 8)])]
         else if ( |l| == 7 ) then
             //  No need to pad as |l + [true]| % 8 == 0.
             [ list8BitsToByte( l + [true]) ]
         else  
-            //  Encode first element and recursively encode the rest.
+            //  Encode first 8 bits and recursively encode the rest.
             [ list8BitsToByte(l[..8]) ] + fromBitlistToBytes(l[8..])
     }
 
@@ -140,11 +140,11 @@ include "BytesAndBits.dfy"
     /**
      *  Decoding of encoded l returns l. 
      */
-    lemma {:induction l} decodeEncodeIsIdentity(l : seq<bool>) 
+    lemma {:induction l} bitlistDecodeEncodeIsIdentity(l : seq<bool>) 
         ensures fromBytesToBitList( fromBitlistToBytes (l) ) == l 
     {
         //  The structure of the proof is split in 3 cases to
-        //  follow the definition of fromBitlistToBytes and makeit easier to
+        //  follow the definition of fromBitlistToBytes and make it easier to
         //  prove.
         if ( |l| < 7 ) {
             //  Thanks Dafny
@@ -153,7 +153,7 @@ include "BytesAndBits.dfy"
         } else {
             calc == {
                 fromBytesToBitList( fromBitlistToBytes (l) );
-                == 
+                == //   Definition of fromBitlistToBytes
                 fromBytesToBitList([list8BitsToByte(l[..8])] + fromBitlistToBytes(l[8..]));
                 == { simplifyFromByteToListFirstArg(
                         list8BitsToByte(l[..8]), 
@@ -164,6 +164,9 @@ include "BytesAndBits.dfy"
                     fromBytesToBitList(fromBitlistToBytes(l[8..]));
                 == { decodeOfEncode8BitsIsIdentity(l[..8]); }
                 l[0..8] + fromBytesToBitList(fromBitlistToBytes(l[8..]));
+                ==  //  Induction on l[8..]. 
+                    //  This last step is not needed as Dafny figures it out.
+                l[0..8] + l[8..];
             }
         }
     }
@@ -171,7 +174,7 @@ include "BytesAndBits.dfy"
     /**
      *  Encoding a decoded `xb` returns `xb`.
      */
-    lemma {:induction xb} encodeDecodeIsIdentity(xb: seq<Byte>) 
+    lemma {:induction xb} bitlistEncodeDecodeIsIdentity(xb: seq<Byte>) 
         requires |xb| >= 1
         requires xb[|xb| - 1] >= 1
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
@@ -181,14 +184,17 @@ include "BytesAndBits.dfy"
         } else {
             calc == {
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
-                ==
+                ==  //  Definition of fromBytesToBitList
                 fromBitlistToBytes(byteTo8Bits(xb[0]) + fromBytesToBitList(xb[1..])) ;
                 == { simplifyFromBitListToByteFirstArg(
                         xb[0],
                         fromBytesToBitList(xb[1..])
                     ) ;
                 }
-                [xb[0]] + fromBitlistToBytes(fromBytesToBitList(xb[1..]));
+                [xb[0]] + fromBitlistToBytes(fromBytesToBitList(xb[1..])); 
+                ==  //  Induction on xb[1..]
+                    //  This lst steo is not needed, Dafny figures it out.
+                 [xb[0]] + xb[1..];
             }
         }
     }
@@ -196,12 +202,12 @@ include "BytesAndBits.dfy"
     /**
      *  Serialise is injective for bitlists.
      */
-    lemma {:induction l1, l2} BitlistSerialiseIsInjective(l1: seq<bool>, l2 : seq<bool>)
+    lemma {:induction l1, l2} bitlistSerialiseIsInjective(l1: seq<bool>, l2 : seq<bool>)
         ensures fromBitlistToBytes(l1) == fromBitlistToBytes(l2) ==> l1 == l2 
     {
         calc ==> {
             fromBitlistToBytes(l1) == fromBitlistToBytes(l2) ;
-            ==> { decodeEncodeIsIdentity(l1) ; decodeEncodeIsIdentity(l2) ; }
+            ==> { bitlistDecodeEncodeIsIdentity(l1) ; bitlistDecodeEncodeIsIdentity(l2) ; }
             l1 == l2 ;
         }
     }
@@ -209,7 +215,7 @@ include "BytesAndBits.dfy"
     /**
      *  Deserialise is injective for sequences of bytes.
      */
-    lemma {:induction xa, xb} BitlistDeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
+    lemma {:induction xa, xb} bitlistDeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
         requires |xa| >= 1
         requires xa[|xa| - 1] >= 1
         requires |xb| >= 1
@@ -219,7 +225,7 @@ include "BytesAndBits.dfy"
         calc ==> {
             fromBytesToBitList(xa) == fromBytesToBitList(xb) ;
             ==> {
-                encodeDecodeIsIdentity(xa) ; encodeDecodeIsIdentity(xb) ;
+                bitlistEncodeDecodeIsIdentity(xa) ; bitlistEncodeDecodeIsIdentity(xb) ;
             }
             xa == xb ;
         }
@@ -267,7 +273,7 @@ include "BytesAndBits.dfy"
     {
         if ( |xb| == 1 ) {
             var l : seq<bool> := fromBytesToBitList(xb);
-            encodeDecodeIsIdentity(xb);
+            bitlistEncodeDecodeIsIdentity(xb);
         } else {
             //  Induction assumption on xb[1..]
             var xl : seq<bool> :| fromBitlistToBytes(xl) == xb[1..];
