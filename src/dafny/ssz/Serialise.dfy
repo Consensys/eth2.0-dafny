@@ -88,6 +88,7 @@ module SSZ {
                                 Success(Uint8(byteToUint8(xs[0]), Uint8_))
                              else 
                                 Failure
+                                
             case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
                                 Success(Bitlist(fromBytesToBitList(xs), Bitlist_))
                             else
@@ -100,14 +101,14 @@ module SSZ {
     /** 
      * Well typed deserialisation does not fail. 
      */
-    lemma wellTypedDoesNotFailure(s : Serialisable) 
+    lemma wellTypedDoesNotFail(s : Serialisable) 
         requires wellTyped(s)
         ensures deserialise(serialise(s), s.tipe) != Failure 
     {   //  Thanks Dafny.
     }
     
     /** 
-     * Deserialise(seriliase()) = Identity for well typed objects.
+     * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
         requires wellTyped(s)
@@ -123,27 +124,29 @@ module SSZ {
                         deserialise(fromBitlistToBytes(xl), Bitlist_);
                         == 
                         Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)), Bitlist_));
-                        == { decodeEncodeIsIdentity(xl); } 
+                        == { bitlistDecodeEncodeIsIdentity(xl); } 
                         Success(Bitlist(xl, Bitlist_));
                     }
 
-                case Bool(_, _) => 
+                case Bool(_, _) =>  //  Thanks Dafny
 
-                case Uint8(_, _) => 
+                case Uint8(_, _) => //  Thanks Dafny
             
         }
 
     /**
      *  Serialise is injective.
      */
-    lemma {:induction s1, s2} SerialiseIsInjective(s1: Serialisable, s2 : Serialisable)
+    lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
         requires wellTyped(s1) 
         requires wellTyped(s2) 
-        ensures s1.tipe == s2.tipe ==> serialise(s1) == serialise(s2) ==> s1 == s2 
+        ensures s1.tipe == s2.tipe ==> 
+                serialise(s1) == serialise(s2) ==> s1 == s2 
     {
-        //  The proof follows from involutive
+        //  The proof follows from involution
         if (s1.tipe == s2.tipe) {
             if ( serialise(s1) == serialise(s2) ) {
+                //  Show that success(s1) == success(s2) which implies s1 == s2
                 calc {
                     Success(s1) ;
                     == { seDesInvolutive(s1); }
