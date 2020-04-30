@@ -19,6 +19,8 @@ include "../utils/Helpers.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
+include "../ssz/BitListSeDes.dfy"
+include "../ssz/BytesAndBits.dfy"
 
 /**
  *  SSZ_Merkleise library.
@@ -31,31 +33,77 @@ include "../ssz/BoolSeDes.dfy"
     import opened Eth2Types
     import opened IntSeDes
     import opened BoolSeDes
+    import opened BitListSeDes
+    import opened BytesAndBits
     import opened SSZ
     import opened Helpers
+
+    /**
+     * Constants (reference: simple-serialize.md)
+     */
+     const BYTES_PER_CHUNK := 32
+     const BITS_PER_BYTE := 8
+
+     /**
+      * Create an additional constant to store the number of bits per chunk
+      */
+    const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE
 
     predicate is32BytesChunk(c : chunk) 
     {
         |c| == 32
     }
 
+    /** TODO: Move constants to a separate file
+     */
+
     /** chunkCount.
      *
      *  @param  s   A serialisable object.
-     *  @returns    The number of chunks (32-bytes) used by a serialised form of this type.
+     *  @returns    Calculate the amount of leafs for merkleisation of the type.
      *
      *  @note       For composite types and containers, a helper function may be required
      *              to complete the calculation?
+     *  @note       A leaf is 256 bits/32-bytes.
+     *  @note       The maximum tree depth for a depost contract is 32 
+     *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
         requires wellTyped(s)
-        ensures 1 <= chunkCount(s) && chunkCount(s) == |pack([serialise(s)])|
+        ensures 0 <= chunkCount(s) // add upper limit 
     {
         match s
-            case Bool(_,_) => 1
-            case Uint8(_, _) => 1
+            case Bool(_,_) => chunkCountBool()
+            case Uint8(_, _) => chunkCountUintN()
+            case Bitlist(xl , _ ) => chunkCountBitlist(xl) 
     } 
 
+    /** 
+     * chunkCount functions for specific types
+     */
+    function method chunkCountBool(): nat
+        // all basic types require 1 leaf (reference: simple-serialize.md)
+        ensures chunkCountBool() == 1
+    {
+        1
+    }
+
+    function method chunkCountUintN(): nat
+        // all basic types require 1 leaf (reference: simple-serialize.md)
+        ensures chunkCountUintN() == 1
+    {
+        1
+    }
+
+    function method chunkCountBitlist(xl: seq<bool>): nat
+        // divide by chunk size (in bits), rounding up (reference: simple-serialize.md)
+        // the spec doesn't make reference to whether N can be zero for bitlist[N]
+        // the py-szz implementation of bitlists only raises an error if N is negative
+        // hence it will be assumed that N >= 0
+        ensures 0 <= chunkCountBitlist(xl) == ceil(|xl|, BITS_PER_CHUNK)
+    {
+        (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
+    }
     
     type Bytes = seq<Byte> // i.e. the output of serialisation
     //type serialisedElement = seq<Byte> // i.e. the output of serialisation
