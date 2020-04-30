@@ -187,6 +187,9 @@ include "../ssz/BytesAndBits.dfy"
     //         else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
     // }   
     
+    /** 
+     *  Properties of chunk.
+     */
     lemma {:induction b} toChunksProp1(b: Bytes)
         requires |b| == 0
         ensures |toChunks(b)| == 1
