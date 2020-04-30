@@ -19,6 +19,8 @@ include "../utils/Helpers.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
+include "../ssz/BitListSeDes.dfy"
+include "../ssz/BytesAndBits.dfy"
 
 /**
  *  SSZ_Merkleise library.
@@ -31,6 +33,8 @@ include "../ssz/BoolSeDes.dfy"
     import opened Eth2Types
     import opened IntSeDes
     import opened BoolSeDes
+    import opened BitListSeDes
+    import opened BytesAndBits
     import opened SSZ
     import opened Helpers
 
