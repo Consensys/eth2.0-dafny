@@ -57,7 +57,7 @@ include "../ssz/BytesAndBits.dfy"
     /** chunkCount.
      *
      *  @param  s   A serialisable object.
-     *  @returns    The number of chunks (32-bytes) used by a serialised form of this type.
+     *  @returns    Calculate the amount of leafs for merkleisation of the type.
      *
      *  @note       For composite types and containers, a helper function may be required
      *              to complete the calculation?
