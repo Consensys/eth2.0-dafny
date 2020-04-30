@@ -327,7 +327,7 @@ include "../ssz/BytesAndBits.dfy"
 
             case Uint8(_, _) => merkleiseUint8(pack([serialise(s)]))
 
-            //case Bitlist(xl , _ ) => 
+            case Bitlist(xl,_ ) => EMPTY_CHUNK  // placeholder, fn TBC
     }
 
 
