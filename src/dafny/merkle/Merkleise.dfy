@@ -162,9 +162,9 @@ include "../ssz/BytesAndBits.dfy"
         ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
-        if |b| < 32 then [rightPadZeros(b)]
-        else    if |b| == 32 then [b] 
-                else [b[..32]] + toChunks(b[32..])
+        if |b| < BYTES_PER_CHUNK then [rightPadZeros(b)]
+        else    if |b| == BYTES_PER_CHUNK then [b] 
+                else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
 
