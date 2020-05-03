@@ -34,7 +34,7 @@ module Helpers {
      *
      *  @param  n   Numerator
      *  @param  d   Denominator
-     *  @returns    The smallest integer last than float(n / d).
+     *  @returns    The smallest integer larger than float(n / d).
      */
     function method ceil(n: nat, d: nat) : nat
         requires d != 0
