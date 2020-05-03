@@ -23,19 +23,6 @@ module  Math
     import opened MathHelperLemmas
     import opened NativeTypes
 
-    lemma l1(x:uint64, n:uint64)
-    requires n < 0xFFFFFFFFFFFFFFFF;
-    requires x as nat * x as nat > n as nat
-    ensures x as nat + n as nat / x as nat <= 0xFFFFFFFFFFFFFFFF;
-    {}
-
-
-    lemma l2(y:nat,n:nat)
-    requires y > 0;
-    requires (y+1)*(y+1) > n;
-    ensures y + 3 >=n/y;
-
-
     /**
      *  Return the largest integer `x` such that `x**2 <= n`
      *
