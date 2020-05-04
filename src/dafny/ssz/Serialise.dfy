@@ -43,12 +43,12 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires wellTyped(s) && s.tipe in {Uint8_, Bool_}
+        requires typeOf(s) in {Uint8_, Bool_}
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
         match s
-            case Bool(_,_) => 1
-            case Uint8(_,_) => 1  
+            case Bool(_) => 1
+            case Uint8(_) => 1  
     }
 
     /** Serialise.
@@ -59,11 +59,11 @@ module SSZ {
     function method serialise(s : Serialisable) : seq<Byte> 
     {
         match s 
-            case Bool(b, _) => boolToBytes(b)
+            case Bool(b) => boolToBytes(b)
 
-            case Uint8(n, _) => uint8ToBytes(n)
+            case Uint8(n) => uint8ToBytes(n)
 
-            case Bitlist(xl , _ ) => fromBitlistToBytes(xl)
+            case Bitlist(xl) => fromBitlistToBytes(xl)
     }
 
     /** Deserialise. 
@@ -80,21 +80,20 @@ module SSZ {
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(Bool(byteToBool(xs[0]), Bool_))
+                                Success(Bool(byteToBool(xs[0])))
                             else 
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(byteToUint8(xs[0]), Uint8_))
+                                Success(Uint8(byteToUint8(xs[0])))
                              else 
                                 Failure
                                 
             case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
-                                Success(Bitlist(fromBytesToBitList(xs), Bitlist_))
+                                Success(Bitlist(fromBytesToBitList(xs)))
                             else
                                 Failure
     }
-
 
     //  Specifications and Proofs
     
@@ -102,35 +101,33 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires wellTyped(s)
-        ensures deserialise(serialise(s), s.tipe) != Failure 
+        ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {   //  Thanks Dafny.
     }
-    
+
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires wellTyped(s)
-        ensures deserialise(serialise(s), s.tipe) == Success(s) 
+        ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
-                case Bitlist(xl, Bitlist_) => 
+                case Bitlist(xl) => 
                     calc {
-                        deserialise(serialise(s), s.tipe);
+                        deserialise(serialise(s), typeOf(s));
                         ==
-                        deserialise(serialise(Bitlist(xl, Bitlist_)), Bitlist_);
+                        deserialise(serialise(Bitlist(xl)), Bitlist_);
                         == 
                         deserialise(fromBitlistToBytes(xl), Bitlist_);
                         == 
-                        Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)), Bitlist_));
+                        Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl))));
                         == { bitlistDecodeEncodeIsIdentity(xl); } 
-                        Success(Bitlist(xl, Bitlist_));
+                        Success(Bitlist(xl));
                     }
 
-                case Bool(_, _) =>  //  Thanks Dafny
+                case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(_, _) => //  Thanks Dafny
+                case Uint8(_) => //  Thanks Dafny
             
         }
 
@@ -138,21 +135,19 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires wellTyped(s1) 
-        requires wellTyped(s2) 
-        ensures s1.tipe == s2.tipe ==> 
-                serialise(s1) == serialise(s2) ==> s1 == s2 
+        ensures typeOf(s1) == typeOf(s2) ==> 
+                    serialise(s1) == serialise(s2) ==> s1 == s2 
     {
         //  The proof follows from involution
-        if (s1.tipe == s2.tipe) {
+        if ( typeOf(s1) ==  typeOf(s2)) {
             if ( serialise(s1) == serialise(s2) ) {
                 //  Show that success(s1) == success(s2) which implies s1 == s2
                 calc {
                     Success(s1) ;
                     == { seDesInvolutive(s1); }
-                    deserialise(serialise(s1), s1.tipe);
+                    deserialise(serialise(s1), typeOf(s1));
                     ==
-                    deserialise(serialise(s2), s2.tipe);
+                    deserialise(serialise(s2), typeOf(s2));
                     == { seDesInvolutive(s2); }
                     Success(s2);
                 }
