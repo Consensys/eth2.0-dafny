@@ -109,6 +109,9 @@ module Constants {
   const BYTES_PER_LENGTH_OFFSET := 4 ;
   const BITS_PER_BYTE := 8           ;
   /** Create an additional constant to store the number of bits per chunk */
-    const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE ;
+  const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE ;
 
+  /** A 0 Byte, all bits set to false. */
+  const FALSE_BYTE := [false, false, false, false, false, false, false, false]
+  
 }

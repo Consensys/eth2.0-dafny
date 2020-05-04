@@ -17,6 +17,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/SeqHelpers.dfy"
 include "BytesAndBits.dfy"
+include "Constants.dfy"
 
 /**
  *  list<Boolean> serialisation, desrialisation.
@@ -29,9 +30,7 @@ include "BytesAndBits.dfy"
     import opened BytesAndBits
     import opened Helpers
     import opened SeqHelpers
-
-    /** A 0 Byte, all bits set to false. */
-    const FALSE_BYTE := [false, false, false, false, false, false, false, false]
+    import opened Constants
 
     /**
      *  Compute largest index in l with a true value.
