@@ -33,12 +33,10 @@ module IntSeDes {
         [n as Byte]
     }
  
-
     function method byteToUint8(b: Byte) : uint8
     {
         (b as uint8)
     }
-
 
     /** Encode/decode Uint8 yields Identity. */
     lemma uint8AsBytesInvolutive(n : uint8) 
