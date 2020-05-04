@@ -73,13 +73,12 @@ include "../ssz/BytesAndBits.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires wellTyped(s)
         ensures 0 <= chunkCount(s) // add upper limit 
     {
         match s
-            case Bool(_,_) => chunkCountBool()
-            case Uint8(_, _) => chunkCountUintN()
-            case Bitlist(xl , _ ) => chunkCountBitlist(xl) 
+            case Bool(_) => chunkCountBool()
+            case Uint8(_) => chunkCountUintN()
+            case Bitlist(xl) => chunkCountBitlist(xl) 
     } 
 
     /** 
@@ -322,11 +321,11 @@ include "../ssz/BytesAndBits.dfy"
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
-            case Bool(_, _) => merkleiseBool(pack([serialise(s)]))
+            case Bool(_) => merkleiseBool(pack([serialise(s)]))
 
-            case Uint8(_, _) => merkleiseUint8(pack([serialise(s)]))
+            case Uint8(_) => merkleiseUint8(pack([serialise(s)]))
 
-            case Bitlist(xl,_ ) => EMPTY_CHUNK  // placeholder, fn TBC
+            case Bitlist(xl) => EMPTY_CHUNK  // placeholder, fn TBC
     }
 
 
