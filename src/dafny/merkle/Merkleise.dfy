@@ -221,30 +221,6 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(flatten(s))  
     }
 
-    /** TODO: Add documentation for fromBitsToBytes and move to appropriate file.
-     *  TODO: better name?
-     *  TODO: py-ssz issue - bitvectors of zero length are illegal, though not reflected in code!
-     *  TODO: check how to ensure bitvectors in this repo have N > 0 (well typed?)
-     */ 
-     
-    function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
-        ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
-        
-        decreases l
-    {
-        if ( |l| == 0) then
-            []
-        else if ( |l| < 8 ) then 
-            //  pad to 1 byte
-            [ list8BitsToByte( l + FALSE_BYTE[.. (8 - |l| % 8)])]
-        else if ( |l| == 8 ) then
-            //  No need to pad as |l| % 8 == 0.
-            [ list8BitsToByte(l) ]
-        else  
-            //  Encode first element and recursively encode the rest.
-            [ list8BitsToByte(l[..8]) ] + fromBitsToBytes(l[8..])
-    }
-
     /** bitfieldBytes.
      *
      *  @param  b   A sequence of bits (seq<bool>)
