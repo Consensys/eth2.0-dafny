@@ -166,7 +166,6 @@ include "../ssz/BytesAndBits.dfy"
                 else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
-
     /** toChunks (py-ssz version).
      *
      *  @param  b   A sequence of bytes i.e. a Bytes object.
@@ -284,7 +283,6 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(fromBitsToBytes(b)) 
     }
 
-
     /** merkleiseBool
      *
      *  @param  b   A sequence of bytes representing the packed from of a serialised Bool.
@@ -311,7 +309,6 @@ include "../ssz/BytesAndBits.dfy"
         c[0]
     }
 
-    
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
@@ -327,6 +324,4 @@ include "../ssz/BytesAndBits.dfy"
 
             case Bitlist(xl) => EMPTY_CHUNK  // placeholder, fn TBC
     }
-
-
  }
