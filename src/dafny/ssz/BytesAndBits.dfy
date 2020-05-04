@@ -13,6 +13,8 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "../utils/Helpers.dfy"
+include "Constants.dfy"
 
 /**
  *  Helpers to convert list of bits into uint8 and back
@@ -21,6 +23,8 @@ include "../utils/Eth2Types.dfy"
 module BytesAndBits {
 
     import opened Eth2Types
+    import opened Constants
+    import opened Helpers
 
     /** Convert a boolean into a Byte.
      *
@@ -99,6 +103,38 @@ module BytesAndBits {
             byteToBool((n / 64) % 2),
             byteToBool((n / 128) % 2)
         ]
+    }
+
+    /**
+     *  Encode a list of bits into a sequence of bytes, padding with zeros.
+     *
+     *  The algorithm to encode list of bits into seq of bytes works as follows:
+     *      1.  split the list into chunks of 8 bits and encode each one into a Byte
+     *      2.  if last chunk does not have 8 bits, pad with zeros and make a Byte.
+     *
+     *  @example: l1 = [0,1,0,0] is padded with [0,0,0,0] to obtain [0,1,0,0, 0,0,0,0] 
+     *  and this encoded into a Byte (little endian). The hexadecimal value is 
+     *  thus 0x02: 0000.0010 (in `l1` the bits are ordered from little l1[0]to big l1[7])
+     *  @example: with more than one byte needed l2 = [1] * 9 and |l| == 9.
+     *  The encoding of l2 is: [1111.1111, 0000.0001] i.e. [0xFF , 0x01] 
+     *  
+     */
+    function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
+        ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
+        
+        decreases l
+    {
+        if ( |l| == 0) then
+            []
+        else if ( |l| < 8 ) then 
+            //  pad to 1 byte
+            [ list8BitsToByte( l + FALSE_BYTE[.. (8 - |l| % 8)])]
+        else if ( |l| == 8 ) then
+            //  No need to pad as |l| % 8 == 0.
+            [ list8BitsToByte(l) ]
+        else  
+            //  Encode first element and recursively encode the rest.
+            [ list8BitsToByte(l[..8]) ] + fromBitsToBytes(l[8..])
     }
 
     //  Some useful properties.
