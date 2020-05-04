@@ -29,9 +29,9 @@ module Eth2Types {
 
     /** The serialisable objects. */
     datatype Serialisable = 
-            Uint8(n: uint8, ghost tipe: Tipe)
-        |   Bool(b: bool, ghost tipe: Tipe)
-        |   Bitlist(xl: seq<bool>, ghost tipe: Tipe)
+            Uint8(n: uint8)
+        |   Bool(b: bool)
+        |   Bitlist(xl: seq<bool>)
 
     /** Some type tags.
      * 
@@ -46,18 +46,19 @@ module Eth2Types {
         |   Bool_
         |   Bitlist_
 
-    /** Whether a serialisable has its Tipe field matching its type. 
-     *
+   /**  The Tipe of a serialisable.
+     *  This function allows to obtain the type of a `Serialisable`.
+     *  
      *  @param  s   A serialisable.
-     *  @returns    True iff s.tipe is s.tipe_.
+     *  @returns    Its tipe.
      */
-    predicate wellTyped(s : Serialisable) {
+    function typeOf(s : Serialisable) : Tipe {
             match s 
-                case Bool(_, t) => t == Bool_
+                case Bool(_) => Bool_
         
-                case Uint8(_, t) => t == Uint8_
+                case Uint8(_) => Uint8_
 
-                case Bitlist(_, t) => t == Bitlist_
+                case Bitlist(_) => Bitlist_
     }
 
     //  Old section
