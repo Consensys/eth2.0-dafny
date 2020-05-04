@@ -59,8 +59,10 @@ module BytesAndBits {
         forall i | 0 <= i < |l| :: !l[i]
     }
 
+    //  The following methods convert 8 bits to Byte and Byte to 8 bits
+
     /**
-     *  Convert a list of 8 bits into a number.
+     *  Convert a list of 8 bits into a number. Little endian assumed.
      *
      *  @param  l   A sequence of bits.
      *  @returns    A byte the binary encoding of which is reverse(l).
@@ -80,7 +82,7 @@ module BytesAndBits {
     }
 
     /**
-     *  Compute a list of bits given a Byte.
+     *  Compute a Byte into a seq of 8 bits. Little endian assumed. 
      *
      *  @param  n   A byte, i.e. a number that can be represented with 8 bits.
      *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
