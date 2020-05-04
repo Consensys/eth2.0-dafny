@@ -12,7 +12,6 @@
  * under the License.
  */
 
-
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"

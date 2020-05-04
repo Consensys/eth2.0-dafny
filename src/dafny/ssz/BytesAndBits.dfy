@@ -12,7 +12,6 @@
  * under the License.
  */
 
-
 include "../utils/Eth2Types.dfy"
 
 /**
