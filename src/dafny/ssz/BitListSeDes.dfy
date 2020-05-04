@@ -59,7 +59,6 @@ include "Constants.dfy"
         else 0
     }
  
-    
     /**
      *  Encode a list of bits into a sequence of bytes.
      *
