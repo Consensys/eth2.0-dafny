@@ -3,7 +3,7 @@
   * constants-minimal.k in the K spec.
   *
   */
-module Eth2Constants {  
+module Constants {  
   //  Powers of 2
   const TWO_UP_0 := 1;
   const TWO_UP_2 := 2 * TWO_UP_0;
@@ -108,5 +108,7 @@ module Eth2Constants {
   const BYTES_PER_CHUNK := 32        ;  
   const BYTES_PER_LENGTH_OFFSET := 4 ;
   const BITS_PER_BYTE := 8           ;
+  /** Create an additional constant to store the number of bits per chunk */
+    const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE ;
 
 }

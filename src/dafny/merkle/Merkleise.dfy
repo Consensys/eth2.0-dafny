@@ -16,6 +16,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
+include "../ssz/Constants.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
@@ -31,23 +32,13 @@ include "../ssz/BytesAndBits.dfy"
 
     import opened NativeTypes
     import opened Eth2Types
+    import opened Constants
     import opened IntSeDes
     import opened BoolSeDes
     import opened BitListSeDes
     import opened BytesAndBits
     import opened SSZ
     import opened Helpers
-
-    /**
-     * Constants (reference: simple-serialize.md)
-     */
-     const BYTES_PER_CHUNK := 32
-     const BITS_PER_BYTE := 8
-
-     /**
-      * Create an additional constant to store the number of bits per chunk
-      */
-    const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE
 
     /** 
      *  Predicate used in checking chunk properties.
@@ -166,6 +157,7 @@ include "../ssz/BytesAndBits.dfy"
                 else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
+
     /** toChunks (py-ssz version).
      *
      *  @param  b   A sequence of bytes i.e. a Bytes object.
@@ -235,7 +227,7 @@ include "../ssz/BytesAndBits.dfy"
      *  TODO: py-ssz issue - bitvectors of zero length are illegal, though not reflected in code!
      *  TODO: check how to ensure bitvectors in this repo have N > 0 (well typed?)
      */ 
-
+     
     function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
         ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
         
