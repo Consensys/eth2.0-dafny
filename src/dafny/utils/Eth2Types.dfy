@@ -27,11 +27,22 @@ module Eth2Types {
 
     //  The Eth2 basic types.
 
+    /** The type `Seq32uint8` corresponding to sequences of 32 `uint8`s */
+    type Seq32uint8 = x:seq<uint8> | |x| == 32
+                                    witness timeSeq(0,32)
+
     /** The serialisable objects. */
     datatype Serialisable = 
             Uint8(n: uint8)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>)
+        |   Bytes32(bs: Seq32uint8)
+
+    /** The type `Bytes32` corresponding to a Serialisable built using the
+     * `Bytes32` constructor */
+    type Bytes32 = s:Serialisable | && s.Bytes32?
+                                    witness Bytes32(timeSeq(0,32))
+
 
     /** Some type tags.
      * 
@@ -45,6 +56,7 @@ module Eth2Types {
             Uint8_
         |   Bool_
         |   Bitlist_
+        |   Bytes32_
 
    /**  The Tipe of a serialisable.
      *  This function allows to obtain the type of a `Serialisable`.
@@ -59,6 +71,8 @@ module Eth2Types {
                 case Uint8(_) => Uint8_
 
                 case Bitlist(_) => Bitlist_
+
+                case Bytes32(_) => Bytes32_
     }
 
     //  Old section
