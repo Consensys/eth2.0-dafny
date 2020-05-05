@@ -71,7 +71,7 @@ module BytesAndBits {
      *  @returns    A byte the binary encoding of which is reverse(l).
      */
     function method list8BitsToByte(l : seq<bool>) : Byte    
-        requires |l| == 8 
+        requires |l| == 8 == BITS_PER_BYTE
         ensures isNull(l) <==> list8BitsToByte(l) == 0
     {
         128 * boolToByte(l[7]) +
@@ -91,7 +91,7 @@ module BytesAndBits {
      *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
      */
     function method byteTo8Bits( n : Byte ) : seq<bool>
-        ensures | byteTo8Bits(n) | == 8 
+        ensures | byteTo8Bits(n) | == 8 == BITS_PER_BYTE
     {
         [
             byteToBool((n / 1) % 2),
@@ -158,7 +158,7 @@ module BytesAndBits {
      *
      */    
     lemma decodeOfEncode8BitsIsIdentity(l : seq<bool>) 
-        requires |l| == 8
+        requires |l| == 8 == BITS_PER_BYTE
         ensures byteTo8Bits(list8BitsToByte(l)) == l 
     {   //  Thanks Dafny.
     }
