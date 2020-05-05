@@ -75,12 +75,14 @@ module SSZ {
      */
     function method serialise(s : Serialisable) : seq<Byte> 
     {
-        match s 
+        match s
             case Bool(b) => boolToBytes(b)
 
             case Uint8(n) => uint8ToBytes(n)
 
             case Bitlist(xl) => fromBitlistToBytes(xl)
+
+            case Bytes32(bs) => bs
     }
 
     /** Deserialise. 
@@ -110,6 +112,10 @@ module SSZ {
                                 Success(Bitlist(fromBytesToBitList(xs)))
                             else
                                 Failure
+
+            case Bytes32_ => if |xs| == 32 then
+                                Success(Bytes32(xs))
+                            else Failure
     }
 
     //  Specifications and Proofs
@@ -145,6 +151,8 @@ module SSZ {
                 case Bool(_) =>  //  Thanks Dafny
 
                 case Uint8(_) => //  Thanks Dafny
+
+                case Bytes32(_) => // Thanks Dafny
             
         }
 
