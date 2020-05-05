@@ -63,6 +63,31 @@ module Helpers {
         else [t] + timeSeq(t, k - 1)
     }
 
+    /**
+     * Maps two sequences of the same length and type to a sequence obtained by
+     * applying a binary operation (supplied as parameter) to each pair of
+     * elements of the input sequences
+     *
+     * @param s1  First sequence
+     * @param s2  Second sequence
+     * @param binOp Binary operation
+     *
+     * @returns A sequence of the same length and type of the input sequences
+     * where the `i`-th element corresponds to the application of
+     * `binOp` to the `i`-the elements of `s1` and `s2`.
+     */
+    function seqBinOpMap<T>(s1:seq<T>, s2:seq<T>, binOp: (T,T) -> T): seq<T>
+    requires |s1| == |s2|
+    ensures |seqBinOpMap(s1,s2,binOp)| == |s1| == |s2|
+    ensures forall i | 0 <= i < |s1| :: seqBinOpMap(s1,s2,binOp)[i] == binOp(s1[i],s2[i])
+    {
+        if(|s1| == 0) then
+            []
+        else
+            [binOp(s1[0],s2[0])] +
+            seqBinOpMap(s1[1..], s2[1..],binOp)
+    }    
+
     //  Seq of Seqs functions.
 
     /** .

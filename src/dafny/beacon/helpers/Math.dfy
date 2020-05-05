@@ -14,6 +14,8 @@
 
 include "../../libraries/integers/power.i.dfy"
 include "../../utils/NativeTypes.dfy"
+include "../../utils/Helpers.dfy"
+include "../../utils/Eth2Types.dfy"
 include "helper_lemmas/MathHelper.dfy"
 
 module  Math
@@ -22,6 +24,8 @@ module  Math
     import opened Math__power_s
     import opened MathHelperLemmas
     import opened NativeTypes
+    import opened Eth2Types
+    import opened Helpers
 
     /**
      *  Return the largest integer `x` such that `x**2 <= n`
@@ -71,5 +75,20 @@ module  Math
         return x;
     }    
     
+    /**
+     * Computes the exclusive-or of two `Bytes32` values
+     *
+     * @param b1  First `Bytes32` value
+     * @param b2  Second `Bytes32` value
+     *
+     * @returns   A `Bytes32` value corresponding to the exclusive-or of `b1`
+     *            and `b2`
+     */
+    function xor(b1:Bytes32, b2:Bytes32): Bytes32
+    ensures forall i | 0 <= i < |xor(b1,b2).bs| :: xor(b1,b2).bs[i] == uint8xor(b1.bs[i],b2.bs[i])
+    {
+        Bytes32(seqBinOpMap<uint8>(b1.bs, b2.bs, uint8xor))
+    } 
+
 }
 
