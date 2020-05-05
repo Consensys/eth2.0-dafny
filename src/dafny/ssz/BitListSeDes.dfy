@@ -43,7 +43,7 @@ include "Constants.dfy"
      *  
      */
     function method largestIndexOfOne(l : seq<bool>) : nat 
-        requires |l| == 8
+        requires |l| == BITS_PER_BYTE == 8
         requires exists i: nat | 0 <= i < |l| :: l[i]
         ensures 0 <= largestIndexOfOne(l) < |l| 
         ensures l[largestIndexOfOne(l)] == true
@@ -89,20 +89,20 @@ include "Constants.dfy"
      *  
      */
     function method fromBitlistToBytes(l : seq<bool>) : seq<Byte> 
-        ensures | fromBitlistToBytes(l) | == ceil( |l| + 1, 8)
+        ensures | fromBitlistToBytes(l) | == ceil( |l| + 1, BITS_PER_BYTE)
         ensures fromBitlistToBytes(l)[|fromBitlistToBytes(l)| - 1] >= 1
         
         decreases l
     {
-        if ( |l| < 7 ) then 
+        if ( |l| < BITS_PER_BYTE - 1 ) then 
             //  8 - (|l| + 1) % 8 = 8 for |l| == 7 so we need to pad.
-            [ list8BitsToByte( l + [true] + FALSE_BYTE[.. (8 - (|l| + 1) % 8)])]
-        else if ( |l| == 7 ) then
+            [ list8BitsToByte( l + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|l| + 1) % BITS_PER_BYTE )])]
+        else if ( |l| == BITS_PER_BYTE - 1 ) then
             //  No need to pad as |l + [true]| % 8 == 0.
             [ list8BitsToByte( l + [true]) ]
         else  
             //  Encode first 8 bits and recursively encode the rest.
-            [ list8BitsToByte(l[..8]) ] + fromBitlistToBytes(l[8..])
+            [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitlistToBytes(l[BITS_PER_BYTE..])
     }
 
     /**
@@ -119,8 +119,8 @@ include "Constants.dfy"
     function method fromBytesToBitList(xb : seq<Byte>) : seq<bool> 
         requires |xb| >= 1
         requires xb[|xb|-1] >= 1
-        ensures 8 * (|xb| - 1) >= 0
-        ensures 8 * (|xb| - 1) <= |fromBytesToBitList(xb)| <= 8 * |xb|
+        ensures BITS_PER_BYTE * (|xb| - 1) >= 0
+        ensures BITS_PER_BYTE * (|xb| - 1) <= |fromBytesToBitList(xb)| <= BITS_PER_BYTE * |xb|
 
         decreases xb
     {
@@ -145,27 +145,27 @@ include "Constants.dfy"
     {
         //  The structure of the proof is split in 3 cases to follow
         //  the definition of fromBitlistToBytes and make it easier to prove
-        if ( |l| < 7 ) {
+        if ( |l| < BITS_PER_BYTE - 1 ) {
             //  Thanks Dafny
-        } else if ( |l| == 7 ) {
+        } else if ( |l| == BITS_PER_BYTE - 1 ) {
             //  Thanks Dafny
         } else {
             calc == {
                 fromBytesToBitList( fromBitlistToBytes (l) );
                 == //   Definition of fromBitlistToBytes
-                fromBytesToBitList([list8BitsToByte(l[..8])] + fromBitlistToBytes(l[8..]));
+                fromBytesToBitList([list8BitsToByte(l[..BITS_PER_BYTE])] + fromBitlistToBytes(l[BITS_PER_BYTE..]));
                 == { simplifyFromByteToListFirstArg(
-                        list8BitsToByte(l[..8]), 
-                        fromBitlistToBytes(l[8..])
+                        list8BitsToByte(l[..BITS_PER_BYTE]), 
+                        fromBitlistToBytes(l[BITS_PER_BYTE..])
                         ) ;  
                 }
-                byteTo8Bits(list8BitsToByte(l[..8])) + 
-                    fromBytesToBitList(fromBitlistToBytes(l[8..]));
-                == { decodeOfEncode8BitsIsIdentity(l[..8]); }
-                l[0..8] + fromBytesToBitList(fromBitlistToBytes(l[8..]));
+                byteTo8Bits(list8BitsToByte(l[..BITS_PER_BYTE])) + 
+                    fromBytesToBitList(fromBitlistToBytes(l[BITS_PER_BYTE..]));
+                == { decodeOfEncode8BitsIsIdentity(l[..BITS_PER_BYTE]); }
+                l[0..BITS_PER_BYTE] + fromBytesToBitList(fromBitlistToBytes(l[BITS_PER_BYTE..]));
                 ==  //  Induction on l[8..]. 
                     //  This last step can be ommitted as Dafny figures it out.
-                l[0..8] + l[8..];
+                l[0..BITS_PER_BYTE] + l[BITS_PER_BYTE..];
             }
         }
     }
@@ -276,10 +276,10 @@ include "Constants.dfy"
         calc == {
             fromBitlistToBytes(byteTo8Bits(e) + xl);
             == 
-            [ list8BitsToByte((byteTo8Bits(e) + xl)[..8]) ] + 
-                fromBitlistToBytes((byteTo8Bits(e) + xl)[8..]) ; 
+            [ list8BitsToByte((byteTo8Bits(e) + xl)[..BITS_PER_BYTE]) ] + 
+                fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ; 
             == 
-            [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[8..]) ;
+            [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ;
         }
     }
 
