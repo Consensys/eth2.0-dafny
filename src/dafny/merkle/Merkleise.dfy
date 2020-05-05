@@ -25,7 +25,16 @@ include "../ssz/BytesAndBits.dfy"
 /**
  *  SSZ_Merkleise library.
  *
- *  size_of, chunk_count, pack, merkleise, get_hash_tree_root
+ *  Primary reference: simple-serialize.md
+ *  Secondary reference: py-ssz implementation
+ *
+ *  This library defines various helper functions for merkleisation, including 
+ *  chunk_count, bitfield_bytes, pack, merkleise, mix_in_length, mix_in_type.
+ *
+ *  Other helper functions (size_of and next_pow_of_two) are included in other
+ *  libraries.
+ *
+ *  The get_hash_tree_root function is also included in this library.
  */
  module SSZ_Merkleise {
 
@@ -47,9 +56,6 @@ include "../ssz/BytesAndBits.dfy"
     {
         |c| == BYTES_PER_CHUNK
     }
-
-    /** TODO: Move constants to a separate file
-     */
 
     /** chunkCount.
      *
