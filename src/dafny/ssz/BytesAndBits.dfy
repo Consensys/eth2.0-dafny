@@ -120,21 +120,21 @@ module BytesAndBits {
      *  
      */
     function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
-        ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
+        ensures  | fromBitsToBytes(l) | == ceil( |l|, BITS_PER_BYTE)
         ensures |l| >= 1 && l[|l| - 1] ==> fromBitsToBytes(l)[|fromBitsToBytes(l)| - 1] >= 1
         decreases l
     {
         if ( |l| == 0) then
             []
-        else if ( |l| < 8 ) then 
+        else if ( |l| < BITS_PER_BYTE ) then 
             //  pad to 1 byte
-            [ list8BitsToByte( l + FALSE_BYTE[.. (8 - |l| % 8)])]
-        else if ( |l| == 8 ) then
+            [ list8BitsToByte( l + FALSE_BYTE[.. (BITS_PER_BYTE - |l| % BITS_PER_BYTE)])]
+        else if ( |l| == BITS_PER_BYTE ) then
             //  No need to pad as |l| % 8 == 0.
             [ list8BitsToByte(l) ]
         else  
             //  Encode first element and recursively encode the rest.
-            [ list8BitsToByte(l[..8]) ] + fromBitsToBytes(l[8..])
+            [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitsToBytes(l[BITS_PER_BYTE..])
     }
 
     //  Some useful properties.
