@@ -121,7 +121,7 @@ module BytesAndBits {
      */
     function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
         ensures  | fromBitsToBytes(l) | == ceil( |l|, 8)
-        
+        ensures |l| >= 1 && l[|l| - 1] ==> fromBitsToBytes(l)[|fromBitsToBytes(l)| - 1] >= 1
         decreases l
     {
         if ( |l| == 0) then
