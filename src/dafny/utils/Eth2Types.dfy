@@ -39,18 +39,16 @@ module Eth2Types {
         |   Bytes32(bs: Seq32uint8)
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
-     * `Bytes32` constructor */
+     * `Bytes32` constructor 
+     */
     type Bytes32 = s:Serialisable | && s.Bytes32?
                                     witness Bytes32(timeSeq(0,32))
-
 
     /** Some type tags.
      * 
      *  In Dafny we cannot extract the type of a given object.
      *  In the proofs, we need to specify the type when deserialise is called
      *  and also to prove some lemmas.
-     *  The `Tipe` tag should match the actual type of a serialisable.
-     *  This can be enforced by invoking the predicate [[wellTyped]].
      */
     datatype Tipe =
             Uint8_
