@@ -51,6 +51,23 @@ module SSZ {
             case Uint8(_) => 1  
     }
 
+    /** default.
+     *
+     *  @param  t   Serialisable tipe.
+     *  @returns    The default serialisable for this tipe.
+     *
+    */
+    function method default(t : Tipe) : Serialisable {
+            match t 
+                case Bool_ => Bool(false)
+        
+                case Uint8_ => Uint8(0)
+
+                case Bitlist_ => Bitlist([])
+
+                case Bytes32_ => Bytes32(timeSeq(0,32))
+    }
+
     /** Serialise.
      *
      *  @param  s   The object to serialise.
