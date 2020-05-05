@@ -66,3 +66,4 @@ scripts/__pycache__/pytesttests.cpython-37-pytest-5.4.1.pyc
 *cs
 .metals/metals.lock.db
 scripts/data/.DS_Store
+**/.DS_Store
