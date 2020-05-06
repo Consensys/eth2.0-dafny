@@ -78,6 +78,18 @@ module Eth2Types {
                 case Bytes32(_) => Bytes32_
     }
 
+    /**
+     * Bitwise exclusive-or of two `Byte` value
+     *
+     * @param a  First value
+     * @param b  Second value
+     * @returns  Bitwise exclusive-or of `a` and `b`
+     */
+    function byteXor(a:Byte, b:Byte): Byte
+    {
+        ((a as bv8)^(b as bv8)) as Byte
+    }      
+
     //  Old section
 
     /** Simple Serialisable types. */

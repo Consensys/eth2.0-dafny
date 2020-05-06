@@ -46,16 +46,5 @@ module NativeTypes {
     newtype{:nativeType "short"} nat16 = i:int | 0 <= i < 0x8000
     newtype{:nativeType "int"} nat32 = i:int | 0 <= i < 0x80000000
     newtype{:nativeType "long"} nat64 = i:int | 0 <= i < 0x8000000000000000
-
-    /**
-     * Bitwise exclusive-or of two `uint8` value
-     *
-     * @param a  First value
-     * @param b  Second value
-     * @returns  Bitwise exclusive-or of `a` and `b`
-     */
-    function uint8xor(a:uint8, b:uint8): uint8
-    {
-        ((a as bv8)^(b as bv8)) as uint8
-    }    
+  
 } 

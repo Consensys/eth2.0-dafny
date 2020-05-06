@@ -85,9 +85,9 @@ module  Math
      *            and `b2`
      */
     function xor(b1:Bytes32, b2:Bytes32): Bytes32
-    ensures forall i | 0 <= i < |xor(b1,b2).bs| :: xor(b1,b2).bs[i] == uint8xor(b1.bs[i],b2.bs[i])
+    ensures forall i | 0 <= i < |xor(b1,b2).bs| :: xor(b1,b2).bs[i] == byteXor(b1.bs[i],b2.bs[i])
     {
-        Bytes32(seqBinOpMap<uint8>(b1.bs, b2.bs, uint8xor))
+        Bytes32(seqBinOpMap<Byte>(b1.bs, b2.bs, byteXor))
     } 
 
     /**
