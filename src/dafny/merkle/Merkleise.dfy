@@ -48,15 +48,6 @@ include "../ssz/BytesAndBits.dfy"
     import opened SSZ
     import opened Helpers
 
-    /** 
-     *  Predicate used in checking chunk properties.
-     */
-    predicate is32BytesChunk(c : chunk) 
-    // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
-    {
-        |c| == BYTES_PER_CHUNK
-    }
-    
     /** chunkCount.
      *
      *  @param  s   A serialisable object.
@@ -69,27 +60,30 @@ include "../ssz/BytesAndBits.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        ensures 0 <= chunkCount(s) // add upper limit 
+        ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
-            case Bool(_) => chunkCountBool()
-            case Uint8(_) => chunkCountUintN()
+            case Bool(b) => chunkCountBool(b)
+            case Uint8(n) => chunkCountUint8(n)
             case Bitlist(xl) => chunkCountBitlist(xl) 
+            case Bytes32(bs) => chunkCountBytes32(bs)
     } 
 
     /** 
-     * chunkCount functions for specific types
+     * chunkCount helper functions for specific types
      */
-    function method chunkCountBool(): nat
+    function method chunkCountBool(b: bool): nat
         // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountBool() == 1
+        ensures chunkCountBool(b) == 1
+        ensures |pack(Bool(b))| == chunkCountBool(b)
     {
         1
     }
 
-    function method chunkCountUintN(): nat
+    function method chunkCountUint8(n: uint8): nat
         // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountUintN() == 1
+        ensures chunkCountUint8(n) == 1
+        ensures |pack(Uint8(n))| == chunkCountUint8(n)
     {
         1
     }
@@ -100,32 +94,83 @@ include "../ssz/BytesAndBits.dfy"
         // the py-szz implementation of bitlists only raises an error if N is negative
         // hence it will be assumed that N >= 0
         ensures 0 <= chunkCountBitlist(xl) == ceil(|xl|, BITS_PER_CHUNK)
+        //ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl) (moved to lemma)
     {
         (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
     }
+
+    lemma lengthBitfieldBytes(xl: seq<bool>)
+        ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl)
+    {
+            if (|xl| == 0) {
+                calc == {
+                    // |bitfieldBytes(xl)|;
+                    // == 
+                    // |[]|;
+                    // ==
+                    // 0;
+                    // ==
+                    // chunkCountBitlist(xl);
+                }
+            } else {
+                calc == {
+                    |bitfieldBytes(xl)|;
+                    ==
+                    |toChunks(fromBitsToBytes(xl)) |;
+                    //|toChunks(serialiseObjects(s))|;
+                    ==
+                    {toChunksProp2(fromBitsToBytes(xl));} ceil(|fromBitsToBytes(xl)|, BYTES_PER_CHUNK);
+                    ==
+                    ceil(|xl|, BITS_PER_CHUNK);
+                    ==
+                    chunkCountBitlist(xl);
+                }
+            }
+        }
+
+    function method chunkCountBytes32(bs: Seq32Byte): nat
+        ensures chunkCountBytes32(bs) == ceil(|bs|, BYTES_PER_CHUNK)
+        //ensures pack
+    {
+        var s := default(Uint8_);
+        (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
+    }
+
     
-    type Bytes = seq<Byte> // i.e. the output of serialisation
+
+    /** 
+     *  Predicate used in checking chunk properties.
+     */
+    predicate is32BytesChunk(s : Serialisable) 
+    // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
+    {
+        typeOf(s) == Bytes32_ && |s.bs| == BYTES_PER_CHUNK
+    }
+
+    // TODO: MOVE TO ETH2 TYPES
+     // i.e. the output of serialisation
     //type serialisedElement = seq<Byte> // i.e. the output of serialisation
     // bounds? should be at least 1 byte (if representing serialised output)
     // maybe call serialisedBytes or serialisedElement?
 
     type chunk = seq<Byte> // set size to 32 bytes
 
-    const EMPTY_CHUNK := [0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte,
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte,
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-                            0 as Byte,0 as Byte,0 as Byte,0 as Byte]
+    const EMPTY_CHUNK := Bytes32(timeSeq(0,32))
+    // [0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte,
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte,
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
+    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte]
 
     /** 
      *  Properties of empty chunk.
      */
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
-        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 as Byte 
+        ensures forall i :: 0 <= i < |EMPTY_CHUNK.bs| ==> EMPTY_CHUNK.bs[i]== 0 //as Byte 
     {   //  Thanks Dafny
     }
 
@@ -135,11 +180,11 @@ include "../ssz/BytesAndBits.dfy"
      *  @returns    The sequence of bytes right padded with zero bytes to form a 32-byte chunk.
      *
      */
-    function method rightPadZeros(b: Bytes): chunk
+    function method rightPadZeros(b: bytes): Bytes32
         requires |b| < BYTES_PER_CHUNK
         ensures is32BytesChunk(rightPadZeros(b)) 
     {
-        b + EMPTY_CHUNK[|b|..]
+        Bytes32(b + EMPTY_CHUNK.bs[|b|..])
     }
 
     /** toChunks.
@@ -152,14 +197,14 @@ include "../ssz/BytesAndBits.dfy"
      *              be returned. It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
      *
      */
-    function toChunks(b: Bytes): seq<chunk>
+    function method toChunks(b: bytes): seq<Bytes32>
         ensures |toChunks(b)| > 0
         ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
         if |b| < BYTES_PER_CHUNK then [rightPadZeros(b)]
-        else    if |b| == BYTES_PER_CHUNK then [b] 
-                else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
+        else    if |b| == BYTES_PER_CHUNK then [Bytes32(b)] 
+                else [Bytes32(b[..BYTES_PER_CHUNK])] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
 
@@ -185,13 +230,13 @@ include "../ssz/BytesAndBits.dfy"
     /** 
      *  Properties of chunk.
      */
-    lemma {:induction b} toChunksProp1(b: Bytes)
+    lemma {:induction b} toChunksProp1(b: bytes)
         requires |b| == 0
         ensures |toChunks(b)| == 1
     {
     }
 
-    lemma  {:induction b} toChunksProp2(b: Bytes)
+    lemma  {:induction b} toChunksProp2(b: bytes)
         requires |b| > 0
         ensures 1 <= |toChunks(b)| == ceil(|b|, 32) 
     {
@@ -214,18 +259,81 @@ include "../ssz/BytesAndBits.dfy"
      *              the py-ssz implementation can return an empty seq and therefore a zero
      *              chunk output.           
      */
+     // Applicable to uintN, bool, or list/vector of uintN
+     // Can't be a list/vector of bool's as bitlists/bitvectors are dealth with separately
+     // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
+
+    //  function pack(s: seq<Serialisable>) : seq<chunk>
+    //     requires forall i :: 0 <= i < |s| ==> typeOf(s[i]) in {Uint8_, Bool_}
+    //     requires forall i :: 1 <= i < |s| ==> typeOf(s[i]) in {Uint8_}
+    //     requires forall i,j :: 0 <= i < j < |s| ==> typeOf(s[i]) == typeOf(s[j])
+    //     // no upper bound on length of any individual serialised element???
+    //     ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
+    //     ensures 1 <= |pack(s)| 
+    // {        
+    //     if |s| == 0 then [EMPTY_CHUNK] // can theoretically have list[uint8, 0]
+    //     // else toChunks(concatSerialisedElements(s))  
+    //     else toChunks(serialiseObjects(s))
+    // }
+    function method pack(s: Serialisable): seq<Bytes32>
+        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
+    {
+        match s
+            case Bool(b) => packBool(b)
+            case Uint8(n) => packUint8(n)
+            case Bytes32(bs) => packBytes32(bs)
+    } 
+
+    /** 
+     * pack functions for specific types
+     */
+    function method packBool(b: bool): seq<Bytes32>
+        ensures |packBool(b)| == 1
+    {
+        toChunks(serialise(Bool(b)))
+    }
+
+    function method packUint8(n: uint8): seq<Bytes32>
+        ensures |packUint8(n)| == 1
+    {
+        toChunks(serialise(Uint8(n)))
+    }
+
+    function method packBytes32(bs: Seq32Byte): seq<Bytes32>
+        ensures |packBytes32(bs)| == 1
+    {
+        toChunks(serialise(Bytes32(bs)))
+    }
+
+    /** Pack.
+     *
+     *  @param  s   A sequence of serialised objects (seq<Byte>).
+     *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
+     *              bytes if necessary. It is implied by the spec that at least one chunk is 
+     *              returned (see note below).
+     *
+     *  @note       The pack function isn't type based.
+     *  @note       The spec (eth2.0-specs/ssz/simple-serialize.md) says 'Given ordered objects 
+     *              of the same basic type, serialize them, pack them into BYTES_PER_CHUNK-byte 
+     *              chunks, right-pad the last chunk with zero bytes, and return the chunks.'
+     *  @note       The py-ssz implementation checks for |seq<Bytes>| == 0 for which it returns
+     *              the EMPTY_CHUNK. However, if the length of the input is greater than 0, i.e.
+     *              |seq<Bytes>| > 0, a toChunks function is called and the toChunks function in
+     *              the py-ssz implementation can return an empty seq and therefore a zero
+     *              chunk output.           
+     */
     // Applicable to uintN, bool, or list/vector of uintN
     // Can't be a list/vector of bool's as bitlists/bitvectors are dealth with separately
     // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
-     function pack(s: seq<Bytes>) : seq<chunk>
-        // no upper bound on length of any individual serialised element???
-        ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
-        ensures 1 <= |pack(s)| 
-     {        
-        if |s| == 0 then [EMPTY_CHUNK]
-        // else toChunks(concatSerialisedElements(s))  
-        else toChunks(flatten(s))  
-    }
+    //  function pack(s: seq<Bytes>) : seq<chunk>
+    //     // no upper bound on length of any individual serialised element???
+    //     ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
+    //     ensures 1 <= |pack(s)| 
+    //  {        
+    //     if |s| == 0 then [EMPTY_CHUNK]
+    //     // else toChunks(concatSerialisedElements(s))  
+    //     else toChunks(flatten(s))  
+    // }
 
     /** bitfieldBytes.
      *
@@ -246,7 +354,7 @@ include "../ssz/BytesAndBits.dfy"
      *              returned.
      */
     
-    function bitfieldBytes(b: seq<bool>) : seq<chunk>
+    function bitfieldBytes(b: seq<bool>) : seq<Bytes32>
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
         ensures 0 <= |bitfieldBytes(b)| 
@@ -256,45 +364,42 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(fromBitsToBytes(b)) 
     }
 
-    /** merkleiseBool
+    /** merkleiseBasic
      *
      *  @param  b   A sequence of bytes representing the packed from of a serialised Bool.
      *  @returns    The root of the merkle tree.
      *
+     *  @note       As per the simple-serialize.md spec: 
+     *              If 1 chunk: the root is the chunk itself.
+     *              Hence return the first (and only) chunk of the packed object.
+     *
      */
-    function merkleiseBool(c: seq<chunk>): chunk
-        requires |c| == 1 && |c[0]| == 32
-        ensures is32BytesChunk(merkleiseBool(c))
+    function merkleiseBasic(s: Serialisable): Bytes32
+        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
+        requires |pack(s)| == 1
+        ensures is32BytesChunk(merkleiseBasic(s))
     {
-        c[0]
+        pack(s)[0]
     }
     
-    /** merkleiseUint8 
-     *
-     *  @param  b   A sequence of bytes representing the packed from of a serialised Uint8.
-     *  @returns    The root of the merkle tree.
-     *
-     */
-    function method merkleiseUint8(c: seq<chunk>): chunk
-        requires |c| == 1 && is32BytesChunk(c[0])
-        ensures is32BytesChunk(merkleiseUint8(c))
-    {
-        c[0]
-    }
+    
+    
 
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
      *  @returns    A 32-byte chunk representing the root node of the merkle tree.
      */
-    function getHashTreeRoot(s : Serialisable) : chunk
+    function getHashTreeRoot(s : Serialisable) : Bytes32
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
-            case Bool(_) => merkleiseBool(pack([serialise(s)]))
+            case Bool(_) => merkleiseBasic(s)
 
-            case Uint8(_) => merkleiseUint8(pack([serialise(s)]))
+            case Uint8(_) => merkleiseBasic(s)
 
             case Bitlist(xl) => EMPTY_CHUNK  // placeholder, fn TBC
+
+            case Bytes32(_) => merkleiseBasic(s)
     }
  }
