@@ -90,5 +90,83 @@ module  Math
         Bytes32(seqBinOpMap<uint8>(b1.bs, b2.bs, uint8xor))
     } 
 
+    /**
+     * Computes the little endian serialisation of a `uint64` value
+     *
+     * @param n        A `uint64` value
+     * @param length   Length of the serialisation.
+     * @requires       n < power(256,length) 
+     *                 n <= 8
+     *
+     * @returns        The `length`-byte little endian serialisation of `n`
+     *
+     */
+    function int_to_bytes(n: uint64, length: uint64) : seq<uint8>
+    requires n as nat < power(256,length as nat)
+    requires length <= 8
+    ensures |int_to_bytes(n,length)| == length as int
+    {
+        reveal_power();
+        if(length == 0) then
+            []
+        else
+            [(n % 256) as uint8] +
+            int_to_bytes(n / 256, length-1)
+    }
+
+    /**
+     * Deserialise a sequence of bytes to `uint64` using little endian
+     * interpretation
+     *
+     * @param s Sequence of bytes. Must be no longer than 8 bytes.
+     * 
+     * @returns A `uint64` value corresponding to the little endian
+     * deserialisation of `s`
+     */
+    function bytes_to_int(s: seq<uint8>):uint64
+    requires |s| <= 8 
+    ensures bytes_to_int(s) as nat < power(256,|s|)
+    {
+        reveal_power();
+        if(|s| == 0) then
+            0
+        else
+            calc ==> {
+                bytes_to_int(s[1..]) as nat < power(256,|s|-1);
+                bytes_to_int(s[1..]) as nat * 256 < power(256,|s|);
+                bytes_to_int(s[1..]) as nat * 256 < power(256,8);
+            }
+            s[0] as uint64 + bytes_to_int(s[1..])*256
+    }
+
+    /** `bytes_to_int` is the inverse of `int_to_bytes` */
+    lemma lemmaBytesToIntIsTheInverseOfIntToBytes(n:uint64, length:uint64)
+    requires int_to_bytes.requires(n,length)
+    ensures bytes_to_int(int_to_bytes(n,length)) == n 
+    {
+        // Thanks Dafny
+    }
+
+    /** `int_to_bytes` is the inverse of `bytes_to_int` */
+    lemma lemmaIntToBytesIsTheInverseOfBytesToInt(s:seq<uint8>)
+    requires bytes_to_int.requires(s)
+    ensures int_to_bytes(bytes_to_int(s),|s| as uint64) == s 
+    { 
+        if(|s|==0)
+        {
+            // Thanks Dafny
+        }
+        else
+        {
+            calc == {
+                int_to_bytes(bytes_to_int(s),|s| as uint64);
+                int_to_bytes(s[0] as uint64 + bytes_to_int(s[1..])*256,|s| as uint64);
+                [s[0]] + int_to_bytes(bytes_to_int(s[1..]),(|s|-1) as uint64);
+                // via induction
+                [s[0]] + s[1..];
+                s;
+            }
+        }
+    }    
 }
 
