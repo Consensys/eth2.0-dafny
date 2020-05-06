@@ -29,7 +29,7 @@ include "../ssz/BytesAndBits.dfy"
  *  Secondary reference: py-ssz implementation
  *
  *  This library defines various helper functions for merkleisation, including 
- *  chunk_count, bitfield_bytes, pack, merkleise, mix_in_length, mix_in_type.
+ *  chunk_count, bitfield_bytes, pack, merkleise*, mix_in_length, mix_in_type.
  *
  *  Other helper functions (size_of and next_pow_of_two) are included in other
  *  libraries.
