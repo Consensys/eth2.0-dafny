@@ -56,7 +56,7 @@ include "../ssz/BytesAndBits.dfy"
     {
         |c| == BYTES_PER_CHUNK
     }
-
+    
     /** chunkCount.
      *
      *  @param  s   A serialisable object.
