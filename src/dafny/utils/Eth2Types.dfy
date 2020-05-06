@@ -27,8 +27,13 @@ module Eth2Types {
 
     //  The Eth2 basic types.
 
-    /** The type `Seq32uint8` corresponding to sequences of 32 `uint8`s */
-    type Seq32uint8 = x:seq<uint8> | |x| == 32
+    /** The type `Byte` corresponds to a 'uint8' */
+    type Byte = uint8
+    /** The type `bytes` corresponds to a sequence of 'Bytes's */
+    type bytes = seq<Byte>
+    
+    /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
+    type Seq32Byte = x:seq<Byte> | |x| == 32
                                     witness timeSeq(0,32)
 
     /** The serialisable objects. */
@@ -36,7 +41,7 @@ module Eth2Types {
             Uint8(n: uint8)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>)
-        |   Bytes32(bs: Seq32uint8)
+        |   Bytes32(bs: Seq32Byte)
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
@@ -91,7 +96,7 @@ module Eth2Types {
 
     //  TODO: change the Bytes type
     // type SerialisedBytes = seq<Byte> 
-    type Byte = uint8
+    
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
 
