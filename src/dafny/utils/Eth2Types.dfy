@@ -32,9 +32,11 @@ module Eth2Types {
     /** The type `bytes` corresponds to a sequence of 'Bytes's */
     type bytes = seq<Byte>
     
+    /** The default zeroed Bytes32.  */
+    const SEQ_EMPTY_32_BYTES := timeSeq<Byte>(0,32)
+
     /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
-    type Seq32Byte = x:seq<Byte> | |x| == 32
-                                    witness timeSeq(0,32)
+    type Seq32Byte = x:seq<Byte> | |x| == 32 witness SEQ_EMPTY_32_BYTES
 
     /** The serialisable objects. */
     datatype Serialisable = 
@@ -46,8 +48,11 @@ module Eth2Types {
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
      */
-    type Bytes32 = s:Serialisable | && s.Bytes32?
-                                    witness Bytes32(timeSeq(0,32))
+    type Bytes32 = s:Serialisable | && s.Bytes32? witness EMPTY_BYTES32
+
+    const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
+    
+    type Root = Bytes32
 
     /** Some type tags.
      * 
@@ -104,7 +109,7 @@ module Eth2Types {
     type HashTreeRoot = Option<array<byte>>
     // Basic Python (SSZ) types.
     /* Hash. (Should probably be a fix-sized bytes. */
-    type Hash = String
+    type Hash = Bytes32
 
     //  TODO: change the Bytes type
     // type SerialisedBytes = seq<Byte> 
