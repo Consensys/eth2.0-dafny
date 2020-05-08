@@ -3,7 +3,9 @@
   * constants-minimal.k in the K spec.
   *
   */
+
 module Constants {  
+
   //  Powers of 2
   const TWO_UP_0 := 1;
   const TWO_UP_2 := 2 * TWO_UP_0;
