@@ -75,6 +75,7 @@ Our work aims to complement the previous work by providing a thorough formal ver
 
 * [Eth2.0 resources](wiki/eth2-specs.md) resources, specifications and implementations.
 * [Dafny resources](wiki/dafny.md), install and learn.
+* [Coding practices and database of known vulnerabilities](wiki/vulnerabilities.md),
 * [Other resources](wiki/other-resources.md), K-framework resources.
 
 # How to check the proofs?
