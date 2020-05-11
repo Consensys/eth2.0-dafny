@@ -117,7 +117,7 @@ module Eth2Types {
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
 
-    type Slot = int
+    type Slot = uint64
     type Gwei = int
 
     // Custom types
