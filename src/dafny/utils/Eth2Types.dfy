@@ -12,9 +12,9 @@
  * under the License.
  */
 
-
 include "NativeTypes.dfy"
 include "../utils/Helpers.dfy"
+
 /** 
  * Define the types used in the Eth2.0 spec.
  * From types.k in the Eth2 spec.
