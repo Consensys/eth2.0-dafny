@@ -403,7 +403,8 @@ include "../ssz/BytesAndBits.dfy"
                 ==
                 get_next_power_of_two(|chunks|);
                 ==
-                {Prop1(|chunks|);} get_next_power_of_two(get_next_power_of_two(|chunks|));
+                {Prop1(|chunks|);} 
+                get_next_power_of_two(get_next_power_of_two(|chunks|));
                 ==
                 get_next_power_of_two(|padPow2Chunks(chunks)|) ;
             }
