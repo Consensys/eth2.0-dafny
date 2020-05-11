@@ -445,22 +445,22 @@ include "../ssz/BytesAndBits.dfy"
             propPadPow2ChunksLength(chunks);
             merkleisePow2Chunks(padPow2Chunks(chunks))
      }
-
+    
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
      *  @returns    A 32-byte chunk representing the root node of the merkle tree.
      */
-    function getHashTreeRoot(s : Serialisable) : Bytes32
+    function getHashTreeRoot(s : Serialisable) : hash32
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
-            case Bool(_) => merkleiseBasic(s)
+            case Bool(_) => merkleise(pack(s))
 
-            case Uint8(_) => merkleiseBasic(s)
+            case Uint8(_) => merkleise(pack(s))
 
-            case Bitlist(xl) => EMPTY_CHUNK  // placeholder, fn TBC
+            case Bitlist(xl) => merkleise(bitfieldBytes(xl))  
 
-            case Bytes32(_) => merkleiseBasic(s)
+            case Bytes32(_) => merkleise(pack(s))
     }
  }
