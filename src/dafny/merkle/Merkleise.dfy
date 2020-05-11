@@ -15,6 +15,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/MathHelpers.dfy"
 include "../ssz/Constants.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
@@ -47,6 +48,7 @@ include "../ssz/BytesAndBits.dfy"
     import opened BytesAndBits
     import opened SSZ
     import opened Helpers
+    import opened MathHelpers
 
     /** chunkCount.
      *
