@@ -149,11 +149,6 @@ include "../ssz/BytesAndBits.dfy"
         |c| == BYTES_PER_CHUNK
     }
 
-    // TODO: MOVE TO ETH2 TYPES
-     // i.e. the output of serialisation
-    //type serialisedElement = seq<Byte> // i.e. the output of serialisation
-    // bounds? should be at least 1 byte (if representing serialised output)
-    // maybe call serialisedBytes or serialisedElement?
     
     const EMPTY_CHUNK := timeSeq<Byte>(0,32)
     //[0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
