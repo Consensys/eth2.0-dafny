@@ -15,6 +15,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/MathHelpers.dfy"
 include "../ssz/Constants.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
@@ -47,6 +48,7 @@ include "../ssz/BytesAndBits.dfy"
     import opened BytesAndBits
     import opened SSZ
     import opened Helpers
+    import opened MathHelpers
 
     /** chunkCount.
      *
@@ -141,22 +143,15 @@ include "../ssz/BytesAndBits.dfy"
     /** 
      *  Predicate used in checking chunk properties.
      */
-    predicate is32BytesChunk(s : Serialisable) 
+    predicate is32BytesChunk(c : chunk) 
     // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
     {
-        typeOf(s) == Bytes32_ && |s.bs| == BYTES_PER_CHUNK
+        |c| == BYTES_PER_CHUNK
     }
 
-    // TODO: MOVE TO ETH2 TYPES
-     // i.e. the output of serialisation
-    //type serialisedElement = seq<Byte> // i.e. the output of serialisation
-    // bounds? should be at least 1 byte (if representing serialised output)
-    // maybe call serialisedBytes or serialisedElement?
-
-    type chunk = seq<Byte> // set size to 32 bytes
-
-    const EMPTY_CHUNK := Bytes32(timeSeq(0,32))
-    // [0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
+    
+    const EMPTY_CHUNK := timeSeq<Byte>(0,32)
+    //[0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
@@ -170,7 +165,7 @@ include "../ssz/BytesAndBits.dfy"
      */
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
-        ensures forall i :: 0 <= i < |EMPTY_CHUNK.bs| ==> EMPTY_CHUNK.bs[i]== 0 //as Byte 
+        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as Byte 
     {   //  Thanks Dafny
     }
 
@@ -180,11 +175,11 @@ include "../ssz/BytesAndBits.dfy"
      *  @returns    The sequence of bytes right padded with zero bytes to form a 32-byte chunk.
      *
      */
-    function method rightPadZeros(b: bytes): Bytes32
+    function method rightPadZeros(b: bytes): chunk
         requires |b| < BYTES_PER_CHUNK
         ensures is32BytesChunk(rightPadZeros(b)) 
     {
-        Bytes32(b + EMPTY_CHUNK.bs[|b|..])
+        b + EMPTY_CHUNK[|b|..]
     }
 
     /** toChunks.
@@ -197,14 +192,14 @@ include "../ssz/BytesAndBits.dfy"
      *              be returned. It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
      *
      */
-    function method toChunks(b: bytes): seq<Bytes32>
+    function method toChunks(b: bytes): seq<chunk>
         ensures |toChunks(b)| > 0
         ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
         if |b| < BYTES_PER_CHUNK then [rightPadZeros(b)]
-        else    if |b| == BYTES_PER_CHUNK then [Bytes32(b)] 
-                else [Bytes32(b[..BYTES_PER_CHUNK])] + toChunks(b[BYTES_PER_CHUNK..])
+        else    if |b| == BYTES_PER_CHUNK then [b] 
+                else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
 
@@ -275,7 +270,7 @@ include "../ssz/BytesAndBits.dfy"
     //     // else toChunks(concatSerialisedElements(s))  
     //     else toChunks(serialiseObjects(s))
     // }
-    function method pack(s: Serialisable): seq<Bytes32>
+    function method pack(s: Serialisable): seq<chunk>
         requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
     {
         match s
@@ -287,19 +282,19 @@ include "../ssz/BytesAndBits.dfy"
     /** 
      * pack functions for specific types
      */
-    function method packBool(b: bool): seq<Bytes32>
+    function method packBool(b: bool): seq<chunk>
         ensures |packBool(b)| == 1
     {
         toChunks(serialise(Bool(b)))
     }
 
-    function method packUint8(n: uint8): seq<Bytes32>
+    function method packUint8(n: uint8): seq<chunk>
         ensures |packUint8(n)| == 1
     {
         toChunks(serialise(Uint8(n)))
     }
 
-    function method packBytes32(bs: Seq32Byte): seq<Bytes32>
+    function method packBytes32(bs: Seq32Byte): seq<chunk>
         ensures |packBytes32(bs)| == 1
     {
         toChunks(serialise(Bytes32(bs)))
@@ -354,7 +349,7 @@ include "../ssz/BytesAndBits.dfy"
      *              returned.
      */
     
-    function bitfieldBytes(b: seq<bool>) : seq<Bytes32>
+    function bitfieldBytes(b: seq<bool>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
         ensures 0 <= |bitfieldBytes(b)| 
@@ -364,42 +359,103 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(fromBitsToBytes(b)) 
     }
 
-    /** merkleiseBasic
-     *
-     *  @param  b   A sequence of bytes representing the packed from of a serialised Bool.
-     *  @returns    The root of the merkle tree.
-     *
-     *  @note       As per the simple-serialize.md spec: 
-     *              If 1 chunk: the root is the chunk itself.
-     *              Hence return the first (and only) chunk of the packed object.
-     *
-     */
-    function merkleiseBasic(s: Serialisable): Bytes32
-        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
-        requires |pack(s)| == 1
-        ensures is32BytesChunk(merkleiseBasic(s))
+    function method hash(b: seq<Byte>): hash32
+        requires |b|>=32
+        ensures |hash(b)| == 32
     {
-        pack(s)[0]
+        b[..32] // TODO: update
+        //EMPTY_CHUNK
     }
-    
-    
-    
 
+    predicate isPowerOf2(n: nat)
+    {
+        //(n == get_next_power_of_two(n))
+        exists k:nat:: power2(k)==n 
+        //x > 0 && ( x == 1 || ((x % 2 == 0) && isPowerOf2(x/2)) )
+    }
+
+    lemma Prop1(n: nat)
+        ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
+    {
+        //Thanks Dafny
+    }
+
+    lemma propPadPow2Chunks(chunks: seq<chunk>)
+        requires 1 <= |chunks| 
+        ensures get_next_power_of_two(|padPow2Chunks(chunks)|) == get_next_power_of_two(|chunks|)
+    {
+        calc == {
+            get_next_power_of_two(|padPow2Chunks(chunks)|);
+            ==
+            get_next_power_of_two(get_next_power_of_two(|chunks|));
+            ==
+            {Prop1(|chunks|);} get_next_power_of_two(|chunks|);
+
+        }
+    }
+
+    lemma propPadPow2ChunksLength(chunks: seq<chunk>)
+         requires |chunks| >= 1
+         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|padPow2Chunks(chunks)|) 
+     {  
+        calc == {
+                |padPow2Chunks(chunks)|;
+                ==
+                get_next_power_of_two(|chunks|);
+                ==
+                {Prop1(|chunks|);} get_next_power_of_two(get_next_power_of_two(|chunks|));
+                ==
+                get_next_power_of_two(|padPow2Chunks(chunks)|) ;
+            }
+     }
+
+    function method padPow2Chunks(chunks: seq<chunk>): seq<chunk>
+        requires 1 <= |chunks| 
+        ensures 1 <= |padPow2Chunks(chunks)| 
+        ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
+        //ensures isPowerOf2(|padPow2Chunks(chunks)|)
+    {
+        if |chunks| == get_next_power_of_two(|chunks|) then chunks
+        else chunks + timeSeq(EMPTY_CHUNK, get_next_power_of_two(|chunks|)-|chunks|)
+    }
+
+    function method merkleisePow2Chunks(chunks: seq<chunk>): hash32
+        requires 1 <= |chunks| 
+        requires |chunks| == get_next_power_of_two(|chunks|)
+        //requires isPowerOf2(|chunks|)
+        ensures is32BytesChunk(merkleisePow2Chunks(chunks))
+        decreases chunks
+    {
+        if |chunks| == 1 then chunks[0]
+        else hash(merkleisePow2Chunks(chunks[..(|chunks|/2)]) + merkleisePow2Chunks(chunks[|chunks|/2..]))
+    }
+
+    function method merkleise(chunks: seq<chunk>): hash32
+        requires |chunks| >= 0
+        ensures is32BytesChunk(merkleise(chunks))
+    {
+        
+        if |chunks| == 0 then EMPTY_CHUNK
+        else 
+            propPadPow2ChunksLength(chunks);
+            merkleisePow2Chunks(padPow2Chunks(chunks))
+     }
+    
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
      *  @returns    A 32-byte chunk representing the root node of the merkle tree.
      */
-    function getHashTreeRoot(s : Serialisable) : Bytes32
+    function getHashTreeRoot(s : Serialisable) : hash32
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
-            case Bool(_) => merkleiseBasic(s)
+            case Bool(_) => merkleise(pack(s))
 
-            case Uint8(_) => merkleiseBasic(s)
+            case Uint8(_) => merkleise(pack(s))
 
-            case Bitlist(xl) => EMPTY_CHUNK  // placeholder, fn TBC
+            case Bitlist(xl) => merkleise(bitfieldBytes(xl))  
 
-            case Bytes32(_) => merkleiseBasic(s)
+            case Bytes32(_) => merkleise(pack(s))
     }
  }

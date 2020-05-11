@@ -38,6 +38,12 @@ module Eth2Types {
     /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
     type Seq32Byte = x:seq<Byte> | |x| == 32 witness SEQ_EMPTY_32_BYTES
 
+    /** Create type synonym for a chunk */
+    type chunk = Seq32Byte
+
+    /** Create type synonym for a hash 'root' */
+    type hash32 = Seq32Byte
+
     /** The serialisable objects. */
     datatype Serialisable = 
             Uint8(n: uint8)
