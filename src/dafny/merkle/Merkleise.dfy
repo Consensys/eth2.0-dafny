@@ -420,11 +420,31 @@ include "../ssz/BytesAndBits.dfy"
         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
         //ensures isPowerOf2(|padPow2Chunks(chunks)|)
     {
-        pack(s)[0]
+        if |chunks| == get_next_power_of_two(|chunks|) then chunks
+        else chunks + timeSeq(EMPTY_CHUNK, get_next_power_of_two(|chunks|)-|chunks|)
     }
-    
-    
-    
+
+    function method merkleisePow2Chunks(chunks: seq<chunk>): hash32
+        requires 1 <= |chunks| 
+        requires |chunks| == get_next_power_of_two(|chunks|)
+        //requires isPowerOf2(|chunks|)
+        ensures is32BytesChunk(merkleisePow2Chunks(chunks))
+        decreases chunks
+    {
+        if |chunks| == 1 then chunks[0]
+        else hash(merkleisePow2Chunks(chunks[..(|chunks|/2)]) + merkleisePow2Chunks(chunks[|chunks|/2..]))
+    }
+
+    function method merkleise(chunks: seq<chunk>): hash32
+        requires |chunks| >= 0
+        ensures is32BytesChunk(merkleise(chunks))
+    {
+        
+        if |chunks| == 0 then EMPTY_CHUNK
+        else 
+            propPadPow2ChunksLength(chunks);
+            merkleisePow2Chunks(padPow2Chunks(chunks))
+     }
 
     /** getHashTreeRoot.
      *
