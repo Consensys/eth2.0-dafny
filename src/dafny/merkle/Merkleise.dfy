@@ -364,20 +364,61 @@ include "../ssz/BytesAndBits.dfy"
         else toChunks(fromBitsToBytes(b)) 
     }
 
-    /** merkleiseBasic
-     *
-     *  @param  b   A sequence of bytes representing the packed from of a serialised Bool.
-     *  @returns    The root of the merkle tree.
-     *
-     *  @note       As per the simple-serialize.md spec: 
-     *              If 1 chunk: the root is the chunk itself.
-     *              Hence return the first (and only) chunk of the packed object.
-     *
-     */
-    function merkleiseBasic(s: Serialisable): Bytes32
-        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
-        requires |pack(s)| == 1
-        ensures is32BytesChunk(merkleiseBasic(s))
+    function method hash(b: seq<Byte>): hash32
+        requires |b|>=32
+        ensures |hash(b)| == 32
+    {
+        b[..32] // TODO: update
+        //EMPTY_CHUNK
+    }
+
+    predicate isPowerOf2(n: nat)
+    {
+        //(n == get_next_power_of_two(n))
+        exists k:nat:: power2(k)==n 
+        //x > 0 && ( x == 1 || ((x % 2 == 0) && isPowerOf2(x/2)) )
+    }
+
+    lemma Prop1(n: nat)
+        ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
+    {
+        //Thanks Dafny
+    }
+
+    lemma propPadPow2Chunks(chunks: seq<chunk>)
+        requires 1 <= |chunks| 
+        ensures get_next_power_of_two(|padPow2Chunks(chunks)|) == get_next_power_of_two(|chunks|)
+    {
+        calc == {
+            get_next_power_of_two(|padPow2Chunks(chunks)|);
+            ==
+            get_next_power_of_two(get_next_power_of_two(|chunks|));
+            ==
+            {Prop1(|chunks|);} get_next_power_of_two(|chunks|);
+
+        }
+    }
+
+    lemma propPadPow2ChunksLength(chunks: seq<chunk>)
+         requires |chunks| >= 1
+         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|padPow2Chunks(chunks)|) 
+     {  
+        calc == {
+                |padPow2Chunks(chunks)|;
+                ==
+                get_next_power_of_two(|chunks|);
+                ==
+                {Prop1(|chunks|);} get_next_power_of_two(get_next_power_of_two(|chunks|));
+                ==
+                get_next_power_of_two(|padPow2Chunks(chunks)|) ;
+            }
+     }
+
+    function method padPow2Chunks(chunks: seq<chunk>): seq<chunk>
+        requires 1 <= |chunks| 
+        ensures 1 <= |padPow2Chunks(chunks)| 
+        ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
+        //ensures isPowerOf2(|padPow2Chunks(chunks)|)
     {
         pack(s)[0]
     }
