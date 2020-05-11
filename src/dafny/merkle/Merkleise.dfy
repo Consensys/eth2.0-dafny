@@ -143,10 +143,10 @@ include "../ssz/BytesAndBits.dfy"
     /** 
      *  Predicate used in checking chunk properties.
      */
-    predicate is32BytesChunk(s : Serialisable) 
+    predicate is32BytesChunk(c : chunk) 
     // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
     {
-        typeOf(s) == Bytes32_ && |s.bs| == BYTES_PER_CHUNK
+        |c| == BYTES_PER_CHUNK
     }
 
     // TODO: MOVE TO ETH2 TYPES
@@ -154,11 +154,9 @@ include "../ssz/BytesAndBits.dfy"
     //type serialisedElement = seq<Byte> // i.e. the output of serialisation
     // bounds? should be at least 1 byte (if representing serialised output)
     // maybe call serialisedBytes or serialisedElement?
-
-    type chunk = seq<Byte> // set size to 32 bytes
-
-    const EMPTY_CHUNK := Bytes32(timeSeq(0,32))
-    // [0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
+    
+    const EMPTY_CHUNK := timeSeq<Byte>(0,32)
+    //[0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
     //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
@@ -172,7 +170,7 @@ include "../ssz/BytesAndBits.dfy"
      */
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
-        ensures forall i :: 0 <= i < |EMPTY_CHUNK.bs| ==> EMPTY_CHUNK.bs[i]== 0 //as Byte 
+        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as Byte 
     {   //  Thanks Dafny
     }
 
@@ -182,11 +180,11 @@ include "../ssz/BytesAndBits.dfy"
      *  @returns    The sequence of bytes right padded with zero bytes to form a 32-byte chunk.
      *
      */
-    function method rightPadZeros(b: bytes): Bytes32
+    function method rightPadZeros(b: bytes): chunk
         requires |b| < BYTES_PER_CHUNK
         ensures is32BytesChunk(rightPadZeros(b)) 
     {
-        Bytes32(b + EMPTY_CHUNK.bs[|b|..])
+        b + EMPTY_CHUNK[|b|..]
     }
 
     /** toChunks.
@@ -199,14 +197,14 @@ include "../ssz/BytesAndBits.dfy"
      *              be returned. It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
      *
      */
-    function method toChunks(b: bytes): seq<Bytes32>
+    function method toChunks(b: bytes): seq<chunk>
         ensures |toChunks(b)| > 0
         ensures forall i :: 0 <= i < |toChunks(b)| ==> is32BytesChunk(toChunks(b)[i]) 
         decreases b
     {
         if |b| < BYTES_PER_CHUNK then [rightPadZeros(b)]
-        else    if |b| == BYTES_PER_CHUNK then [Bytes32(b)] 
-                else [Bytes32(b[..BYTES_PER_CHUNK])] + toChunks(b[BYTES_PER_CHUNK..])
+        else    if |b| == BYTES_PER_CHUNK then [b] 
+                else [b[..BYTES_PER_CHUNK]] + toChunks(b[BYTES_PER_CHUNK..])
     }    
 
 
@@ -277,7 +275,7 @@ include "../ssz/BytesAndBits.dfy"
     //     // else toChunks(concatSerialisedElements(s))  
     //     else toChunks(serialiseObjects(s))
     // }
-    function method pack(s: Serialisable): seq<Bytes32>
+    function method pack(s: Serialisable): seq<chunk>
         requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
     {
         match s
@@ -289,19 +287,19 @@ include "../ssz/BytesAndBits.dfy"
     /** 
      * pack functions for specific types
      */
-    function method packBool(b: bool): seq<Bytes32>
+    function method packBool(b: bool): seq<chunk>
         ensures |packBool(b)| == 1
     {
         toChunks(serialise(Bool(b)))
     }
 
-    function method packUint8(n: uint8): seq<Bytes32>
+    function method packUint8(n: uint8): seq<chunk>
         ensures |packUint8(n)| == 1
     {
         toChunks(serialise(Uint8(n)))
     }
 
-    function method packBytes32(bs: Seq32Byte): seq<Bytes32>
+    function method packBytes32(bs: Seq32Byte): seq<chunk>
         ensures |packBytes32(bs)| == 1
     {
         toChunks(serialise(Bytes32(bs)))
@@ -356,7 +354,7 @@ include "../ssz/BytesAndBits.dfy"
      *              returned.
      */
     
-    function bitfieldBytes(b: seq<bool>) : seq<Bytes32>
+    function bitfieldBytes(b: seq<bool>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
         ensures 0 <= |bitfieldBytes(b)| 
