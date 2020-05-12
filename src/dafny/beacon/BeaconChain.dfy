@@ -29,22 +29,19 @@ module BeaconChain {
     
      /**
      *  Beacon chain block header.
-     *  Is it used?? Not mentioned in 
-     *  @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
-     *  NOT USED and duplicate of BeaconBlock (see further down)
      *
      *  @param  slot
+     *  @param  proposer_index
      *  @param  parent_root
      *  @param  state_root
      *  @param  body_root
-     *  @param  signature
      */
     datatype BeaconBlockHeader = BeaconBlockHeader(
-        slot: int,
-        parent_root: Hash,
-        state_root: Hash,
-        body_root: Hash,
-        signature: BLSSignature
+        slot: Slot,
+        // proposer_index: ValidatorIndex,
+        parent_root: Root,
+        state_root: Root,
+        body_root: Root
     )
 
     /**
@@ -88,22 +85,22 @@ module BeaconChain {
      *  @note: Note that hash_tree_root(BeaconBlock) == hash_tree_root(BeaconBlockHeader) 
      *  and thus signatures of each are equivalent.
      *
-     *  @param  slot        The slot for which this block is proposed for. Must be greater 
-     *                      than the slot of the block defined by parent_root
-     *  @param  parent_root The block root of the parent block, forming a block chain
-     *  @param  state_root  The hash root of the post state of running the state 
-     *                      transition through this block
-     *  @param  body        A BeaconBlockBody which contains fields for each of the 
-     *                      [beacon operation] objects as well as a few proposer input fields
-     *  @param  signature   Signature of the BeaconBlock message included in this object 
-     *                      by the pubkey of the proposer for the given slot
+     *  @param  slot            The slot for which this block is proposed for. Must be greater 
+     *                          than the slot of the block defined by parent_root.
+     *  @param  proposer_index  The index of the block proposer for the slot.
+     *  @param  parent_root     The block root of the parent block, forming a block chain.
+     *  @param  state_root      The hash root of the post state of running the state 
+     *                          transition through this block.
+     *  @param  body            A BeaconBlockBody which contains fields for each of the 
+     *                          [beacon operation] objects as well as a few proposer 
+     *                          input fields.
      */  
     datatype BeaconBlock = BeaconBlock(
-        slot: int,
-        parent_root: Hash,
-        state_root: Hash,
-        body: BeaconBlockBody,
-        signature: BLSSignature
+        slot: Slot,
+        // proposer_index: ValidatorIndex,
+        parent_root: Root
+        // state_root: Root,
+        // body: BeaconBlockBody
     )  
 
     /**
