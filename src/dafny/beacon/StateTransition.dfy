@@ -35,10 +35,19 @@ module StateTransition {
     import opened Validators
     import opened Helpers
 
-    type VectorOfHistRoots = x : seq<Bytes32> | |x| == SLOTS_PER_HISTORICAL_ROOT 
-        witness timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT) 
+    /** The default zeroed Bytes32.  */
+    const SEQ_EMPTY_32_BYTES := timeSeq<Byte>(0,32)
+    
+    const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
+
+    const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT + 1)
+
+    type VectorOfHistRoots = x : seq<Bytes32> | |x| == SLOTS_PER_HISTORICAL_ROOT + 1
+        witness EMPTY_HIST_ROOTS
 
     function method hash_tree_root(s: BeaconState) : Bytes32 
+    function method hash_tree_root_block(s: BeaconBlock) : Bytes32 
+    function method hash_tree_root_block_header(s: BeaconBlockHeader) : Bytes32 
 
     /** From config.k.
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
@@ -169,11 +178,11 @@ module StateTransition {
         // genesis_time: uint64,
         slot: Slot,
         // fork: Fork,
-        latest_block_header: BeaconBlockHeader,
+        latest_block_header: BeaconBlockHeader
         // block_roots: array<Hash>, 
         // state_roots: array<Hash>,
-        block_roots: VectorOfHistRoots,
-        state_roots: VectorOfHistRoots
+        // block_roots: VectorOfHistRoots
+        // state_roots: VectorOfHistRoots
         // historical_roots: seq<Hash>,
         // eth1_data: Eth1Data,
         // eth1_data_votes: seq<Eth1Data>,
@@ -191,62 +200,62 @@ module StateTransition {
     )
 
     method state_transition(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState )
-    // requires b.state_root == hash_tree_root_state()
-        requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT
         requires s.slot <= b.slot
+        requires b.parent_root == s.latest_block_header.parent_root
+        // requires s.state_roots : VectorOfHistRoots
+        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
+        // ensures false
     {
+        // assert(|s.state_roots| == SLOTS_PER_HISTORICAL_ROOT );
         //  Process slots
-        s' := process_slots(s, b.slot);
+        var s1 := process_slots(s, b.slot);
 
+        assert(b.parent_root == s1.latest_block_header.parent_root);
         //  Process block
+        s' := process_block(s1, b);
         
         //  Validate state block
     }
-
 
     /**
      * 
      */
    method process_slots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot <= slot
-        requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT
+        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
         ensures  s'.slot == slot 
-        ensures  |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
-        ensures  |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
+        ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+
+        // ensures  |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
+        // ensures  |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
         decreases slot - s.slot
     {
         s' := s;
         while (s'.slot < slot)  
             invariant s'.slot <= slot
+            invariant s.latest_block_header.parent_root == s'.latest_block_header.parent_root
             decreases slot - s'.slot 
         {
             s':= process_slot(s');
             s':= s'.(slot := s'.slot + 1) ;
         }
-        //  functional version 
-        // if (s.slot < slot) {
-        //     //  Let s' be ... in ...
-        //     var s' := process_slot(s, slot) ; 
-        //     process_slots(s', slot);
-        // }
-        // else {
-        //     return s;
-        // }
     }
 
     method process_slot(s: BeaconState) returns (s' : BeaconState)
-        // requires s.slot < slot
-        requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT
+        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
         ensures s'.slot == s.slot
-        ensures |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
-        ensures |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
+        ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+        // ensures |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
+        // ensures |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
+        // ensures b.parent_root == hash_tree_root_block_header(s.latest_block_header)
+
     {
         s' := s;
         var previous_state_root := hash_tree_root(s);
-        s' := s'.( 
-                state_roots := 
-                    s'.state_roots[s.slot % SLOTS_PER_HISTORICAL_ROOT := previous_state_root]
-                );  
+        // s' := s'.( 
+        //         state_roots := 
+        //             s'.state_roots[s.slot as nat % SLOTS_PER_HISTORICAL_ROOT as nat := previous_state_root][..SLOTS_PER_HISTORICAL_ROOT] + [EMPTY_BYTES32]
+        //         );  
         
         if ( s'.latest_block_header.state_root == EMPTY_BYTES32) {
             s' := s'.(latest_block_header :=
@@ -292,9 +301,51 @@ module StateTransition {
     /**
      * 
      */
-    function process_block(s: BeaconState, slot: Slot) : BeaconState 
+    method process_block(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
+        requires b.slot == s.slot
+        requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
     {
-        s
+        s' := process_block_header(s, b);
     }
+
+    method process_block_header(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
+        requires b.slot == s.slot
+        requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
+    {
+        s':= s.(
+            latest_block_header := BeaconBlockHeader(
+                b.slot,
+                b.parent_root,
+                EMPTY_BYTES32,
+                hash_tree_root_block(b)
+            )
+        );
+    }
+
+
+    // def process_block(state: BeaconState, block: BeaconBlock) -> None:
+    // process_block_header(state, block)
+
+    /*
+    def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
+    # Verify that the slots match
+    assert block.slot == state.slot
+    # Verify that proposer index is the correct index
+    assert block.proposer_index == get_beacon_proposer_index(state)
+    # Verify that the parent matches
+    assert block.parent_root == hash_tree_root(state.latest_block_header)
+    # Cache current block as the new latest block
+    state.latest_block_header = BeaconBlockHeader(
+        slot=block.slot,
+        proposer_index=block.proposer_index,
+        parent_root=block.parent_root,
+        state_root=Bytes32(),  # Overwritten in the next process_slot call
+        body_root=hash_tree_root(block.body),
+    )
+
+    # Verify proposer is not slashed
+    proposer = state.validators[block.proposer_index]
+    assert not proposer.slashed
+    */
 
 }
