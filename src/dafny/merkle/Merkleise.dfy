@@ -412,7 +412,7 @@ include "../ssz/BytesAndBits.dfy"
 
     function method padPow2Chunks(chunks: seq<chunk>): seq<chunk>
         requires 1 <= |chunks| 
-        ensures 1 <= |padPow2Chunks(chunks)| 
+        ensures |chunks| <= |padPow2Chunks(chunks)| 
         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
         //ensures isPowerOf2(|padPow2Chunks(chunks)|)
     {
