@@ -412,7 +412,7 @@ include "../ssz/BytesAndBits.dfy"
 
     function method padPow2Chunks(chunks: seq<chunk>): seq<chunk>
         requires 1 <= |chunks| 
-        ensures 1 <= |padPow2Chunks(chunks)| 
+        ensures |chunks| <= |padPow2Chunks(chunks)| 
         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
         //ensures isPowerOf2(|padPow2Chunks(chunks)|)
     {
@@ -438,7 +438,7 @@ include "../ssz/BytesAndBits.dfy"
         
         if |chunks| == 0 then EMPTY_CHUNK
         else 
-            propPadPow2ChunksLength(chunks);
+            propPadPow2ChunksLength(chunks); // lemma to ensure precondition is satisfied
             merkleisePow2Chunks(padPow2Chunks(chunks))
      }
     
@@ -455,7 +455,7 @@ include "../ssz/BytesAndBits.dfy"
 
             case Uint8(_) => merkleise(pack(s))
 
-            case Bitlist(xl) => merkleise(bitfieldBytes(xl))  
+            case Bitlist(xl) => merkleise(bitfieldBytes(xl))  // TODO: include mix-in functionality
 
             case Bytes32(_) => merkleise(pack(s))
     }
