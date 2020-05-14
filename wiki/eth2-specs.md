@@ -20,6 +20,8 @@ This section contains references to resources on Ethereum.
 
 * [SSZ types](https://github.com/prysmaticlabs/go-ssz) and [Eth2-ssz-spec](https://github.com/ethereum/eth2.0-specs/blob/master/ssz/simple-serialize.md)
 
+* [py-ssz](https://github.com/ethereum/py-ssz)
+
 * [Prysm SSZ](https://docs.prylabs.network/docs/how-prysm-works/simple-serialize-ssz/)
 
 * [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md) blob
