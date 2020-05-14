@@ -49,7 +49,7 @@ module MathHelpers {
      * get_next_power_of_two returns a power of 2. 
      */
     lemma {:induction n} getNextPow2isPower2(n: nat)
-        ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
+        ensures exists k : nat {:induction k}  ::  get_next_power_of_two(n) == power2(k) 
     {
         if n <= 1 {
             assert(get_next_power_of_two(n) == power2(0)) ;
