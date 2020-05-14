@@ -22,7 +22,7 @@ This section contains references to resources on Ethereum.
 
 * [py-ssz](https://github.com/ethereum/py-ssz)
 
-* [Prysm SSZ](https://docs.prylabs.network/docs/how-prysm-works/simple-serialize-ssz/)
+* ~[Prysm SSZ](https://docs.prylabs.network/docs/how-prysm-works/simple-serialize-ssz/)~ ![Link Not Working](https://img.shields.io/badge/-Link%20Currently%20Broken-red)
 
 * [Eth2.0 spec](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/README.md) blob
 
