@@ -16,13 +16,13 @@ else
         exit 1
     else
         # use the python script to generate a dot file
-        python $SCRIPTDIR/call_graph.py --func tmp.cfg --out $1.cfg
+        python $SCRIPTDIR/call_graph.py --func tmp.cfg --out $1.dot
         if [ $? -ne 0 ]; then
         echo "Could not run command $SCRIPTDIR/call_graph.py"
         exit 2
         else
             # Remove tmp file and exit 
-            echo "Call graph generated in $1.cfg"
+            echo "Call graph generated in $1.dot"
             \rm -f tmp.cfg 
             exit 0
         fi
