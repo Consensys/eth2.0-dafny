@@ -584,7 +584,7 @@ include "../ssz/BytesAndBits.dfy"
             case Uint8(_) => merkleise(pack(s), -1)
 
             case Bitlist(xl) => bitlistLimit(s);
-                                mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  // TODO: include mix-in functionality
+                                mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
             case Bytes32(_) => merkleise(pack(s), -1)
     }
