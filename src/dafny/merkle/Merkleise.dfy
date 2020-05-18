@@ -529,6 +529,22 @@ include "../ssz/BytesAndBits.dfy"
             nextPow2Prop(limit);
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
      }
+
+     lemma bitlistLimit(s: Serialisable)
+        requires typeOf(s) == Bitlist_
+        ensures 0 <= |bitfieldBytes(s.xl)|
+        ensures |bitfieldBytes(s.xl)| <= chunkCount(s)
+    {
+        calc {
+            |bitfieldBytes(s.xl)|;
+            ==
+            {lengthBitfieldBytes(s.xl);} chunkCount(s);
+            <=
+            chunkCount(s);
+
+        }
+    }
+
     
     /** getHashTreeRoot.
      *
