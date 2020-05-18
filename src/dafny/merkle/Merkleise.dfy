@@ -431,6 +431,50 @@ include "../ssz/BytesAndBits.dfy"
         else hash(merkleisePow2Chunks(chunks[..(|chunks|/2)]) + merkleisePow2Chunks(chunks[|chunks|/2..]))
     }
 
+    lemma nextPow2Prop(n: nat)
+        ensures n <= get_next_power_of_two(n)
+    {
+        // Thanks Dafny
+    }
+
+    lemma nextPow2IsPow2(n: nat)
+        ensures isPowerOf2(get_next_power_of_two(n))
+        //ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
+    {
+        if n <= 1 {
+            assert(get_next_power_of_two(n) == power2(0)) ;
+        } else {
+            //  Induction on (n + 1)/2
+            var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
+            calc {
+                get_next_power_of_two(n);
+                ==  //  Definition of 
+                2 * get_next_power_of_two( (n + 1) / 2);
+                == //   Use Induction assumption in (n + 1)/2
+                2 * power2(k);
+                ==  //  Definition of
+                power2(k + 1);
+            }
+        }
+    }
+
+    lemma halfPow2IsPow2(n: nat)
+        requires n > 1
+        requires isPowerOf2(n)
+        ensures isPowerOf2(n/2)
+    {
+        var k:nat :| power2(k)==n ;
+        assert(n>=2);
+        assert(k>=1);
+        calc {
+            isPowerOf2(n/2); 
+            ==
+            isPowerOf2(power2(k)/2); 
+            ==
+            isPowerOf2(power2(k-1)); 
+        }
+    }
+    
     function method merkleise(chunks: seq<chunk>): hash32
         requires |chunks| >= 0
         ensures is32BytesChunk(merkleise(chunks))
