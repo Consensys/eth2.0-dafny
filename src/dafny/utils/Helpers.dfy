@@ -84,6 +84,27 @@ module Helpers {
     }
 
     /**
+     * Generic mapping for sequences
+     *
+     * @param s Original sequence
+     * @param m Mapping function
+     *
+     * @returns A sequence of length `|s|` where the element in position `i` is
+     *          `m(s[i])`.
+     */
+    function method seqMap<T1,T2>(s:seq<T1>, m: T1 --> T2): seq<T2>
+    requires forall i | 0 <= i < |s| :: m.requires(s[i])
+    ensures |seqMap(s,m)| == |s|
+    ensures forall i | 0 <= i < |s| :: seqMap(s,m)[i] == m(s[i])
+    {
+        if |s| == 0 then 
+            []
+        else
+            [m(s[0])] +
+            seqMap(s[1..], m)
+    }
+
+    /**
      * Maps two sequences of the same length and type to a sequence obtained by
      * applying a binary operation (supplied as parameter) to each pair of
      * elements of the input sequences
@@ -108,6 +129,7 @@ module Helpers {
             [binOp(s1[0],s2[0])] +
             seqBinOpMap(s1[1..], s2[1..],binOp)
     }    
+   
 
     //  Seq of Seqs functions.
 
