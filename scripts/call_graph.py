@@ -102,8 +102,12 @@ class Visualizer():
     i = 0 # current colour
     for module in graph.modules.values():
       displayName = re.search("_(.*)_(.*)", module.name)
+      if displayName == None:
+        labName = "System"
+      else:
+        labName = displayName.group(2)
       module.colour = colours[i % len(colours)]
-      module.cluster = pydot.Cluster(module.name, color=module.colour,  label=displayName.group(2),penwidth="2.5", fontcolor=module.colour)
+      module.cluster = pydot.Cluster(module.name, color=module.colour,  label=labName,penwidth="2.5", fontcolor=module.colour)
       dot.add_subgraph(module.cluster)
       i = i + 1
 
