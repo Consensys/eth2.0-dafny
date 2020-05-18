@@ -569,7 +569,7 @@ include "../ssz/BytesAndBits.dfy"
     {
         hash(root + uint256_to_bytes(length))
     }
-    
+
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
@@ -579,12 +579,13 @@ include "../ssz/BytesAndBits.dfy"
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
-            case Bool(_) => merkleise(pack(s))
+            case Bool(_) => merkleise(pack(s), -1)
 
-            case Uint8(_) => merkleise(pack(s))
+            case Uint8(_) => merkleise(pack(s), -1)
 
-            case Bitlist(xl) => merkleise(bitfieldBytes(xl))  // TODO: include mix-in functionality
+            case Bitlist(xl) => bitlistLimit(s);
+                                mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  // TODO: include mix-in functionality
 
-            case Bytes32(_) => merkleise(pack(s))
+            case Bytes32(_) => merkleise(pack(s), -1)
     }
  }
