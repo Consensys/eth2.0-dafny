@@ -64,6 +64,47 @@ module Helpers {
     }
 
     /**
+     * Create a Sequence using an initialisation function
+     * @param f Function mapping a position in the sequence to a value
+     * @param nEl Number of elements in the sequence
+     *
+     * @return A Sequence of length `nEl` where the value of the element in
+     *         position `i` is `f(i)`.
+     */
+    function method initSeq<T>(f:nat --> T, nEl: nat): seq<T>
+    requires forall i | 0 <= i < nEl :: f.requires(i)
+    ensures |initSeq(f,nEl)| == nEl
+    ensures forall i | 0 <= i < nEl :: initSeq(f,nEl)[i] == f(i)
+    {
+        if nEl==0 then
+            []
+        else
+            [f(0)] +
+            initSeq((i:nat) requires 0 <= i < (nEl -1) => f(i+1), nEl-1)
+    }
+
+    /**
+     * Generic mapping for sequences
+     *
+     * @param s Original sequence
+     * @param m Mapping function
+     *
+     * @returns A sequence of length `|s|` where the element in position `i` is
+     *          `m(s[i])`.
+     */
+    function method seqMap<T1,T2>(s:seq<T1>, m: T1 --> T2): seq<T2>
+    requires forall i | 0 <= i < |s| :: m.requires(s[i])
+    ensures |seqMap(s,m)| == |s|
+    ensures forall i | 0 <= i < |s| :: seqMap(s,m)[i] == m(s[i])
+    {
+        if |s| == 0 then 
+            []
+        else
+            [m(s[0])] +
+            seqMap(s[1..], m)
+    }
+
+    /**
      * Maps two sequences of the same length and type to a sequence obtained by
      * applying a binary operation (supplied as parameter) to each pair of
      * elements of the input sequences
@@ -88,6 +129,7 @@ module Helpers {
             [binOp(s1[0],s2[0])] +
             seqBinOpMap(s1[1..], s2[1..],binOp)
     }    
+   
 
     //  Seq of Seqs functions.
 
