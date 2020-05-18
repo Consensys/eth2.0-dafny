@@ -1,0 +1,25 @@
+# Test of the Prysamtic Lab Bitlist Merkleisation Implementation
+The following instructions detail how to compile and execute the test for the [Pysmatic Lab Bitlist Merkleisation Implementation](https://github.com/prysmaticlabs/go-ssz/blob/master/types/bitlist.go) which is part of the [Prysm Eth2 client](https://github.com/prysmaticlabs/prysm).
+
+
+The following commands must be executed withing the directory including this README.md file.
+```
+./compilePrysmBitlistMerkleisationTest.sh 
+./TestBitlistMerkleise <number-of-tests> <average-failure-percentage>
+```
+where
+- `number-of-tests` is a natural number representing the number of tests to run
+- `average-failure-percentage` is a natural number, bounded between 0 and 100 included, representing the average percentage of tests that should fail.
+
+# Test of the Py-SSZ Bitlist Merkleisation Implementation
+The following instructions detail how to compile and execute the test for the [Py-SSZ](https://github.com/ethereum/py-ssz) Bitlist Merkleisation Implementation.
+
+
+The following commands must be executed withing the directory including this README.md file.
+```
+./compilePySszBitlistMerkleisationTest.sh
+./TestBitlistMerkleise.exe <number-of-tests> <average-failure-percentage>
+```
+where `number-of-tests` and `average-failure-percentage` are as detailed in the Prysamtic Lab Bitlist Merkleisation Implementation section above.
+
+**Note:** The executable for the Prysamtic Lab Bitlist Merkleisation Implementation has no extension, whereas the executable for the Py-SSZ Bitlist Merkleisation Implementation has `.exe` extension.
