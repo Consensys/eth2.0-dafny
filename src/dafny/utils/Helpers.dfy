@@ -64,6 +64,26 @@ module Helpers {
     }
 
     /**
+     * Create a Sequence using an initialisation function
+     * @param f Function mapping a position in the sequence to a value
+     * @param nEl Number of elements in the sequence
+     *
+     * @return A Sequence of length `nEl` where the value of the element in
+     *         position `i` is `f(i)`.
+     */
+    function method initSeq<T>(f:nat --> T, nEl: nat): seq<T>
+    requires forall i | 0 <= i < nEl :: f.requires(i)
+    ensures |initSeq(f,nEl)| == nEl
+    ensures forall i | 0 <= i < nEl :: initSeq(f,nEl)[i] == f(i)
+    {
+        if nEl==0 then
+            []
+        else
+            [f(0)] +
+            initSeq((i:nat) requires 0 <= i < (nEl -1) => f(i+1), nEl-1)
+    }
+
+    /**
      * Maps two sequences of the same length and type to a sequence obtained by
      * applying a binary operation (supplied as parameter) to each pair of
      * elements of the input sequences
