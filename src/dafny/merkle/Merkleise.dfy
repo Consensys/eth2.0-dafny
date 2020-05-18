@@ -22,6 +22,7 @@ include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
 include "../ssz/BitListSeDes.dfy"
 include "../ssz/BytesAndBits.dfy"
+include "../beacon/helpers/Crypto.dfy"
 
 /**
  *  SSZ_Merkleise library.
@@ -49,6 +50,7 @@ include "../ssz/BytesAndBits.dfy"
     import opened SSZ
     import opened Helpers
     import opened MathHelpers
+    import opened Crypto
 
     /** chunkCount.
      *
@@ -357,14 +359,6 @@ include "../ssz/BytesAndBits.dfy"
      {        
         if |b| == 0 then []
         else toChunks(fromBitsToBytes(b)) 
-    }
-
-    function method hash(b: seq<Byte>): hash32
-        requires |b|>=32
-        ensures |hash(b)| == 32
-    {
-        b[..32] // TODO: update
-        //EMPTY_CHUNK
     }
 
     predicate isPowerOf2(n: nat)
