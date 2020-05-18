@@ -511,7 +511,7 @@ include "../ssz/BytesAndBits.dfy"
             propPadPow2ChunksLength(chunks); // lemma to ensure precondition is satisfied
             merkleisePow2Chunks(padPow2Chunks(chunks))
      }
-
+    
      function method merkleise(chunks: seq<chunk>, limit: int): hash32
         requires 0 <= |chunks|
         requires -1 == limit || |chunks| <= limit
