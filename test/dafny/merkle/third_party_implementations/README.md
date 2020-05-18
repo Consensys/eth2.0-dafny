@@ -1,6 +1,10 @@
 # Test of the Prysamtic Lab Bitlist Merkleisation Implementation
 The following instructions detail how to compile and execute the test for the [Pysmatic Lab Bitlist Merkleisation Implementation](https://github.com/prysmaticlabs/go-ssz/blob/master/types/bitlist.go) which is part of the [Prysm Eth2 client](https://github.com/prysmaticlabs/prysm).
 
+## Prerequisites
+- Go. The commands below were tests with Go 1.14, but other versions should work fine as well.
+
+## Commands
 
 The following commands must be executed withing the directory including this README.md file.
 ```
@@ -14,6 +18,11 @@ where
 # Test of the Py-SSZ Bitlist Merkleisation Implementation
 The following instructions detail how to compile and execute the test for the [Py-SSZ](https://github.com/ethereum/py-ssz) Bitlist Merkleisation Implementation.
 
+## Prerequisites
+- Python3
+- `pip3 install ssz`
+
+## Commands
 
 The following commands must be executed withing the directory including this README.md file.
 ```
