@@ -81,7 +81,7 @@ class Parser():
     return graph
     
 # colours for clusters (modules)
-colours = ['lightblue', 'lightgreen', 'orange'] 
+colours = ['lightblue', 'bisque3', 'orange2', 'rosybrown1', 'tomato', 'gold', 'darkolivegreen3', 'orchid4', 'slategrey'] 
 
 
 class Visualizer():
@@ -89,7 +89,7 @@ class Visualizer():
     pass
 
   def draw(self, graph, output_filename, labels):
-    dot = pydot.Dot(graph_type='digraph')   # Digraph = Directed graph
+    dot = pydot.Dot(graph_type='digraph', fontname="helvetica")   # Digraph = Directed graph
 
 #    graphviz_path = 'C:\Program Files (x86)\Graphviz2.38\\bin'
 #    execs = ['dot', 'twopi', 'neato', 'circo', 'fdp']
@@ -103,7 +103,7 @@ class Visualizer():
     for module in graph.modules.values():
       displayName = re.search("_(.*)_(.*)", module.name)
       module.colour = colours[i % len(colours)]
-      module.cluster = pydot.Cluster(module.name, color=module.colour,  label=displayName.group(2))
+      module.cluster = pydot.Cluster(module.name, color=module.colour,  label=displayName.group(2),penwidth="2.5", fontcolor=module.colour)
       dot.add_subgraph(module.cluster)
       i = i + 1
 
@@ -111,7 +111,7 @@ class Visualizer():
     for function in graph.functions.values():
       if labels:
         # Labeled with function name
-        function.node = pydot.Node(function.name, shape="rectangle", style="filled", fillcolor=function.module.colour)
+        function.node = pydot.Node(function.name, fontname="helvetica", shape="rectangle", style="filled", fillcolor=function.module.colour)
       else:
         # Smaller, unlabeled dots
         function.node = pydot.Node(function.name, label=" ", shape="circle", style="filled", fillcolor="green")
