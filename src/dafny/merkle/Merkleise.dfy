@@ -511,6 +511,24 @@ include "../ssz/BytesAndBits.dfy"
             propPadPow2ChunksLength(chunks); // lemma to ensure precondition is satisfied
             merkleisePow2Chunks(padPow2Chunks(chunks))
      }
+
+     function method merkleise(chunks: seq<chunk>, limit: int): hash32
+        requires 0 <= |chunks|
+        requires -1 == limit || |chunks| <= limit
+        ensures is32BytesChunk(merkleise(chunks, limit))
+    {
+        
+        if limit == -1 then 
+            nextPow2IsPow2(|chunks|);
+            nextPow2Prop(|chunks|);
+            merkleiseChunks(padChunks(chunks, get_next_power_of_two(|chunks|)))
+        else 
+            assert(limit >= 0);
+            //assert(limit >= |chunks|);
+            nextPow2IsPow2(limit);
+            nextPow2Prop(limit);
+            merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
+     }
     
     /** getHashTreeRoot.
      *
