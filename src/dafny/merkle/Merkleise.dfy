@@ -501,16 +501,6 @@ include "../ssz/BytesAndBits.dfy"
             hash(merkleiseChunks(chunks[..(|chunks|/2)]) + merkleiseChunks(chunks[|chunks|/2..]))
     }
     
-    function method merkleise(chunks: seq<chunk>): hash32
-        requires |chunks| >= 0
-        ensures is32BytesChunk(merkleise(chunks))
-    {
-        
-        if |chunks| == 0 then EMPTY_CHUNK
-        else 
-            propPadPow2ChunksLength(chunks); // lemma to ensure precondition is satisfied
-            merkleisePow2Chunks(padPow2Chunks(chunks))
-     }
     
      function method merkleise(chunks: seq<chunk>, limit: int): hash32
         requires 0 <= |chunks|
