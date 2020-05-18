@@ -474,6 +474,32 @@ include "../ssz/BytesAndBits.dfy"
             isPowerOf2(power2(k-1)); 
         }
     }
+
+    function method padChunks(chunks: seq<chunk>, padLength: nat): seq<chunk>
+        requires 1 <= padLength  // since padLength must be a power of two
+        requires 0 <= |chunks| 
+        requires |chunks| <= padLength // upper bound as per spec // TODO: change upper to <
+        requires isPowerOf2(padLength)
+        ensures 1 <= |padChunks(chunks, padLength)| == padLength
+        //ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
+        ensures isPowerOf2(|padChunks(chunks, padLength)|)
+    {
+        if |chunks| == padLength then chunks
+        else chunks + timeSeq(EMPTY_CHUNK, padLength-|chunks|)
+    }
+
+    function method merkleiseChunks(chunks: seq<chunk>): hash32
+        requires 1 <= |chunks| 
+        requires isPowerOf2(|chunks|)
+        ensures is32BytesChunk(merkleiseChunks(chunks))
+        decreases chunks
+    {
+        if |chunks| == 1 then chunks[0]
+        else 
+            assert(|chunks|>1);
+            halfPow2IsPow2(|chunks|);
+            hash(merkleiseChunks(chunks[..(|chunks|/2)]) + merkleiseChunks(chunks[|chunks|/2..]))
+    }
     
     function method merkleise(chunks: seq<chunk>): hash32
         requires |chunks| >= 0
