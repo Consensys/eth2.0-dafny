@@ -81,7 +81,17 @@ class Parser():
     return graph
     
 # colours for clusters (modules)
-colours = ['lightblue', 'bisque3', 'orange2', 'rosybrown1', 'tomato', 'gold', 'darkolivegreen3', 'orchid4', 'slategrey', 'palegreen4'] 
+colours = [
+  ('#3690c0', '#d0d1e6'), 
+  ('bisque3', 'cornsilk'), 
+  ('#fd8d3c','#fee6ce'),  
+  ('#de77ae', '#fde0ef'),
+  ('tomato','lightpink'),
+  ('gold','#ffffdd'),
+  ('darkolivegreen3','#e0f3db'),
+  ('orchid3','#fde0ef'),
+  ('slategrey','snow2'),
+  ('palegreen4', '#f0f9e8')] 
 
 
 class Visualizer():
@@ -107,7 +117,7 @@ class Visualizer():
       else:
         labName = displayName.group(2)
       module.colour = colours[i % len(colours)]
-      module.cluster = pydot.Cluster(module.name, color=module.colour,  label=labName,penwidth="2.5", fontcolor=module.colour)
+      module.cluster = pydot.Cluster(module.name,  style="filled", fillcolor=module.colour[1], label=labName,penwidth="2", fontcolor=module.colour[0], fontsize="20.0")
       dot.add_subgraph(module.cluster)
       i = i + 1
 
@@ -115,7 +125,7 @@ class Visualizer():
     for function in graph.functions.values():
       if labels:
         # Labeled with function name
-        function.node = pydot.Node(function.name, fontname="helvetica", shape="rectangle", style="filled", fillcolor=function.module.colour)
+        function.node = pydot.Node(function.name, fontname="helvetica", shape="rectangle", style="filled", fillcolor=function.module.colour[0])
       else:
         # Smaller, unlabeled dots
         function.node = pydot.Node(function.name, label=" ", shape="circle", style="filled", fillcolor="green")
