@@ -81,7 +81,7 @@ class Parser():
     return graph
     
 # colours for clusters (modules)
-colours = ['lightblue', 'bisque3', 'orange2', 'rosybrown1', 'tomato', 'gold', 'darkolivegreen3', 'orchid4', 'slategrey'] 
+colours = ['lightblue', 'bisque3', 'orange2', 'rosybrown1', 'tomato', 'gold', 'darkolivegreen3', 'orchid4', 'slategrey', 'palegreen4'] 
 
 
 class Visualizer():
