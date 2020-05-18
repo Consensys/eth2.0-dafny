@@ -351,7 +351,7 @@ include "../beacon/helpers/Crypto.dfy"
      *              returned.
      */
     
-    function bitfieldBytes(b: seq<bool>) : seq<chunk>
+    function method bitfieldBytes(b: seq<bool>) : seq<chunk>
         // no upper bound on length of any individual serialised element???
         ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
         ensures 0 <= |bitfieldBytes(b)| 
@@ -559,7 +559,7 @@ include "../beacon/helpers/Crypto.dfy"
      *  @param  s   A serialisable object.
      *  @returns    A 32-byte chunk representing the root node of the merkle tree.
      */
-    function getHashTreeRoot(s : Serialisable) : hash32
+    function method getHashTreeRoot(s : Serialisable) : hash32
         ensures is32BytesChunk(getHashTreeRoot(s))
     {
         match s 
