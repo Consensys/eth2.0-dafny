@@ -545,6 +545,30 @@ include "../ssz/BytesAndBits.dfy"
         }
     }
 
+    function method uint256_to_bytes(n: nat) : chunk
+        ensures |uint256_to_bytes(n)| == 32
+    {
+        uint256_to_bytes_helper(n,0)
+    }
+
+    function method uint256_to_bytes_helper(n: nat, byte_number: nat) : bytes
+        requires byte_number <= 32
+        decreases 32  - byte_number
+    ensures |uint256_to_bytes_helper(n,byte_number)| == 32 - byte_number as int
+    {
+        if(byte_number == 32) then
+            []
+        else
+            [(n % 256) as uint8] +
+            uint256_to_bytes_helper(n / 256, byte_number+1)
+    }
+
+    function method mixInLength(root: hash32, length: nat) : hash32
+        requires is32BytesChunk(root)
+        ensures is32BytesChunk(mixInLength(root, length))
+    {
+        hash(root + uint256_to_bytes(length))
+    }
     
     /** getHashTreeRoot.
      *
