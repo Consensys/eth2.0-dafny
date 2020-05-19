@@ -27,16 +27,16 @@ module Eth2Types {
 
     //  The Eth2 basic types.
 
-    /** The type `Byte` corresponds to a 'uint8' */
-    type Byte = uint8
+    /** The type `byte` corresponds to a 'uint8' */
+    type byte = uint8
     /** The type `bytes` corresponds to a sequence of 'Bytes's */
-    type bytes = seq<Byte>
+    type bytes = seq<byte>
     
     /** The default zeroed Bytes32.  */
-    // const SEQ_EMPTY_32_BYTES := timeSeq<Byte>(0,32)
+    // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 
     /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
-    type Seq32Byte = x:seq<Byte> | |x| == 32 witness timeSeq(0 as Byte, 32)
+    type Seq32Byte = x:seq<byte> | |x| == 32 witness timeSeq(0 as byte, 32)
     // SEQ_EMPTY_32_BYTES
 
     /** Create type synonym for a chunk */
@@ -56,7 +56,7 @@ module Eth2Types {
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
      */
-    type Bytes32 = s:Serialisable | && s.Bytes32? witness Bytes32(timeSeq(0 as Byte, 32))
+    type Bytes32 = s:Serialisable | && s.Bytes32? witness Bytes32(timeSeq(0 as byte, 32))
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
@@ -96,15 +96,15 @@ module Eth2Types {
     }
 
     /**
-     * Bitwise exclusive-or of two `Byte` value
+     * Bitwise exclusive-or of two `byte` value
      *
      * @param a  First value
      * @param b  Second value
      * @returns  Bitwise exclusive-or of `a` and `b`
      */
-    function byteXor(a:Byte, b:Byte): Byte
+    function byteXor(a:byte, b:byte): byte
     {
-        ((a as bv8)^(b as bv8)) as Byte
+        ((a as bv8)^(b as bv8)) as byte
     }      
 
     //  Old section
@@ -124,7 +124,7 @@ module Eth2Types {
     type Hash = Bytes32
 
     //  TODO: change the Bytes type
-    // type SerialisedBytes = seq<Byte> 
+    // type SerialisedBytes = seq<byte> 
     
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.

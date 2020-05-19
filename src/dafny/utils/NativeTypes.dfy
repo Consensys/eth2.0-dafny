@@ -32,7 +32,6 @@ module NativeTypes {
 
     /* Signed and unsigned int. */
     newtype{:nativeType "sbyte"} sbyte = i:int | -0x80 <= i < 0x80
-    newtype{:nativeType "byte"} byte = i:int | 0 <= i < 0x100
     newtype{:nativeType "byte"} uint8 = i:int | 0 <= i < 0x100
     newtype{:nativeType "short"} int16 = i:int | -0x8000 <= i < 0x8000
     newtype{:nativeType "ushort"} uint16 = i:int | 0 <= i < 0x10000

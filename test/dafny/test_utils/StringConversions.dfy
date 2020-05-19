@@ -48,13 +48,13 @@ module StringConversions
     /**
      * Converts a byte to its character based hex representation
      * 
-     * @param b  Byte to convert
+     * @param b  byte to convert
      * @return String representing the hex value of `b1
      * 
      * @example ByteToHexString(0)  == "0x00"
      *          ByteToHexString(16) == "0x10"
      */
-    function method ByteToHexString(b:Byte): string
+    function method ByteToHexString(b:byte): string
     ensures  |ByteToHexString(b)| == 4
     ensures  ByteToHexString(b)[0..2] == "0x"
     {
@@ -71,7 +71,7 @@ module StringConversions
      * @returns Sequence of strings corresponding to the hex representation of
      * the sequence of Bytes
      */
-    function method ByteSeqToHexSeq(bs:seq<Byte>): seq<string>
+    function method ByteSeqToHexSeq(bs:seq<byte>): seq<string>
     ensures |ByteSeqToHexSeq(bs)| == |bs|
     ensures forall i | 0 <= i < |bs| :: ByteSeqToHexSeq(bs)[i] == ByteToHexString(bs[i])
     {

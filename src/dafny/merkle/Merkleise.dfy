@@ -153,22 +153,22 @@ include "../beacon/helpers/Crypto.dfy"
     }
 
     
-    const EMPTY_CHUNK := timeSeq<Byte>(0,32)
-    //[0 as Byte, 0 as Byte, 0 as Byte, 0 as Byte, 
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte,
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte,
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte, 
-    //                         0 as Byte,0 as Byte,0 as Byte,0 as Byte]
+    const EMPTY_CHUNK := timeSeq<byte>(0,32)
+    //[0 as byte, 0 as byte, 0 as byte, 0 as byte, 
+    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
+    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
+    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
+    //                         0 as byte,0 as byte,0 as byte,0 as byte,
+    //                         0 as byte,0 as byte,0 as byte,0 as byte,
+    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
+    //                         0 as byte,0 as byte,0 as byte,0 as byte]
 
     /** 
      *  Properties of empty chunk.
      */
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
-        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as Byte 
+        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as byte 
     {   //  Thanks Dafny
     }
 
@@ -242,7 +242,7 @@ include "../beacon/helpers/Crypto.dfy"
 
     /** Pack.
      *
-     *  @param  s   A sequence of serialised objects (seq<Byte>).
+     *  @param  s   A sequence of serialised objects (seq<byte>).
      *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
      *              bytes if necessary. It is implied by the spec that at least one chunk is 
      *              returned (see note below).
@@ -305,7 +305,7 @@ include "../beacon/helpers/Crypto.dfy"
 
     /** Pack.
      *
-     *  @param  s   A sequence of serialised objects (seq<Byte>).
+     *  @param  s   A sequence of serialised objects (seq<byte>).
      *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
      *              bytes if necessary. It is implied by the spec that at least one chunk is 
      *              returned (see note below).

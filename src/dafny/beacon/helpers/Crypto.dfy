@@ -17,7 +17,6 @@ include "../../utils/Eth2Types.dfy"
 
 module {:extern "eth2crypto"} Crypto {
     import opened Eth2Types
-    import opened NativeTypes
 
     /**
      * Calculate the SHA256 of a sequence of bytes
@@ -26,5 +25,5 @@ module {:extern "eth2crypto"} Crypto {
      * 
      * @returns SHA256 hash of `data`
      */
-    function method {:extern} hash(data:seq<Byte>) : hash32
+    function method {:extern} hash(data:seq<byte>) : hash32
 }

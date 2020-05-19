@@ -18,5 +18,5 @@ include "../../../../src/dafny/utils/Eth2Types.dfy"
 module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
     import opened Eth2Types
     import opened NativeTypes
-    function method {:extern} BitlistRoot(rbl: seq<bool>, brbl:seq<Byte>, limit:nat): hash32
+    function method {:extern} BitlistRoot(rbl: seq<bool>, brbl:seq<byte>, limit:nat): hash32
 }

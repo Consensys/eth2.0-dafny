@@ -75,7 +75,7 @@ module SSZ {
      *  @param  s   The object to serialise.
      *  @returns    A sequence of bytes encoding `s`.
      */
-    function method serialise(s : Serialisable) : seq<Byte> 
+    function method serialise(s : Serialisable) : seq<byte> 
     requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
     {
         match s
@@ -98,7 +98,7 @@ module SSZ {
      *  @note       It would probabaly be good to return the suffix of `xs`
      *              that has not been used in the deserialisation as well.
      */
-    function method deserialise(xs : seq<Byte>, s : Tipe) : Try<Serialisable>
+    function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
     requires s in {Bool_,Uint8_,Bitlist_,Bytes32_}
     {
         match s

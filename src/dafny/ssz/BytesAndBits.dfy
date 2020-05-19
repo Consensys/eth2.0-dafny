@@ -26,24 +26,24 @@ module BytesAndBits {
     import opened Constants
     import opened Helpers
 
-    /** Convert a boolean into a Byte.
+    /** Convert a boolean into a byte.
      *
      *  @param      b   A boolean.
-     *  @returns        A Byte (uint8) such that b?1:0. 
+     *  @returns        A byte (uint8) such that b?1:0. 
      */
-    function method boolToByte(b : bool) : Byte
+    function method boolToByte(b : bool) : byte
         ensures 0 <= boolToByte(b) <= 1  
     {
-        (if b then 1 else 0) as Byte
+        (if b then 1 else 0) as byte
     }
 
     /**
-     *  Convert a Byte into a boolean.
+     *  Convert a byte into a boolean.
      *
      *  @param      b   A byte between 0 and 1.
      *  @returns        The corresponding boolean (b == 1)?true:false.
      */
-    function method byteToBool(b : Byte) : bool
+    function method byteToBool(b : byte) : bool
         requires 0 <= b <= 1
     {
         b == 1
@@ -62,7 +62,7 @@ module BytesAndBits {
         forall i | 0 <= i < |l| :: !l[i]
     }
 
-    //  The following methods convert 8 bits to Byte and Byte to 8 bits
+    //  The following methods convert 8 bits to byte and byte to 8 bits
 
     /**
      *  Convert a list of 8 bits into a number. Little endian assumed.
@@ -70,7 +70,7 @@ module BytesAndBits {
      *  @param  l   A sequence of bits.
      *  @returns    A byte the binary encoding of which is reverse(l).
      */
-    function method list8BitsToByte(l : seq<bool>) : Byte    
+    function method list8BitsToByte(l : seq<bool>) : byte    
         requires |l| == 8 == BITS_PER_BYTE
         ensures isNull(l) <==> list8BitsToByte(l) == 0
     {
@@ -85,12 +85,12 @@ module BytesAndBits {
     }
 
     /**
-     *  Compute a Byte into a seq of 8 bits. Little endian assumed. 
+     *  Compute a byte into a seq of 8 bits. Little endian assumed. 
      *
      *  @param  n   A byte, i.e. a number that can be represented with 8 bits.
      *  @returns    A sequence of bits `l` such `reverse(l)` is the binary encoding of `n`. 
      */
-    function method byteTo8Bits( n : Byte ) : seq<bool>
+    function method byteTo8Bits( n : byte ) : seq<bool>
         ensures | byteTo8Bits(n) | == 8 == BITS_PER_BYTE
     {
         [
@@ -109,17 +109,17 @@ module BytesAndBits {
      *  Encode a list of bits into a sequence of bytes, padding with zeros.
      *
      *  The algorithm to encode list of bits into seq of bytes works as follows:
-     *      1.  split the list into chunks of 8 bits and encode each one into a Byte
-     *      2.  if last chunk does not have 8 bits, pad with zeros and make a Byte.
+     *      1.  split the list into chunks of 8 bits and encode each one into a byte
+     *      2.  if last chunk does not have 8 bits, pad with zeros and make a byte.
      *
      *  @example: l1 = [0,1,0,0] is padded with [0,0,0,0] to obtain [0,1,0,0, 0,0,0,0] 
-     *  and this encoded into a Byte (little endian). The hexadecimal value is 
+     *  and this encoded into a byte (little endian). The hexadecimal value is 
      *  thus 0x02: 0000.0010 (in `l1` the bits are ordered from little l1[0]to big l1[7])
      *  @example: with more than one byte needed l2 = [1] * 9 and |l| == 9.
      *  The encoding of l2 is: [1111.1111, 0000.0001] i.e. [0xFF , 0x01] 
      *  
      */
-    function method fromBitsToBytes(l : seq<bool>) : seq<Byte> 
+    function method fromBitsToBytes(l : seq<bool>) : seq<byte> 
         ensures  | fromBitsToBytes(l) | == ceil( |l|, BITS_PER_BYTE)
         ensures |l| >= 1 && l[|l| - 1] ==> fromBitsToBytes(l)[|fromBitsToBytes(l)| - 1] >= 1
         decreases l
@@ -143,9 +143,9 @@ module BytesAndBits {
      *  Encode(decode(n)) = Identity(n).
      *  
      *  @param  n   a number.
-     *  @returns    Encoding (as a Byte) the decoded version of `n` yields `n`.
+     *  @returns    Encoding (as a byte) the decoded version of `n` yields `n`.
      */
-    lemma encodeOfDecodeByteIsIdentity(n: Byte)  
+    lemma encodeOfDecodeByteIsIdentity(n: byte)  
         ensures list8BitsToByte(byteTo8Bits(n)) == n 
     {   //  Thanks Dafny.
     }
@@ -166,9 +166,9 @@ module BytesAndBits {
     /** 
      *  Zero is the only byte represented by the null sequence.
      *
-     *  @param  n   A Byte
+     *  @param  n   A byte
      */
-    lemma byteIsZeroIffBinaryIsNull(n : Byte) 
+    lemma byteIsZeroIffBinaryIsNull(n : byte) 
         ensures n == 0 <==> isNull(byteTo8Bits(n))
     {
         calc <==> {

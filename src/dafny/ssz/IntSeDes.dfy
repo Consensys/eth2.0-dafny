@@ -27,13 +27,13 @@ module IntSeDes {
     //  Uintk serialisation and deserielisation.
 
     /** Uint8. */
-    function method uint8ToBytes(n: uint8) : seq<Byte> 
+    function method uint8ToBytes(n: uint8) : seq<byte> 
         ensures |uint8ToBytes(n)| == 1
     {
-        [n as Byte]
+        [n as byte]
     }
  
-    function method byteToUint8(b: Byte) : uint8
+    function method byteToUint8(b: byte) : uint8
     {
         (b as uint8)
     }

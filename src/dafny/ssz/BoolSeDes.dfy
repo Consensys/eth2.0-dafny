@@ -27,19 +27,19 @@ module BoolSeDes {
     /**
      *  Convert a bool into a byte.
      */
-    function method boolToBytes(b: bool) : seq<Byte> 
+    function method boolToBytes(b: bool) : seq<byte> 
         ensures | boolToBytes(b) | == 1 
     {
         if b then 
-            [1 as Byte]
+            [1 as byte]
         else 
-            [0 as Byte]
+            [0 as byte]
     }
 
     /** 
-     *  Convert a Byte into a bool.
+     *  Convert a byte into a bool.
      */
-    function method byteToBool(b: Byte) : bool
+    function method byteToBool(b: byte) : bool
     {
        (b as nat) > 0
     }

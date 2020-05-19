@@ -78,7 +78,7 @@ include "Constants.dfy"
      *  @example: l = [0,1,0,0] yields l' = [0,1,0,0] + [1]
      *  l'' = [0,1,0,0,1] + [0,0,0] (add 3 0's to ensure the size of l'' is 
      *  multiple of 8).
-     *  l'' is a Byte and is encoded as a uint8 `n` as follows: the bitvector 
+     *  l'' is a byte and is encoded as a uint8 `n` as follows: the bitvector 
      *  representation of n is reverse(l''). `n` in hexadecimal is thus: 0001.0010 
      *  which is the uint8 0x12.
      *
@@ -88,7 +88,7 @@ include "Constants.dfy"
      *  and the encoding of l is: [1000.0000, 0000.0000] i.e. [0x01 , 0x00] 
      *  
      */
-    function method fromBitlistToBytes(l : seq<bool>) : seq<Byte> 
+    function method fromBitlistToBytes(l : seq<bool>) : seq<byte> 
         ensures | fromBitlistToBytes(l) | == ceil( |l| + 1, BITS_PER_BYTE)
         ensures fromBitlistToBytes(l)[|fromBitlistToBytes(l)| - 1] >= 1
         
@@ -116,7 +116,7 @@ include "Constants.dfy"
      *              of which is >= 1.
      *  @returns    The sequence of bits upto (and except) the last true bit. 
      */
-    function method fromBytesToBitList(xb : seq<Byte>) : seq<bool> 
+    function method fromBytesToBitList(xb : seq<byte>) : seq<bool> 
         requires |xb| >= 1
         requires xb[|xb|-1] >= 1
         ensures BITS_PER_BYTE * (|xb| - 1) >= 0
@@ -173,7 +173,7 @@ include "Constants.dfy"
     /**
      *  Encoding a decoded `xb` returns `xb`.
      */
-    lemma {:induction xb} bitlistEncodeDecodeIsIdentity(xb: seq<Byte>) 
+    lemma {:induction xb} bitlistEncodeDecodeIsIdentity(xb: seq<byte>) 
         requires |xb| >= 1
         requires xb[|xb| - 1] >= 1
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
@@ -214,7 +214,7 @@ include "Constants.dfy"
     /**
      *  Deserialise is injective for sequences of bytes.
      */
-    lemma {:induction xa, xb} bitlistDeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
+    lemma {:induction xa, xb} bitlistDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>)
         requires |xa| >= 1
         requires xa[|xa| - 1] >= 1
         requires |xb| >= 1
@@ -235,7 +235,7 @@ include "Constants.dfy"
     /**
      *  Rewriting (simplification) rule for fromBytesToBitList.
      */
-    lemma {:induction m} simplifyFromByteToListFirstArg(b : Byte, m : seq<Byte>) 
+    lemma {:induction m} simplifyFromByteToListFirstArg(b : byte, m : seq<byte>) 
         requires |m| >= 1
         requires m[|m| - 1] >= 1
         ensures fromBytesToBitList([b] + m) == 
@@ -269,7 +269,7 @@ include "Constants.dfy"
     /**
      *  Rewriting (simplification) rule for fromBitlistToBytes.
      */
-    lemma {:induction xl} simplifyFromBitListToByteFirstArg(e: Byte, xl : seq<bool>) 
+    lemma {:induction xl} simplifyFromBitListToByteFirstArg(e: byte, xl : seq<bool>) 
         ensures fromBitlistToBytes(byteTo8Bits(e) + xl) == 
             [ e ] + fromBitlistToBytes(xl) 
     { 
@@ -286,7 +286,7 @@ include "Constants.dfy"
     /**
      *  fromBitlistToBytes surjective on |xb| >= 1 && xb[|xb| - 1] >= 1
      */
-    lemma {:induction xb} surjective(xb : seq<Byte>) 
+    lemma {:induction xb} surjective(xb : seq<byte>) 
         requires |xb| >= 1 
         requires xb[|xb| - 1] >= 1
         ensures exists l : seq<bool> {:induction l} :: xb == fromBitlistToBytes(l) 
