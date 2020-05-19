@@ -57,7 +57,9 @@ module SSZ {
      *  @returns    The default serialisable for this tipe.
      *
     */
-    function method default(t : Tipe) : Serialisable {
+    function method default(t : Tipe) : Serialisable 
+    requires t in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    {
             match t 
                 case Bool_ => Bool(false)
         
@@ -74,6 +76,7 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<Byte> 
+    requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
     {
         match s
             case Bool(b) => boolToBytes(b)
@@ -96,6 +99,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<Byte>, s : Tipe) : Try<Serialisable>
+    requires s in {Bool_,Uint8_,Bitlist_,Bytes32_}
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -124,6 +128,7 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
+        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {   //  Thanks Dafny.
     }
@@ -132,6 +137,7 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
+        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
@@ -160,6 +166,7 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
+        requires typeOf(s1) in {Bool_,Uint8_,Bitlist_,Bytes32_}
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {

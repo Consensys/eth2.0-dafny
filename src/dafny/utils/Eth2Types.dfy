@@ -51,6 +51,7 @@ module Eth2Types {
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>)
         |   Bytes32(bs: Seq32Byte)
+        |   Container(fl: seq<Serialisable>)
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
@@ -73,6 +74,7 @@ module Eth2Types {
         |   Bool_
         |   Bitlist_
         |   Bytes32_
+        |   Container_
 
    /**  The Tipe of a serialisable.
      *  This function allows to obtain the type of a `Serialisable`.
@@ -89,6 +91,8 @@ module Eth2Types {
                 case Bitlist(_) => Bitlist_
 
                 case Bytes32(_) => Bytes32_
+
+                case Container(_) => Container_
     }
 
     /**
