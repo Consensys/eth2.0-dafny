@@ -64,6 +64,7 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
+        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
@@ -571,5 +572,30 @@ include "../beacon/helpers/Crypto.dfy"
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
             case Bytes32(_) => merkleise(pack(s), -1)
-    }
+
+            case Container(fl) => merkleise(prepareSeqOfSerialisableForMerkleisation(fl),-1)
+            // Note: if `seqMap(fl,(f:Serialisable) => getHashTreeRoot(f))` is
+            // used in place of `prepareSeqOfSerialisableForMerkleisation(fl)`,
+            // like below, then Dafny is unable to prove termination:
+            //merkleise(seqMap(fl,(f:Serialisable) => getHashTreeRoot(f)),-1)
+    }       
+
+    /**
+     * Prepare a sequence of `Serialisable` objects for merkleisation.
+     *
+     * @param ss Sequence of `Serialisable` objects
+     *
+     * @return Sequence of `chunk` to be given in input to the `merkleise`
+     *         function to merkleise a container `c` where `ss == c.fl`
+     */
+    function method prepareSeqOfSerialisableForMerkleisation(ss:seq<Serialisable>): seq<chunk>
+    ensures |prepareSeqOfSerialisableForMerkleisation(ss)| == |ss|
+    ensures forall i | 0 <= i < |ss| :: prepareSeqOfSerialisableForMerkleisation(ss)[i] == getHashTreeRoot(ss[i])
+    {
+        if(|ss| == 0) then
+            []
+        else
+            [getHashTreeRoot(ss[0])] +
+            prepareSeqOfSerialisableForMerkleisation(ss[1..])
+    }     
  }
