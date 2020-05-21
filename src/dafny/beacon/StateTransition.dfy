@@ -40,7 +40,7 @@ module StateTransition {
     /** The historical roots type.  */
     const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
-    type VectorOfHistRoots = x : seq<Bytes32> | |x| == SLOTS_PER_HISTORICAL_ROOT + 1
+    type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness EMPTY_HIST_ROOTS
 
     function method hash_tree_root(s: BeaconState) : Bytes32 
