@@ -14,6 +14,7 @@
 
 include "NativeTypes.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/MathHelpers.dfy"
 
 /** 
  * Define the types used in the Eth2.0 spec.
@@ -24,6 +25,7 @@ module Eth2Types {
 
     import opened NativeTypes
     import opened Helpers
+    import opened MathHelpers
 
     //  The Eth2 basic types.
 
@@ -31,6 +33,18 @@ module Eth2Types {
     type byte = uint8
     /** The type `bytes` corresponds to a sequence of 'Bytes's */
     type bytes = seq<byte>
+ 
+    /** The type `uint128` correspond to the restriction of the `int` type to
+     * positive numbers that can be expressed in binary form with less than 128
+     * bits 
+     */
+    newtype uint128 = i:int | 0 <= i < power2(128)
+
+    /** The type `uint256` correspond to the restriction of the `int` type to
+    * positive numbers that can be expressed in binary form with less than 256
+    * bits 
+    */
+    newtype uint256 = i:int | 0 <= i < power2(256)
     
     /** The default zeroed Bytes32.  */
     // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
