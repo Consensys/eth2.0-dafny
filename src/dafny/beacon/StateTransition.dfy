@@ -18,7 +18,6 @@ include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../ssz/Constants.dfy"
 include "../utils/Helpers.dfy"
-// include "Attestations.dfy"
 include "Validators.dfy"
 
 /**
@@ -30,9 +29,7 @@ module StateTransition {
     import opened NativeTypes
     import opened Eth2Types
     import opened Constants
-    // import opened Attestations
     import opened BeaconChain
-    import opened Validators
     import opened Helpers
 
     /** The default zeroed Bytes32.  */
@@ -40,6 +37,7 @@ module StateTransition {
     
     const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
 
+    /** The default zeroed Bytes32.  */
     const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT + 1)
 
     type VectorOfHistRoots = x : seq<Bytes32> | |x| == SLOTS_PER_HISTORICAL_ROOT + 1
@@ -66,22 +64,14 @@ module StateTransition {
      * the state transition function on the previous block and its state 
      * all the way back to the genesis state.
      *
-     * @param   genesis_time                    The Unix timestamp of when the genesis slot 
-     *                                          occurred. This allows a client to calculate 
-     *                                          what the current slot should be according to 
-     *                                          wall clock time
      * @param   slot                            Time is divided into “slots” of fixed length 
      *                                          at which actions occur and state transitions 
      *                                          happen. This field tracks the slot of the 
      *                                          containing state, not necessarily the slot 
      *                                          according to the local wall clock
-     * @param   fork                            A mechanism for handling forking (upgrading) 
-     *                                          the beacon chain. The main purpose here is to
-     *                                          handle versioning of signatures and handle 
-     *                                          objects of different signatures across fork 
-     *                                          boundaries
      * @param   latest_block_header             The latest block header seen in the chain 
-     *                                          defining this state. During the slot transition 
+     *                                          defining this state. This blockheader has
+     *                                          During the slot transition 
      *                                          of the block, the header is stored without the 
      *                                          real state root but instead with a stub of Root
      *                                          () (empty 0x00 bytes). At the start of the next 
@@ -106,208 +96,136 @@ module StateTransition {
      *                                          The state root for a slot is stored at the 
      *                                          start of the next slot to avoid a circular 
      *                                          dependency
-     * @param   historical_roots                A double batch merkle accumulator of the latest
-     *                                          block and state roots defined by 
-     *                                          HistoricalBatch to make historic merkle 
-     *                                          proofs against. Note that although this field 
-     *                                          grows unbounded, it grows at less than ___ MB 
-     *                                          per ___ years
-     * @param   eth1_data                       The most recent Eth1Data that validators have 
-     *                                          come to consensus upon and stored in state. 
-     *                                          Validator deposits from eth1 can be processed 
-     *                                          up through the latest deposit contained within 
-     *                                          the eth1_data root
-     * @param   eth1_data_votes                 Running list of votes on new Eth1Data to be 
-     *                                          stored in state. If any Eth1Data achieves > 50% 
-     *                                          proposer votes in a voting period, this 
-     *                                          majority data is stored in state and new 
-     *                                          deposits can be processed
-     * @param   eth1_deposit_index              Index of the next deposit to be processed. 
-     *                                          Deposits must be added to the next block and 
-     *                                          processed if state.eth1_data.deposit_count > 
-     *                                          state.eth1_deposit_index
-     * @param   validators                      List of Validator records, tracking the current
-     *                                          full registry. Each validator contains 
-     *                                          relevant data such as pubkey, withdrawal 
-     *                                          credentials, effective balance, a slashed 
-     *                                          boolean, and status (pending, active, exited, 
-     *                                          etc)
-     * @param   balances                        List mapping 1:1 with the validator_registry. 
-     *                                          The granular/frequently changing balances are 
-     *                                          pulled out of the validators list to reduce the 
-     *                                          amount of re-hashing (in a cache optimized SSZ 
-     *                                          implementation) that needs to be performed at 
-     *                                          each epoch transition
-     * @param   randao_mixes                    The randao mix from each epoch for the past 
-     *                                          EPOCHS_PER_HISTORICAL_VECTOR epochs. At the 
-     *                                          start of every epoch, the randao_mix from the 
-     *                                          previous epoch is copied over as the base of 
-     *                                          the current epoch. At each block, the hash of 
-     *                                          the block.randao_reveal is xor’d into the 
-     *                                          running mix of the current epoch
-     * @param   slashings                       per-epoch store of the total slashed GWEI 
-     *                                          during that epoch. The sum of this list at any 
-     *                                          time gives the “recent slashed balance” and is 
-     *                                          used to calculate the proportion of balance 
-     *                                          that should be slashed for slashable validators
-     * @param   previous_epoch_attestations     Attestations from blocks are converted to 
-     *                                          PendingAttestations and stored in state for 
-     *                                          bulk accounting at epoch boundaries. We store 
-     *                                          two separate lists.
-     *                                          List of PendingAttestations for slots from the 
-     *                                          previous epoch. note: these are attestations 
-     *                                          attesting to slots in the previous epoch, not
-     *                                          necessarily those included in blocks during 
-     *                                          the previous epoch.
-     * @param   current_epoch_attestations      List of PendingAttestations for slots from the 
-     *                                          current epoch. Copied over to 
-     *                                          previous_epoch_attestations and then emptied at
-     *                                          the end of the current epoch processing
-     * @param   justification_bits              4 bits used to track justification during the 
-     *                                          last 4 epochs to aid in finality calculations
-     * @param   previous_justified_checkpoint   The most recent justified Checkpoint as it 
-     *                                          was during the previous epoch. Used to validate 
-     *                                          attestations from the previous epoch
-     * @param   current_justified_checkpoint    The most recent justified Checkpoint during the 
-     *                                          current epoch. Used to validate current epoch 
-     *                                          attestations and for fork choice purposes
-     * @param   finalized_checkpoint            The most recent finalized Checkpoint, prior to
-     *                                           which blocks are never reverted.
      */
     datatype BeaconState = BeaconState(
-        // genesis_time: uint64,
         slot: Slot,
-        // fork: Fork,
-        latest_block_header: BeaconBlockHeader
-        // block_roots: array<Hash>, 
-        // state_roots: array<Hash>,
-        // block_roots: VectorOfHistRoots
-        // state_roots: VectorOfHistRoots
-        // historical_roots: seq<Hash>,
-        // eth1_data: Eth1Data,
-        // eth1_data_votes: seq<Eth1Data>,
-        // eth1_deposit_index: uint64,
-        // validators: seq<Validator>,
-        // balances: seq<Gwei>
-        // randao_mixes: array<Hash>,
-        // slashings: array<Gwei>, 
-        // previous_epoch_attestations: seq<PendingAttestation>,
-        // current_epoch_attestations: seq<PendingAttestation>,
-        // justification_bits: array<bool>,  
-        // previous_justified_checkpoint: CheckPoint,
-        // current_justified_checkPoint: CheckPoint,
-        // finalized_checkPoint: CheckPoint
+        latest_block_header: BeaconBlockHeader,
+        block_roots: VectorOfHistRoots,
+        state_roots: VectorOfHistRoots
     )
 
-    method state_transition(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState )
+    /**
+     *  The history of blocks
+     */
+    datatype History = History(
+        blocks: map<Slot,BeaconBlock>,
+        chain: map<BeaconBlock, BeaconBlockHeader>
+    )
+
+
+    const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0, EMPTY_BYTES32, EMPTY_BYTES32)
+    const initState := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS)
+
+    /**
+     *  Consistency of a state.
+     */
+    predicate isConsistent(s: BeaconState, h: History) 
+    {
+        true
+        // forall i :: 0 < i < s.slot ==> h.chain()
+    }
+
+    /**
+     *  Compute the state obtained after adding a block.
+     */
+    method state_transition(s: BeaconState, b: BeaconBlock, ghost h: History) returns (s' : BeaconState )
+        requires isConsistent(s, h)
         requires s.slot <= b.slot
         requires b.parent_root == s.latest_block_header.parent_root
-        // requires s.state_roots : VectorOfHistRoots
-        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
-        // ensures false
+        ensures isConsistent(s',h)
     {
-        // assert(|s.state_roots| == SLOTS_PER_HISTORICAL_ROOT );
         //  Process slots
         var s1 := process_slots(s, b.slot);
 
         assert(b.parent_root == s1.latest_block_header.parent_root);
         //  Process block
-        s' := process_block(s1, b);
+        s' := s1;
+        // process_block(s1, b);
         
         //  Validate state block
     }
 
     /**
-     * 
+     *  Advance current state to a given slot.
+     *
+     *  This mainly consists in advancing the slot number to
+     *  a target future `slot` number and updating/recording the history of intermediate
+     *  states (and block headers). 
+     *  Under normal circumstances, where a block is received at each slot,
+     *  this involves only one iteration of the loop.
+     *  Otherwise, the first iteration of the loop `finalises` the block header
+     *  of the previous slot before recortding it, 
+     *  and subsequent rounds advance the slot number and record the history of states
+     *  and blocks for each slot.
+     *
+     *  @param  s       A state
+     *  @param  slot    The slot to advance to. This is usually the slot of newly
+     *                  proposed block.
+     *  @returns        The state obtained after advancing the history to slot.
+     *                 
      */
    method process_slots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot <= slot
-        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
         ensures  s'.slot == slot 
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
-
-        // ensures  |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
-        // ensures  |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
         decreases slot - s.slot
     {
+        //  start from thr current state
         s' := s;
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s.latest_block_header.parent_root == s'.latest_block_header.parent_root
             decreases slot - s'.slot 
         {
+            //  s'.slot < slot. Complete processing of s'.slot 
+            //  The slot number s'.slot is incremented after as
+            //  process_slot 
             s':= process_slot(s');
+            //  s'.slot is now processed: history updates and block header resolved
             s':= s'.(slot := s'.slot + 1) ;
         }
     }
 
+    /** 
+     *  Finalise processing of a slot.
+     *
+     *  @param  s   A state.
+     *  @returns    A new state where `s` has been added to the history and
+     *              the block header tracks the hash of the most recent received
+     *              block.
+     */
     method process_slot(s: BeaconState) returns (s' : BeaconState)
-        // requires |s.state_roots| == SLOTS_PER_HISTORICAL_ROOT 
         ensures s'.slot == s.slot
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
-        // ensures |s'.state_roots| == SLOTS_PER_HISTORICAL_ROOT
-        // ensures |s'.block_roots| == SLOTS_PER_HISTORICAL_ROOT
-        // ensures b.parent_root == hash_tree_root_block_header(s.latest_block_header)
-
     {
         s' := s;
+        //  Record the hash of the previous state in the history
         var previous_state_root := hash_tree_root(s);
-        // s' := s'.( 
-        //         state_roots := 
-        //             s'.state_roots[s.slot as nat % SLOTS_PER_HISTORICAL_ROOT as nat := previous_state_root][..SLOTS_PER_HISTORICAL_ROOT] + [EMPTY_BYTES32]
-        //         );  
         
+        //  The block header in the state may be empty if a new block
+        //  was received in the previous slot.
+        //  It should be resolved befire it is added to the history.
         if ( s'.latest_block_header.state_root == EMPTY_BYTES32) {
             s' := s'.(latest_block_header :=
                 s'.latest_block_header.(state_root := previous_state_root));
         }
-
-        //  functional version 
-        // s.(
-        //     slot := s.slot + 1,
-        //     state_roots := 
-        //         s.state_roots[s.slot % SLOTS_PER_HISTORICAL_ROOT := previous_state_root],
-        //     block_roots := 
-        //         s.block_roots[s.slot % SLOTS_PER_HISTORICAL_ROOT := 
-        //         if (s.latest_block_header.state_root] == EMPTY_BYTES32) previous_state_root
-        //         else 
-        // )
     }
 
-    /*
-    def process_slot(state: BeaconState) -> None:
-    # Cache state root
-    previous_state_root = hash_tree_root(state)
-    state.state_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_state_root
-    # Cache latest block header state root
-    if state.latest_block_header.state_root == Bytes32():
-        state.latest_block_header.state_root = previous_state_root
-    # Cache block root
-    previous_block_root = hash_tree_root(state.latest_block_header)
-    state.block_roots[state.slot % SLOTS_PER_HISTORICAL_ROOT] = previous_block_root
-    */
-
-    /*
-    def process_slots(state: BeaconState, slot: Slot) -> None:
-    assert state.slot <= slot
-    while state.slot < slot:
-        process_slot(state)
-        # Process epoch on the start slot of the next epoch
-        if (state.slot + 1) % SLOTS_PER_EPOCH == 0:
-            process_epoch(state)
-        state.slot += Slot(1)
-    */
-
     /**
-     * 
+     *  Verify that a block is valid.
      */
     method process_block(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
     {
+        //  Start by creating a block header from the ther actual block.
         s' := process_block_header(s, b);
     }
 
+    /**
+     *  Check whether a block is valid and prepare and initialise new state
+     *  with a corresponding block header. 
+     */
     method process_block_header(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
@@ -316,36 +234,8 @@ module StateTransition {
             latest_block_header := BeaconBlockHeader(
                 b.slot,
                 b.parent_root,
-                EMPTY_BYTES32,
-                hash_tree_root_block(b)
+                EMPTY_BYTES32
             )
         );
     }
-
-
-    // def process_block(state: BeaconState, block: BeaconBlock) -> None:
-    // process_block_header(state, block)
-
-    /*
-    def process_block_header(state: BeaconState, block: BeaconBlock) -> None:
-    # Verify that the slots match
-    assert block.slot == state.slot
-    # Verify that proposer index is the correct index
-    assert block.proposer_index == get_beacon_proposer_index(state)
-    # Verify that the parent matches
-    assert block.parent_root == hash_tree_root(state.latest_block_header)
-    # Cache current block as the new latest block
-    state.latest_block_header = BeaconBlockHeader(
-        slot=block.slot,
-        proposer_index=block.proposer_index,
-        parent_root=block.parent_root,
-        state_root=Bytes32(),  # Overwritten in the next process_slot call
-        body_root=hash_tree_root(block.body),
-    )
-
-    # Verify proposer is not slashed
-    proposer = state.validators[block.proposer_index]
-    assert not proposer.slashed
-    */
-
 }
