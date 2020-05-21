@@ -35,13 +35,13 @@ module Eth2Types {
     type bytes = seq<byte>
  
     /** The type `uint128` correspond to the restriction of the `int` type to
-     * positive numbers that can be expressed in binary form with less than 128
+     * positive numbers that can be expressed in binary form with no more than 128
      * bits 
      */
     newtype uint128 = i:int | 0 <= i < power2(128)
 
     /** The type `uint256` correspond to the restriction of the `int` type to
-    * positive numbers that can be expressed in binary form with less than 256
+    * positive numbers that can be expressed in binary form with no more than 256
     * bits 
     */
     newtype uint256 = i:int | 0 <= i < power2(256)
