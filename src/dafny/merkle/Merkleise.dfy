@@ -64,12 +64,13 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires || typeOf(s) in {Bool_,Bitlist_,Bytes32_}
+                 || exists n:nat :: typeOf(s) == Uint_(n)
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
             case Bool(b) => chunkCountBool(b)
-            case Uint8(n) => chunkCountUint8(n)
+            case Uint(n) => chunkCountUint(s)
             case Bitlist(xl) => chunkCountBitlist(xl) 
             case Bytes32(bs) => chunkCountBytes32(bs)
     } 
@@ -85,10 +86,10 @@ include "../beacon/helpers/Crypto.dfy"
         1
     }
 
-    function method chunkCountUint8(n: uint8): nat
+    function method chunkCountUint(n: Uint): nat
         // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountUint8(n) == 1
-        ensures |pack(Uint8(n))| == chunkCountUint8(n)
+        ensures chunkCountUint(n) ==  1
+        ensures |pack(n)| == chunkCountUint(n)
     {
         1
     }
@@ -137,7 +138,7 @@ include "../beacon/helpers/Crypto.dfy"
         ensures chunkCountBytes32(bs) == ceil(|bs|, BYTES_PER_CHUNK)
         //ensures pack
     {
-        var s := default(Uint8_);
+        var s := default(Uint_(1));
         (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
     }
 
@@ -262,8 +263,8 @@ include "../beacon/helpers/Crypto.dfy"
      // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
 
     //  function pack(s: seq<Serialisable>) : seq<chunk>
-    //     requires forall i :: 0 <= i < |s| ==> typeOf(s[i]) in {Uint8_, Bool_}
-    //     requires forall i :: 1 <= i < |s| ==> typeOf(s[i]) in {Uint8_}
+    //     requires forall i :: 0 <= i < |s| ==> typeOf(s[i]) in {Uint_, Bool_}
+    //     requires forall i :: 1 <= i < |s| ==> typeOf(s[i]) in {Uint_}
     //     requires forall i,j :: 0 <= i < j < |s| ==> typeOf(s[i]) == typeOf(s[j])
     //     // no upper bound on length of any individual serialised element???
     //     ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
@@ -274,11 +275,12 @@ include "../beacon/helpers/Crypto.dfy"
     //     else toChunks(serialiseObjects(s))
     // }
     function method pack(s: Serialisable): seq<chunk>
-        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
+        requires || typeOf(s) in {Bool_,Bytes32_}
+                 || exists n:nat :: typeOf(s) == Uint_(n)
     {
         match s
             case Bool(b) => packBool(b)
-            case Uint8(n) => packUint8(n)
+            case Uint(n) => packUint(s)
             case Bytes32(bs) => packBytes32(bs)
     } 
 
@@ -291,10 +293,10 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Bool(b)))
     }
 
-    function method packUint8(n: uint8): seq<chunk>
-        ensures |packUint8(n)| == 1
+    function method packUint(n: Uint): seq<chunk>
+        ensures |packUint(n)| == 1
     {
-        toChunks(serialise(Uint8(n)))
+        toChunks(serialise(n))
     }
 
     function method packBytes32(bs: Seq32Byte): seq<chunk>
@@ -566,7 +568,7 @@ include "../beacon/helpers/Crypto.dfy"
         match s 
             case Bool(_) => merkleise(pack(s), -1)
 
-            case Uint8(_) => merkleise(pack(s), -1)
+            case Uint(_) => merkleise(pack(s), -1)
 
             case Bitlist(xl) => bitlistLimit(s);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  

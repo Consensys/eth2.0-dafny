@@ -43,12 +43,14 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires typeOf(s) in {Uint8_, Bool_}
-        ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
+        requires || typeOf(s) == Bool_
+                 || exists n:nat :: typeOf(s) == Uint_(n)
+        ensures 1 <= sizeOf(s) <= 32
+        ensures sizeOf(s) == |serialise(s)|
     {
         match s
             case Bool(_) => 1
-            case Uint8(_) => 1  
+            case Uint(n) => n.byteLength
     }
 
     /** default.
@@ -58,12 +60,13 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires t in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires || t in {Bool_,Bitlist_,Bytes32_}
+             || exists n:nat :: t == Uint_(n)
     {
             match t 
                 case Bool_ => Bool(false)
         
-                case Uint8_ => Uint8(0)
+                case Uint_(_) => Uint(Uint256WithByteLength(0,1))
 
                 case Bitlist_ => Bitlist([])
 
@@ -76,12 +79,13 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires || typeOf(s) in {Bool_,Bitlist_,Bytes32_}
+             || exists n:nat :: typeOf(s) == Uint_(n)
     {
         match s
             case Bool(b) => boolToBytes(b)
 
-            case Uint8(n) => uint8ToBytes(n)
+            case Uint(n) => uintToBytes(s)
 
             case Bitlist(xl) => fromBitlistToBytes(xl)
 
@@ -99,7 +103,8 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires s in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires || s in {Bool_,Bitlist_,Bytes32_}
+             || exists n:nat :: s == Uint_(n)
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -107,10 +112,10 @@ module SSZ {
                             else 
                                 Failure
                             
-            case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(byteToUint8(xs[0])))
-                             else 
-                                Failure
+            case Uint_(byteLength) =>   if 1 <= |xs| == byteLength <= 32 then
+                                            Success(byteToUint(xs))
+                                        else 
+                                            Failure
                                 
             case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
                                 Success(Bitlist(fromBytesToBitList(xs)))
@@ -128,7 +133,8 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires || typeOf(s) in {Bool_,Bitlist_,Bytes32_}
+             || exists n:nat :: typeOf(s) == Uint_(n)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {   //  Thanks Dafny.
     }
@@ -137,7 +143,8 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires || typeOf(s) in {Bool_,Bitlist_,Bytes32_}
+                || exists n:nat :: typeOf(s) == Uint_(n)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
@@ -156,7 +163,7 @@ module SSZ {
 
                 case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(_) => //  Thanks Dafny
+                case Uint(_) => lemmaBytesToUintIsTheInverseOfUintToBytes(s);//  Thanks Dafny
 
                 case Bytes32(_) => // Thanks Dafny
             
@@ -166,7 +173,8 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires typeOf(s1) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires || typeOf(s1) in {Bool_,Bitlist_,Bytes32_}
+                 || exists n:nat :: typeOf(s1) == Uint_(n)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {

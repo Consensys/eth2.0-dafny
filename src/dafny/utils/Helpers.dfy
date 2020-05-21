@@ -332,5 +332,14 @@ module Helpers {
         ensures flatten(s)[flattenLength(s[..i]) + j] == s[i][j]
     {
         flattenOneToOneChunk(s,i,flattenLength(s[..i]));
+    }    
+
+    /** 
+     * Predicate to be used in quantifier expressions that need to be triggered
+     * on equality check
+     */
+    predicate Equal<T(==)>(a:T,b:T)
+    {
+        a == b
     }        
 }

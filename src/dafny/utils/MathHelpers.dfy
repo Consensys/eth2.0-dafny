@@ -18,7 +18,7 @@
 module MathHelpers {
 
     /** Define 2^n. */
-    function power2(n : nat): nat 
+    function method power2(n : nat): nat 
         ensures power2(n) >= 1
         ensures n >= 1 ==> power2(n) >= 2 
 
@@ -26,6 +26,11 @@ module MathHelpers {
     {
         if n == 0 then 1 else 2 * power2(n - 1)
     }
+
+    lemma lemmaPower2IsMonotnoic(e1:nat,e2:nat)
+    requires e1 <= e2
+    ensures power2(e1) <= power2(e2)
+    { }
 
     /** Get the next power of two.
      *

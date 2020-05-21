@@ -13,6 +13,7 @@
  */
 
 include "NativeTypes.dfy"
+include "NonNativeTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
 
@@ -24,6 +25,7 @@ include "../utils/MathHelpers.dfy"
 module Eth2Types {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Helpers
     import opened MathHelpers
 
@@ -41,6 +43,16 @@ module Eth2Types {
     type Seq32Byte = x:seq<byte> | |x| == 32 witness timeSeq(0 as byte, 32)
     // SEQ_EMPTY_32_BYTES
 
+    datatype Uint256WithByteLength = Uint256WithByteLength(n:uint256,byteLength:nat)
+
+    type CorrectUint256WithByteLength = u:Uint256WithByteLength |   && u.n as nat < power2(u.byteLength * 8)
+                                                                    && 1 <= u.byteLength <= 32
+                                                                    witness Uint256WithByteLength(0,1)
+
+    // type Uint256WithByteLength = x:(uint256,nat) | && x.0 as nat < power2(x.1 * 8)
+    //                                            && 1 <= x.1 <= 32 
+    //                                            witness (0,1)
+
     /** Create type synonym for a chunk */
     type chunk = Seq32Byte
 
@@ -49,11 +61,102 @@ module Eth2Types {
 
     /** The serialisable objects. */
     datatype Serialisable = 
-            Uint8(n: uint8)
+            Uint(n: CorrectUint256WithByteLength)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>)
         |   Bytes32(bs: Seq32Byte)
         |   Container(fl: seq<Serialisable>)
+
+    type Uint = s:Serialisable |    s.Uint?
+                                    witness Uint(Uint256WithByteLength(0,1))
+    
+
+    // The assert is required to for Dafny to verify that the provided witness
+    // respects the constraint imposed by the existential quantifier
+    type Uint8 = s:Uint |   assert  Equal<uint256>(0,0);
+                            && exists x:uint8 :: Equal<uint256>(s.n.n, x as uint256)
+                            && s.n.byteLength == 1
+                            witness Uint(Uint256WithByteLength(0,1))
+
+    type Uint16 = s:Uint |  assert  Equal<uint256>(0,0);
+                            && exists x:uint16 :: Equal<uint256>(s.n.n, x as uint256)
+                            && s.n.byteLength == 2
+                            witness Uint(Uint256WithByteLength(0,2))   
+
+    type Uint32 = s:Uint |  assert  Equal<uint256>(0,0);
+                            && exists x:uint32 :: Equal<uint256>(s.n.n, x as uint256)
+                            && s.n.byteLength == 4
+                            witness Uint(Uint256WithByteLength(0,4))
+ 
+
+    type Uint64 = s:Uint |  assert  Equal<uint256>(0,0);
+                            // castUin64ToUint256 is probaly only required
+                            // becaue uint256 is currently defined using power2
+                            && exists x:uint64 :: Equal<uint256>(s.n.n, castUin64ToUint256(x))
+                            && s.n.byteLength == 8
+                            witness Uint(Uint256WithByteLength(castUin64ToUint256(0),8))
+
+    type Uint128 = s:Uint | assert  Equal<uint256>(0,0);
+                            // castUi1284ToUint256 is probaly only required
+                            // becaue uint256 is currently defined using power2
+                            && exists x:uint128 :: Equal<uint256>(s.n.n, castUin128ToUint256(x))
+                            && s.n.byteLength == 16
+                            witness Uint(Uint256WithByteLength(castUin128ToUint256(0),16))   
+
+    type Uint256 = s:Uint |  assert  Equal<uint256>(0,0);
+                            && exists x:uint256 :: Equal<uint256>(s.n.n, x as uint256)
+                            && s.n.byteLength == 32
+                            witness Uint(Uint256WithByteLength(0,32))                                                                                                           
+
+    // Strangely, if the prefix "make" is dropped by the following functions,
+    // then inside this module Dafny is still able to correctly associate when,
+    // for example, Uint8 is used as a type or as function, however outside this
+    // module Dafny appears to consider Uint8 only a type and not a function.
+    function method makeUint8(a:uint8): Uint8
+    ensures makeUint8(a).n.n == a as uint256;
+    {
+        assert Equal<uint256>(a as uint256, a as uint256);
+        Uint(Uint256WithByteLength(a as uint256,1))
+    }
+
+    function method makeUint16(a:uint16): Uint16
+    ensures makeUint16(a).n.n == a as uint256;
+    {
+        assert Equal<uint256>(a as uint256, a as uint256);
+        assert a as nat < power2(16);
+        Uint(Uint256WithByteLength(a as uint256,2))
+    }    
+
+    function method makeUint32(a:uint32): Uint32
+    ensures makeUint32(a).n.n == a as uint256;
+    {
+        assert Equal<uint256>(a as uint256, a as uint256);
+        assert a as nat < power2(32);
+        Uint(Uint256WithByteLength(a as uint256,4))
+    }
+
+    function method makeUint64(a:uint64): Uint64
+    ensures makeUint64(a).n.n == castUin64ToUint256(a);
+    {
+        assert Equal<uint256>(castUin64ToUint256(a),castUin64ToUint256(a));
+        UpperBoundForUint64(a);
+        Uint(Uint256WithByteLength(a as uint256,8))
+    }  
+
+    function method makeUint128(a:uint128): Uint128
+    ensures makeUint128(a).n.n == castUin128ToUint256(a);
+    {
+        assert Equal<uint256>(castUin128ToUint256(a),castUin128ToUint256(a));
+        UpperBoundForUint128(a);
+        Uint(Uint256WithByteLength(a as uint256,16))
+    } 
+
+    function method makeUint256(a:uint256): Uint256
+    ensures makeUint256(a).n.n == a;
+    {
+        assert Equal<uint256>(a as uint256, a as uint256);
+        Uint(Uint256WithByteLength(a,32))
+    }  
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
@@ -72,7 +175,9 @@ module Eth2Types {
      *  and also to prove some lemmas.
      */
     datatype Tipe =
-            Uint8_
+            // The Tipe Uint_ requires the byteLength parameter as Uint_ of
+            // different lenght are different types
+            Uint_(byteLength:nat)
         |   Bool_
         |   Bitlist_
         |   Bytes32_
@@ -88,7 +193,7 @@ module Eth2Types {
             match s 
                 case Bool(_) => Bool_
         
-                case Uint8(_) => Uint8_
+                case Uint(n) => Uint_(n.byteLength)
 
                 case Bitlist(_) => Bitlist_
 
