@@ -141,15 +141,12 @@ module StateTransition {
      *  Compute the state obtained after adding a block.
      */
     method state_transition(s: BeaconState, b: BeaconBlock, ghost h: History) returns (s' : BeaconState )
-        requires isConsistent(s, h)
         requires s.slot <= b.slot
         requires b.parent_root == s.latest_block_header.parent_root
-        ensures isConsistent(s',h)
     {
-        //  Process slots
+        //  finalise slots before b.slot
         var s1 := process_slots(s, b.slot);
 
-        assert(b.parent_root == s1.latest_block_header.parent_root);
         //  Process block
         s' := s1;
         // process_block(s1, b);
