@@ -43,11 +43,16 @@ module StateTransition {
     type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness EMPTY_HIST_ROOTS
 
+    /**
+     *  Compute Root/Hash/Bytes32 for different types.
+     *  
+     *  @todo   Use the hash_tree_root from Merkle.
+     */
     function method hash_tree_root(s: BeaconState) : Bytes32 
     function method hash_tree_root_block(s: BeaconBlock) : Bytes32 
     function method hash_tree_root_block_header(s: BeaconBlockHeader) : Bytes32 
 
-    /** From config.k.
+    /** 
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
      * The beacon chain’s state (BeaconState) is the core object around 
      * which the specification is built. The BeaconState encapsulates 
@@ -113,7 +118,14 @@ module StateTransition {
     )
 
 
+    /**
+     *  The default block header.
+     */
     const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0, EMPTY_BYTES32, EMPTY_BYTES32)
+
+    /**
+     *  Initial beacon state.
+     */
     const initState := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS)
 
     /**
@@ -182,15 +194,19 @@ module StateTransition {
             //  process_slot 
             s':= process_slot(s');
             //  s'.slot is now processed: history updates and block header resolved
+            //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
         }
     }
 
     /** 
-     *  Finalise processing of a slot.
+     *  Cache data for a slot.
+     *
+     *  This function also finalises the block header of the last block
+     *  so that it records the hash of the state `s`. 
      *
      *  @param  s   A state.
-     *  @returns    A new state where `s` has been added to the history and
+     *  @returns    A new state where `s` has been added/cached to the history and
      *              the block header tracks the hash of the most recent received
      *              block.
      */
