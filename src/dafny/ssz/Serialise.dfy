@@ -50,7 +50,7 @@ module SSZ {
     {
         match s
             case Bool(_) => 1
-            case Uint(n) => n.byteLength
+            case Uint(n) => n.1
     }
 
     /** default.
@@ -66,7 +66,7 @@ module SSZ {
             match t 
                 case Bool_ => Bool(false)
         
-                case Uint_(_) => Uint(Uint256WithByteLength(0,1))
+                case Uint_(_) => Uint((0,1))
 
                 case Bitlist_ => Bitlist([])
 

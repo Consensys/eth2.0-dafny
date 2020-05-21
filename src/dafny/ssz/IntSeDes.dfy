@@ -34,16 +34,16 @@ module IntSeDes {
     //  Uintk serialisation and deserielisation.
 
     function method uintToBytes(n: Uint) : seq<byte> 
-    ensures |uintToBytes(n)| == n.n.byteLength
+    ensures |uintToBytes(n)| == n.n.1
     {
-        int_to_bytes(n.n.n as nat,n.n.byteLength)
+        int_to_bytes(n.n.0 as nat,n.n.1)
     }
 
     function method byteToUint(bs: bytes) :  Uint
     requires 1 <= |bs| <= 32
     {
         lemmaPower2IsMonotnoic(|bs|*8,256);
-        Uint(Uint256WithByteLength(bytes_to_int(bs) as uint256,|bs|))
+        Uint((bytes_to_int(bs) as uint256,|bs|))
     }    
     
     /**
@@ -151,7 +151,7 @@ module IntSeDes {
     lemma lemmaBytesToUintIsTheInverseOfUintToBytes(n:Uint)
     ensures byteToUint(uintToBytes(n)) == n
     {
-        lemmaBytesToIntIsTheInverseOfIntToBytes(n.n.n as nat,n.n.byteLength);
+        lemmaBytesToIntIsTheInverseOfIntToBytes(n.n.0 as nat,n.n.1);
     }
 
     lemma lemmaUintToBytesIsTheInverseOfBytesToUint(bs:bytes)
