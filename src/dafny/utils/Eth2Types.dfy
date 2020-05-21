@@ -33,18 +33,6 @@ module Eth2Types {
     type byte = uint8
     /** The type `bytes` corresponds to a sequence of 'Bytes's */
     type bytes = seq<byte>
- 
-    /** The type `uint128` correspond to the restriction of the `int` type to
-     * positive numbers that can be expressed in binary form with no more than 128
-     * bits 
-     */
-    newtype uint128 = i:int | 0 <= i < power2(128)
-
-    /** The type `uint256` correspond to the restriction of the `int` type to
-    * positive numbers that can be expressed in binary form with no more than 256
-    * bits 
-    */
-    newtype uint256 = i:int | 0 <= i < power2(256)
     
     /** The default zeroed Bytes32.  */
     // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
