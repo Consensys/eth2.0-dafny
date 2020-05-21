@@ -40,8 +40,8 @@ module BeaconChain {
         slot: Slot,
         // proposer_index: ValidatorIndex,
         parent_root: Root,
-        state_root: Root,
-        body_root: Root
+        state_root: Root
+        // body_root: Root
     )
 
     /**
@@ -60,7 +60,7 @@ module BeaconChain {
     datatype BeaconBlockBody = BeaconBlockBody(
         randao_reveal: BLSSignature,
         eth1_data: Eth1Data,
-        graffiti: uint32,                          //  In K: Bytes32
+        // graffiti: uint32,                          //  In K: Bytes32
         // proposer_slashings: seq<ProposerSlashing>,
         // attester_slashings: seq<AttesterSlashing>,
         // attestations: seq<Attestation>,
@@ -98,8 +98,8 @@ module BeaconChain {
     datatype BeaconBlock = BeaconBlock(
         slot: Slot,
         // proposer_index: ValidatorIndex,
-        parent_root: Root
-        // state_root: Root,
+        parent_root: Root,
+        state_root: Root
         // body: BeaconBlockBody
     )  
 
