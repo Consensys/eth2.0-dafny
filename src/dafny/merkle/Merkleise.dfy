@@ -64,13 +64,17 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires || typeOf(s) in {Bool_,Bitlist_,Bytes32_}
-                 || exists n:nat :: typeOf(s) == Uint_(n)
+        requires typeOf(s) in {Bool_, Uint8_, Uint16_, Uint32_, Uint64_, Uint128_, Uint256_, Bitlist_,Bytes32_}
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
             case Bool(b) => chunkCountBool(b)
-            case Uint(n) => chunkCountUint(s)
+            case Uint8(_) => chunkCountUint(s)
+            case Uint16(_) => chunkCountUint(s)
+            case Uint32(_) => chunkCountUint(s)
+            case Uint64(_) => chunkCountUint(s)
+            case Uint128(_) => chunkCountUint(s)
+            case Uint256(_) => chunkCountUint(s)
             case Bitlist(xl) => chunkCountBitlist(xl) 
             case Bytes32(bs) => chunkCountBytes32(bs)
     } 
@@ -275,12 +279,16 @@ include "../beacon/helpers/Crypto.dfy"
     //     else toChunks(serialiseObjects(s))
     // }
     function method pack(s: Serialisable): seq<chunk>
-        requires || typeOf(s) in {Bool_,Bytes32_}
-                 || exists n:nat :: typeOf(s) == Uint_(n)
+        requires typeOf(s) in {Bool_,Bytes32_, Uint8_, Uint16_, Uint32_, Uint64_, Uint128_, Uint256_}
     {
         match s
             case Bool(b) => packBool(b)
-            case Uint(n) => packUint(s)
+            case Uint8(_) => packUint(s)
+            case Uint16(_) => packUint(s)
+            case Uint32(_) => packUint(s)
+            case Uint64(_) => packUint(s)
+            case Uint128(_) => packUint(s)
+            case Uint256(_) => packUint(s)
             case Bytes32(bs) => packBytes32(bs)
     } 
 
@@ -293,10 +301,10 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Bool(b)))
     }
 
-    function method packUint(n: Uint): seq<chunk>
-        ensures |packUint(n)| == 1
+    function method packUint(s: Uint): seq<chunk>
+        ensures |packUint(s)| == 1
     {
-        toChunks(serialise(n))
+        toChunks(serialise(s))
     }
 
     function method packBytes32(bs: Seq32Byte): seq<chunk>
@@ -569,6 +577,16 @@ include "../beacon/helpers/Crypto.dfy"
             case Bool(_) => merkleise(pack(s), -1)
 
             case Uint(_) => merkleise(pack(s), -1)
+
+            case Uint16(_) => merkleise(pack(s), -1)
+
+            case Uint32(_) => merkleise(pack(s), -1)
+
+            case Uint64(_) => merkleise(pack(s), -1)
+
+            case Uint128(_) => merkleise(pack(s), -1)
+
+            case Uint256(_) => merkleise(pack(s), -1)          
 
             case Bitlist(xl) => bitlistLimit(s);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  

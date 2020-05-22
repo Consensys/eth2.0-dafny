@@ -32,20 +32,7 @@ module IntSeDes {
     import opened Math__power_s
 
     //  Uintk serialisation and deserielisation.
-
-    function method uintToBytes(n: Uint) : seq<byte> 
-    ensures |uintToBytes(n)| == n.n.byteLength
-    {
-        int_to_bytes(n.n.n as nat,n.n.byteLength)
-    }
-
-    function method byteToUint(bs: bytes) :  Uint
-    requires 1 <= |bs| <= 32
-    {
-        lemmaPower2IsMonotnoic(|bs|*8,256);
-        Uint(Uint256WithByteLength(bytes_to_int(bs) as uint256,|bs|))
-    }    
-    
+      
     /**
      * Computes the little endian serialisation of a `uint64` value
      *
@@ -139,6 +126,12 @@ module IntSeDes {
                             (s[0] as nat)/power2(8) + bytes_to_int(s[1..]);
                             bytes_to_int(s[1..]);
                         }
+
+                        calc {
+                            (s[0] as nat + bytes_to_int(s[1..])*power2(8)) % power2(8);
+                            s[0] as nat % power2(8);
+                            s[0] as nat;
+                        }
                     }
                 [s[0]] + int_to_bytes(bytes_to_int(s[1..]),(|s|-1));
                 // via induction
@@ -148,16 +141,4 @@ module IntSeDes {
         }
     }     
 
-    lemma lemmaBytesToUintIsTheInverseOfUintToBytes(n:Uint)
-    ensures byteToUint(uintToBytes(n)) == n
-    {
-        lemmaBytesToIntIsTheInverseOfIntToBytes(n.n.n as nat,n.n.byteLength);
-    }
-
-    lemma lemmaUintToBytesIsTheInverseOfBytesToUint(bs:bytes)
-    requires 1 <= |bs| <= 32
-    ensures uintToBytes(byteToUint(bs)) == bs
-    {
-        lemmaIntToBytesIsTheInverseOfBytesToInt(bs);
-    }
 }

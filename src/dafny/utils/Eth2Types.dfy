@@ -61,102 +61,26 @@ module Eth2Types {
 
     /** The serialisable objects. */
     datatype Serialisable = 
-            Uint(n: CorrectUint256WithByteLength)
+            Uint8(n8: uint8)
+        |   Uint16(n16: uint16)
+        |   Uint32(n32: uint32)
+        |   Uint64(n64: uint64)
+        |   Uint128(n128: uint128)
+        |   Uint256(n256 :uint256)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>)
         |   Bytes32(bs: Seq32Byte)
         |   Container(fl: seq<Serialisable>)
 
-    type Uint = s:Serialisable |    s.Uint?
-                                    witness Uint(Uint256WithByteLength(0,1))
+    type Uint = s:Serialisable |    || s.Uint8?
+                                    || s.Uint16?
+                                    || s.Uint32?
+                                    || s.Uint64?
+                                    || s.Uint128?
+                                    || s.Uint256?
+                                    witness Uint8(0)
     
 
-    // The assert is required to for Dafny to verify that the provided witness
-    // respects the constraint imposed by the existential quantifier
-    type Uint8 = s:Uint |   assert  Equal<uint256>(0,0);
-                            && exists x:uint8 :: Equal<uint256>(s.n.n, x as uint256)
-                            && s.n.byteLength == 1
-                            witness Uint(Uint256WithByteLength(0,1))
-
-    type Uint16 = s:Uint |  assert  Equal<uint256>(0,0);
-                            && exists x:uint16 :: Equal<uint256>(s.n.n, x as uint256)
-                            && s.n.byteLength == 2
-                            witness Uint(Uint256WithByteLength(0,2))   
-
-    type Uint32 = s:Uint |  assert  Equal<uint256>(0,0);
-                            && exists x:uint32 :: Equal<uint256>(s.n.n, x as uint256)
-                            && s.n.byteLength == 4
-                            witness Uint(Uint256WithByteLength(0,4))
- 
-
-    type Uint64 = s:Uint |  assert  Equal<uint256>(0,0);
-                            // castUin64ToUint256 is probaly only required
-                            // becaue uint256 is currently defined using power2
-                            && exists x:uint64 :: Equal<uint256>(s.n.n, castUin64ToUint256(x))
-                            && s.n.byteLength == 8
-                            witness Uint(Uint256WithByteLength(castUin64ToUint256(0),8))
-
-    type Uint128 = s:Uint | assert  Equal<uint256>(0,0);
-                            // castUi1284ToUint256 is probaly only required
-                            // becaue uint256 is currently defined using power2
-                            && exists x:uint128 :: Equal<uint256>(s.n.n, castUin128ToUint256(x))
-                            && s.n.byteLength == 16
-                            witness Uint(Uint256WithByteLength(castUin128ToUint256(0),16))   
-
-    type Uint256 = s:Uint |  assert  Equal<uint256>(0,0);
-                            && exists x:uint256 :: Equal<uint256>(s.n.n, x as uint256)
-                            && s.n.byteLength == 32
-                            witness Uint(Uint256WithByteLength(0,32))                                                                                                           
-
-    // Strangely, if the prefix "make" is dropped by the following functions,
-    // then inside this module Dafny is still able to correctly associate when,
-    // for example, Uint8 is used as a type or as function, however outside this
-    // module Dafny appears to consider Uint8 only a type and not a function.
-    function method makeUint8(a:uint8): Uint8
-    ensures makeUint8(a).n.n == a as uint256;
-    {
-        assert Equal<uint256>(a as uint256, a as uint256);
-        Uint(Uint256WithByteLength(a as uint256,1))
-    }
-
-    function method makeUint16(a:uint16): Uint16
-    ensures makeUint16(a).n.n == a as uint256;
-    {
-        assert Equal<uint256>(a as uint256, a as uint256);
-        assert a as nat < power2(16);
-        Uint(Uint256WithByteLength(a as uint256,2))
-    }    
-
-    function method makeUint32(a:uint32): Uint32
-    ensures makeUint32(a).n.n == a as uint256;
-    {
-        assert Equal<uint256>(a as uint256, a as uint256);
-        assert a as nat < power2(32);
-        Uint(Uint256WithByteLength(a as uint256,4))
-    }
-
-    function method makeUint64(a:uint64): Uint64
-    ensures makeUint64(a).n.n == castUin64ToUint256(a);
-    {
-        assert Equal<uint256>(castUin64ToUint256(a),castUin64ToUint256(a));
-        UpperBoundForUint64(a);
-        Uint(Uint256WithByteLength(a as uint256,8))
-    }  
-
-    function method makeUint128(a:uint128): Uint128
-    ensures makeUint128(a).n.n == castUin128ToUint256(a);
-    {
-        assert Equal<uint256>(castUin128ToUint256(a),castUin128ToUint256(a));
-        UpperBoundForUint128(a);
-        Uint(Uint256WithByteLength(a as uint256,16))
-    } 
-
-    function method makeUint256(a:uint256): Uint256
-    ensures makeUint256(a).n.n == a;
-    {
-        assert Equal<uint256>(a as uint256, a as uint256);
-        Uint(Uint256WithByteLength(a,32))
-    }  
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
@@ -175,9 +99,12 @@ module Eth2Types {
      *  and also to prove some lemmas.
      */
     datatype Tipe =
-            // The Tipe Uint_ requires the byteLength parameter as Uint_ of
-            // different lenght are different types
-            Uint_(byteLength:nat)
+            Uint8_
+        |   Uint16_
+        |   Uint32_
+        |   Uint64_
+        |   Uint128_
+        |   Uint256_
         |   Bool_
         |   Bitlist_
         |   Bytes32_
@@ -194,6 +121,16 @@ module Eth2Types {
                 case Bool(_) => Bool_
         
                 case Uint(n) => Uint_(n.byteLength)
+
+                case Uint16(_) => Uint16_
+
+                case Uint32(_) => Uint32_
+
+                case Uint64(_) => Uint64_
+
+                case Uint128(_) => Uint128_
+
+                case Uint256(_) => Uint256_
 
                 case Bitlist(_) => Bitlist_
 
