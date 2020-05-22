@@ -117,7 +117,6 @@ module StateTransition {
         chain: map<BeaconBlock, BeaconBlockHeader>
     )
 
-
     /**
      *  The default block header.
      */
@@ -147,7 +146,6 @@ module StateTransition {
             EMPTY_BYTES32
         )
     }
-
     predicate isGenesisBlockHeader(b : BeaconBlockHeader) 
     {
         b == BeaconBlockHeader(
