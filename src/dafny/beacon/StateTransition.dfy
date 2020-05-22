@@ -43,8 +43,6 @@ module StateTransition {
     type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness EMPTY_HIST_ROOTS
 
-    
-
     /**
      *  Compute Root/Hash/Bytes32 for different types.
      *  
