@@ -27,7 +27,12 @@ module Constants {
   const TWO_UP_16 := TWO_UP_5 * TWO_UP_11;
   const TWO_UP_24 := TWO_UP_12 * TWO_UP_12;
   const TWO_UP_25 := 2 * TWO_UP_24;
+  const TWO_UP_32 := TWO_UP_16 * TWO_UP_16;
   const TWO_UP_40 := TWO_UP_10 * TWO_UP_10 * TWO_UP_10 * TWO_UP_10;
+  const TWO_UP_64 := TWO_UP_32 * TWO_UP_32;
+  const TWO_UP_128 := TWO_UP_64 * TWO_UP_64;
+  
+  const TWO_UP_256 := TWO_UP_128 * TWO_UP_128;
 
   //  Powers of 10
   const TEN_UP_2 := 10 * 10;
