@@ -1,8 +1,3 @@
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using System.IO;
-
 /*
  * Copyright 2020 ConsenSys AG.
  *
@@ -17,7 +12,11 @@ using System.IO;
  * under the License.
  */
  
+using System;
 using System.Text;
+using System.Numerics;
+using System.Diagnostics;
+using System.IO;
 
 namespace thirdpartymerkleisation
 {
@@ -53,5 +52,42 @@ namespace thirdpartymerkleisation
                 // Console.Write("\n            " + Encoding.Default.GetString(retBytes));
                 return Dafny.Sequence<byte>.FromElements(retBytes);
         }
+
+        /** Invoke PySSZ through an helper Python script to calculate the Merkle
+         *  hash root of a Vector of Bytes
+         */
+        public static Dafny.Sequence<byte>  BytesRoot(Dafny.Sequence<byte> bs)
+        {               
+                ProcessStartInfo start = new ProcessStartInfo();
+
+                // Set command and command line
+                start.FileName = "python3";
+                start.Arguments="PySszBytesMerkleisation.py";
+
+                // Set redirections for stdin and stdout
+                start.UseShellExecute = false;
+                start.RedirectStandardOutput = true;
+                start.RedirectStandardInput = true;
+
+                // Start the process 
+                Process cmdProcess = new Process();
+                cmdProcess.StartInfo = start;
+                cmdProcess.Start();
+
+                // Write to the process stdin in binary format and then closes
+                // the stream
+                var bw = new BinaryWriter(cmdProcess.StandardInput.BaseStream);
+                bw.Write(bs.Elements); 
+                cmdProcess.StandardInput.Close();   
+
+                // Read from the process stdout in binary format and store the
+                // read data in a byte array
+                var br = new BinaryReader(cmdProcess.StandardOutput.BaseStream);
+                byte[] retBytes = br.ReadBytes(32);
+
+                // Convert the C# byte array containing the data read from the
+                // process stdout to a Dafny sequence of byte
+                return Dafny.Sequence<byte>.FromElements(retBytes);
+        }        
     }
 }

@@ -49,7 +49,25 @@ module StringConversions
      * Converts a byte to its character based hex representation
      * 
      * @param b  byte to convert
-     * @return String representing the hex value of `b1
+     * @returns   String representing the hex value of `b1
+     * 
+     * @example ByteToHexString(0)  == "00"
+     *          ByteToHexString(16) == "10"
+     */
+    function method ByteToHexStringCompressed(b:byte): string
+    ensures  |ByteToHexStringCompressed(b)| == 2
+    {
+        [nibbleToString(((b as bv8) >> 4) as bv4)]  + 
+        [nibbleToString(((b as bv8) & 0x0F) as bv4)]
+    }    
+
+    /**
+     * Converts a byte to its character based hex representation with "0x" 
+     * prepended to it
+     * 
+     * @param b  byte to convert
+     * @return  String representing the hex value of `b1 with "0x" prepended 
+     *          to it
      * 
      * @example ByteToHexString(0)  == "0x00"
      *          ByteToHexString(16) == "0x10"
@@ -59,17 +77,34 @@ module StringConversions
     ensures  ByteToHexString(b)[0..2] == "0x"
     {
         "0x" + 
-        [nibbleToString(((b as bv8) >> 4) as bv4)]  + 
-        [nibbleToString(((b as bv8) & 0x0F) as bv4)]
+        ByteToHexStringCompressed(b)
     }
 
     /**
-     * Converts a sequence of Bytes to a sequence of hex strings representation
-     * of the sequence of Bytes
+     * Converts a sequence of Bytes to a sequence of hex strings representing
+     * the sequence of Bytes
      *
      * @param bs  Sequence of Bytes
      * @returns Sequence of strings corresponding to the hex representation of
      * the sequence of Bytes
+     */
+    function method ByteSeqToHexSeqCompressed(bs:seq<byte>): seq<string>
+    ensures |ByteSeqToHexSeq(bs)| == |bs|
+    ensures forall i | 0 <= i < |bs| :: ByteSeqToHexSeq(bs)[i] == ByteToHexString(bs[i])
+    {
+        if(|bs|==0) then
+            []
+        else
+            [ByteToHexStringCompressed(bs[0])] + ByteSeqToHexSeqCompressed(bs[1..])
+    } 
+
+    /**
+     * Converts a sequence of Bytes to a sequence of "0x"-prefixed hex strings 
+     * representing the sequence of Bytes 
+     *
+     * @param bs  Sequence of Bytes
+     * @returns Sequence of "0x"-prefixed strings corresponding to the hex 
+     *          representation of the sequence of Bytes
      */
     function method ByteSeqToHexSeq(bs:seq<byte>): seq<string>
     ensures |ByteSeqToHexSeq(bs)| == |bs|
@@ -230,7 +265,22 @@ module StringConversions
            ""
         else
             itos(n/10) + [dtoc(n%10)]
-    }         
+    }
+
+    /** Join all items of a sequence of String into a String
+     *
+     * @param s The sequence of String
+     * @param sep The String that separate any two consecutive items
+     * @returns A String composed of all the items of `s` joined by `sep`
+     */
+    function method join(s: seq<string>, sep:string): string
+    {
+        if |s| == 0 then []
+        else s[0] + 
+        (if |s| > 1 then sep else "")
+        +
+        join(s[1..],sep)
+    }        
 
 }
 
