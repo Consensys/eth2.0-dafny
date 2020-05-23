@@ -138,6 +138,8 @@ module StateTransition {
         // forall i :: 0 < i < s.slot ==> h.chain()
     }
 
+    /**
+     */
     predicate isGenesisBlock(b : BeaconBlock) 
     {
         b == BeaconBlock(
@@ -146,8 +148,14 @@ module StateTransition {
             EMPTY_BYTES32
         )
     }
+
+    /**
+     *  Whether a block header is a genesis block header.
+     */
     predicate isGenesisBlockHeader(b : BeaconBlockHeader) 
     {
+        //  Genesis block header must be for slot 0 and have a default parent_root
+        //  and state root Bytes32()
         b == BeaconBlockHeader(
             0 as Slot,
             EMPTY_BYTES32,
@@ -173,7 +181,7 @@ module StateTransition {
         /**
         *  Compute the state obtained after adding a block.
         */
-        method state_transition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
+        method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
             // requires isReachableFromGenesis(s.latest_block_header)
             // requires !isGenesisBlock(b)
             requires s.slot <= b.slot
@@ -181,10 +189,10 @@ module StateTransition {
             modifies this
         {
             //  finalise slots before b.slot
-            var s1 := process_slots(s, b.slot);
+            var s1 := processSlots(s, b.slot);
 
             //  Process block
-            s' := process_block(s1, b);
+            s' := processBlock(s1, b);
 
             //  Add the block to the global Store
             store := store[hash_tree_root_block_header(b) := b];
@@ -211,7 +219,7 @@ module StateTransition {
         *  @returns        The state obtained after advancing the history to slot.
         *                 
         */
-    method process_slots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
+    method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
             requires s.slot <= slot
             ensures  s'.slot == slot 
             ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
@@ -227,7 +235,7 @@ module StateTransition {
                 //  s'.slot < slot. Complete processing of s'.slot 
                 //  The slot number s'.slot is incremented after as
                 //  process_slot 
-                s':= process_slot(s');
+                s':= processSlot(s');
                 //  s'.slot is now processed: history updates and block header resolved
                 //  The state's slot is processed and we can advance to the next slot.
                 s':= s'.(slot := s'.slot + 1) ;
@@ -245,9 +253,9 @@ module StateTransition {
         *              the block header tracks the hash of the most recent received
         *              block.
         */
-        function method process_slot(s: BeaconState) : BeaconState
-            ensures process_slot(s).slot == s.slot
-            ensures s.latest_block_header.parent_root == process_slot(s).latest_block_header.parent_root
+        function method processSlot(s: BeaconState) : BeaconState
+            ensures processSlot(s).slot == s.slot
+            ensures s.latest_block_header.parent_root == processSlot(s).latest_block_header.parent_root
         {
             //  Let definitions for readability.
 
@@ -280,19 +288,19 @@ module StateTransition {
         /**
         *  Verify that a block is valid.
         */
-        method process_block(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
+        method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
         {
             //  Start by creating a block header from the ther actual block.
-            s' := process_block_header(s, b);
+            s' := processBlockHeader(s, b);
         }
 
         /**
         *  Check whether a block is valid and prepare and initialise new state
         *  with a corresponding block header. 
         */
-        method process_block_header(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
+        method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
         {
