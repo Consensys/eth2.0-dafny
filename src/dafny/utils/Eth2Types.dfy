@@ -55,7 +55,8 @@ module Eth2Types {
     datatype Serialisable = 
             Uint8(n: uint8)
         |   Bool(b: bool)
-        |   Bitlist(xl:CorrectBitlist)
+        //|   Bitlist(xl:CorrectBitlist)
+        |   Bitlist(xl: seq<bool>)
         |   Bytes32(bs: Seq32Byte)
         |   Container(fl: seq<Serialisable>)
 
