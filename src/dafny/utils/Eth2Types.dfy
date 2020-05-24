@@ -78,7 +78,7 @@ module Eth2Types {
     datatype Tipe =
             Uint8_
         |   Bool_
-        |   Bitlist_(limit:nat)
+        |   Bitlist_
         |   Bytes32_
         |   Container_
 
@@ -94,7 +94,7 @@ module Eth2Types {
         
                 case Uint8(_) => Uint8_
 
-                case Bitlist(xl) => Bitlist_(xl.limit)
+                case Bitlist(_) => Bitlist_
 
                 case Bytes32(_) => Bytes32_
 
