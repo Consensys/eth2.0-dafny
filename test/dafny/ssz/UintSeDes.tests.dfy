@@ -31,35 +31,34 @@ module BitListSeDesTests {
      *  Dafny compiles the Main method if it finds one.
      */
     method Main() {
-
+        constAsPowersOfTwo();
         //  Serialise with Uintk
         var rb := [
             TestItem(
                 "Serialise uint16 0 is [0x00, 0x00]",
-                () => uint16ToBytes(0) == [0x00, 0x00]
+                () => uintSe(0, 2) == [0x00, 0x00]
             ),
             TestItem(
                 "Serialise uint16 1 is [0x01, 0x00]",
-                () => uint16ToBytes(1) == [0x01, 0x00]
+                () => uintSe(1, 2) == [0x01, 0x00]
             ),
             TestItem(
                 "Serialise uint16 256 is [0x00, 0x01]",
-                () => uint16ToBytes(256) == [0x00, 0x01]
+                () => 
+                    uintSe(256, 2) == [0x00, 0x01]
             ),
             TestItem(
                 "Serialise uint32 65536 is [0x00, 0x00, 0x01, 0x00]",
-                () => uint32ToBytes(65536) == [0x00, 0x00, 0x01, 0x00]
+                () => uintSe(65536, 4) == [0x00, 0x00, 0x01, 0x00]
             ),  
             TestItem(
                 "Serialise uint64 1,099,511,627,776 (2^40) is [0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00]",
                 () => 
-                    constAsPowersOfTwo();
-                    assert(1_099_511_627_776 < 0x10000000000000000);
-                    uint64ToBytes(1_099_511_627_776 as uint64) == [0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00]
+                    uintSe(1_099_511_627_776, 8) == [0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00]
             ),
             TestItem(
                 "Serialise uint8 0 is [0x00]",
-                () => uint8ToBytes(0) == [0x00]
+                () => uintSe(0, 1) == [0x00]
             )
         ];
 
@@ -74,11 +73,11 @@ module BitListSeDesTests {
         var r2 := [
             TestItem(
                 "Deserialise [0x01] into uint8 is 1",
-                () => byteToUint8([0x01]) == 1
+                () => uintDes([0x01]) == 1
             ),
             TestItem(
                 "Deserialise [0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00] into uint64 is 1_099_511_627_776",
-                () => bytesToUint64([0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00]) == 1_099_511_627_776
+                () => uintDes([0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00]) == 1_099_511_627_776
             )        
         ];
 
