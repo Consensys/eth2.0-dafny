@@ -103,17 +103,17 @@ module SSZ {
         match s
             case Bool(b) => boolToBytes(b)
 
-            case Uint8(n) => uint8ToBytes(n as uint8)
+            case Uint8(n) =>  uintSe(n as nat, 1)
 
-            case Uint16(n) => uint16ToBytes(n as uint16)
+            case Uint16(n) => uintSe(n as nat, 2)
 
-            case Uint32(n) => uint32ToBytes(n as uint32)
+            case Uint32(n) => uintSe(n as nat, 4)
 
-            case Uint64(n) => uint64ToBytes(n as uint64)
+            case Uint64(n) => uintSe(n as nat, 8)
 
-            case Uint128(n) => uint128ToBytes(n as uint128)
+            case Uint128(n) => uintSe(n as nat, 16)
 
-            case Uint256(n) => uint256ToBytes(n as uint256)
+            case Uint256(n) => uintSe(n as nat, 32)
 
             case Bitlist(xl) => fromBitlistToBytes(xl)
 
@@ -143,33 +143,34 @@ module SSZ {
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(byteToUint8(xs) as nat))
+                                Success(Uint8(uintDes(xs)))
                              else 
                                 Failure
 
             case Uint16_ => if |xs| == 2 then
-                                Success(Uint16(bytesToUint16(xs) as nat))
+                                Success(Uint16(uintDes(xs)))
                              else 
                                 Failure
             
             case Uint32_ => if |xs| == 4 then
-                                Success(Uint32(bytesToUint32(xs) as nat))
+                                Success(Uint32(uintDes(xs)))
                              else 
                                 Failure
 
             case Uint64_ => if |xs| == 8 then
-                                var r := bytesToUint64(xs) as nat;
-                                Success(Uint64(r))
+                                Success(Uint64(uintDes(xs)))
                              else 
                                 Failure
 
             case Uint128_ => if |xs| == 16 then
-                                Success(Uint128(bytesToUint128(xs) as nat))
+                                constAsPowersOfTwo();
+                                Success(Uint128(uintDes(xs)))
                              else 
                                 Failure
 
             case Uint256_ => if |xs| == 32 then
-                                Success(Uint256(bytesToUint256(xs) as nat))
+                                constAsPowersOfTwo();
+                                Success(Uint256(uintDes(xs)))
                              else 
                                 Failure
                                 
@@ -222,17 +223,17 @@ module SSZ {
 
                 case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(n) => uint8AsBytesInvolutive(n as uint8);
+                case Uint8(n) => involution(n as nat, 1);
 
-                case Uint16(n) => uint16AsBytesInvolutive(n as uint16);
+                case Uint16(n) => involution(n as nat, 2);
 
-                case Uint32(n) => uint32AsBytesInvolutive(n as uint32);
+                case Uint32(n) => involution(n as nat, 4);
 
-                case Uint64(n) => uint64AsBytesInvolutive(n as uint64);
+                case Uint64(n) => involution(n as nat, 8);
 
-                case Uint128(n) => uint128AsBytesInvolutive(n as uint128);
+                case Uint128(n) =>  involution(n as nat, 16);
 
-                case Uint256(n) => uint256AsBytesInvolutive(n as uint256);
+                case Uint256(n) =>  involution(n as nat, 32);
 
                 case Bytes32(_) => // Thanks Dafny
         }
