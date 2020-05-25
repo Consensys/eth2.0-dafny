@@ -101,6 +101,16 @@ module Eth2Types {
         
                 case Uint8(_) => Uint8_
 
+                case Uint16(_) => Uint16_
+
+                case Uint32(_) => Uint32_
+
+                case Uint64(_) => Uint64_
+
+                case Uint128(_) => Uint128_
+
+                case Uint256(_) => Uint256_
+
                 case Bitlist(_) => Bitlist_
 
                 case Bytes32(_) => Bytes32_
