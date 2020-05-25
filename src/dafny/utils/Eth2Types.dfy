@@ -83,11 +83,30 @@ module Eth2Types {
 
     // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
 
+    /** The type `Bytes4` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 4 `byte`s to it
+     */
+    type Bytes4 = s:Serialisable |  s.Bytes? && |s.bs| == 4
+                                    witness Bytes(timeSeq(0 as byte, 4))
+
     /** The type `Bytes32` corresponds to a Serialisable built using the
-     * `Bytes` constructor passing a sequence of 32 `byte` to it
+     * `Bytes` constructor passing a sequence of 32 `byte`s to it
      */
     type Bytes32 = s:Serialisable | s.Bytes? && |s.bs| == 32
                                     witness Bytes(timeSeq(0 as byte, 32))
+
+    /** The type `Bytes48` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 48 `byte`s to it
+     */
+    type Bytes48 = s:Serialisable | s.Bytes? && |s.bs| == 48
+                                    witness Bytes(timeSeq(0 as byte, 48))
+
+    /** The type `Bytes96` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 96 `byte`s to it
+     */
+    type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
+                                    witness Bytes(timeSeq(0 as byte, 96))
+
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
