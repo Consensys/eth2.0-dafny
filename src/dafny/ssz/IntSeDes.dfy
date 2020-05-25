@@ -13,6 +13,7 @@
  */
 
 include "../utils/NativeTypes.dfy"
+include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 
 /**
@@ -22,7 +23,10 @@ include "../utils/Eth2Types.dfy"
 module IntSeDes {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Eth2Types
+    import opened MathHelpers
+    import opened Helpers
 
     //  Uintk serialisation and deserielisation.
 
