@@ -13,6 +13,7 @@
  */
 
 include "NativeTypes.dfy"
+include "NonNativeTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
 
