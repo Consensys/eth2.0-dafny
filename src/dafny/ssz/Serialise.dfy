@@ -131,7 +131,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires s in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires s !in {Container_}
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -140,7 +140,32 @@ module SSZ {
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(byteToUint8(xs[0])))
+                                Success(Uint8(byteToUint8(xs) as nat))
+                             else 
+                                Failure
+
+            case Uint16_ => if |xs| == 2 then
+                                Success(Uint16(bytesToUint16(xs) as nat))
+                             else 
+                                Failure
+            
+            case Uint32_ => if |xs| == 4 then
+                                Success(Uint32(bytesToUint32(xs) as nat))
+                             else 
+                                Failure
+
+            case Uint64_ => if |xs| == 8 then
+                                Success(Uint64(bytesToUint64(xs) as nat))
+                             else 
+                                Failure
+
+            case Uint128_ => if |xs| == 16 then
+                                Success(Uint128(bytesToUint128(xs) as nat))
+                             else 
+                                Failure
+
+            case Uint256_ => if |xs| == 32 then
+                                Success(Uint256(bytesToUint256(xs) as nat))
                              else 
                                 Failure
                                 
