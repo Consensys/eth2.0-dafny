@@ -94,12 +94,26 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires uintWellTyped(s)
+    requires typeOf(s) !in {Container_}
     {
+        //  Equalities between upper bounds of uintk types and powers of two 
+        constAsPowersOfTwo();
+
         match s
             case Bool(b) => boolToBytes(b)
 
-            case Uint8(n) => uint8ToBytes(n)
+            case Uint8(n) => uint8ToBytes(n as uint8)
+
+            case Uint16(n) => uint16ToBytes(n as uint16)
+
+            case Uint32(n) => uint32ToBytes(n as uint32)
+
+            case Uint64(n) => uint64ToBytes(n as uint64)
+
+            case Uint128(n) => uint128ToBytes(n as uint128)
+
+            case Uint256(n) => uint256ToBytes(n as uint256)
 
             case Bitlist(xl) => fromBitlistToBytes(xl)
 
