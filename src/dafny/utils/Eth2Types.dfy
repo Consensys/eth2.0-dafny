@@ -54,7 +54,12 @@ module Eth2Types {
 
     /** The serialisable objects. */
     datatype Serialisable = 
-            Uint8(n: uint8)
+            Uint8(n: nat)
+        |   Uint16(n: nat)
+        |   Uint32(n: nat)
+        |   Uint64(n: nat)
+        |   Uint128(n: nat)
+        |   Uint256(n: nat)
         |   Bool(b: bool)
         //|   Bitlist(xl:CorrectBitlist)
         |   Bitlist(xl: seq<bool>)
@@ -116,6 +121,33 @@ module Eth2Types {
                 case Bytes32(_) => Bytes32_
 
                 case Container(_) => Container_
+    }
+
+    /**
+     *  Check that value used for a given uint_k is compatile with k.
+     */
+    predicate uintWellTyped(s: Serialisable) 
+    {
+    match s 
+        case Bool(_) => true
+
+        case Uint8(n) => n < 0x100
+
+        case Uint16(n) => n < 0x10000
+
+        case Uint32(n) => n < 0x100000000
+
+        case Uint64(n) => n < 0x10000000000000000
+
+        case Uint128(n) => n < 0x100000000000000000000000000000000
+
+        case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
+
+        case Bitlist(_) => true
+
+        case Bytes32(_) => true
+
+        case Container(_) => true
     }
 
     /**
