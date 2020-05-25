@@ -71,7 +71,7 @@ include "../beacon/helpers/Crypto.dfy"
         match s
             case Bool(b) => chunkCountBool(b)
             case Uint8(n) => chunkCountUint8(n)
-            case Bitlist(xl,_) => chunkCountBitlist(xl) 
+            case Bitlist(_,limit) => chunkCountBitlist(limit) 
             case Bytes32(bs) => chunkCountBytes32(bs)
     } 
 
@@ -94,42 +94,40 @@ include "../beacon/helpers/Crypto.dfy"
         1
     }
 
-    function method chunkCountBitlist(xl: seq<bool>): nat
+    function method chunkCountBitlist(limit: nat): nat
         // divide by chunk size (in bits), rounding up (reference: simple-serialize.md)
         // the spec doesn't make reference to whether N can be zero for bitlist[N]
         // the py-szz implementation of bitlists only raises an error if N is negative
         // hence it will be assumed that N >= 0
-        ensures 0 <= chunkCountBitlist(xl) == ceil(|xl|, BITS_PER_CHUNK)
+        ensures 0 <= chunkCountBitlist(limit) == ceil(limit, BITS_PER_CHUNK)
         //ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl) (moved to lemma)
     {
-        (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
+        (limit+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
     }
 
-    lemma lengthBitfieldBytes(xl: seq<bool>)
-        ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl)
+    lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
+        requires |xl| <= limit
+        ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
     {
             if (|xl| == 0) {
                 calc == {
-                    // |bitfieldBytes(xl)|;
-                    // == 
-                    // |[]|;
-                    // ==
-                    // 0;
-                    // ==
-                    // chunkCountBitlist(xl);
+                    // thanks Dafny
                 }
             } else {
                 calc == {
                     |bitfieldBytes(xl)|;
                     ==
                     |toChunks(fromBitsToBytes(xl)) |;
-                    //|toChunks(serialiseObjects(s))|;
                     ==
                     {toChunksProp2(fromBitsToBytes(xl));} ceil(|fromBitsToBytes(xl)|, BYTES_PER_CHUNK);
                     ==
-                    ceil(|xl|, BITS_PER_CHUNK);
+                    ceil(|xl|, BITS_PER_BYTE * BYTES_PER_CHUNK);
                     ==
-                    chunkCountBitlist(xl);
+                    ceil(|xl|, BITS_PER_CHUNK);
+                    <=
+                    ceil(limit, BITS_PER_CHUNK);
+                    ==
+                    chunkCountBitlist(limit);
                 }
             }
         }
@@ -516,18 +514,15 @@ include "../beacon/helpers/Crypto.dfy"
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
      }
 
-     lemma bitlistLimit(s: Serialisable, limit:nat)
+    lemma bitlistLimit(s: Serialisable, limit:nat)
         requires typeOf(s) == Bitlist_(limit)
         ensures 0 <= |bitfieldBytes(s.xl)|
         ensures |bitfieldBytes(s.xl)| <= chunkCount(s)
     {
         calc {
             |bitfieldBytes(s.xl)|;
-            ==
-            {lengthBitfieldBytes(s.xl);} chunkCount(s);
             <=
-            chunkCount(s);
-
+            {lengthBitfieldBytes(s.xl, s.limit);} chunkCount(s);
         }
     }
 
@@ -569,7 +564,8 @@ include "../beacon/helpers/Crypto.dfy"
 
             case Uint8(_) => merkleise(pack(s), -1)
 
-            case Bitlist(xl,limit) =>   bitlistLimit(s,limit);
+            case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
+                                lengthBitfieldBytes(xl, limit);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
             case Bytes32(_) => merkleise(pack(s), -1)
