@@ -24,6 +24,7 @@ include "../utils/MathHelpers.dfy"
 module Eth2Types {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Helpers
     import opened MathHelpers
 
@@ -78,6 +79,11 @@ module Eth2Types {
      */
     datatype Tipe =
             Uint8_
+        |   Uint16_
+        |   Uint32_
+        |   Uint64_
+        |   Uint128_
+        |   Uint256_
         |   Bool_
         |   Bitlist_
         |   Bytes32_
