@@ -237,7 +237,9 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires typeOf(s1) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires uintWellTyped(s1) 
+        requires uintWellTyped(s2) 
+        requires typeOf(s1) !in {Container_, Uint256_}
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {
