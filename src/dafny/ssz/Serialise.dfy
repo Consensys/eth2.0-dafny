@@ -44,12 +44,18 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires typeOf(s) in {Uint8_, Bool_}
+        requires typeOf(s) !in {Bitlist_, Bytes32_, Container_}
+        requires uintWellTyped(s)
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
         match s
             case Bool(_) => 1
             case Uint8(_) => 1  
+            case Uint16(_) => 2 
+            case Uint32(_) => 4 
+            case Uint64(_) => 8
+            case Uint128(_) => 16 
+            case Uint256(_) => 32
     }
 
     /** default.
