@@ -157,4 +157,124 @@ module IntSeDes {
     {   //  Thanks Dafny
     }
 
+    /** Uint16. */
+    function method uint16ToBytes(n: uint16) : seq<byte> 
+        requires n as nat < power2(2 * 8)
+        ensures |uint16ToBytes(n)| == 2
+    {
+        assert( n as nat < power2(2 * 8));
+
+        uintSe(n as nat, 2)
+    }
+
+    function method bytesToUint16(b: seq<byte>) : uint16
+        requires |b| == 2
+    {
+        uintDes(b) as uint16
+    }
+
+    /** Encode/decode Uint16 yields Identity. */
+    lemma uint16AsBytesInvolutive(n : uint16) 
+        requires n as nat < power2(2 * 8)
+        ensures bytesToUint16(uint16ToBytes(n)) == n
+    {   
+        involution(n as nat, 2);
+    }
+
+    /** Uint32. */
+    function method uint32ToBytes(n: uint32) : seq<byte> 
+        requires n as nat < power2(4 * 8)
+        ensures |uint32ToBytes(n)| == 4
+    {
+        uintSe(n as nat, 4)
+    }
+
+    function method bytesToUint32(b: seq<byte>) : uint32
+        requires |b| == 4
+        ensures power2(|b| * 8) == 0x100000000
+    {   
+        constAsPowersOfTwo();
+        uintDes(b) as uint32
+    }
+
+    /** Encode/decode Uint32 yields Identity. */
+    lemma uint32AsBytesInvolutive(n : uint32) 
+        requires n as nat < power2(4 * 8)
+        ensures bytesToUint32(uint32ToBytes(n)) == n
+    {   
+        involution(n as nat, 4);
+    }
+
+    /** Uint64. */
+    function method uint64ToBytes(n: uint64) : seq<byte> 
+        requires n as nat < power2(8 * 8)
+        ensures |uint64ToBytes(n)| == 8
+    {
+        uintSe(n as nat, 8)
+    }
+
+    function method bytesToUint64(b: seq<byte>) : uint64
+        requires |b| == 8
+        ensures power2(|b| * 8) == 0x10000000000000000
+    {   
+        constAsPowersOfTwo();
+        uintDes(b) as uint64
+    }
+
+    /** Encode/decode Uint32 yields Identity. */
+    lemma uint64AsBytesInvolutive(n : uint64) 
+        requires n as nat < power2(8 * 8)
+        ensures bytesToUint64(uint64ToBytes(n)) == n
+    {   
+        involution(n as nat, 8);
+    }
+
+    /** Uint128. */
+    function method uint128ToBytes(n: uint128) : seq<byte> 
+        requires n as nat < power2(16 * 8)
+        ensures |uint128ToBytes(n)| == 16
+    {
+        uintSe(n as nat, 16)
+    }
+
+    function method bytesToUint128(b: seq<byte>) : uint128
+        requires |b| == 16
+        ensures power2(|b| * 8) == 0x100000000000000000000000000000000
+    {   
+        constAsPowersOfTwo();
+        uintDes(b) as uint128
+    }
+
+    /** Encode/decode Uint32 yields Identity. */
+    lemma uint128AsBytesInvolutive(n : uint128) 
+        requires n as nat < power2(16 * 8)
+        ensures bytesToUint128(uint128ToBytes(n)) == n
+    {   
+        involution(n as nat, 16);
+    }
+
+    /** Uint256. */
+    function method uint256ToBytes(n: uint256) : seq<byte> 
+        requires n as nat < power2(32 * 8)
+        ensures |uint256ToBytes(n)| == 32
+    {
+        uintSe(n as nat, 32)
+    }
+
+    function method bytesToUint256(b: seq<byte>) : uint256
+        requires |b| == 32
+        ensures power2(|b| * 8) == 0x10000000000000000000000000000000000000000000000000000000000000000
+    {   
+        constAsPowersOfTwo();
+        uintDes(b) as uint256
+    }
+
+    /** Encode/decode Uint32 yields Identity. */
+    lemma uint256AsBytesInvolutive(n : uint256) 
+        requires n as nat < power2(32 * 8)
+        ensures bytesToUint256(uint256ToBytes(n)) == n
+    {   
+        involution(n as nat, 32);
+    }
+
 }
