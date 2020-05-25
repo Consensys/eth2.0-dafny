@@ -59,6 +59,11 @@ module Eth2Types {
         |   Bytes(bs: seq<byte>)
         |   Container(fl: seq<RawSerialisable>)
 
+    /** Well typed predicate for `RawSerialisable`s
+     * @param s `RawSerialisable` value
+     * @returns `true` iff `s` is a legal value for serialisation and
+     *           merkleisation
+     */    
     predicate wellTyped(s:RawSerialisable)
     {
         match s 
@@ -73,8 +78,19 @@ module Eth2Types {
             case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
     }
 
+    /**
+     * The type `Serialisable` corresponds to well typed `RawSerialisable`s
+     */
     type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
 
+    /**
+     * Helper function to cast a well typed `RawSerialisable` to a
+     * `Serialisable`. Its mainly usage is for the cases where `Serialisable` is
+     * used as type parameter.
+     * 
+     * @param s RawSerialisable value
+     * @returns `s` typed as `Serialisable`
+     */
     function method castToSerialisable(s:RawSerialisable):Serialisable
     requires wellTyped(s)
     {
