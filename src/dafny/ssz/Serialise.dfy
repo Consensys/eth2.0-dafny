@@ -132,6 +132,9 @@ module SSZ {
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
         requires s !in {Container_}
+        ensures match deserialise(xs, s) 
+            case Failure => true 
+            case Success(z) => uintWellTyped(z)
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -155,7 +158,8 @@ module SSZ {
                                 Failure
 
             case Uint64_ => if |xs| == 8 then
-                                Success(Uint64(bytesToUint64(xs) as nat))
+                                var r := bytesToUint64(xs) as nat;
+                                Success(Uint64(r))
                              else 
                                 Failure
 
@@ -196,7 +200,7 @@ module SSZ {
      */
     lemma seDesInvolutive(s : Serialisable) 
         requires uintWellTyped(s)
-        requires typeOf(s) !in {Container_, Uint256_}
+        requires typeOf(s) !in {Container_}
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   
             //  Equalities between upper bounds of uintk types and powers of two 
@@ -228,7 +232,7 @@ module SSZ {
 
                 case Uint128(n) => uint128AsBytesInvolutive(n as uint128);
 
-                // case Uint256(n) => uint256AsBytesInvolutive(n as uint256);
+                case Uint256(n) => uint256AsBytesInvolutive(n as uint256);
 
                 case Bytes32(_) => // Thanks Dafny
         }
@@ -239,7 +243,8 @@ module SSZ {
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
         requires uintWellTyped(s1) 
         requires uintWellTyped(s2) 
-        requires typeOf(s1) !in {Container_, Uint256_}
+        requires typeOf(s1) !in {Container_}
+        requires typeOf(s2) !in {Container_}
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {
