@@ -64,13 +64,14 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires || typeOf(s) in {Bool_,Uint8_,Bytes32_}
+                 || exists n:nat :: typeOf(s) == Bitlist_(n)
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
             case Bool(b) => chunkCountBool(b)
             case Uint8(n) => chunkCountUint8(n)
-            case Bitlist(xl) => chunkCountBitlist(xl) 
+            case Bitlist(xl,_) => chunkCountBitlist(xl) 
             case Bytes32(bs) => chunkCountBytes32(bs)
     } 
 
@@ -515,8 +516,8 @@ include "../beacon/helpers/Crypto.dfy"
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
      }
 
-     lemma bitlistLimit(s: Serialisable)
-        requires typeOf(s) == Bitlist_
+     lemma bitlistLimit(s: Serialisable, limit:nat)
+        requires typeOf(s) == Bitlist_(limit)
         ensures 0 <= |bitfieldBytes(s.xl)|
         ensures |bitfieldBytes(s.xl)| <= chunkCount(s)
     {
@@ -568,7 +569,7 @@ include "../beacon/helpers/Crypto.dfy"
 
             case Uint8(_) => merkleise(pack(s), -1)
 
-            case Bitlist(xl) => bitlistLimit(s);
+            case Bitlist(xl,limit) =>   bitlistLimit(s,limit);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
             case Bytes32(_) => merkleise(pack(s), -1)

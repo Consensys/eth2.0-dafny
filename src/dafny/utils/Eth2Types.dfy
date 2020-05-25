@@ -52,13 +52,36 @@ module Eth2Types {
     type hash32 = Seq32Byte
 
     /** The serialisable objects. */
-    datatype Serialisable = 
+    datatype RawSerialisable = 
             Uint8(n: uint8)
         |   Bool(b: bool)
-        //|   Bitlist(xl:CorrectBitlist)
-        |   Bitlist(xl: seq<bool>)
+        |   Bitlist(xl: seq<bool>, limit:nat)
         |   Bytes32(bs: Seq32Byte)
-        |   Container(fl: seq<Serialisable>)
+        |   Container(fl: seq<RawSerialisable>)
+
+    predicate wellTyped(s:RawSerialisable)
+    {
+        match s 
+            case Bool(_) => true
+    
+            case Uint8(_) => true
+
+            case Bitlist(xl,limit) => |xl| <= limit
+
+            case Bytes32(_) => true
+
+            case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+    }
+
+    type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
+
+    function method castToSerialisable(s:RawSerialisable):Serialisable
+    requires wellTyped(s)
+    {
+        s
+    }
+
+    // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
 
     /** The type `Bytes32` corresponding to a Serialisable built using the
      * `Bytes32` constructor 
@@ -79,7 +102,7 @@ module Eth2Types {
     datatype Tipe =
             Uint8_
         |   Bool_
-        |   Bitlist_
+        |   Bitlist_(limit:nat)
         |   Bytes32_
         |   Container_
 
@@ -89,13 +112,13 @@ module Eth2Types {
      *  @param  s   A serialisable.
      *  @returns    Its tipe.
      */
-    function typeOf(s : Serialisable) : Tipe {
+    function typeOf(s : RawSerialisable) : Tipe {
             match s 
                 case Bool(_) => Bool_
         
                 case Uint8(_) => Uint8_
 
-                case Bitlist(_) => Bitlist_
+                case Bitlist(_,limit) => Bitlist_(limit)
 
                 case Bytes32(_) => Bytes32_
 

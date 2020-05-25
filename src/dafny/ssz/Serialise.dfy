@@ -19,6 +19,7 @@ include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
 include "BoolSeDes.dfy"
 include "BitListSeDes.dfy"
+include "Constants.dfy"
 
 /**
  *  SSZ library.
@@ -33,6 +34,7 @@ module SSZ {
     import opened BoolSeDes
     import opened BitListSeDes
     import opened Helpers
+    import opened Constants    
 
     /** SizeOf.
      *
@@ -58,14 +60,15 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires t in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires    || t in {Bool_,Uint8_,Bytes32_}
+                || exists n:nat :: t == Bitlist_(n)
     {
             match t 
                 case Bool_ => Bool(false)
         
                 case Uint8_ => Uint8(0)
 
-                case Bitlist_ => Bitlist([])
+                case Bitlist_(limit) => Bitlist([],limit)
 
                 case Bytes32_ => Bytes32(timeSeq(0,32))
     }
@@ -76,14 +79,15 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
+                || exists n:nat :: typeOf(s) == Bitlist_(n)
     {
         match s
             case Bool(b) => boolToBytes(b)
 
             case Uint8(n) => uint8ToBytes(n)
 
-            case Bitlist(xl) => fromBitlistToBytes(xl)
+            case Bitlist(xl,limit) => fromBitlistToBytes(xl)
 
             case Bytes32(bs) => bs
     }
@@ -99,26 +103,32 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires s in {Bool_,Uint8_,Bitlist_,Bytes32_}
+    requires    || s in {Bool_, Uint8_, Bytes32_}
+                || exists n:nat :: s  == Bitlist_(n)
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(Bool(byteToBool(xs[0])))
+                                Success(castToSerialisable(Bool(byteToBool(xs[0]))))
                             else 
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(byteToUint8(xs[0])))
+                                Success(castToSerialisable(
+                                    Uint8(byteToUint8(xs[0]))))
                              else 
                                 Failure
                                 
-            case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
-                                Success(Bitlist(fromBytesToBitList(xs)))
-                            else
-                                Failure
+            case Bitlist_(limit) => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
+                                        var desBl := fromBytesToBitList(xs);
+                                        if |desBl| <= limit then
+                                            Success(castToSerialisable(Bitlist(desBl,limit)))
+                                        else
+                                            Failure
+                                    else
+                                        Failure
 
             case Bytes32_ => if |xs| == 32 then
-                                Success(Bytes32(xs))
+                                Success(castToSerialisable(Bytes32(xs)))
                             else Failure
     }
 
@@ -128,30 +138,40 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
+                    || exists n:nat :: typeOf(s) == Bitlist_(n)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
-    {   //  Thanks Dafny.
+    {
+         match s
+            case Bool(b) => 
+
+            case Uint8(n) => 
+
+            case Bitlist(xl,limit) => bitlistDecodeEncodeIsIdentity(xl); 
+
+            case Bytes32(_) => 
     }
 
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
+                    || exists n:nat :: typeOf(s) == Bitlist_(n)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
-                case Bitlist(xl) => 
+                case Bitlist(xl,limit) => 
                     calc {
                         deserialise(serialise(s), typeOf(s));
                         ==
-                        deserialise(serialise(Bitlist(xl)), Bitlist_);
+                        deserialise(serialise(Bitlist(xl,limit)), Bitlist_(limit));
                         == 
-                        deserialise(fromBitlistToBytes(xl), Bitlist_);
-                        == 
-                        Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl))));
+                        deserialise(fromBitlistToBytes(xl), Bitlist_(limit));
                         == { bitlistDecodeEncodeIsIdentity(xl); } 
-                        Success(Bitlist(xl));
+                        Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
+                        == { bitlistDecodeEncodeIsIdentity(xl); } 
+                        Success(castToSerialisable(Bitlist(xl,limit)));
                     }
 
                 case Bool(_) =>  //  Thanks Dafny
@@ -166,7 +186,8 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires typeOf(s1) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires    || typeOf(s1) in {Bool_,Uint8_,Bytes32_}
+                    || exists n:nat :: typeOf(s1) == Bitlist_(n)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {
