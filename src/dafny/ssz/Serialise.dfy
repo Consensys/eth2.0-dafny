@@ -195,9 +195,13 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires uintWellTyped(s)
+        requires typeOf(s) !in {Container_, Uint256_}
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
-        {   //  thanks Dafny.
+        {   
+            //  Equalities between upper bounds of uintk types and powers of two 
+            constAsPowersOfTwo();
+
             match s 
                 case Bitlist(xl) => 
                     calc {
@@ -214,7 +218,17 @@ module SSZ {
 
                 case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(_) => //  Thanks Dafny
+                case Uint8(n) => uint8AsBytesInvolutive(n as uint8);
+
+                case Uint16(n) => uint16AsBytesInvolutive(n as uint16);
+
+                case Uint32(n) => uint32AsBytesInvolutive(n as uint32);
+
+                case Uint64(n) => uint64AsBytesInvolutive(n as uint64);
+
+                case Uint128(n) => uint128AsBytesInvolutive(n as uint128);
+
+                // case Uint256(n) => uint256AsBytesInvolutive(n as uint256);
 
                 case Bytes32(_) => // Thanks Dafny
             
