@@ -185,7 +185,8 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires uintWellTyped(s)
+        requires typeOf(s) !in {Container_}
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {   //  Thanks Dafny.
     }
