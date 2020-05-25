@@ -19,7 +19,7 @@ include "../utils/MathHelpers.dfy"
 include "../utils/Helpers.dfy"
 
 /**
- *  Integers serialisation, desrialisation.
+ *  Integers serialisation, deserialisation.
  *
  */
 module IntSeDes {
