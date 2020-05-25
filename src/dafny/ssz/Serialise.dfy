@@ -231,7 +231,6 @@ module SSZ {
                 // case Uint256(n) => uint256AsBytesInvolutive(n as uint256);
 
                 case Bytes32(_) => // Thanks Dafny
-            
         }
 
     /**
