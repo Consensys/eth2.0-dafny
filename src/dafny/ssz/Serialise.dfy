@@ -65,12 +65,23 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires t in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires t !in {Container_}
+        ensures uintWellTyped(default(t))
     {
             match t 
                 case Bool_ => Bool(false)
         
                 case Uint8_ => Uint8(0)
+               
+                case Uint16_ => Uint16(0)
+
+                case Uint32_ => Uint32(0)
+
+                case Uint64_ => Uint64(0)
+
+                case Uint128_ => Uint128(0)
+
+                case Uint256_ => Uint256(0)
 
                 case Bitlist_ => Bitlist([])
 
