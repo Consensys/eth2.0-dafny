@@ -56,7 +56,7 @@ module Eth2Types {
             Uint8(n: uint8)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>, limit:nat)
-        |   Bytes32(bs: Seq32Byte)
+        |   Bytes(bs: seq<byte>)
         |   Container(fl: seq<RawSerialisable>)
 
     predicate wellTyped(s:RawSerialisable)
@@ -68,7 +68,7 @@ module Eth2Types {
 
             case Bitlist(xl,limit) => |xl| <= limit
 
-            case Bytes32(_) => true
+            case Bytes(bs) => |bs| > 0
 
             case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
     }
@@ -83,10 +83,11 @@ module Eth2Types {
 
     // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
 
-    /** The type `Bytes32` corresponding to a Serialisable built using the
-     * `Bytes32` constructor 
+    /** The type `Bytes32` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 32 `byte` to it
      */
-    type Bytes32 = s:Serialisable | && s.Bytes32? witness Bytes32(timeSeq(0 as byte, 32))
+    type Bytes32 = s:Serialisable | s.Bytes? && |s.bs| == 32
+                                    witness Bytes(timeSeq(0 as byte, 32))
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
@@ -103,7 +104,7 @@ module Eth2Types {
             Uint8_
         |   Bool_
         |   Bitlist_(limit:nat)
-        |   Bytes32_
+        |   Bytes_(len:nat)
         |   Container_
 
    /**  The Tipe of a serialisable.
@@ -120,7 +121,7 @@ module Eth2Types {
 
                 case Bitlist(_,limit) => Bitlist_(limit)
 
-                case Bytes32(_) => Bytes32_
+                case Bytes(bs) => Bytes_(|bs|)
 
                 case Container(_) => Container_
     }

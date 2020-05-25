@@ -64,15 +64,14 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires || typeOf(s) in {Bool_,Uint8_,Bytes32_}
-                 || exists n:nat :: typeOf(s) == Bitlist_(n)
+        requires typeOf(s) != Container_
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
             case Bool(b) => chunkCountBool(b)
             case Uint8(n) => chunkCountUint8(n)
             case Bitlist(_,limit) => chunkCountBitlist(limit) 
-            case Bytes32(bs) => chunkCountBytes32(bs)
+            case Bytes(bs) => chunkCountBytes(bs)
     } 
 
     /** 
@@ -132,8 +131,8 @@ include "../beacon/helpers/Crypto.dfy"
             }
         }
 
-    function method chunkCountBytes32(bs: Seq32Byte): nat
-        ensures chunkCountBytes32(bs) == ceil(|bs|, BYTES_PER_CHUNK)
+    function method chunkCountBytes(bs: seq<byte>): nat
+        ensures chunkCountBytes(bs) == ceil(|bs|, BYTES_PER_CHUNK)
         //ensures pack
     {
         var s := default(Uint8_);
@@ -273,12 +272,13 @@ include "../beacon/helpers/Crypto.dfy"
     //     else toChunks(serialiseObjects(s))
     // }
     function method pack(s: Serialisable): seq<chunk>
-        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
+        requires || typeOf(s) in {Bool_, Uint8_}
+                 || exists n:nat :: typeOf(s) == Bytes_(n)    
     {
         match s
             case Bool(b) => packBool(b)
             case Uint8(n) => packUint8(n)
-            case Bytes32(bs) => packBytes32(bs)
+            case Bytes(bs) => packBytes(bs)
     } 
 
     /** 
@@ -296,10 +296,12 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Uint8(n)))
     }
 
-    function method packBytes32(bs: Seq32Byte): seq<chunk>
-        ensures |packBytes32(bs)| == 1
+    function method packBytes(bs: seq<byte>): seq<chunk>
+        requires |bs| > 0
+        ensures |packBytes(bs)| == chunkCountBytes(bs)
     {
-        toChunks(serialise(Bytes32(bs)))
+        toChunksProp2(bs);
+        toChunks(serialise(Bytes(bs)))
     }
 
     /** Pack.
@@ -568,7 +570,7 @@ include "../beacon/helpers/Crypto.dfy"
                                 lengthBitfieldBytes(xl, limit);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
-            case Bytes32(_) => merkleise(pack(s), -1)
+            case Bytes(_) => merkleise(pack(s), -1)
 
             case Container(fl) => merkleise(prepareSeqOfSerialisableForMerkleisation(fl),-1)
             // Note: if `seqMap(fl,(f:Serialisable) => getHashTreeRoot(f))` is

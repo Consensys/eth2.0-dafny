@@ -60,8 +60,8 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires    || t in {Bool_,Uint8_,Bytes32_}
-                || exists n:nat :: t == Bitlist_(n)
+    requires  t != Container_
+    requires  t.Bytes_? ==> match t case Bytes_(n) => n > 0
     {
             match t 
                 case Bool_ => Bool(false)
@@ -70,7 +70,7 @@ module SSZ {
 
                 case Bitlist_(limit) => Bitlist([],limit)
 
-                case Bytes32_ => Bytes32(timeSeq(0,32))
+                case Bytes_(len) => Bytes(timeSeq(0,len))
     }
 
     /** Serialise.
@@ -79,8 +79,7 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
-                || exists n:nat :: typeOf(s) == Bitlist_(n)
+    requires  typeOf(s) != Container_
     {
         match s
             case Bool(b) => boolToBytes(b)
@@ -89,7 +88,7 @@ module SSZ {
 
             case Bitlist(xl,limit) => fromBitlistToBytes(xl)
 
-            case Bytes32(bs) => bs
+            case Bytes(bs) => bs
     }
 
     /** Deserialise. 
@@ -103,8 +102,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires    || s in {Bool_, Uint8_, Bytes32_}
-                || exists n:nat :: s  == Bitlist_(n)
+    requires  s != Container_
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -127,9 +125,9 @@ module SSZ {
                                     else
                                         Failure
 
-            case Bytes32_ => if |xs| == 32 then
-                                Success(castToSerialisable(Bytes32(xs)))
-                            else Failure
+            case Bytes_(len) => if 0 < |xs| == len then
+                                  Success(castToSerialisable(Bytes(xs)))
+                                else Failure
     }
 
     //  Specifications and Proofs
@@ -138,8 +136,7 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
-                    || exists n:nat :: typeOf(s) == Bitlist_(n)
+        requires typeOf(s) != Container_
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {
          match s
@@ -149,15 +146,14 @@ module SSZ {
 
             case Bitlist(xl,limit) => bitlistDecodeEncodeIsIdentity(xl); 
 
-            case Bytes32(_) => 
+            case Bytes(bs) => 
     }
 
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires    || typeOf(s) in {Bool_,Uint8_,Bytes32_}
-                    || exists n:nat :: typeOf(s) == Bitlist_(n)
+        requires typeOf(s) != Container_
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
@@ -178,7 +174,7 @@ module SSZ {
 
                 case Uint8(_) => //  Thanks Dafny
 
-                case Bytes32(_) => // Thanks Dafny
+                case Bytes(_) => // Thanks Dafny
             
         }
 
@@ -186,8 +182,7 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires    || typeOf(s1) in {Bool_,Uint8_,Bytes32_}
-                    || exists n:nat :: typeOf(s1) == Bitlist_(n)
+        requires  typeOf(s1) != Container_
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {
