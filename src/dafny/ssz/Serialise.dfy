@@ -12,8 +12,8 @@
  * under the License.
  */
 
-
 include "../utils/NativeTypes.dfy"
+include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
@@ -28,6 +28,7 @@ include "BitListSeDes.dfy"
 module SSZ {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Eth2Types
     import opened IntSeDes
     import opened BoolSeDes
