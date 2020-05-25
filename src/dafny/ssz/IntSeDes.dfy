@@ -15,6 +15,8 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
+include "../utils/MathHelpers.dfy"
+include "../utils/Helpers.dfy"
 
 /**
  *  Integers serialisation, desrialisation.
