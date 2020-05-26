@@ -57,6 +57,7 @@ module Eth2Types {
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>, limit:nat)
         |   Bytes(bs: seq<byte>)
+        |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
         |   Container(fl: seq<RawSerialisable>)
 
     /** Well typed predicate for `RawSerialisable`s
@@ -76,6 +77,11 @@ module Eth2Types {
             case Bytes(bs) => |bs| > 0
 
             case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+
+            case List(l, t, limit) =>   && |l| <= limit
+                                        && limit > 0
+                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t
+                                        && forall i | 0 <= i < |l| :: wellTyped(l[i])
     }
 
     /**
@@ -141,6 +147,19 @@ module Eth2Types {
         |   Bitlist_(limit:nat)
         |   Bytes_(len:nat)
         |   Container_
+        |   List_(t:Tipe, limit:nat)
+
+    /**
+     * Check if a `Tipe` is the representation of a basic `Serialisable` type
+     *
+     * @param t The `Tipe` value
+     * @returns `true` iff `t` is the representation of a basic `Serialisable`
+     *          type
+     */
+    predicate method isBasicTipe(t:Tipe)
+    {
+        t in {Bool_, Uint8_}
+    }
 
    /**  The Tipe of a serialisable.
      *  This function allows to obtain the type of a `Serialisable`.
@@ -148,7 +167,7 @@ module Eth2Types {
      *  @param  s   A serialisable.
      *  @returns    Its tipe.
      */
-    function typeOf(s : RawSerialisable) : Tipe {
+    function method typeOf(s : RawSerialisable) : Tipe {
             match s 
                 case Bool(_) => Bool_
         
@@ -159,6 +178,8 @@ module Eth2Types {
                 case Bytes(bs) => Bytes_(|bs|)
 
                 case Container(_) => Container_
+
+                case List(l, t, limit) =>   List_(t, limit)
     }
 
     /**

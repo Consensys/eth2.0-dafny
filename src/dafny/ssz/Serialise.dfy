@@ -60,7 +60,7 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires  t != Container_
+    requires  !(t.Container_? || t.List_?)
     requires  t.Bytes_? ==> match t case Bytes_(n) => n > 0
     {
             match t 
@@ -80,6 +80,7 @@ module SSZ {
      */
     function method serialise(s : Serialisable) : seq<byte> 
     requires  typeOf(s) != Container_
+    requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
     {
         match s
             case Bool(b) => boolToBytes(b)
@@ -89,7 +90,28 @@ module SSZ {
             case Bitlist(xl,limit) => fromBitlistToBytes(xl)
 
             case Bytes(bs) => bs
+
+            case List(l,_,_) => serialiseSeqOfBasics(l)
     }
+
+    /**
+     * Serialise a sequence of basic `Serialisable` values
+     * 
+     * @param  s Sequence of basic `Serialisable` values
+     * @returns  A sequence of bytes encoding `s`.
+     */
+    function method serialiseSeqOfBasics(s: seq<Serialisable>): seq<byte>
+    requires forall i | 0 <= i < |s| :: isBasicTipe(typeOf(s[i]))
+    ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
+    ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
+    {
+        if |s| == 0 then
+            []
+        else
+            serialise(s[0]) + 
+            serialiseSeqOfBasics(s[1..])
+    }
+
 
     /** Deserialise. 
      *  
@@ -102,7 +124,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires  s != Container_
+    requires !(s.Container_? || s.List_?)
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -136,7 +158,7 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires typeOf(s) != Container_
+        requires !(s.Container? || s.List?)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {
          match s
@@ -153,7 +175,7 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires typeOf(s) != Container_
+        requires !(s.Container? || s.List?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
@@ -182,7 +204,7 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires  typeOf(s1) != Container_
+        requires !(s1.Container? || s1.List?)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {

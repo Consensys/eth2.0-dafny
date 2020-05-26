@@ -72,6 +72,10 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint8(n) => chunkCountUint8(n)
             case Bitlist(_,limit) => chunkCountBitlist(limit) 
             case Bytes(bs) => chunkCountBytes(bs)
+            case List(l,t,limit) => if isBasicTipe(t) then 
+                                        chunkCountSequenceOfBasic(t,limit)
+                                    else
+                                        limit
     } 
 
     /** 
@@ -139,8 +143,14 @@ include "../beacon/helpers/Crypto.dfy"
         (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
     }
 
+    function method chunkCountSequenceOfBasic(t:Tipe, limit:nat): nat
+        requires isBasicTipe(t)
+        ensures  chunkCountSequenceOfBasic(t, limit) == ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
+    {
+        var s := default(t);
+        (limit * sizeOf(s) + 31) / BYTES_PER_CHUNK
+    }    
     
-
     /** 
      *  Predicate used in checking chunk properties.
      */
@@ -272,13 +282,14 @@ include "../beacon/helpers/Crypto.dfy"
     //     else toChunks(serialiseObjects(s))
     // }
     function method pack(s: Serialisable): seq<chunk>
-        requires || typeOf(s) in {Bool_, Uint8_}
-                 || exists n:nat :: typeOf(s) == Bytes_(n)    
+        requires !(s.Container? || s.Bitlist?)
+        requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
     {
         match s
             case Bool(b) => packBool(b)
             case Uint8(n) => packUint8(n)
             case Bytes(bs) => packBytes(bs)
+            case List(l,_,limit) => packSequenceOfBasics(l)
     } 
 
     /** 
@@ -304,6 +315,34 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Bytes(bs)))
     }
 
+    function method packSequenceOfBasics(l: seq<Serialisable>): seq<chunk>
+        requires forall i | 0 <= i < |l| :: isBasicTipe(typeOf(l[i]))
+    {
+        toChunks(serialiseSeqOfBasics(l))
+    }    
+
+    lemma lengthOfSerialisationOfSequenceOfBasics(s:Serialisable)
+        requires s.List?
+        requires isBasicTipe(s.t)
+        ensures |packSequenceOfBasics(s.l)| <= chunkCountSequenceOfBasic(s.t, s.limit)
+    {
+            if (|s.l| == 0) {
+                // Thanks Dafny
+            } else {
+                calc == {
+                    |packSequenceOfBasics(s.l)|;
+                    ==
+                    |toChunks(serialiseSeqOfBasics(s.l))|;
+                    ==
+                        {toChunksProp2(serialiseSeqOfBasics(s.l));} 
+                    ceil(|serialiseSeqOfBasics(s.l)|, BYTES_PER_CHUNK);
+                    ==
+                    ceil(|s.l|*|serialise(s.l[0])|, BYTES_PER_CHUNK);
+                    <=
+                    chunkCountSequenceOfBasic(s.t, s.limit);
+                }
+            }
+        }
     /** Pack.
      *
      *  @param  s   A sequence of serialised objects (seq<byte>).
@@ -577,6 +616,17 @@ include "../beacon/helpers/Crypto.dfy"
             // used in place of `prepareSeqOfSerialisableForMerkleisation(fl)`,
             // like below, then Dafny is unable to prove termination:
             //merkleise(seqMap(fl,(f:Serialisable) => getHashTreeRoot(f)),-1)
+
+            case List(l,t,limit) =>     if isBasicTipe(t) then
+                                            lengthOfSerialisationOfSequenceOfBasics(s);
+                                            mixInLength(
+                                                merkleise(pack(s),chunkCount(s)),
+                                                |l|)
+                                        else
+                                            mixInLength(
+                                                merkleise(prepareSeqOfSerialisableForMerkleisation(l),chunkCount(s)),
+                                                |l|
+                                            )
     }       
 
     /**
