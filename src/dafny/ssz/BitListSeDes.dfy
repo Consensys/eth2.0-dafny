@@ -278,7 +278,7 @@ include "Constants.dfy"
             == 
             [ list8BitsToByte((byteTo8Bits(e) + xl)[..BITS_PER_BYTE]) ] + 
                 fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ; 
-            == 
+            ==  {encodeOfDecodeByteIsIdentity(e);}
             [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ;
         }
     }
