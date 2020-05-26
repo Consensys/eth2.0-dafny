@@ -179,7 +179,50 @@ include "Constants.dfy"
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
     {
         if ( |xb| == 1 ) {
-            //  Thanks Dafny
+            if( xb[0] >= 128)
+            {
+                calc == {
+                    fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                    [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
+                        calc == {
+                            byteTo8Bits(xb[0])[.. 7] + [true];
+                            byteTo8Bits(xb[0]);
+                        }
+                    [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                    xb;
+                }
+            }
+            else
+            {
+                calc == {
+                    fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+
+                }
+
+                var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
+                var blPadded:= bl + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|bl| + 1) % BITS_PER_BYTE )];
+
+                calc == {
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                    {
+                        assert largestIndexOfOne(byteTo8Bits(xb[0])) < 7;      
+
+                    }
+                    [ list8BitsToByte(blPadded)];       
+                        calc == {
+                            blPadded;
+                            byteTo8Bits(xb[0]);
+                        }
+                    [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                    xb;
+                }
+            // }
+            //assume fromBitlistToBytes(fromBytesToBitList(xb)) == xb;
+            }
         } else {
             calc == {
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
