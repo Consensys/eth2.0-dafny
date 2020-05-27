@@ -174,13 +174,16 @@ module StateTransition {
          */
         var store : map<Bytes32, BeaconBlockHeader> 
 
-        // predicate isReachableFromGenesis(b: BeaconBlockHeader) 
-        // {
-        //     if ( isGenesisBlockHeader(b) ) then 
-        //         true
-        //     else 
-        //         isReachableFromGenesis(store(b.parent_root))
-        // }
+        predicate isConsistent() 
+            reads this
+        {
+            forall b :: b in store.Values && !isGenesisBlockHeader(b) ==>  
+                b.parent_root != EMPTY_BYTES32 && b.parent_root in store.Keys && store[b.parent_root].slot < b.slot
+            &&
+            // exists k :: k in store.Keys && store[k] == s.latest_block_header 
+            forall k :: k in store.Keys && !isGenesisBlockHeader(store[k]) ==>  
+                store[k].parent_root != EMPTY_BYTES32 && store[k].parent_root in store.Keys && store[b.parent_root].slot < b.slot
+        }
 
         /**
         *  Compute the state obtained after adding a block.
