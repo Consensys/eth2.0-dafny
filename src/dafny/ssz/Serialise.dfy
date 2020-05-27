@@ -60,7 +60,7 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires  !(t.Container_? || t.List_?)
+    requires  !(t.Container_? || t.List_? || t.Vector_?)
     requires  t.Bytes_? ==> match t case Bytes_(n) => n > 0
     {
             match t 
@@ -81,6 +81,7 @@ module SSZ {
     function method serialise(s : Serialisable) : seq<byte> 
     requires  typeOf(s) != Container_
     requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+    requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
         match s
             case Bool(b) => boolToBytes(b)
@@ -92,6 +93,8 @@ module SSZ {
             case Bytes(bs) => bs
 
             case List(l,_,_) => serialiseSeqOfBasics(l)
+
+            case Vector(v) => serialiseSeqOfBasics(v)
     }
 
     /**
@@ -124,7 +127,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires !(s.Container_? || s.List_?)
+    requires !(s.Container_? || s.List_? || s.Vector_?)
     {
         match s
             case Bool_ => if |xs| == 1 then
@@ -158,7 +161,7 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires !(s.Container? || s.List?)
+        requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {
          match s
@@ -175,7 +178,7 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires !(s.Container? || s.List?)
+        requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   //  thanks Dafny.
             match s 
@@ -204,7 +207,7 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires !(s1.Container? || s1.List?)
+        requires !(s1.Container? || s1.List? || s1.Vector?)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {

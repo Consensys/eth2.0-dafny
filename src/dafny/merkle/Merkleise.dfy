@@ -76,6 +76,12 @@ include "../beacon/helpers/Crypto.dfy"
                                         chunkCountSequenceOfBasic(t,limit)
                                     else
                                         limit
+
+            case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then 
+                                    chunkCountSequenceOfBasic(typeOf(v[0]),|v|)
+                                else
+                                    |v|
+
     } 
 
     /** 
@@ -284,12 +290,14 @@ include "../beacon/helpers/Crypto.dfy"
     function method pack(s: Serialisable): seq<chunk>
         requires !(s.Container? || s.Bitlist?)
         requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+        requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
         match s
             case Bool(b) => packBool(b)
             case Uint8(n) => packUint8(n)
             case Bytes(bs) => packBytes(bs)
             case List(l,_,limit) => packSequenceOfBasics(l)
+            case Vector(v) => packSequenceOfBasics(v)
     } 
 
     /** 
@@ -627,7 +635,12 @@ include "../beacon/helpers/Crypto.dfy"
                                                 merkleise(prepareSeqOfSerialisableForMerkleisation(l),chunkCount(s)),
                                                 |l|
                                             )
-    }       
+
+            case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then
+                                    merkleise(pack(s), -1)
+                                else
+                                   merkleise(prepareSeqOfSerialisableForMerkleisation(v),-1)
+    }
 
     /**
      * Prepare a sequence of `Serialisable` objects for merkleisation.

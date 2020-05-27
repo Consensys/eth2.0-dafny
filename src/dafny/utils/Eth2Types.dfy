@@ -58,6 +58,7 @@ module Eth2Types {
         |   Bitlist(xl: seq<bool>, limit:nat)
         |   Bytes(bs: seq<byte>)
         |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
+        |   Vector(v:seq<RawSerialisable>)
         |   Container(fl: seq<RawSerialisable>)
 
     /** Well typed predicate for `RawSerialisable`s
@@ -66,6 +67,7 @@ module Eth2Types {
      *           merkleisation
      */    
     predicate wellTyped(s:RawSerialisable)
+    decreases s, 0
     {
         match s 
             case Bool(_) => true
@@ -80,8 +82,13 @@ module Eth2Types {
 
             case List(l, t, limit) =>   && |l| <= limit
                                         && limit > 0
+                                        && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
                                         && forall i | 0 <= i < |l| :: typeOf(l[i]) == t
-                                        && forall i | 0 <= i < |l| :: wellTyped(l[i])
+
+            case Vector(v) =>   && |v| > 0
+                                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                                && forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j])
+
     }
 
     /**
@@ -148,6 +155,7 @@ module Eth2Types {
         |   Bytes_(len:nat)
         |   Container_
         |   List_(t:Tipe, limit:nat)
+        |   Vector_(t:Tipe, len:nat)
 
     /**
      * Check if a `Tipe` is the representation of a basic `Serialisable` type
@@ -167,7 +175,10 @@ module Eth2Types {
      *  @param  s   A serialisable.
      *  @returns    Its tipe.
      */
-    function method typeOf(s : RawSerialisable) : Tipe {
+    function method typeOf(s : RawSerialisable) : Tipe 
+    requires wellTyped(s)
+    decreases s
+    {
             match s 
                 case Bool(_) => Bool_
         
@@ -180,6 +191,8 @@ module Eth2Types {
                 case Container(_) => Container_
 
                 case List(l, t, limit) =>   List_(t, limit)
+
+                case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
     /**
