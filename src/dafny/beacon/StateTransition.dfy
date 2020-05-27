@@ -50,7 +50,8 @@ module StateTransition {
      */
     function method hash_tree_root(s: BeaconState) : Bytes32 
     // function method hash_tree_root_block(s: BeaconBlock) : Bytes32 
-    function method hash_tree_root_block_header(s: BeaconBlockHeader) : Bytes32 
+    function method hash_tree_root_block_header(b: BeaconBlockHeader) : Bytes32 
+        ensures hash_tree_root_block_header(b) == EMPTY_BYTES32 <==> isGenesisBlockHeader(b)
 
     /** 
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
