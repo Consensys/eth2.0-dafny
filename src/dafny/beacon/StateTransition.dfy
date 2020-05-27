@@ -169,6 +169,9 @@ module StateTransition {
      */
     class Env {
 
+        /**
+         *  The record of blocks that have been accepted.
+         */
         var store : map<Bytes32, BeaconBlockHeader> 
 
         // predicate isReachableFromGenesis(b: BeaconBlockHeader) 
