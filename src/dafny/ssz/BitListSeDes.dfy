@@ -146,7 +146,8 @@ include "Constants.dfy"
         //  The structure of the proof is split in 3 cases to follow
         //  the definition of fromBitlistToBytes and make it easier to prove
         if ( |l| < BITS_PER_BYTE - 1 ) {
-            //  Thanks Dafny
+            // The following lemma help reduce theverification time
+            decodeOfEncode8BitsIsIdentity(l + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|l| + 1) % BITS_PER_BYTE )]);
         } else if ( |l| == BITS_PER_BYTE - 1 ) {
             //  Thanks Dafny
         } else {
@@ -154,7 +155,14 @@ include "Constants.dfy"
                 fromBytesToBitList( fromBitlistToBytes (l) );
                 == //   Definition of fromBitlistToBytes
                 fromBytesToBitList([list8BitsToByte(l[..BITS_PER_BYTE])] + fromBitlistToBytes(l[BITS_PER_BYTE..]));
-                == { simplifyFromByteToListFirstArg(
+                == { 
+                        // The following assert statement help the verifier to
+                        // check that the preconditions for the
+                        // simplifyFromByteToListFirstArg lemma are satisfied
+                        // which helps reduce the verification time
+                        assert  |fromBitlistToBytes(l[BITS_PER_BYTE..])| >=1;
+                        
+                        simplifyFromByteToListFirstArg(
                         list8BitsToByte(l[..BITS_PER_BYTE]), 
                         fromBitlistToBytes(l[BITS_PER_BYTE..])
                         ) ;  
