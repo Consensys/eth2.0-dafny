@@ -191,19 +191,43 @@ module StateTransition {
         method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
             // requires isReachableFromGenesis(s.latest_block_header)
             // requires !isGenesisBlock(b)
+            requires s.latest_block_header in store.Values
+            requires isConsistent()
+            requires hash_tree_root_block_header(b) !in store.Keys
             requires s.slot <= b.slot
             requires b.parent_root == s.latest_block_header.parent_root
+            // ensures isConsistent()
             modifies this
         {
             //  finalise slots before b.slot
             var s1 := processSlots(s, b.slot);
+            assert(s1.latest_block_header.parent_root ==  s.latest_block_header.parent_root); 
+            assert(isConsistent());
 
+            // assert(b.parent_root == hash_tree_root_block_header(s.latest_block_header));
             //  Process block
             s' := processBlock(s1, b);
+            // assert(s'.latest_block_header.parent_root !=  EMPTY_BYTES32); 
+            // assert(s'.latest_block_header.parent_root ==  b.parent_root); 
+            // assert(isConsistent());
 
+            // assert(s'.latest_block_header in store.Values); 
+            // assert(hash_tree_root_block_header(b) !in store.Keys);
+            //  the key for the s.latest_block_header cannot be hash_tree_root_block_header(b)
+            // assert(exists k:: k in store.Keys && store[k] == s'.latest_block_header);
+            // var k :| k in store.Keys && store[k] == s.latest_block_header;
+            // assert( k != hash_tree_root_block_header(b));
             //  Add the block to the global Store
             store := store[hash_tree_root_block_header(b) := b];
-            
+            // assert(b.slot > store[b.parent_root].slot);
+            // assert(b.parent_root != EMPTY_BYTES32);
+            // assert(forall i :: i in store.Keys && i != hash_tree_root_block_header(b) ==> 
+                // store[i] == old(store)[i]);
+            // assert(s.latest_block_header in store.Values); 
+            // assert(s.latest_block_header.parent_root in store.Keys); 
+            // assert(b.parent_root in store.Keys);
+            // assert(isConsistent());
+
             //  Validate state block
         }
 
@@ -230,6 +254,8 @@ module StateTransition {
             requires s.slot <= slot
             ensures  s'.slot == slot 
             ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+            // ensures s'.latest_block_header.parent_root != EMPTY_BYTES32
+            ensures store == old(store)
             decreases slot - s.slot
         {
             //  start from thr current state
@@ -298,6 +324,7 @@ module StateTransition {
         method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
+            ensures s'.latest_block_header.parent_root == b.parent_root
         {
             //  Start by creating a block header from the ther actual block.
             s' := processBlockHeader(s, b);
@@ -310,6 +337,7 @@ module StateTransition {
         method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
+            ensures s'.latest_block_header.parent_root == b.parent_root
         {
             s':= s.(
                 latest_block_header := BeaconBlockHeader(
