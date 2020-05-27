@@ -348,4 +348,64 @@ module StateTransition {
             );
         }
     }
+
+    //  Specifications of finalisation of a state and forward to future slot.
+
+    /**
+        *  Complete the current slot.
+        *
+        *  @param  s   A beacon state.
+        *  @returns    A new state `s'` such that:
+        *              1. a new latest_block_header' state_root set to the hash_tree_root(s) 
+        *              2. the hash_tree_root(s) archived in the s'.state_roots for the slot
+        *              3. the hash_tree_root of the new_block_header is archived 
+        *              in s'.block_roots
+        */
+    function resolveStateRoot(s: BeaconState): BeaconState 
+    {
+        var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
+        var latest_block_header_root :=  hash_tree_root_block_header(new_latest_block_header);
+        BeaconState(
+            // slot unchanged
+            s.slot,
+            //  block header fixed if there was a new block in previous slot
+            s.latest_block_header.(state_root := latest_block_header_root),
+            //  add new block_header root to block_roots history.
+            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := latest_block_header_root],
+            //  add previous state root to state_roots history
+            s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
+        )
+    }
+
+    /**
+        *  Finalise a state and forward to slot.
+        *  
+        *  @param  s       A state
+        *  @param  slot    A slot. 
+        *  @returns        A new state obtained by  archiving roots and incrementing slot.
+        *  slot.
+        */
+    function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
+        requires s.slot <= slot
+
+        decreases slot - s.slot
+    {
+        if (s.slot == slot) then 
+            s
+        else
+            forwardStateToSlot(
+                BeaconState(
+                    // slot unchanged
+                    s.slot + 1,
+                    //  block header fixed if there was a new block in previous slot
+                    s.latest_block_header,
+                    //  add block roots to history
+                    s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(s.latest_block_header)],
+                    //  add previous state roots to history
+                    s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := s.latest_block_header.state_root]
+                ),
+                slot
+            )
+    }
+
 }
