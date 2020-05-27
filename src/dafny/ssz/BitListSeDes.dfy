@@ -178,20 +178,21 @@ include "Constants.dfy"
         requires xb[|xb| - 1] >= 1
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
     {
-        if ( |xb| == 1 ) {
-            if( xb[0] >= 0x80)
-            {
-                calc == {
-                    fromBitlistToBytes(fromBytesToBitList(xb)) ;
-                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
-                    [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
-                    [ list8BitsToByte( byteTo8Bits(xb[0]))];
-                        {encodeOfDecodeByteIsIdentity(xb[0]);}
-                    xb;
-                }
+        //  The structure of the proof is split in 3 cases to follow
+        //  the definition of fromBitlistToBytes and make it easier to prove
+        if ( |xb| == 1 && xb[0] >= 0x80) 
+        {
+            calc == {
+                fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
+                [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                xb;
             }
-            else
-            {
+        }
+        else if ( |xb| == 1 && xb[0] < 0x80) 
+        {
                 calc == {
                     fromBitlistToBytes(fromBytesToBitList(xb)) ;
                     fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
@@ -207,8 +208,8 @@ include "Constants.dfy"
                         {encodeOfDecodeByteIsIdentity(xb[0]);}
                     xb;
                 }
-            }
-        } else {
+        } else // |xb| > 1
+        {
             calc == {
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
                 ==  //  Definition of fromBytesToBitList
