@@ -390,7 +390,7 @@ module StateTransition {
     function resolveStateRoot(s: BeaconState): BeaconState 
         //  The state_root of `s` must be unresolved.
         requires s.latest_block_header.state_root == EMPTY_BYTES32
-        //  No overflow
+        //  Make sure s.slot does not  overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
     {
         var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
@@ -412,8 +412,8 @@ module StateTransition {
      *  @param  s       A state
      *  @param  slot    A slot. 
      *  @returns        A new state obtained by  archiving roots and incrementing slot.
-        *  slot.
-        */
+     *                  slot.
+     */
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
         ensures forwardStateToSlot(s, slot).slot == slot
