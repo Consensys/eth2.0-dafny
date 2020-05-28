@@ -298,25 +298,25 @@ module StateTransition {
             assert(s' == forwardStateToSlot( resolveStateRoot(s), slot));
         }
 
-        /** 
-        *  Cache data for a slot.
+       /** 
+        *   Cache data for a slot.
         *
-        *  This function also finalises the block header of the last block
-        *  so that it records the hash of the state `s`. 
+        *   This function also finalises the block header of the last block
+        *   so that it records the hash of the state `s`. 
         *
-        *  @param  s   A state.
-        *  @returns    A new state where `s` has been added/cached to the history and
-        *              the block header tracks the hash of the most recent received
-        *              block.
+        *   @param  s   A state.
+        *   @returns    A new state where `s` has been added/cached to the history and
+        *               the block header tracks the hash of the most recent received
+        *                   block.
+        *
+        *   @note       This function method could be a method (as per the Eth2 specs).
+        *               However, this requires to expose the properties of the computation
+        *               as methods are not inlined. 
+        *   @todo       Make this a method to have a def closer to Eth2 implementation.  
         */
         function method processSlot(s: BeaconState) : BeaconState
-            // ensures processSlot(s).slot == s.slot
-            // ensures s.latest_block_header.parent_root == processSlot(s).latest_block_header.parent_root
-            // ensures processSlot(s).latest_block_header.state_root != EMPTY_BYTES32
-            // ensures s.latest_block_header.state_root == EMPTY_BYTES32 ==> processSlot(s).latest_block_header.state_root == hash_tree_root(s)
-            // ensures s.latest_block_header.state_root != EMPTY_BYTES32 ==> processSlot(s).latest_block_header.state_root == s.latest_block_header.state_root
         {
-            //  Let definitions for readability.
+            //  Let definitions for increased readability.
 
             //  Record the hash of the previous state in the history.
             var previous_state_root := hash_tree_root(s); 
@@ -349,7 +349,6 @@ module StateTransition {
         */
         method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
-            // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
             ensures s'.latest_block_header.parent_root == b.parent_root
         {
             //  Start by creating a block header from the ther actual block.
@@ -362,7 +361,6 @@ module StateTransition {
         */
         method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
-            // requires b.parent_root == hash_tree_root_block_header(s.latest_block_header)
             ensures s'.latest_block_header.parent_root == b.parent_root
         {
             s':= s.(
