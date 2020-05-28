@@ -180,11 +180,14 @@ module StateTransition {
             reads this
         {
             forall b :: b in store.Values && !isGenesisBlockHeader(b) ==>  
-                b.parent_root != EMPTY_BYTES32 && b.parent_root in store.Keys && store[b.parent_root].slot < b.slot
-            &&
+                b.parent_root != EMPTY_BYTES32 
+                // && hash_tree_root_block_header(b) in store.Keys
+                && b.parent_root in store.Keys 
+                && store[b.parent_root].slot < b.slot
+            // &&
             // exists k :: k in store.Keys && store[k] == s.latest_block_header 
-            forall k :: k in store.Keys && !isGenesisBlockHeader(store[k]) ==>  
-                store[k].parent_root != EMPTY_BYTES32 && store[k].parent_root in store.Keys && store[b.parent_root].slot < b.slot
+            // forall k :: k in store.Keys && !isGenesisBlockHeader(store[k]) ==>  
+                // store[k].parent_root != EMPTY_BYTES32 && store[k].parent_root in store.Keys && store[b.parent_root].slot < b.slot
         }
 
         /**
@@ -205,32 +208,18 @@ module StateTransition {
         {
             //  finalise slots before b.slot
             var s1 := processSlots(s, b.slot);
-            // assert(s1.latest_block_header.parent_root ==  s.latest_block_header.parent_root); 
-            // assert(isConsistent());
-            // assert( s1 == forwardStateToSlot(resolveStateRoot(s),b.slot));
-            // assert(b.parent_root == hash_tree_root_block_header(s.latest_block_header));
+
+            //  Because of Req1, `s1`, the state obtained after resolving and forwarding to
+            //  `slot` agrees with `b` on the parent_block's root
+            assert(s1.latest_block_header.parent_root == b.parent_root);
+            assert(s1.latest_block_header.parent_root != EMPTY_BYTES32);
+            assert(isConsistent());
+
             //  Process block
             s' := processBlock(s1, b);
-            // assert(s'.latest_block_header.parent_root !=  EMPTY_BYTES32); 
-            // assert(s'.latest_block_header.parent_root ==  b.parent_root); 
-            // assert(isConsistent());
-
-            // assert(s'.latest_block_header in store.Values); 
-            // assert(hash_tree_root_block_header(b) !in store.Keys);
-            //  the key for the s.latest_block_header cannot be hash_tree_root_block_header(b)
-            // assert(exists k:: k in store.Keys && store[k] == s'.latest_block_header);
-            // var k :| k in store.Keys && store[k] == s.latest_block_header;
-            // assert( k != hash_tree_root_block_header(b));
+            // assert(store[b.parent_root].slot < b.slot);
             //  Add the block to the global Store
             store := store[hash_tree_root_block_header(b) := b];
-            // assert(b.slot > store[b.parent_root].slot);
-            // assert(b.parent_root != EMPTY_BYTES32);
-            // assert(forall i :: i in store.Keys && i != hash_tree_root_block_header(b) ==> 
-                // store[i] == old(store)[i]);
-            // assert(s.latest_block_header in store.Values); 
-            // assert(s.latest_block_header.parent_root in store.Keys); 
-            // assert(b.parent_root in store.Keys);
-            // assert(isConsistent());
 
             //  Validate state block
         }
@@ -263,13 +252,13 @@ module StateTransition {
         *                  resolveStateRoot(s); 
         *
         */
-    method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
+        method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.slot < slot  //  update in 0.12.0 (was <= before)
-            // ensures  s'.slot == slot 
+            ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
             ensures store == old(store)
 
-            decreases slot - s.slot
+        decreases slot - s.slot
         {
             //  start from the current state and finalise it.
             s' := processSlot(s);
