@@ -408,4 +408,15 @@ module StateTransition {
             )
     }
 
+    function nextSlot(s : BeaconState) : BeaconState 
+        //  No overflow
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    {
+        //  Add header root to history of block_roots
+        var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(s.latest_block_header)];
+        //  Add state root to history of state roots
+        var new_state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)];
+        //  Increment slot and copy latest_block_header
+        BeaconState(s.slot + 1, s.latest_block_header, new_block_roots, new_state_roots)
+    }
 }
