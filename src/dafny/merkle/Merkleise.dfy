@@ -166,16 +166,11 @@ include "../beacon/helpers/Crypto.dfy"
         |c| == BYTES_PER_CHUNK
     }
 
-    
-    const EMPTY_CHUNK := timeSeq<byte>(0,32)
-    //[0 as byte, 0 as byte, 0 as byte, 0 as byte, 
-    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
-    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
-    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
-    //                         0 as byte,0 as byte,0 as byte,0 as byte,
-    //                         0 as byte,0 as byte,0 as byte,0 as byte,
-    //                         0 as byte,0 as byte,0 as byte,0 as byte, 
-    //                         0 as byte,0 as byte,0 as byte,0 as byte]
+    lemma emptyChunkIsSeq()
+        ensures EMPTY_CHUNK == timeSeq<byte>(0,32)
+    {
+        // Thanks Dafny
+    }
 
     /** 
      *  Properties of empty chunk.
