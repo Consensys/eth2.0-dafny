@@ -54,7 +54,7 @@ module Eth2Types {
     type hash32 = Seq32Byte
 
     /** The serialisable objects. */
-    datatype Serialisable = 
+    datatype RawSerialisable = 
             Uint8(n: nat)
         |   Uint16(n: nat)
         |   Uint32(n: nat)
@@ -62,15 +62,97 @@ module Eth2Types {
         |   Uint128(n: nat)
         |   Uint256(n: nat)
         |   Bool(b: bool)
-        //|   Bitlist(xl:CorrectBitlist)
-        |   Bitlist(xl: seq<bool>)
-        |   Bytes32(bs: Seq32Byte)
-        |   Container(fl: seq<Serialisable>)
+        |   Bitlist(xl: seq<bool>, limit:nat)
+        |   Bytes(bs: seq<byte>)
+        |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
+        |   Vector(v:seq<RawSerialisable>)
+        |   Container(fl: seq<RawSerialisable>)
 
-    /** The type `Bytes32` corresponding to a Serialisable built using the
-     * `Bytes32` constructor 
+    /** Well typed predicate for `RawSerialisable`s
+     * @param s `RawSerialisable` value
+     * @returns `true` iff `s` is a legal value for serialisation and
+     *           merkleisation
+     */    
+    predicate wellTyped(s:RawSerialisable)
+    decreases s, 0
+    {
+        match s 
+            case Bool(_) => true
+    
+            case Uint8(n) => n < 0x100
+
+            case Uint16(n) => n < 0x10000
+
+            case Uint32(n) => n < 0x100000000
+
+            case Uint64(n) => n < 0x10000000000000000
+
+            case Uint128(n) => n < 0x100000000000000000000000000000000
+
+            case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
+
+            case Bitlist(xl,limit) => |xl| <= limit
+
+            case Bytes(bs) => |bs| > 0
+
+            case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+
+            case List(l, t, limit) =>   && |l| <= limit
+                                        && limit > 0
+                                        && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
+                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t
+
+            case Vector(v) =>   && |v| > 0
+                                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                                && forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j])
+
+    }
+
+    /**
+     * The type `Serialisable` corresponds to well typed `RawSerialisable`s
      */
-    type Bytes32 = s:Serialisable | && s.Bytes32? witness Bytes32(timeSeq(0 as byte, 32))
+    type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
+
+    /**
+     * Helper function to cast a well typed `RawSerialisable` to a
+     * `Serialisable`. Its mainly usage is for the cases where `Serialisable` is
+     * used as type parameter.
+     * 
+     * @param s RawSerialisable value
+     * @returns `s` typed as `Serialisable`
+     */
+    function method castToSerialisable(s:RawSerialisable):Serialisable
+    requires wellTyped(s)
+    {
+        s
+    }
+
+    // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
+
+    /** The type `Bytes4` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 4 `byte`s to it
+     */
+    type Bytes4 = s:Serialisable |  s.Bytes? && |s.bs| == 4
+                                    witness Bytes(timeSeq(0 as byte, 4))
+
+    /** The type `Bytes32` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 32 `byte`s to it
+     */
+    type Bytes32 = s:Serialisable | s.Bytes? && |s.bs| == 32
+                                    witness Bytes(timeSeq(0 as byte, 32))
+
+    /** The type `Bytes48` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 48 `byte`s to it
+     */
+    type Bytes48 = s:Serialisable | s.Bytes? && |s.bs| == 48
+                                    witness Bytes(timeSeq(0 as byte, 48))
+
+    /** The type `Bytes96` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 96 `byte`s to it
+     */
+    type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
+                                    witness Bytes(timeSeq(0 as byte, 96))
+
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
@@ -91,9 +173,23 @@ module Eth2Types {
         |   Uint128_
         |   Uint256_
         |   Bool_
-        |   Bitlist_
-        |   Bytes32_
+        |   Bitlist_(limit:nat)
+        |   Bytes_(len:nat)
         |   Container_
+        |   List_(t:Tipe, limit:nat)
+        |   Vector_(t:Tipe, len:nat)
+
+    /**
+     * Check if a `Tipe` is the representation of a basic `Serialisable` type
+     *
+     * @param t The `Tipe` value
+     * @returns `true` iff `t` is the representation of a basic `Serialisable`
+     *          type
+     */
+    predicate method isBasicTipe(t:Tipe)
+    {
+        t in {Bool_, Uint8_}
+    }
 
    /**  The Tipe of a serialisable.
      *  This function allows to obtain the type of a `Serialisable`.
@@ -101,7 +197,10 @@ module Eth2Types {
      *  @param  s   A serialisable.
      *  @returns    Its tipe.
      */
-    function typeOf(s : Serialisable) : Tipe {
+    function method typeOf(s : RawSerialisable) : Tipe 
+    requires wellTyped(s)
+    decreases s
+    {
             match s 
                 case Bool(_) => Bool_
         
@@ -117,39 +216,17 @@ module Eth2Types {
 
                 case Uint256(_) => Uint256_
 
-                case Bitlist(_) => Bitlist_
+                case Bitlist(_,limit) => Bitlist_(limit)
 
-                case Bytes32(_) => Bytes32_
+                case Bytes(bs) => Bytes_(|bs|)
 
                 case Container(_) => Container_
+
+                case List(l, t, limit) =>   List_(t, limit)
+
+                case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
-    /**
-     *  Check that value used for a given uint_k is compatile with k.
-     */
-    predicate uintWellTyped(s: Serialisable) 
-    {
-    match s 
-        case Bool(_) => true
-
-        case Uint8(n) => n < 0x100
-
-        case Uint16(n) => n < 0x10000
-
-        case Uint32(n) => n < 0x100000000
-
-        case Uint64(n) => n < 0x10000000000000000
-
-        case Uint128(n) => n < 0x100000000000000000000000000000000
-
-        case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
-
-        case Bitlist(_) => true
-
-        case Bytes32(_) => true
-
-        case Container(_) => true
-    }
 
     /**
      * Bitwise exclusive-or of two `byte` value

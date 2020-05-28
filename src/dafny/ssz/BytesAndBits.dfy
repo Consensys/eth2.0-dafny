@@ -147,7 +147,29 @@ module BytesAndBits {
      */
     lemma encodeOfDecodeByteIsIdentity(n: byte)  
         ensures list8BitsToByte(byteTo8Bits(n)) == n 
-    {   //  Thanks Dafny.
+    {
+        // The following two lemmas help reduce the verification time
+        lemmaBoolToByteIsTheInverseOfByteToBool();
+        lemmaHelperForEncodeOfDecodeByteIsIdentity(n);
+    }
+
+    /**
+     * `boolToByte` is the inverse of `byteToBool`
+     */
+    lemma lemmaBoolToByteIsTheInverseOfByteToBool()
+    ensures forall b | 0 <= b <= 1 :: boolToByte(byteToBool(b)) == b;
+    {
+        // Thanks Dafny.
+    }
+
+    /**
+     * Helper lemma for the `encodeOfDecodeByteIsIdentity` lemma
+     */
+    lemma lemmaHelperForEncodeOfDecodeByteIsIdentity(n:byte)
+    ensures forall i | i in {1,2,4,8,16,32,64} :: (n%(i*2)/i*i) == i * boolToByte(byteToBool((n/i)%2)); 
+    ensures (n/128*128) == 128 * boolToByte(byteToBool((n/128)%2));
+    {
+        // Thanks Dafny.
     }
 
     /** 

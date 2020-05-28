@@ -64,14 +64,24 @@ include "../beacon/helpers/Crypto.dfy"
      *              (reference: Phase 0 spec - deposit contract).
      */
     function method chunkCount(s: Serialisable): nat
-        requires typeOf(s) in {Bool_,Uint8_,Bitlist_,Bytes32_}
+        requires typeOf(s) != Container_
         ensures 0 <= chunkCount(s) // add upper limit ???
     {
         match s
             case Bool(b) => chunkCountBool(b)
             case Uint8(n) => chunkCountUint8(n)
-            case Bitlist(xl) => chunkCountBitlist(xl) 
-            case Bytes32(bs) => chunkCountBytes32(bs)
+            case Bitlist(_,limit) => chunkCountBitlist(limit) 
+            case Bytes(bs) => chunkCountBytes(bs)
+            case List(l,t,limit) => if isBasicTipe(t) then 
+                                        chunkCountSequenceOfBasic(t,limit)
+                                    else
+                                        limit
+
+            case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then 
+                                    chunkCountSequenceOfBasic(typeOf(v[0]),|v|)
+                                else
+                                    |v|
+
     } 
 
     /** 
@@ -93,56 +103,60 @@ include "../beacon/helpers/Crypto.dfy"
         1
     }
 
-    function method chunkCountBitlist(xl: seq<bool>): nat
+    function method chunkCountBitlist(limit: nat): nat
         // divide by chunk size (in bits), rounding up (reference: simple-serialize.md)
         // the spec doesn't make reference to whether N can be zero for bitlist[N]
         // the py-szz implementation of bitlists only raises an error if N is negative
         // hence it will be assumed that N >= 0
-        ensures 0 <= chunkCountBitlist(xl) == ceil(|xl|, BITS_PER_CHUNK)
+        ensures 0 <= chunkCountBitlist(limit) == ceil(limit, BITS_PER_CHUNK)
         //ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl) (moved to lemma)
     {
-        (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
+        (limit+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
     }
 
-    lemma lengthBitfieldBytes(xl: seq<bool>)
-        ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl)
+    lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
+        requires |xl| <= limit
+        ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
     {
             if (|xl| == 0) {
                 calc == {
-                    // |bitfieldBytes(xl)|;
-                    // == 
-                    // |[]|;
-                    // ==
-                    // 0;
-                    // ==
-                    // chunkCountBitlist(xl);
+                    // thanks Dafny
                 }
             } else {
                 calc == {
                     |bitfieldBytes(xl)|;
                     ==
                     |toChunks(fromBitsToBytes(xl)) |;
-                    //|toChunks(serialiseObjects(s))|;
                     ==
                     {toChunksProp2(fromBitsToBytes(xl));} ceil(|fromBitsToBytes(xl)|, BYTES_PER_CHUNK);
                     ==
-                    ceil(|xl|, BITS_PER_CHUNK);
+                    ceil(|xl|, BITS_PER_BYTE * BYTES_PER_CHUNK);
                     ==
-                    chunkCountBitlist(xl);
+                    ceil(|xl|, BITS_PER_CHUNK);
+                    <=
+                    ceil(limit, BITS_PER_CHUNK);
+                    ==
+                    chunkCountBitlist(limit);
                 }
             }
         }
 
-    function method chunkCountBytes32(bs: Seq32Byte): nat
-        ensures chunkCountBytes32(bs) == ceil(|bs|, BYTES_PER_CHUNK)
+    function method chunkCountBytes(bs: seq<byte>): nat
+        ensures chunkCountBytes(bs) == ceil(|bs|, BYTES_PER_CHUNK)
         //ensures pack
     {
         var s := default(Uint8_);
         (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
     }
 
+    function method chunkCountSequenceOfBasic(t:Tipe, limit:nat): nat
+        requires isBasicTipe(t)
+        ensures  chunkCountSequenceOfBasic(t, limit) == ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
+    {
+        var s := default(t);
+        (limit * sizeOf(s) + 31) / BYTES_PER_CHUNK
+    }    
     
-
     /** 
      *  Predicate used in checking chunk properties.
      */
@@ -274,12 +288,16 @@ include "../beacon/helpers/Crypto.dfy"
     //     else toChunks(serialiseObjects(s))
     // }
     function method pack(s: Serialisable): seq<chunk>
-        requires typeOf(s) in {Bool_, Uint8_, Bytes32_}
+        requires !(s.Container? || s.Bitlist?)
+        requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+        requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
         match s
             case Bool(b) => packBool(b)
             case Uint8(n) => packUint8(n)
-            case Bytes32(bs) => packBytes32(bs)
+            case Bytes(bs) => packBytes(bs)
+            case List(l,_,limit) => packSequenceOfBasics(l)
+            case Vector(v) => packSequenceOfBasics(v)
     } 
 
     /** 
@@ -297,12 +315,42 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Uint8(n)))
     }
 
-    function method packBytes32(bs: Seq32Byte): seq<chunk>
-        ensures |packBytes32(bs)| == 1
+    function method packBytes(bs: seq<byte>): seq<chunk>
+        requires |bs| > 0
+        ensures |packBytes(bs)| == chunkCountBytes(bs)
     {
-        toChunks(serialise(Bytes32(bs)))
+        toChunksProp2(bs);
+        toChunks(serialise(Bytes(bs)))
     }
 
+    function method packSequenceOfBasics(l: seq<Serialisable>): seq<chunk>
+        requires forall i | 0 <= i < |l| :: isBasicTipe(typeOf(l[i]))
+    {
+        toChunks(serialiseSeqOfBasics(l))
+    }    
+
+    lemma lengthOfSerialisationOfSequenceOfBasics(s:Serialisable)
+        requires s.List?
+        requires isBasicTipe(s.t)
+        ensures |packSequenceOfBasics(s.l)| <= chunkCountSequenceOfBasic(s.t, s.limit)
+    {
+            if (|s.l| == 0) {
+                // Thanks Dafny
+            } else {
+                calc == {
+                    |packSequenceOfBasics(s.l)|;
+                    ==
+                    |toChunks(serialiseSeqOfBasics(s.l))|;
+                    ==
+                        {toChunksProp2(serialiseSeqOfBasics(s.l));} 
+                    ceil(|serialiseSeqOfBasics(s.l)|, BYTES_PER_CHUNK);
+                    ==
+                    ceil(|s.l|*|serialise(s.l[0])|, BYTES_PER_CHUNK);
+                    <=
+                    chunkCountSequenceOfBasic(s.t, s.limit);
+                }
+            }
+        }
     /** Pack.
      *
      *  @param  s   A sequence of serialised objects (seq<byte>).
@@ -515,18 +563,15 @@ include "../beacon/helpers/Crypto.dfy"
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
      }
 
-     lemma bitlistLimit(s: Serialisable)
-        requires typeOf(s) == Bitlist_
+    lemma bitlistLimit(s: Serialisable, limit:nat)
+        requires typeOf(s) == Bitlist_(limit)
         ensures 0 <= |bitfieldBytes(s.xl)|
         ensures |bitfieldBytes(s.xl)| <= chunkCount(s)
     {
         calc {
             |bitfieldBytes(s.xl)|;
-            ==
-            {lengthBitfieldBytes(s.xl);} chunkCount(s);
             <=
-            chunkCount(s);
-
+            {lengthBitfieldBytes(s.xl, s.limit);} chunkCount(s);
         }
     }
 
@@ -568,17 +613,34 @@ include "../beacon/helpers/Crypto.dfy"
 
             case Uint8(_) => merkleise(pack(s), -1)
 
-            case Bitlist(xl) => bitlistLimit(s);
+            case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
+                                lengthBitfieldBytes(xl, limit);
                                 mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
 
-            case Bytes32(_) => merkleise(pack(s), -1)
+            case Bytes(_) => merkleise(pack(s), -1)
 
             case Container(fl) => merkleise(prepareSeqOfSerialisableForMerkleisation(fl),-1)
             // Note: if `seqMap(fl,(f:Serialisable) => getHashTreeRoot(f))` is
             // used in place of `prepareSeqOfSerialisableForMerkleisation(fl)`,
             // like below, then Dafny is unable to prove termination:
             //merkleise(seqMap(fl,(f:Serialisable) => getHashTreeRoot(f)),-1)
-    }       
+
+            case List(l,t,limit) =>     if isBasicTipe(t) then
+                                            lengthOfSerialisationOfSequenceOfBasics(s);
+                                            mixInLength(
+                                                merkleise(pack(s),chunkCount(s)),
+                                                |l|)
+                                        else
+                                            mixInLength(
+                                                merkleise(prepareSeqOfSerialisableForMerkleisation(l),chunkCount(s)),
+                                                |l|
+                                            )
+
+            case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then
+                                    merkleise(pack(s), -1)
+                                else
+                                   merkleise(prepareSeqOfSerialisableForMerkleisation(v),-1)
+    }
 
     /**
      * Prepare a sequence of `Serialisable` objects for merkleisation.

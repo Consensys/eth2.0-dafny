@@ -146,7 +146,8 @@ include "Constants.dfy"
         //  The structure of the proof is split in 3 cases to follow
         //  the definition of fromBitlistToBytes and make it easier to prove
         if ( |l| < BITS_PER_BYTE - 1 ) {
-            //  Thanks Dafny
+            // The following lemma help reduce theverification time
+            decodeOfEncode8BitsIsIdentity(l + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|l| + 1) % BITS_PER_BYTE )]);
         } else if ( |l| == BITS_PER_BYTE - 1 ) {
             //  Thanks Dafny
         } else {
@@ -154,7 +155,14 @@ include "Constants.dfy"
                 fromBytesToBitList( fromBitlistToBytes (l) );
                 == //   Definition of fromBitlistToBytes
                 fromBytesToBitList([list8BitsToByte(l[..BITS_PER_BYTE])] + fromBitlistToBytes(l[BITS_PER_BYTE..]));
-                == { simplifyFromByteToListFirstArg(
+                == { 
+                        // The following assert statement help the verifier to
+                        // check that the preconditions for the
+                        // simplifyFromByteToListFirstArg lemma are satisfied
+                        // which helps reduce the verification time
+                        assert  |fromBitlistToBytes(l[BITS_PER_BYTE..])| >=1;
+                        
+                        simplifyFromByteToListFirstArg(
                         list8BitsToByte(l[..BITS_PER_BYTE]), 
                         fromBitlistToBytes(l[BITS_PER_BYTE..])
                         ) ;  
@@ -178,9 +186,38 @@ include "Constants.dfy"
         requires xb[|xb| - 1] >= 1
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
     {
-        if ( |xb| == 1 ) {
-            //  Thanks Dafny
-        } else {
+        //  The structure of the proof is split in 3 cases to follow
+        //  the definition of fromBitlistToBytes and make it easier to prove
+        if ( |xb| == 1 && xb[0] >= 0x80) 
+        {
+            calc == {
+                fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
+                [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                xb;
+            }
+        }
+        else if ( |xb| == 1 && xb[0] < 0x80) 
+        {
+                calc == {
+                    fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                }
+
+                var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
+                var blPadded:= bl + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|bl| + 1) % BITS_PER_BYTE )];
+
+                calc == {
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                    [ list8BitsToByte(blPadded)];
+                    [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                        {encodeOfDecodeByteIsIdentity(xb[0]);}
+                    xb;
+                }
+        } else // |xb| > 1
+        {
             calc == {
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
                 ==  //  Definition of fromBytesToBitList
@@ -278,7 +315,7 @@ include "Constants.dfy"
             == 
             [ list8BitsToByte((byteTo8Bits(e) + xl)[..BITS_PER_BYTE]) ] + 
                 fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ; 
-            == 
+            ==  {encodeOfDecodeByteIsIdentity(e);}
             [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ;
         }
     }

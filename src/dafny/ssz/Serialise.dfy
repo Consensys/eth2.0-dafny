@@ -19,6 +19,7 @@ include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
 include "BoolSeDes.dfy"
 include "BitListSeDes.dfy"
+include "Constants.dfy"
 
 /**
  *  SSZ library.
@@ -34,6 +35,7 @@ module SSZ {
     import opened BoolSeDes
     import opened BitListSeDes
     import opened Helpers
+    import opened Constants    
 
     /** SizeOf.
      *
@@ -44,8 +46,7 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires typeOf(s) !in {Bitlist_, Bytes32_, Container_}
-        requires uintWellTyped(s)
+        requires !(s.Bitlist? || s.Bytes? || s.Container? || s.List? || s.Vector?)
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
         match s
@@ -65,8 +66,8 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-        requires t !in {Container_}
-        ensures uintWellTyped(default(t))
+    requires  !(t.Container_? || t.List_? || t.Vector_?)
+    requires  t.Bytes_? ==> match t case Bytes_(n) => n > 0
     {
             match t 
                 case Bool_ => Bool(false)
@@ -83,9 +84,9 @@ module SSZ {
 
                 case Uint256_ => Uint256(0)
 
-                case Bitlist_ => Bitlist([])
+                case Bitlist_(limit) => Bitlist([],limit)
 
-                case Bytes32_ => Bytes32(timeSeq(0,32))
+                case Bytes_(len) => Bytes(timeSeq(0,len))
     }
 
     /** Serialise.
@@ -94,8 +95,9 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires uintWellTyped(s)
-    requires typeOf(s) !in {Container_}
+    requires  typeOf(s) != Container_
+    requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+    requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
         //  Equalities between upper bounds of uintk types and powers of two 
         constAsPowersOfTwo();
@@ -115,10 +117,33 @@ module SSZ {
 
             case Uint256(n) => uintSe(n as nat, 32)
 
-            case Bitlist(xl) => fromBitlistToBytes(xl)
+            case Bitlist(xl,limit) => fromBitlistToBytes(xl)
 
-            case Bytes32(bs) => bs
+            case Bytes(bs) => bs
+
+            case List(l,_,_) => serialiseSeqOfBasics(l)
+
+            case Vector(v) => serialiseSeqOfBasics(v)
     }
+
+    /**
+     * Serialise a sequence of basic `Serialisable` values
+     * 
+     * @param  s Sequence of basic `Serialisable` values
+     * @returns  A sequence of bytes encoding `s`.
+     */
+    function method serialiseSeqOfBasics(s: seq<Serialisable>): seq<byte>
+    requires forall i | 0 <= i < |s| :: isBasicTipe(typeOf(s[i]))
+    ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
+    ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
+    {
+        if |s| == 0 then
+            []
+        else
+            serialise(s[0]) + 
+            serialiseSeqOfBasics(s[1..])
+    }
+
 
     /** Deserialise. 
      *  
@@ -131,57 +156,58 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-        requires s !in {Container_}
-        ensures match deserialise(xs, s) 
-            case Failure => true 
-            case Success(z) => uintWellTyped(z)
+    requires !(s.Container_? || s.List_? || s.Vector_?)
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(Bool(byteToBool(xs[0])))
+                                Success(castToSerialisable(Bool(byteToBool(xs[0]))))
                             else 
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(Uint8(uintDes(xs)))
+                                Success(castToSerialisable(Uint8(uintDes(xs))))
                              else 
                                 Failure
 
             case Uint16_ => if |xs| == 2 then
-                                Success(Uint16(uintDes(xs)))
+                                Success(castToSerialisable(Uint16(uintDes(xs))))
                              else 
                                 Failure
             
             case Uint32_ => if |xs| == 4 then
-                                Success(Uint32(uintDes(xs)))
+                                Success(castToSerialisable(Uint32(uintDes(xs))))
                              else 
                                 Failure
 
             case Uint64_ => if |xs| == 8 then
-                                Success(Uint64(uintDes(xs)))
+                                Success(castToSerialisable(Uint64(uintDes(xs))))
                              else 
                                 Failure
 
             case Uint128_ => if |xs| == 16 then
                                 constAsPowersOfTwo();
-                                Success(Uint128(uintDes(xs)))
+                                Success(castToSerialisable(Uint128(uintDes(xs))))
                              else 
                                 Failure
 
             case Uint256_ => if |xs| == 32 then
                                 constAsPowersOfTwo();
-                                Success(Uint256(uintDes(xs)))
+                                Success(castToSerialisable(Uint256(uintDes(xs))))
                              else 
                                 Failure
                                 
-            case Bitlist_ => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
-                                Success(Bitlist(fromBytesToBitList(xs)))
-                            else
-                                Failure
+            case Bitlist_(limit) => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
+                                        var desBl := fromBytesToBitList(xs);
+                                        if |desBl| <= limit then
+                                            Success(castToSerialisable(Bitlist(desBl,limit)))
+                                        else
+                                            Failure
+                                    else
+                                        Failure
 
-            case Bytes32_ => if |xs| == 32 then
-                                Success(Bytes32(xs))
-                            else Failure
+            case Bytes_(len) => if 0 < |xs| == len then
+                                  Success(castToSerialisable(Bytes(xs)))
+                                else Failure
     }
 
     //  Specifications and Proofs
@@ -190,35 +216,51 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires uintWellTyped(s)
-        requires typeOf(s) !in {Container_}
+        requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
-    {   //  Thanks Dafny.
+    {
+         match s
+            case Bool(b) => 
+
+            case Uint8(n) => 
+
+            case Uint16(n) =>
+
+            case Uint32(n) =>
+
+            case Uint64(n) =>
+
+            case Uint128(n) =>
+
+            case Uint256(n) =>
+
+            case Bitlist(xl,limit) => bitlistDecodeEncodeIsIdentity(xl); 
+
+            case Bytes(bs) => 
     }
 
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires uintWellTyped(s)
-        requires typeOf(s) !in {Container_}
+        requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   
             //  Equalities between upper bounds of uintk types and powers of two 
             constAsPowersOfTwo();
 
             match s 
-                case Bitlist(xl) => 
+                case Bitlist(xl,limit) => 
                     calc {
                         deserialise(serialise(s), typeOf(s));
                         ==
-                        deserialise(serialise(Bitlist(xl)), Bitlist_);
+                        deserialise(serialise(Bitlist(xl,limit)), Bitlist_(limit));
                         == 
-                        deserialise(fromBitlistToBytes(xl), Bitlist_);
-                        == 
-                        Success(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl))));
+                        deserialise(fromBitlistToBytes(xl), Bitlist_(limit));
                         == { bitlistDecodeEncodeIsIdentity(xl); } 
-                        Success(Bitlist(xl));
+                        Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
+                        == { bitlistDecodeEncodeIsIdentity(xl); } 
+                        Success(castToSerialisable(Bitlist(xl,limit)));
                     }
 
                 case Bool(_) =>  //  Thanks Dafny
@@ -235,17 +277,15 @@ module SSZ {
 
                 case Uint256(n) =>  involution(n as nat, 32);
 
-                case Bytes32(_) => // Thanks Dafny
+                case Bytes(_) => // Thanks Dafny
+            
         }
 
     /**
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires uintWellTyped(s1) 
-        requires uintWellTyped(s2) 
-        requires typeOf(s1) !in {Container_}
-        requires typeOf(s2) !in {Container_}
+        requires !(s1.Container? || s1.List? || s1.Vector?)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {
