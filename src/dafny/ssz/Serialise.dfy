@@ -12,8 +12,8 @@
  * under the License.
  */
 
-
 include "../utils/NativeTypes.dfy"
+include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
@@ -29,6 +29,7 @@ include "Constants.dfy"
 module SSZ {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Eth2Types
     import opened IntSeDes
     import opened BoolSeDes
@@ -45,12 +46,17 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires typeOf(s) in {Uint8_, Bool_}
+        requires !(s.Bitlist? || s.Bytes? || s.Container? || s.List? || s.Vector?)
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
         match s
             case Bool(_) => 1
             case Uint8(_) => 1  
+            case Uint16(_) => 2 
+            case Uint32(_) => 4 
+            case Uint64(_) => 8
+            case Uint128(_) => 16 
+            case Uint256(_) => 32
     }
 
     /** default.
@@ -67,6 +73,16 @@ module SSZ {
                 case Bool_ => Bool(false)
         
                 case Uint8_ => Uint8(0)
+               
+                case Uint16_ => Uint16(0)
+
+                case Uint32_ => Uint32(0)
+
+                case Uint64_ => Uint64(0)
+
+                case Uint128_ => Uint128(0)
+
+                case Uint256_ => Uint256(0)
 
                 case Bitlist_(limit) => Bitlist([],limit)
 
@@ -83,10 +99,23 @@ module SSZ {
     requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
     requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
+        //  Equalities between upper bounds of uintk types and powers of two 
+        constAsPowersOfTwo();
+
         match s
             case Bool(b) => boolToBytes(b)
 
-            case Uint8(n) => uint8ToBytes(n)
+            case Uint8(n) =>  uintSe(n as nat, 1)
+
+            case Uint16(n) => uintSe(n as nat, 2)
+
+            case Uint32(n) => uintSe(n as nat, 4)
+
+            case Uint64(n) => uintSe(n as nat, 8)
+
+            case Uint128(n) => uintSe(n as nat, 16)
+
+            case Uint256(n) => uintSe(n as nat, 32)
 
             case Bitlist(xl,limit) => fromBitlistToBytes(xl)
 
@@ -136,8 +165,34 @@ module SSZ {
                                 Failure
                             
             case Uint8_ => if |xs| == 1 then
-                                Success(castToSerialisable(
-                                    Uint8(byteToUint8(xs[0]))))
+                                Success(castToSerialisable(Uint8(uintDes(xs))))
+                             else 
+                                Failure
+
+            case Uint16_ => if |xs| == 2 then
+                                Success(castToSerialisable(Uint16(uintDes(xs))))
+                             else 
+                                Failure
+            
+            case Uint32_ => if |xs| == 4 then
+                                Success(castToSerialisable(Uint32(uintDes(xs))))
+                             else 
+                                Failure
+
+            case Uint64_ => if |xs| == 8 then
+                                Success(castToSerialisable(Uint64(uintDes(xs))))
+                             else 
+                                Failure
+
+            case Uint128_ => if |xs| == 16 then
+                                constAsPowersOfTwo();
+                                Success(castToSerialisable(Uint128(uintDes(xs))))
+                             else 
+                                Failure
+
+            case Uint256_ => if |xs| == 32 then
+                                constAsPowersOfTwo();
+                                Success(castToSerialisable(Uint256(uintDes(xs))))
                              else 
                                 Failure
                                 
@@ -169,6 +224,16 @@ module SSZ {
 
             case Uint8(n) => 
 
+            case Uint16(n) =>
+
+            case Uint32(n) =>
+
+            case Uint64(n) =>
+
+            case Uint128(n) =>
+
+            case Uint256(n) =>
+
             case Bitlist(xl,limit) => bitlistDecodeEncodeIsIdentity(xl); 
 
             case Bytes(bs) => 
@@ -180,7 +245,10 @@ module SSZ {
     lemma seDesInvolutive(s : Serialisable) 
         requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
-        {   //  thanks Dafny.
+        {   
+            //  Equalities between upper bounds of uintk types and powers of two 
+            constAsPowersOfTwo();
+
             match s 
                 case Bitlist(xl,limit) => 
                     calc {
@@ -197,7 +265,17 @@ module SSZ {
 
                 case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(_) => //  Thanks Dafny
+                case Uint8(n) => involution(n as nat, 1);
+
+                case Uint16(n) => involution(n as nat, 2);
+
+                case Uint32(n) => involution(n as nat, 4);
+
+                case Uint64(n) => involution(n as nat, 8);
+
+                case Uint128(n) =>  involution(n as nat, 16);
+
+                case Uint256(n) =>  involution(n as nat, 32);
 
                 case Bytes(_) => // Thanks Dafny
             

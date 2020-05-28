@@ -13,6 +13,7 @@
  */
 
 include "NativeTypes.dfy"
+include "NonNativeTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
 
@@ -24,6 +25,7 @@ include "../utils/MathHelpers.dfy"
 module Eth2Types {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Helpers
     import opened MathHelpers
 
@@ -53,7 +55,12 @@ module Eth2Types {
 
     /** The serialisable objects. */
     datatype RawSerialisable = 
-            Uint8(n: uint8)
+            Uint8(n: nat)
+        |   Uint16(n: nat)
+        |   Uint32(n: nat)
+        |   Uint64(n: nat)
+        |   Uint128(n: nat)
+        |   Uint256(n: nat)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>, limit:nat)
         |   Bytes(bs: seq<byte>)
@@ -72,7 +79,17 @@ module Eth2Types {
         match s 
             case Bool(_) => true
     
-            case Uint8(_) => true
+            case Uint8(n) => n < 0x100
+
+            case Uint16(n) => n < 0x10000
+
+            case Uint32(n) => n < 0x100000000
+
+            case Uint64(n) => n < 0x10000000000000000
+
+            case Uint128(n) => n < 0x100000000000000000000000000000000
+
+            case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
 
             case Bitlist(xl,limit) => |xl| <= limit
 
@@ -150,6 +167,11 @@ module Eth2Types {
      */
     datatype Tipe =
             Uint8_
+        |   Uint16_
+        |   Uint32_
+        |   Uint64_
+        |   Uint128_
+        |   Uint256_
         |   Bool_
         |   Bitlist_(limit:nat)
         |   Bytes_(len:nat)
@@ -184,6 +206,16 @@ module Eth2Types {
         
                 case Uint8(_) => Uint8_
 
+                case Uint16(_) => Uint16_
+
+                case Uint32(_) => Uint32_
+
+                case Uint64(_) => Uint64_
+
+                case Uint128(_) => Uint128_
+
+                case Uint256(_) => Uint256_
+
                 case Bitlist(_,limit) => Bitlist_(limit)
 
                 case Bytes(bs) => Bytes_(|bs|)
@@ -194,6 +226,7 @@ module Eth2Types {
 
                 case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
+
 
     /**
      * Bitwise exclusive-or of two `byte` value

@@ -69,7 +69,12 @@ include "../beacon/helpers/Crypto.dfy"
     {
         match s
             case Bool(b) => chunkCountBool(b)
-            case Uint8(n) => chunkCountUint8(n)
+            case Uint8(_) => chunkCountUint(s)
+            case Uint16(_) => chunkCountUint(s)
+            case Uint32(_) => chunkCountUint(s)
+            case Uint64(_) => chunkCountUint(s)
+            case Uint128(_) => chunkCountUint(s)
+            case Uint256(_) => chunkCountUint(s)
             case Bitlist(_,limit) => chunkCountBitlist(limit) 
             case Bytes(bs) => chunkCountBytes(bs)
             case List(l,t,limit) => if isBasicTipe(t) then 
@@ -95,10 +100,11 @@ include "../beacon/helpers/Crypto.dfy"
         1
     }
 
-    function method chunkCountUint8(n: uint8): nat
+    function method chunkCountUint(n: Serialisable): nat
+        requires n.Uint8? || n.Uint16? || n.Uint32? || n.Uint64? || n.Uint128? || n.Uint256?
         // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountUint8(n) == 1
-        ensures |pack(Uint8(n))| == chunkCountUint8(n)
+        ensures chunkCountUint(n) == 1
+        ensures |pack(n)| == chunkCountUint(n)
     {
         1
     }
@@ -289,7 +295,12 @@ include "../beacon/helpers/Crypto.dfy"
     {
         match s
             case Bool(b) => packBool(b)
-            case Uint8(n) => packUint8(n)
+            case Uint8(_) => packUint(s)
+            case Uint16(_) => packUint(s)
+            case Uint32(_) => packUint(s)
+            case Uint64(_) => packUint(s)
+            case Uint128(_) => packUint(s)
+            case Uint256(_) => packUint(s)
             case Bytes(bs) => packBytes(bs)
             case List(l,_,limit) => packSequenceOfBasics(l)
             case Vector(v) => packSequenceOfBasics(v)
@@ -304,10 +315,11 @@ include "../beacon/helpers/Crypto.dfy"
         toChunks(serialise(Bool(b)))
     }
 
-    function method packUint8(n: uint8): seq<chunk>
-        ensures |packUint8(n)| == 1
+    function method packUint(n: Serialisable): seq<chunk>
+        requires n.Uint8? || n.Uint16? || n.Uint32? || n.Uint64? || n.Uint128? || n.Uint256?
+        ensures |packUint(n)| == 1
     {
-        toChunks(serialise(Uint8(n)))
+        toChunks(serialise(n))
     }
 
     function method packBytes(bs: seq<byte>): seq<chunk>
@@ -553,6 +565,16 @@ include "../beacon/helpers/Crypto.dfy"
             case Bool(_) => merkleise(pack(s), -1)
 
             case Uint8(_) => merkleise(pack(s), -1)
+
+            case Uint16(_) => merkleise(pack(s), -1)
+
+            case Uint32(_) => merkleise(pack(s), -1)
+
+            case Uint64(_) => merkleise(pack(s), -1)
+
+            case Uint128(_) => merkleise(pack(s), -1)
+
+            case Uint256(_) => merkleise(pack(s), -1)
 
             case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
                                 lengthBitfieldBytes(xl, limit);
