@@ -191,19 +191,20 @@ module StateTransition {
         method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
             // requires isReachableFromGenesis(s.latest_block_header)
             // requires !isGenesisBlock(b)
+            requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.latest_block_header in store.Values
             requires isConsistent()
             requires hash_tree_root_block_header(b) !in store.Keys
-            requires s.slot <= b.slot
+            requires s.slot < b.slot
             requires b.parent_root == s.latest_block_header.parent_root
             // ensures isConsistent()
             modifies this
         {
             //  finalise slots before b.slot
             var s1 := processSlots(s, b.slot);
-            assert(s1.latest_block_header.parent_root ==  s.latest_block_header.parent_root); 
-            assert(isConsistent());
-
+            // assert(s1.latest_block_header.parent_root ==  s.latest_block_header.parent_root); 
+            // assert(isConsistent());
+            // assert( s1 == forwardStateToSlot(resolveStateRoot(s),b.slot));
             // assert(b.parent_root == hash_tree_root_block_header(s.latest_block_header));
             //  Process block
             s' := processBlock(s1, b);
@@ -251,28 +252,48 @@ module StateTransition {
         *                 
         */
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
-            requires s.slot <= slot
+            requires s.latest_block_header.state_root == EMPTY_BYTES32
+            requires s.slot < slot  //  update in 0.12.0 (was <= before)
             ensures  s'.slot == slot 
-            ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+            // ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
             // ensures s'.latest_block_header.parent_root != EMPTY_BYTES32
             ensures store == old(store)
+            ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
+
+            // ensures s.slot < slot ==> s' == forwardStateToSlot(resolveStateRoot(s), slot)
             decreases slot - s.slot
         {
-            //  start from thr current state
-            s' := s;
+            //  start from the current state
+            s':= processSlot(s);
+            //  s' block header state_root should now be resolved
+            s':= s'.(slot := s'.slot + 1) ;
+            assert(s' == resolveStateRoot(s));
+            ghost var i := 0; 
+            ghost var s1 := s'; //  previous state
+            ghost var s2 := s';
+
+            //  Now fast forward to slot
             while (s'.slot < slot)  
                 invariant s'.slot <= slot
                 invariant s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+                invariant s'.latest_block_header.state_root != EMPTY_BYTES32
+                invariant i == 0 || s1.slot <= s'.slot - 1
+                invariant i == 0 || s' == nextSlot(s1)
+                invariant s' == forwardStateToSlot(s2, s'.slot)
                 decreases slot - s'.slot 
             {
                 //  s'.slot < slot. Complete processing of s'.slot 
                 //  The slot number s'.slot is incremented after as
                 //  process_slot 
+                s1 := s';
                 s':= processSlot(s');
                 //  s'.slot is now processed: history updates and block header resolved
                 //  The state's slot is processed and we can advance to the next slot.
                 s':= s'.(slot := s'.slot + 1) ;
+                i := i + 1;
             }
+            assert(s' == forwardStateToSlot(s2, slot));
+            assert(s' == forwardStateToSlot( resolveStateRoot(s), slot));
         }
 
         /** 
@@ -287,8 +308,11 @@ module StateTransition {
         *              block.
         */
         function method processSlot(s: BeaconState) : BeaconState
-            ensures processSlot(s).slot == s.slot
-            ensures s.latest_block_header.parent_root == processSlot(s).latest_block_header.parent_root
+            // ensures processSlot(s).slot == s.slot
+            // ensures s.latest_block_header.parent_root == processSlot(s).latest_block_header.parent_root
+            // ensures processSlot(s).latest_block_header.state_root != EMPTY_BYTES32
+            // ensures s.latest_block_header.state_root == EMPTY_BYTES32 ==> processSlot(s).latest_block_header.state_root == hash_tree_root(s)
+            // ensures s.latest_block_header.state_root != EMPTY_BYTES32 ==> processSlot(s).latest_block_header.state_root == s.latest_block_header.state_root
         {
             //  Let definitions for readability.
 
