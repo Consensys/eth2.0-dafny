@@ -385,8 +385,8 @@ module StateTransition {
      *              1. a new latest_block_header' state_root set to the hash_tree_root(s) 
      *              2. the hash_tree_root(s) archived in the s'.state_roots for the slot
      *              3. the hash_tree_root of the new_block_header is archived 
-        *              in s'.block_roots
-        */
+     *              in s'.block_roots
+     */
     function resolveStateRoot(s: BeaconState): BeaconState 
         //  The state_root of `s` must be unresolved.
         requires s.latest_block_header.state_root == EMPTY_BYTES32
