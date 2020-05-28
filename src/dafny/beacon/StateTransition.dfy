@@ -362,16 +362,19 @@ module StateTransition {
         *              in s'.block_roots
         */
     function resolveStateRoot(s: BeaconState): BeaconState 
+        //  The state_root of `s` must be unresolved.
+        requires s.latest_block_header.state_root == EMPTY_BYTES32
+        //  No overflow
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
     {
         var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
-        var latest_block_header_root :=  hash_tree_root_block_header(new_latest_block_header);
         BeaconState(
             // slot unchanged
-            s.slot,
-            //  block header fixed if there was a new block in previous slot
-            s.latest_block_header.(state_root := latest_block_header_root),
+            s.slot + 1,
+            //  block header state_root set to `s` root
+            new_latest_block_header,
             //  add new block_header root to block_roots history.
-            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := latest_block_header_root],
+            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(new_latest_block_header)],
             //  add previous state root to state_roots history
             s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
         )
