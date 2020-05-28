@@ -4,7 +4,11 @@
   *
   */
 
+include "../utils/Eth2Types.dfy"
+
 module Constants {  
+
+  import opened Eth2Types
 
   //  Powers of 2
   const TWO_UP_0 := 1;
@@ -116,4 +120,13 @@ module Constants {
   /** A 0 byte, all bits set to false. */
   const FALSE_BYTE := [false, false, false, false, false, false, false, false]
   
-}
+  /** An empty chunk, all 32 bytes set to zero */
+  const EMPTY_CHUNK :=    [0 as byte, 0 as byte, 0 as byte, 0 as byte, 
+                           0 as byte, 0 as byte,0 as byte,0 as byte, 
+                           0 as byte, 0 as byte,0 as byte,0 as byte, 
+                           0 as byte, 0 as byte,0 as byte,0 as byte, 
+                           0 as byte, 0 as byte,0 as byte,0 as byte,
+                           0 as byte, 0 as byte,0 as byte,0 as byte,
+                           0 as byte, 0 as byte,0 as byte,0 as byte, 
+                           0 as byte, 0 as byte,0 as byte,0 as byte]
+} 
