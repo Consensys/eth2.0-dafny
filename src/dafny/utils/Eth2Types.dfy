@@ -99,12 +99,14 @@ module Eth2Types {
 
             case List(l, t, limit) =>   && |l| <= limit
                                         && limit > 0
+                                        && t == Bool_
                                         && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
-                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t
+                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
 
             case Vector(v) =>   && |v| > 0
                                 && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
-                                && forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j])
+                                && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
+                                && (typeOf(v[0])) != Bool_
 
     }
 
