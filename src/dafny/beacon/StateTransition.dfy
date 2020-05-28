@@ -378,13 +378,13 @@ module StateTransition {
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
-        *  Complete the current slot.
-        *
-        *  @param  s   A beacon state.
-        *  @returns    A new state `s'` such that:
-        *              1. a new latest_block_header' state_root set to the hash_tree_root(s) 
-        *              2. the hash_tree_root(s) archived in the s'.state_roots for the slot
-        *              3. the hash_tree_root of the new_block_header is archived 
+     *  Complete the current slot.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    A new state `s'` such that:
+     *              1. a new latest_block_header' state_root set to the hash_tree_root(s) 
+     *              2. the hash_tree_root(s) archived in the s'.state_roots for the slot
+     *              3. the hash_tree_root of the new_block_header is archived 
         *              in s'.block_roots
         */
     function resolveStateRoot(s: BeaconState): BeaconState 
@@ -407,10 +407,10 @@ module StateTransition {
     }
 
     /**
-        *  Finalise a state and forward to slot.
-        *  
-        *  @param  s       A state
-        *  @param  slot    A slot. 
+     *  Finalise a state and forward to slot.
+     *  
+     *  @param  s       A state
+     *  @param  slot    A slot. 
         *  @returns        A new state obtained by  archiving roots and incrementing slot.
         *  slot.
         */
@@ -425,6 +425,16 @@ module StateTransition {
             nextSlot(forwardStateToSlot(s, slot - 1))
     }
 
+    /**
+     *  Advance a state by one slot.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    The successor state for `slot + 1`.
+     *
+     *  @note       This function increment the slot number and archives 
+     *              the previous state_root and block_root, and copy verbatim the 
+     *              latest_block_header.
+     */
     function nextSlot(s : BeaconState) : BeaconState 
         //  No overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
