@@ -405,18 +405,7 @@ include "../beacon/helpers/Crypto.dfy"
         else toChunks(fromBitsToBytes(b)) 
     }
 
-    predicate isPowerOf2(n: nat)
-    {
-        //(n == get_next_power_of_two(n))
-        exists k:nat:: power2(k)==n 
-        //x > 0 && ( x == 1 || ((x % 2 == 0) && isPowerOf2(x/2)) )
-    }
-
-    lemma Prop1(n: nat)
-        ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
-    {
-        //Thanks Dafny
-    }
+    
 
     lemma propPadPow2Chunks(chunks: seq<chunk>)
         requires 1 <= |chunks| 
@@ -427,7 +416,7 @@ include "../beacon/helpers/Crypto.dfy"
             ==
             get_next_power_of_two(get_next_power_of_two(|chunks|));
             ==
-            {Prop1(|chunks|);} get_next_power_of_two(|chunks|);
+            {getNextPow2isIdempotent(|chunks|);} get_next_power_of_two(|chunks|);
 
         }
     }
@@ -441,7 +430,7 @@ include "../beacon/helpers/Crypto.dfy"
                 ==
                 get_next_power_of_two(|chunks|);
                 ==
-                {Prop1(|chunks|);} 
+                {getNextPow2isIdempotent(|chunks|);} 
                 get_next_power_of_two(get_next_power_of_two(|chunks|));
                 ==
                 get_next_power_of_two(|padPow2Chunks(chunks)|) ;
@@ -469,50 +458,7 @@ include "../beacon/helpers/Crypto.dfy"
         else hash(merkleisePow2Chunks(chunks[..(|chunks|/2)]) + merkleisePow2Chunks(chunks[|chunks|/2..]))
     }
 
-    lemma nextPow2Prop(n: nat)
-        ensures n <= get_next_power_of_two(n)
-    {
-        // Thanks Dafny
-    }
-
-    lemma nextPow2IsPow2(n: nat)
-        ensures isPowerOf2(get_next_power_of_two(n))
-        //ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
-    {
-        if n <= 1 {
-            assert(get_next_power_of_two(n) == power2(0)) ;
-        } else {
-            //  Induction on (n + 1)/2
-            var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
-            calc {
-                get_next_power_of_two(n);
-                ==  //  Definition of 
-                2 * get_next_power_of_two( (n + 1) / 2);
-                == //   Use Induction assumption in (n + 1)/2
-                2 * power2(k);
-                ==  //  Definition of
-                power2(k + 1);
-            }
-        }
-    }
-
-    lemma halfPow2IsPow2(n: nat)
-        requires n > 1
-        requires isPowerOf2(n)
-        ensures isPowerOf2(n/2)
-    {
-        var k:nat :| power2(k)==n ;
-        assert(n>=2);
-        assert(k>=1);
-        calc {
-            isPowerOf2(n/2); 
-            ==
-            isPowerOf2(power2(k)/2); 
-            ==
-            isPowerOf2(power2(k-1)); 
-        }
-    }
-
+    
     function method padChunks(chunks: seq<chunk>, padLength: nat): seq<chunk>
         requires 1 <= padLength  // since padLength must be a power of two
         requires 0 <= |chunks| 
@@ -548,13 +494,13 @@ include "../beacon/helpers/Crypto.dfy"
         
         if limit == -1 then 
             nextPow2IsPow2(|chunks|);
-            nextPow2Prop(|chunks|);
+            getNextPow2LowerBound(|chunks|);
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(|chunks|)))
         else 
             assert(limit >= 0);
             //assert(limit >= |chunks|);
             nextPow2IsPow2(limit);
-            nextPow2Prop(limit);
+            getNextPow2LowerBound(limit);
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
      }
 
