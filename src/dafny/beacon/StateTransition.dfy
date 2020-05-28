@@ -387,25 +387,13 @@ module StateTransition {
         */
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
-
+        ensures forwardStateToSlot(s, slot).slot == slot
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
             s
         else
-            forwardStateToSlot(
-                BeaconState(
-                    // slot unchanged
-                    s.slot + 1,
-                    //  block header fixed if there was a new block in previous slot
-                    s.latest_block_header,
-                    //  add block roots to history
-                    s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(s.latest_block_header)],
-                    //  add previous state roots to history
-                    s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := s.latest_block_header.state_root]
-                ),
-                slot
-            )
+            nextSlot(forwardStateToSlot(s, slot - 1))
     }
 
     function nextSlot(s : BeaconState) : BeaconState 
