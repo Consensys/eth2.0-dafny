@@ -256,46 +256,42 @@ module StateTransition {
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.slot < slot  //  update in 0.12.0 (was <= before)
-            ensures  s'.slot == slot 
-            // ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
-            // ensures s'.latest_block_header.parent_root != EMPTY_BYTES32
+            // ensures  s'.slot == slot 
             ensures store == old(store)
             ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
 
-            // ensures s.slot < slot ==> s' == forwardStateToSlot(resolveStateRoot(s), slot)
             decreases slot - s.slot
         {
-            //  start from the current state
-            s':= processSlot(s);
-            //  s' block header state_root should now be resolved
+            //  start from the current state and finalise it.
+            s' := processSlot(s);
             s':= s'.(slot := s'.slot + 1) ;
-            assert(s' == resolveStateRoot(s));
-            ghost var i := 0; 
-            ghost var s1 := s'; //  previous state
-            ghost var s2 := s';
+
+            //  s' block header state_root should now be resolved
+            //  s'.latest_block_header.state_root != EMPTY_BYTES32
+            //  and mnore precisely s' == resolveStateRoot(s);
 
             //  Now fast forward to slot
             while (s'.slot < slot)  
                 invariant s'.slot <= slot
-                invariant s.latest_block_header.parent_root == s'.latest_block_header.parent_root
                 invariant s'.latest_block_header.state_root != EMPTY_BYTES32
-                invariant i == 0 || s1.slot <= s'.slot - 1
-                invariant i == 0 || s' == nextSlot(s1)
-                invariant s' == forwardStateToSlot(s2, s'.slot)
+                invariant s' == forwardStateToSlot(resolveStateRoot(s), s'.slot) // Inv1
                 decreases slot - s'.slot 
             {
-                //  s'.slot < slot. Complete processing of s'.slot 
-                //  The slot number s'.slot is incremented after as
-                //  process_slot 
-                s1 := s';
+                //  Record the value of s' 
+                ghost var s1 := s';
                 s':= processSlot(s');
-                //  s'.slot is now processed: history updates and block header resolved
+
+                //  s'.slot is now processed: history updated and block header resolved
                 //  The state's slot is processed and we can advance to the next slot.
                 s':= s'.(slot := s'.slot + 1) ;
-                i := i + 1;
+
+                //  The following two predicates are not invariant as they do not hold
+                //  before thr first iteration of the loop.
+                //  However, they hold after at least one iteration and 
+                //  are used to prove Inv1
+                assert(s1.slot <= s'.slot - 1) ;
+                assert(s' == nextSlot(s1));
             }
-            assert(s' == forwardStateToSlot(s2, slot));
-            assert(s' == forwardStateToSlot( resolveStateRoot(s), slot));
         }
 
        /** 
@@ -315,6 +311,12 @@ module StateTransition {
         *   @todo       Make this a method to have a def closer to Eth2 implementation.  
         */
         function method processSlot(s: BeaconState) : BeaconState
+            requires s.slot as nat + 1 < 0x10000000000000000 as nat
+
+            ensures  s.latest_block_header.state_root == EMPTY_BYTES32 ==>
+                processSlot(s) == resolveStateRoot(s).(slot := s.slot)
+            ensures  s.latest_block_header.state_root != EMPTY_BYTES32 ==>
+                processSlot(s) == nextSlot(s).(slot := s.slot)
         {
             //  Let definitions for increased readability.
 
