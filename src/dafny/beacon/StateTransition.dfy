@@ -49,6 +49,8 @@ module StateTransition {
      *  @todo   Use the hash_tree_root from Merkle.
      */
     function method hash_tree_root(s: BeaconState) : Bytes32 
+        ensures hash_tree_root(s) != EMPTY_BYTES32
+
     // function method hash_tree_root_block(s: BeaconBlock) : Bytes32 
     function method hash_tree_root_block_header(b: BeaconBlockHeader) : Bytes32 
         ensures hash_tree_root_block_header(b) == EMPTY_BYTES32 <==> isGenesisBlockHeader(b)
