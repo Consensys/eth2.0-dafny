@@ -411,7 +411,7 @@ module StateTransition {
      *  
      *  @param  s       A state
      *  @param  slot    A slot. 
-        *  @returns        A new state obtained by  archiving roots and incrementing slot.
+     *  @returns        A new state obtained by  archiving roots and incrementing slot.
         *  slot.
         */
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
@@ -436,7 +436,7 @@ module StateTransition {
      *              latest_block_header.
      */
     function nextSlot(s : BeaconState) : BeaconState 
-        //  No overflow
+        //  Maske sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
     {
         //  Add header root to history of block_roots
