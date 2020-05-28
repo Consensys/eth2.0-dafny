@@ -172,7 +172,7 @@ module StateTransition {
     class Env {
 
         /**
-         *  The record of blocks that have been accepted.
+         *  The record of blocks that have been added to the chain.
          */
         var store : map<Bytes32, BeaconBlockHeader> 
 
@@ -251,24 +251,32 @@ module StateTransition {
         *  @param  slot    The slot to advance to. This is usually the slot of newly
         *                  proposed block.
         *  @returns        The state obtained after advancing the history to slot.
-        *                 
+        *      
+        *   @note          The specs have the the first processSlot integrated
+        *                  in the while loop. However, because s.slot < slot,
+        *                  the while bdoy must be executed at least one time.
+        *                  To simplify the proof, we have taken this first iteration
+        *                  outside of the loop. It does not change the semantics
+        *                  but enables us to use the state obtained after the first
+        *                  iteration the loop and prove it is the same as 
+        *                  resolveStateRoot(s); 
+        *
         */
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.slot < slot  //  update in 0.12.0 (was <= before)
             // ensures  s'.slot == slot 
             ensures store == old(store)
-            ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
 
             decreases slot - s.slot
         {
             //  start from the current state and finalise it.
             s' := processSlot(s);
             s':= s'.(slot := s'.slot + 1) ;
-
+            //  The following asserts are not needed for the proof but here for readability. 
+            assert(s' == resolveStateRoot(s));
             //  s' block header state_root should now be resolved
-            //  s'.latest_block_header.state_root != EMPTY_BYTES32
-            //  and mnore precisely s' == resolveStateRoot(s);
+            assert(s'.latest_block_header.state_root != EMPTY_BYTES32);
 
             //  Now fast forward to slot
             while (s'.slot < slot)  
@@ -357,7 +365,7 @@ module StateTransition {
             s' := processBlockHeader(s, b);
         }
 
-        /**
+       /**
         *  Check whether a block is valid and prepare and initialise new state
         *  with a corresponding block header. 
         */
@@ -436,7 +444,7 @@ module StateTransition {
      *              latest_block_header.
      */
     function nextSlot(s : BeaconState) : BeaconState 
-        //  Maske sure s.slot does not overflow
+        //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
     {
         //  Add header root to history of block_roots
