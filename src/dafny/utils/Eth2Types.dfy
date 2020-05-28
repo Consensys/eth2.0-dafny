@@ -188,7 +188,13 @@ module Eth2Types {
      */
     predicate method isBasicTipe(t:Tipe)
     {
-        t in {Bool_, Uint8_}
+        !
+        (   || t.Bitlist_? 
+            || t.Bytes_?
+            || t.Container_?
+            || t.List_?
+            || t.Vector_?
+        )
     }
 
    /**  The Tipe of a serialisable.
