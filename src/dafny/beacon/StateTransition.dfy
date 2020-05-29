@@ -260,7 +260,8 @@ module StateTransition {
 
         decreases slot - s.slot
         {
-            //  start from the current state and finalise it.
+            //  start from the current state and update with processSlot.
+            //  First iteration of the loop in process_slots (Eth2)
             s' := processSlot(s);
             s':= s'.(slot := s'.slot + 1) ;
             //  The following asserts are not needed for the proof but here for readability. 
@@ -269,6 +270,7 @@ module StateTransition {
             assert(s'.latest_block_header.state_root != EMPTY_BYTES32);
 
             //  Now fast forward to slot
+            //  Next iterations of process_slot (Eth2)
             while (s'.slot < slot)  
                 invariant s'.slot <= slot
                 invariant s'.latest_block_header.state_root != EMPTY_BYTES32
@@ -284,9 +286,9 @@ module StateTransition {
                 s':= s'.(slot := s'.slot + 1) ;
 
                 //  The following two predicates are not invariant as they do not hold
-                //  before thr first iteration of the loop.
+                //  before the first iteration of the loop.
                 //  However, they hold after at least one iteration and 
-                //  are used to prove Inv1
+                //  are useful to prove Inv1
                 assert(s1.slot <= s'.slot - 1) ;
                 assert(s' == nextSlot(s1));
             }
