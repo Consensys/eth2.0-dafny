@@ -50,6 +50,7 @@ module StateTransition {
      */
     function method hash_tree_root<T>(t : T) : Bytes32 
         ensures hash_tree_root(t) != EMPTY_BYTES32
+
     /** 
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
      * The beacon chain’s state (BeaconState) is the core object around 
@@ -393,7 +394,7 @@ module StateTransition {
     }
 
     /**
-     *  Finalise a state and forward to slot.
+     *  Finalise a state and forward to slot in the future.
      *  
      *  @param  s       A state
      *  @param  slot    A slot. 
