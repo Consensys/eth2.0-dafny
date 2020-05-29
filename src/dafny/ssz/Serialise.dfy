@@ -134,7 +134,7 @@ module SSZ {
      */
     function method serialiseSeqOfBasics(s: seq<Serialisable>): seq<byte>
     requires forall i | 0 <= i < |s| :: isBasicTipe(typeOf(s[i]))
-    requires |s| > 0 ==> (forall i | 0 <= i < |s| :: typeOf(s[0]) == typeOf(s[i]))
+    requires forall i,j | 0 <= i < |s| && 0 <= j < |s| :: typeOf(s[i]) == typeOf(s[j])
     ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
     ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
     {
