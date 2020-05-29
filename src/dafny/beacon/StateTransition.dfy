@@ -214,7 +214,7 @@ module StateTransition {
             s' := processBlock(s1, b);
             // assert(store[b.parent_root].slot < b.slot);
             //  Add the block to the global Store
-            store := store[hash_tree_root_block_header(b) := b];
+            store := store[hash_tree_root(b) := b];
 
             //  Validate state block
         }
@@ -327,7 +327,7 @@ module StateTransition {
             }
 
             //  Cache block root
-            var previous_block_root := hash_tree_root_block_header(s'.latest_block_header);
+            var previous_block_root := hash_tree_root(s'.latest_block_header);
 
             s' := s'.(block_roots := s'.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_block_root]);
         }
@@ -386,7 +386,7 @@ module StateTransition {
             //  block header state_root set to `s` root
             new_latest_block_header,
             //  add new block_header root to block_roots history.
-            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(new_latest_block_header)],
+            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
             //  add previous state root to state_roots history
             s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
         )
@@ -426,7 +426,7 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
     {
         //  Add header root to history of block_roots
-        var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root_block_header(s.latest_block_header)];
+        var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s.latest_block_header)];
         //  Add state root to history of state roots
         var new_state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)];
         //  Increment slot and copy latest_block_header
