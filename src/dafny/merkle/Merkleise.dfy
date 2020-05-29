@@ -332,6 +332,7 @@ include "../beacon/helpers/Crypto.dfy"
 
     function method packSequenceOfBasics(l: seq<Serialisable>): seq<chunk>
         requires forall i | 0 <= i < |l| :: isBasicTipe(typeOf(l[i]))
+        requires forall i,j | 0 <= i < |l| && 0 <= j < |l| :: typeOf(l[i]) == typeOf(l[j])
     {
         toChunks(serialiseSeqOfBasics(l))
     }    
