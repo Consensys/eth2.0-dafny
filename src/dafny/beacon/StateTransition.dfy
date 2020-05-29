@@ -254,7 +254,7 @@ module StateTransition {
             ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
             ensures store == old(store)
 
-        decreases slot - s.slot
+            decreases slot - s.slot
         {
             //  start from the current state and update with processSlot.
             //  First iteration of the loop in process_slots (Eth2)
@@ -404,6 +404,7 @@ module StateTransition {
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
         ensures forwardStateToSlot(s, slot).slot == slot
+        
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
