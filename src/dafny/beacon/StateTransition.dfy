@@ -308,40 +308,31 @@ module StateTransition {
         *               as methods are not inlined. 
         *   @todo       Make this a method to have a def closer to Eth2 implementation.  
         */
-        function method processSlot(s: BeaconState) : BeaconState
+        method processSlot(s: BeaconState) returns (s' : BeaconState)
             requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
             ensures  s.latest_block_header.state_root == EMPTY_BYTES32 ==>
-                processSlot(s) == resolveStateRoot(s).(slot := s.slot)
+                s' == resolveStateRoot(s).(slot := s.slot)
             ensures  s.latest_block_header.state_root != EMPTY_BYTES32 ==>
-                processSlot(s) == nextSlot(s).(slot := s.slot)
+                s' == nextSlot(s).(slot := s.slot)
         {
-            //  Let definitions for increased readability.
+            s' := s;
 
+            // Cache state root
             //  Record the hash of the previous state in the history.
             var previous_state_root := hash_tree_root(s); 
-            //  The block header in the state may be empty if a new block
-            //  was received in the previous slot. It is fixed when finalising a slot.
-            var real_latest_block_header := 
-                if (s.latest_block_header.state_root == EMPTY_BYTES32) then
-                    s.latest_block_header.(state_root := previous_state_root)
-                else 
-                    s.latest_block_header
-                ;     
-            //  The fixed block header root.
-            var real_latest_block_root := hash_tree_root_block_header(real_latest_block_header);
 
-            //  Define the new state   
-            BeaconState(
-                // slot unchanged
-                s.slot,
-                //  block header fixed if there was a new block in previous slot
-                real_latest_block_header,
-                //  add block roots to history
-                s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := real_latest_block_root],
-                //  add previous state roots to history
-                s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_state_root]
-            )
+            s' := s'.(state_roots := s'.state_roots[(s'.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_state_root]);
+
+            //  Cache latest block header state root
+            if (s'.latest_block_header.state_root == EMPTY_BYTES32) {
+                s' := s'.(latest_block_header := s'.latest_block_header.(state_root := previous_state_root));
+            }
+
+            //  Cache block root
+            var previous_block_root := hash_tree_root_block_header(s'.latest_block_header);
+
+            s' := s'.(block_roots := s'.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_block_root]);
         }
 
         /**
