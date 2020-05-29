@@ -121,12 +121,12 @@ module Constants {
   const FALSE_BYTE := [false, false, false, false, false, false, false, false]
   
   /** An empty chunk, all 32 bytes set to zero */
-  const EMPTY_CHUNK :=    [0 as byte, 0 as byte, 0 as byte, 0 as byte, 
-                           0 as byte, 0 as byte,0 as byte,0 as byte, 
-                           0 as byte, 0 as byte,0 as byte,0 as byte, 
-                           0 as byte, 0 as byte,0 as byte,0 as byte, 
-                           0 as byte, 0 as byte,0 as byte,0 as byte,
-                           0 as byte, 0 as byte,0 as byte,0 as byte,
-                           0 as byte, 0 as byte,0 as byte,0 as byte, 
-                           0 as byte, 0 as byte,0 as byte,0 as byte]
+  const EMPTY_CHUNK:seq<byte> := [0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0]
 } 
