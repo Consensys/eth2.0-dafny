@@ -159,4 +159,20 @@ include "Constants.dfy"
             }
         }
     }
+
+    /**
+     *  Serialise is injective for bitvector of the same length.
+     */
+    lemma {:induction l1, l2} bitvectorSerialiseIsInjectiveGeneral(l1: seq<bool>, l2 : seq<bool>)
+        requires |l1| > 0 
+        requires |l2| > 0
+        requires |l1| == |l2|
+        ensures fromBitvectorToBytes(l1) == fromBitvectorToBytes(l2) ==> l1 == l2 
+    {
+        calc ==> {
+            fromBitvectorToBytes(l1) == fromBitvectorToBytes(l2) ;
+            ==> { bitvectorDecodeEncodeIsIdentity(l1) ; bitvectorDecodeEncodeIsIdentity(l2) ; }
+            l1 == l2 ;
+        }
+    }   
 }
