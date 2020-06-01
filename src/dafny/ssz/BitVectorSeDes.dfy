@@ -73,5 +73,29 @@ include "Constants.dfy"
             [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes(l[BITS_PER_BYTE..])
     }
 
+    /**
+     *  Decode a sequence of bytes into vector of bits
+     *  
+     *  This is the inductive specification of deserialise for bitvector.
+     *  The `method` attribute turns it into an executable recursive function
+     *  and always terminates (decreases xb).
+     *
+     *  @param  xb  A non-empty sequence of bytes, the last element
+     *              of which is >= power2(len % 8) if len % 8 != 0.
+     *  @returns    The deserialised bitvector
+     */
+    function method fromBytesToBitVector(xb : seq<byte>, len: nat) : seq<bool> 
+        requires |xb| > 0
+        requires len <= |xb| * BITS_PER_BYTE < len + BITS_PER_BYTE;
+        requires (len % BITS_PER_BYTE) != 0 ==> xb[|xb|-1] as nat < power2(len% BITS_PER_BYTE);
+        decreases xb
+    {
+        if ( |xb| == 1 ) then 
+            //  Remove suffix 0*.
+            byteTo8Bits(xb[0])[.. len] 
+        else 
+            //  Recursive decoding.
+            byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE)
+    }
 
 }
