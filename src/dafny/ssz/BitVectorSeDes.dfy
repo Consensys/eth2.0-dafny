@@ -175,4 +175,22 @@ include "Constants.dfy"
             l1 == l2 ;
         }
     }   
+
+    /**
+     *  Deserialise is injective for bitvectors.
+     */
+    lemma {:induction xa, xb} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
+        requires fromBytesToBitVector.requires(xa,lena)
+        requires fromBytesToBitVector.requires(xb,lenb)
+        ensures fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ==> xa == xb 
+    {
+        calc ==> {
+            fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ;
+            ==> {
+                bitvectorEncodeDecodeIsIdentity(xa,lena) ; bitvectorEncodeDecodeIsIdentity(xb, lenb) ;
+            }
+            xa == xb ;
+        }
+    }
+
 }
