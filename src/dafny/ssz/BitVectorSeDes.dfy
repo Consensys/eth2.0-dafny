@@ -125,4 +125,38 @@ include "Constants.dfy"
             }
         }
     }
+
+    /**
+     *  Bitvector encoding of a decoded `xb` returns `xb`.
+     */
+    lemma  bitvectorEncodeDecodeIsIdentity(xb: seq<byte>, len:nat) 
+        requires fromBytesToBitVector.requires(xb, len)
+        ensures fromBitvectorToBytes(fromBytesToBitVector(xb,len)) == xb
+    {
+        //  The structure of the proof is split in 2 cases to follow
+        //  the definition of fromBytesToBitVector and make it easier to prove
+        if ( |xb| == 1) 
+        {
+            calc == {
+                fromBitvectorToBytes(fromBytesToBitVector(xb,len));
+                fromBitvectorToBytes(byteTo8Bits(xb[0])[.. len] );
+                [ list8BitsToByte( byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len)) ];
+                    {assume byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len) == byteTo8Bits(xb[0]);}
+                [ list8BitsToByte( byteTo8Bits(xb[0])) ];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                [xb[0]];
+            }
+        } else // |xb| > 1
+        {
+            calc == {
+                 fromBitvectorToBytes(fromBytesToBitVector(xb,len));
+                 fromBitvectorToBytes(byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE));
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                [xb[0]] + fromBitvectorToBytes(fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE));
+                    {bitvectorEncodeDecodeIsIdentity(xb[1..], len-BITS_PER_BYTE); }
+                [xb[0]] + xb[1..];
+                xb;
+            }
+        }
+    }
 }
