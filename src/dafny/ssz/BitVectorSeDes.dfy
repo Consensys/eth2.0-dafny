@@ -98,4 +98,31 @@ include "Constants.dfy"
             byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE)
     }
 
+    //  Main proofs  
+
+    /**
+     *  Decoding of encoded bitvector l returns l. 
+     */
+    lemma {:induction l} bitvectorDecodeEncodeIsIdentity(l : seq<bool>)
+        requires fromBitvectorToBytes.requires(l)
+        ensures fromBytesToBitVector( fromBitvectorToBytes (l), |l| ) == l 
+    {
+        //  The structure of the proof is split in 2 cases to follow
+        //  the definition of fromBitvectorToBytes and make it easier to prove
+        if(|l| <= BITS_PER_BYTE)
+        {
+            decodeOfEncode8BitsIsIdentity(l + timeSeq(false,BITS_PER_BYTE - |l|)); 
+        }
+        else
+        {
+            calc == {
+                fromBytesToBitVector( fromBitvectorToBytes (l), |l| );
+                fromBytesToBitVector([ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes(l[BITS_PER_BYTE..]), |l|);
+                    { decodeOfEncode8BitsIsIdentity(l[..BITS_PER_BYTE]); }
+                l[..BITS_PER_BYTE] + fromBytesToBitVector(fromBitvectorToBytes(l[BITS_PER_BYTE..]), |l| - BITS_PER_BYTE);
+                l[..BITS_PER_BYTE] + l[BITS_PER_BYTE..];
+                l;
+            }
+        }
+    }
 }
