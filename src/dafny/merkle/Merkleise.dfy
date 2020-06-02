@@ -355,7 +355,7 @@ include "../beacon/helpers/Crypto.dfy"
     }
 
 
-    /** bitfieldBytes.
+    /** pack_bits.
      *
      *  @param  b   A sequence of bits (seq<bool>)
      *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if |b| % 32 != 0
@@ -363,31 +363,27 @@ include "../beacon/helpers/Crypto.dfy"
      *  @note       This function is only applicable to a bitlist or bitvector. 
      *
      *  @note       Return the bits of the bitlist or bitvector, packed in bytes, aligned to the start. 
-     *              Length-delimiting bit for bitlists is excluded (Reference: simple-serialize.md)
+     *              Length-delimiting bit for bitlists is excluded [1].
+     *  @note       Not that the spec [1] was updated and the original function of bitfield_bytes was
+     *              changed to pack_bits as the specification of bitfield_bytes didn't return chunks.
      *
-     *  @note       Although not explicitly stated in the spec, it is assumed that the bytes are also
-     *              packed into 32-byte chunks and that right padding is applied to ensure full chunks.
-     *              This assumption is supported by the subsequent use of the function within the 
-     *              merkleisation function, which expects input in the form of chunks.
-     *
-     *  @note       Unlike the pack function, it is not implied by the spec that at least one chunk is 
-     *              returned.
+     *  @note       The spec [1] implies that at least one chunk will be returned, however py-ssz [2] 
+     *              has an implementation of to_chunks that will allow [] as output for an empty bitlist.
+     *              For the moment the packBits function will mirror the py-ssz [2] strategy.
      */
-    
-    function method bitfieldBytes(b: seq<bool>) : seq<chunk>
-        // no upper bound on length of any individual serialised element???
-        ensures forall i :: 0 <= i < |bitfieldBytes(b)| ==> is32BytesChunk(bitfieldBytes(b)[i])
-        ensures 0 <= |bitfieldBytes(b)| 
-        //ensures |pack(s)| == max(1, ceil(flattenLength(s),32))      
+    function method packBits(b: seq<bool>) : seq<chunk>
+        ensures 0 <= |packBits(b)|    
      {        
         if |b| == 0 then []
         else toChunks(fromBitsToBytes(b)) 
     }
 
-    
-    lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
+    /** 
+    *   Property of packBits 
+    */
+    lemma bitlistPackBitsToChunkCountProp(xl: seq<bool>, limit: nat)
         requires |xl| <= limit
-        ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
+        ensures |packBits(xl)| <= chunkCountBitlist(limit)
     {
         if (|xl| == 0) {
             calc == {
@@ -395,7 +391,7 @@ include "../beacon/helpers/Crypto.dfy"
             }
         } else {
             calc == {
-                |bitfieldBytes(xl)|;
+                |packBits(xl)|;
                 ==
                 |toChunks(fromBitsToBytes(xl)) |;
                 ==
@@ -411,6 +407,14 @@ include "../beacon/helpers/Crypto.dfy"
             }
         }
     }
+
+    // // TODO: complete once bitvectors are available
+    // lemma bitvectorPackBitsToChunkCountProp(s:Serialisable)
+    //     requires s.BitVector?
+    //     ensures |packBits(s.v)| == chunkCount(s)
+    // {
+        
+    // }
 
     lemma propPadPow2Chunks(chunks: seq<chunk>)
         requires 1 <= |chunks| 
@@ -511,13 +515,13 @@ include "../beacon/helpers/Crypto.dfy"
 
     lemma bitlistLimit(s: Serialisable, limit:nat)
         requires typeOf(s) == Bitlist_(limit)
-        ensures 0 <= |bitfieldBytes(s.xl)|
-        ensures |bitfieldBytes(s.xl)| <= chunkCount(s)
+        ensures 0 <= |packBits(s.xl)|
+        ensures |packBits(s.xl)| <= chunkCount(s)
     {
         calc {
-            |bitfieldBytes(s.xl)|;
+            |packBits(s.xl)|;
             <=
-            {lengthBitfieldBytes(s.xl, s.limit);} chunkCount(s);
+            {bitlistPackBitsToChunkCountProp(s.xl, s.limit);} chunkCount(s);
         }
     }
 
@@ -570,8 +574,8 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint256(_) => merkleise(pack(s), -1)
 
             case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
-                                lengthBitfieldBytes(xl, limit);
-                                mixInLength(merkleise(bitfieldBytes(xl), chunkCount(s)), |xl|)  
+                                bitlistPackBitsToChunkCountProp(xl, limit);
+                                mixInLength(merkleise(packBits(xl), chunkCount(s)), |xl|)  
 
             case Bytes(_) => merkleise(pack(s), -1)
 
