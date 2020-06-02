@@ -63,6 +63,7 @@ module Eth2Types {
         |   Uint256(n: nat)
         |   Bool(b: bool)
         |   Bitlist(xl: seq<bool>, limit:nat)
+        |   Bitvector(xl: seq<bool>)
         |   Bytes(bs: seq<byte>)
         |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
         |   Vector(v:seq<RawSerialisable>)
@@ -92,6 +93,8 @@ module Eth2Types {
             case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
 
             case Bitlist(xl,limit) => |xl| <= limit
+
+            case Bitvector(xl) => |xl| > 0
 
             case Bytes(bs) => |bs| > 0
 
@@ -176,6 +179,7 @@ module Eth2Types {
         |   Uint256_
         |   Bool_
         |   Bitlist_(limit:nat)
+        |   Bitvector_(len:nat)
         |   Bytes_(len:nat)
         |   Container_
         |   List_(t:Tipe, limit:nat)
@@ -191,7 +195,8 @@ module Eth2Types {
     predicate method isBasicTipe(t:Tipe)
     {
         !
-        (   || t.Bitlist_? 
+        (   || t.Bitlist_?
+            || t.Bitvector_?
             || t.Bytes_?
             || t.Container_?
             || t.List_?
@@ -226,7 +231,9 @@ module Eth2Types {
 
                 case Bitlist(_,limit) => Bitlist_(limit)
 
-                case Bytes(bs) => Bytes_(|bs|)
+                case Bitvector(bs) => Bitvector_(|bs|)
+
+                case Bytes(xl) => Bytes_(|xl|)
 
                 case Container(_) => Container_
 

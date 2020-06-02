@@ -80,6 +80,7 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint128(_) => 1
             case Uint256(_) => 1
             case Bitlist(_,limit) => chunkCountBitlist(limit) 
+            case Bitvector(xl) => chunkCountBitvector(xl) 
             case Bytes(bs) => chunkCountBytes(bs)
             case List(l,t,limit) => if isBasicTipe(t) then 
                                         chunkCountSequenceOfBasic(t,limit)
@@ -103,6 +104,14 @@ include "../beacon/helpers/Crypto.dfy"
     {
         (limit+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
     }
+
+    function method chunkCountBitvector(xl: seq<bool>): nat
+        // (N * size_of(B) + 31) // 32 (dividing by chunk size in bytes, rounding up) [1]]
+        // In this case N == |xl|
+        ensures chunkCountBitvector(xl) == ceil(|xl|, BITS_PER_CHUNK)
+    {
+        (|xl|+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
+    }    
 
     function method chunkCountBytes(bs: seq<byte>): nat
         // (N * size_of(B) + 31) // 32 (dividing by chunk size in bytes, rounding up) [1]]
@@ -192,6 +201,7 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint256(_) => toChunks(serialise(s))
             case Bytes(bs) =>   toChunksProp2(bs);
                                 toChunks(serialise(s))
+            case Bitvector(xl) => toChunks(serialise(s))
             case List(l,_,limit) => toChunks(serialiseSeqOfBasics(l)) 
             case Vector(v) => toChunks(serialiseSeqOfBasics(v)) 
     } 
@@ -381,7 +391,7 @@ include "../beacon/helpers/Crypto.dfy"
     /** 
     *   Property of packBits 
     */
-    lemma bitlistPackBitsToChunkCountProp(xl: seq<bool>, limit: nat)
+    lemma packBitsToChunkCountProp(xl: seq<bool>, limit: nat)
         requires |xl| <= limit
         ensures |packBits(xl)| <= chunkCountBitlist(limit)
     {
@@ -512,8 +522,11 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint256(_) => merkleise(pack(s), -1)
 
             case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
-                                bitlistPackBitsToChunkCountProp(xl, limit);
+                                packBitsToChunkCountProp(xl, limit);
                                 mixInLength(merkleise(packBits(xl), chunkCount(s)), |xl|)  
+
+            case Bitvector(xl) =>   packBitsToChunkCountProp(xl, |xl|);
+                                    merkleise(packBits(xl), chunkCount(s))                                
 
             case Bytes(_) => merkleise(pack(s), -1)
 

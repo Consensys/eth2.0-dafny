@@ -86,8 +86,8 @@ include "Constants.dfy"
      */
     function method fromBytesToBitVector(xb : seq<byte>, len: nat) : seq<bool> 
         requires |xb| > 0
-        requires len <= |xb| * BITS_PER_BYTE < len + BITS_PER_BYTE;
-        requires (len % BITS_PER_BYTE) != 0 ==> xb[|xb|-1] as nat < power2(len% BITS_PER_BYTE);
+        requires len <= |xb| * BITS_PER_BYTE < len + BITS_PER_BYTE
+        ensures |fromBytesToBitVector(xb,len)| == len
         decreases xb
     {
         if ( |xb| == 1 ) then 

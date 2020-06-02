@@ -19,6 +19,7 @@ include "../utils/Helpers.dfy"
 include "IntSeDes.dfy"
 include "BoolSeDes.dfy"
 include "BitListSeDes.dfy"
+include "BitVectorSeDes.dfy"
 include "Constants.dfy"
 
 /**
@@ -34,6 +35,7 @@ module SSZ {
     import opened IntSeDes
     import opened BoolSeDes
     import opened BitListSeDes
+    import opened BitVectorSeDes
     import opened Helpers
     import opened Constants    
 
@@ -46,7 +48,7 @@ module SSZ {
      *              i.e. uintN or bool.
      */
     function method sizeOf(s: Serialisable): nat
-        requires !(s.Bitlist? || s.Bytes? || s.Container? || s.List? || s.Vector?)
+        requires isBasicTipe(typeOf(s))
         ensures 1 <= sizeOf(s) <= 32 && sizeOf(s) == |serialise(s)|
     {
         match s
@@ -67,7 +69,9 @@ module SSZ {
     */
     function method default(t : Tipe) : Serialisable 
     requires  !(t.Container_? || t.List_? || t.Vector_?)
-    requires  t.Bytes_? ==> match t case Bytes_(n) => n > 0
+    requires  t.Bytes_? || t.Bitvector_? ==> match t
+                                                case Bytes_(n) => n > 0
+                                                case Bitvector_(n) => n > 0
     {
             match t 
                 case Bool_ => Bool(false)
@@ -85,6 +89,8 @@ module SSZ {
                 case Uint256_ => Uint256(0)
 
                 case Bitlist_(limit) => Bitlist([],limit)
+
+                case Bitvector_(len) => Bitvector(timeSeq(false,len))
 
                 case Bytes_(len) => Bytes(timeSeq(0,len))
     }
@@ -118,6 +124,8 @@ module SSZ {
             case Uint256(n) => uintSe(n as nat, 32)
 
             case Bitlist(xl,limit) => fromBitlistToBytes(xl)
+
+            case Bitvector(xl) => fromBitvectorToBytes(xl)
 
             case Bytes(bs) => bs
 
@@ -206,6 +214,11 @@ module SSZ {
                                     else
                                         Failure
 
+            case Bitvector_(len) => if |xs| > 0 && len <= |xs| * BITS_PER_BYTE < len + BITS_PER_BYTE then
+                                        Success(castToSerialisable(Bitvector(fromBytesToBitVector(xs,len))))
+                                    else
+                                        Failure
+
             case Bytes_(len) => if 0 < |xs| == len then
                                   Success(castToSerialisable(Bytes(xs)))
                                 else Failure
@@ -237,6 +250,8 @@ module SSZ {
 
             case Bitlist(xl,limit) => bitlistDecodeEncodeIsIdentity(xl); 
 
+            case Bitvector(xl) =>
+
             case Bytes(bs) => 
     }
 
@@ -262,6 +277,20 @@ module SSZ {
                         Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
                         == { bitlistDecodeEncodeIsIdentity(xl); } 
                         Success(castToSerialisable(Bitlist(xl,limit)));
+                    }
+
+                case Bitvector(xl) =>
+                    assume deserialise(serialise(s), typeOf(s)) == Success(s);
+                    calc {
+                        deserialise(serialise(s), typeOf(s));
+                        ==
+                        deserialise(serialise(Bitvector(xl)), Bitvector_(|xl|));
+                        ==
+                        deserialise(fromBitvectorToBytes(xl), Bitvector_(|xl|));
+                        == { bitvectorDecodeEncodeIsIdentity(xl); }
+                        Success(castToSerialisable(Bitvector(fromBytesToBitVector(fromBitvectorToBytes(xl), |xl|))));
+                        == { bitvectorDecodeEncodeIsIdentity(xl); }
+                        Success(castToSerialisable(Bitvector(xl)));
                     }
 
                 case Bool(_) =>  //  Thanks Dafny
