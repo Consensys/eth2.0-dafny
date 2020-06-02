@@ -121,8 +121,32 @@ include "../beacon/helpers/Crypto.dfy"
         var s := default(t);
         (limit * sizeOf(s) + 31) / BYTES_PER_CHUNK
     }    
-    
-    
+     
+    /** 
+     *  Predicate used to check if a byte sequence is a chunk.
+     */
+    predicate is32BytesChunk(c : chunk) 
+        // Test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
+    {
+        |c| == BYTES_PER_CHUNK
+    }
+
+     /** 
+     *  Properties of EMPTY_CHUNK.
+     */
+     lemma emptyChunkIsSeq()
+        // Ensure that the defined EMPTY_CHUNK constant is treated by Dafny as a seq.
+        ensures EMPTY_CHUNK == timeSeq<byte>(0,32)
+    {
+        // Thanks Dafny
+    }
+
+    lemma emptyChunkIs32BytesOfZeros()
+        ensures is32BytesChunk(EMPTY_CHUNK) 
+        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as byte 
+    {   //  Thanks Dafny
+    }
+
     lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
         requires |xl| <= limit
         ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
@@ -149,32 +173,6 @@ include "../beacon/helpers/Crypto.dfy"
                 }
             }
         }
-
-    
-    
-    /** 
-     *  Predicate used in checking chunk properties.
-     */
-    predicate is32BytesChunk(c : chunk) 
-    // test whether a chunk has 32 (BYTES_PER_CHUNK) chunks
-    {
-        |c| == BYTES_PER_CHUNK
-    }
-
-    lemma emptyChunkIsSeq()
-        ensures EMPTY_CHUNK == timeSeq<byte>(0,32)
-    {
-        // Thanks Dafny
-    }
-
-    /** 
-     *  Properties of empty chunk.
-     */
-    lemma emptyChunkIs32BytesOfZeros()
-        ensures is32BytesChunk(EMPTY_CHUNK) 
-        ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as byte 
-    {   //  Thanks Dafny
-    }
 
     /** rightPadZeros.
      *
