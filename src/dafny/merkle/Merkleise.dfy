@@ -338,7 +338,7 @@ include "../beacon/helpers/Crypto.dfy"
     // }   
     
     /** 
-     *  Properties of chunk.
+     *  Properties of toChunks.
      */
     lemma {:induction b} toChunksProp1(b: bytes)
         requires |b| == 0
