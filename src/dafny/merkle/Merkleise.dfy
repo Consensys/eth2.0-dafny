@@ -328,13 +328,13 @@ include "../beacon/helpers/Crypto.dfy"
      *              doesn't satisfy the toChunksProp1 and toChunksProp2 lemmas. It also causes
      *              an error in the Pack function, which should reutrn at least one chunk.
      */
-    // function toChunks(b: Bytes): seq<chunk>
-    //     //ensures |toChunks(b)| > 0
+    // function method toChunks(b: bytes): seq<chunk>
+    //     ensures |toChunks2(b)| >= 0
     // {
     //     var full_chunks := |b| / BYTES_PER_CHUNK;
     //     if |b| == 0 then []
-    //     else if |b| % BYTES_PER_CHUNK == 0 then [b[..32]] + toChunks(b[32..])
-    //         else toChunks(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
+    //     else if |b| % BYTES_PER_CHUNK == 0 then [b[..32]] + toChunks2(b[32..])
+    //         else toChunks2(b[..(full_chunks*BYTES_PER_CHUNK)]) + [rightPadZeros(b[(full_chunks*BYTES_PER_CHUNK)..])]
     // }   
     
     /** 
