@@ -27,8 +27,8 @@ include "../beacon/helpers/Crypto.dfy"
 /**
  *  SSZ_Merkleise library.
  *
- *  Primary reference: simple-serialize.md
- *  Secondary reference: py-ssz implementation
+ *  Primary reference: [1] https://github.com/ethereum/eth2.0-specs/ssz/simple-serialize.md
+ *  Secondary reference: [2] https://github.com/ethereum/py-ssz
  *
  *  This library defines various helper functions for merkleisation, including 
  *  chunk_count, bitfield_bytes, pack, merkleise*, mix_in_length, mix_in_type.
@@ -57,8 +57,6 @@ include "../beacon/helpers/Crypto.dfy"
      *  @param  s   A serialisable object.
      *  @returns    Calculate the amount of leafs for merkleisation of the type.
      *
-     *  @note       For composite types and containers, a helper function may be required
-     *              to complete the calculation?
      *  @note       A leaf is 256 bits/32-bytes.
      *  @note       The maximum tree depth for a depost contract is 32 
      *              (https://github.com/ethereum/eth2.0-specs/specs/phase0/deposit-contract.md)
@@ -70,16 +68,16 @@ include "../beacon/helpers/Crypto.dfy"
      */
     function method chunkCount(s: Serialisable): nat
         requires typeOf(s) != Container_
-        ensures 0 <= chunkCount(s) // add upper limit ???
+        ensures 0 <= chunkCount(s) // no upper limit is defined in the spec
     {
         match s
-            case Bool(b) => chunkCountBool(b)
-            case Uint8(_) => chunkCountUint(s)
-            case Uint16(_) => chunkCountUint(s)
-            case Uint32(_) => chunkCountUint(s)
-            case Uint64(_) => chunkCountUint(s)
-            case Uint128(_) => chunkCountUint(s)
-            case Uint256(_) => chunkCountUint(s)
+            case Bool(b) => 1
+            case Uint8(_) => 1
+            case Uint16(_) => 1
+            case Uint32(_) => 1
+            case Uint64(_) => 1
+            case Uint128(_) => 1
+            case Uint256(_) => 1
             case Bitlist(_,limit) => chunkCountBitlist(limit) 
             case Bytes(bs) => chunkCountBytes(bs)
             case List(l,t,limit) => if isBasicTipe(t) then 
@@ -97,34 +95,34 @@ include "../beacon/helpers/Crypto.dfy"
     /** 
      * chunkCount helper functions for specific types
      */
-    function method chunkCountBool(b: bool): nat
-        // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountBool(b) == 1
-        ensures |pack(Bool(b))| == chunkCountBool(b)
-    {
-        1
-    }
-
-    function method chunkCountUint(n: Serialisable): nat
-        requires n.Uint8? || n.Uint16? || n.Uint32? || n.Uint64? || n.Uint128? || n.Uint256?
-        // all basic types require 1 leaf (reference: simple-serialize.md)
-        ensures chunkCountUint(n) == 1
-        ensures |pack(n)| == chunkCountUint(n)
-    {
-        1
-    }
-
     function method chunkCountBitlist(limit: nat): nat
-        // divide by chunk size (in bits), rounding up (reference: simple-serialize.md)
-        // the spec doesn't make reference to whether N can be zero for bitlist[N]
-        // the py-szz implementation of bitlists only raises an error if N is negative
-        // hence it will be assumed that N >= 0
-        ensures 0 <= chunkCountBitlist(limit) == ceil(limit, BITS_PER_CHUNK)
-        //ensures |bitfieldBytes(xl)| == chunkCountBitlist(xl) (moved to lemma)
+        // (N + 255) // 256 (dividing by chunk size in bits, rounding up) [1]
+        // In this case N == limit
+        ensures chunkCountBitlist(limit) == ceil(limit, BITS_PER_CHUNK)
     {
         (limit+BITS_PER_CHUNK-1)/BITS_PER_CHUNK
     }
 
+    function method chunkCountBytes(bs: seq<byte>): nat
+        // (N * size_of(B) + 31) // 32 (dividing by chunk size in bytes, rounding up) [1]]
+        // In this case N == |bs|
+        ensures chunkCountBytes(bs) == ceil(|bs|, BYTES_PER_CHUNK)
+    {
+        var s := default(Uint8_);
+        (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
+    }
+
+    function method chunkCountSequenceOfBasic(t:Tipe, limit:nat): nat
+        // (N * size_of(B) + 31) // 32 (dividing by chunk size in bytes, rounding up) [1]]
+        // In this case N == limit
+        requires isBasicTipe(t)
+        ensures  chunkCountSequenceOfBasic(t, limit) == ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
+    {
+        var s := default(t);
+        (limit * sizeOf(s) + 31) / BYTES_PER_CHUNK
+    }    
+    
+    
     lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
         requires |xl| <= limit
         ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
@@ -152,21 +150,7 @@ include "../beacon/helpers/Crypto.dfy"
             }
         }
 
-    function method chunkCountBytes(bs: seq<byte>): nat
-        ensures chunkCountBytes(bs) == ceil(|bs|, BYTES_PER_CHUNK)
-        //ensures pack
-    {
-        var s := default(Uint8_);
-        (|bs| * sizeOf(s) + 31) / BYTES_PER_CHUNK
-    }
-
-    function method chunkCountSequenceOfBasic(t:Tipe, limit:nat): nat
-        requires isBasicTipe(t)
-        ensures  chunkCountSequenceOfBasic(t, limit) == ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
-    {
-        var s := default(t);
-        (limit * sizeOf(s) + 31) / BYTES_PER_CHUNK
-    }    
+    
     
     /** 
      *  Predicate used in checking chunk properties.
