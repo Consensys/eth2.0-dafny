@@ -62,9 +62,10 @@ include "../beacon/helpers/Crypto.dfy"
      *              (https://github.com/ethereum/eth2.0-specs/specs/phase0/deposit-contract.md)
      *              however NO general maximum tree depth is specified. Hence there is no
      *              upper bound on the number of chunks.
-     *  @note       For the types of Bitlist[N], List[B,N] and List[N] chunkCount will be 0 if
-     *              N=0. For all other types chunkCount will be at least 1. [2] only raises
-     *              an error for bitlists if N < 0.
+     *  @note       For the type of Bitlist[N] chunkCount == 0 only if N=0. 
+     *              ([2] raises an error for bitlists if N < 0, however for lists N > 0)
+     *              Hence, for all other types chunkCount will be at least 1. 
+     *              
      */
     function method chunkCount(s: Serialisable): nat
         requires typeOf(s) != Container_
