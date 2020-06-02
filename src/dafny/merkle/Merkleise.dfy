@@ -416,71 +416,64 @@ include "../beacon/helpers/Crypto.dfy"
         
     // }
 
-    lemma propPadPow2Chunks(chunks: seq<chunk>)
-        requires 1 <= |chunks| 
-        ensures get_next_power_of_two(|padPow2Chunks(chunks)|) == get_next_power_of_two(|chunks|)
+    /** merkleise.
+     *
+     *  @param chunks   A sequence of chunks (seq<chunk>) representing leaves of a merkle tree.
+     *  @param limit    limit == -1 is equivalent to the spec limit=None [1],
+     *                  otherwise limit is the maximum number of leaves required.
+     *  @returns        The root of the merkle tree, a 32-byte hash.
+     *
+     *  @note       The spec [1] says ``merkleize(chunks, limit=None): Given ordered BYTES_PER_CHUNK-byte 
+     *              chunks, merkleize the chunks, and return the root: The merkleization depends on the 
+     *              effective input, which can be padded/limited:
+     *                  if no limit: pad the chunks with zeroed chunks to next_pow_of_two(len(chunks)) 
+                        (virtually for memory efficiency).
+                        if limit > len(chunks), pad the chunks with zeroed chunks to next_pow_of_two(limit) 
+                        (virtually for memory efficiency).
+                        if limit < len(chunks): do not merkleize, input exceeds limit. Raise an error instead.
+                    Then, merkleize the chunks (empty input is padded to 1 zero chunk):
+                        If 1 chunk: the root is the chunk itself.
+                        If > 1 chunks: merkleize as binary tree..``
+     *  @note       The case where limit == len(chunks) is not included in the spec [1]. Our current version
+     *              assumes that this case can occur and is the same as limit > len(chunks). 
+     *  @note       TODO: raise an issue in [1].
+     *  @note       TODO: depending on confirmation of whether a bitlist with N==0 is illegal, review the
+     *              specification [1] wording of this function and the py-ssz [2] implenetation of pack, 
+     *              pack_bits, pack_bytes and to_chunks and resolve the issue that in py-ssz at least 1 chunk
+     *              isn't returned from pack_bits.
+     *  @note       TODO: Also then review whether the need to pad an empty chunk to 1 zero chunk is redundant.
+     */
+     function method merkleise(chunks: seq<chunk>, limit: int): hash32
+        requires -1 == limit || |chunks| <= limit
+        ensures is32BytesChunk(merkleise(chunks, limit))
     {
-        calc == {
-            get_next_power_of_two(|padPow2Chunks(chunks)|);
-            ==
-            get_next_power_of_two(get_next_power_of_two(|chunks|));
-            ==
-            {getNextPow2isIdempotent(|chunks|);} get_next_power_of_two(|chunks|);
-
-        }
+        if limit == -1 then 
+            nextPow2IsPow2(|chunks|);
+            getNextPow2LowerBound(|chunks|);
+            merkleiseChunks(padChunks(chunks, get_next_power_of_two(|chunks|)))
+        else 
+            assert(limit >= 0);
+            nextPow2IsPow2(limit);
+            getNextPow2LowerBound(limit);
+            merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
     }
 
-    lemma propPadPow2ChunksLength(chunks: seq<chunk>)
-         requires |chunks| >= 1
-         ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|padPow2Chunks(chunks)|) 
-     {  
-        calc == {
-                |padPow2Chunks(chunks)|;
-                ==
-                get_next_power_of_two(|chunks|);
-                ==
-                {getNextPow2isIdempotent(|chunks|);} 
-                get_next_power_of_two(get_next_power_of_two(|chunks|));
-                ==
-                get_next_power_of_two(|padPow2Chunks(chunks)|) ;
-            }
-     }
-
-    function method padPow2Chunks(chunks: seq<chunk>): seq<chunk>
-        requires 1 <= |chunks| 
-        ensures |chunks| <= |padPow2Chunks(chunks)| 
-        ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
-        //ensures isPowerOf2(|padPow2Chunks(chunks)|)
-    {
-        if |chunks| == get_next_power_of_two(|chunks|) then chunks
-        else chunks + timeSeq(EMPTY_CHUNK, get_next_power_of_two(|chunks|)-|chunks|)
-    }
-
-    function method merkleisePow2Chunks(chunks: seq<chunk>): hash32
-        requires 1 <= |chunks| 
-        requires |chunks| == get_next_power_of_two(|chunks|)
-        //requires isPowerOf2(|chunks|)
-        ensures is32BytesChunk(merkleisePow2Chunks(chunks))
-        decreases chunks
-    {
-        if |chunks| == 1 then chunks[0]
-        else hash(merkleisePow2Chunks(chunks[..(|chunks|/2)]) + merkleisePow2Chunks(chunks[|chunks|/2..]))
-    }
-
+    /** Helper functions for merkleise. */
     
+    // TODO: add documentation
     function method padChunks(chunks: seq<chunk>, padLength: nat): seq<chunk>
         requires 1 <= padLength  // since padLength must be a power of two
         requires 0 <= |chunks| 
         requires |chunks| <= padLength // upper bound as per spec // TODO: change upper to <
         requires isPowerOf2(padLength)
         ensures 1 <= |padChunks(chunks, padLength)| == padLength
-        //ensures |padPow2Chunks(chunks)| == get_next_power_of_two(|chunks|)
         ensures isPowerOf2(|padChunks(chunks, padLength)|)
     {
         if |chunks| == padLength then chunks
         else chunks + timeSeq(EMPTY_CHUNK, padLength-|chunks|)
     }
 
+    // TODO: add documentation
     function method merkleiseChunks(chunks: seq<chunk>): hash32
         requires 1 <= |chunks| 
         requires isPowerOf2(|chunks|)
@@ -493,63 +486,8 @@ include "../beacon/helpers/Crypto.dfy"
             halfPow2IsPow2(|chunks|);
             hash(merkleiseChunks(chunks[..(|chunks|/2)]) + merkleiseChunks(chunks[|chunks|/2..]))
     }
+
     
-    
-     function method merkleise(chunks: seq<chunk>, limit: int): hash32
-        requires 0 <= |chunks|
-        requires -1 == limit || |chunks| <= limit
-        ensures is32BytesChunk(merkleise(chunks, limit))
-    {
-        
-        if limit == -1 then 
-            nextPow2IsPow2(|chunks|);
-            getNextPow2LowerBound(|chunks|);
-            merkleiseChunks(padChunks(chunks, get_next_power_of_two(|chunks|)))
-        else 
-            assert(limit >= 0);
-            //assert(limit >= |chunks|);
-            nextPow2IsPow2(limit);
-            getNextPow2LowerBound(limit);
-            merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
-     }
-
-    lemma bitlistLimit(s: Serialisable, limit:nat)
-        requires typeOf(s) == Bitlist_(limit)
-        ensures 0 <= |packBits(s.xl)|
-        ensures |packBits(s.xl)| <= chunkCount(s)
-    {
-        calc {
-            |packBits(s.xl)|;
-            <=
-            {bitlistPackBitsToChunkCountProp(s.xl, s.limit);} chunkCount(s);
-        }
-    }
-
-    function method uint256_to_bytes(n: nat) : chunk
-        ensures |uint256_to_bytes(n)| == 32
-    {
-        uint256_to_bytes_helper(n,0)
-    }
-
-    function method uint256_to_bytes_helper(n: nat, byte_number: nat) : bytes
-        requires byte_number <= 32
-        decreases 32  - byte_number
-    ensures |uint256_to_bytes_helper(n,byte_number)| == 32 - byte_number as int
-    {
-        if(byte_number == 32) then
-            []
-        else
-            [(n % 256) as uint8] +
-            uint256_to_bytes_helper(n / 256, byte_number+1)
-    }
-
-    function method mixInLength(root: hash32, length: nat) : hash32
-        requires is32BytesChunk(root)
-        ensures is32BytesChunk(mixInLength(root, length))
-    {
-        hash(root + uint256_to_bytes(length))
-    }
-
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
@@ -603,6 +541,8 @@ include "../beacon/helpers/Crypto.dfy"
                                    merkleise(prepareSeqOfSerialisableForMerkleisation(v),-1)
     }
 
+    /** Helper functions for getHashTreeRoot. */
+
     /**
      * Prepare a sequence of `Serialisable` objects for merkleisation.
      *
@@ -620,5 +560,33 @@ include "../beacon/helpers/Crypto.dfy"
         else
             [getHashTreeRoot(ss[0])] +
             prepareSeqOfSerialisableForMerkleisation(ss[1..])
-    }     
+    }   
+
+    // TODO: add documentation
+    function method uint256_to_bytes(n: nat) : chunk
+        ensures |uint256_to_bytes(n)| == 32
+    {
+        uint256_to_bytes_helper(n,0)
+    }
+
+    // TODO: add documentation
+    function method uint256_to_bytes_helper(n: nat, byte_number: nat) : bytes
+        requires byte_number <= 32
+        decreases 32  - byte_number
+        ensures |uint256_to_bytes_helper(n,byte_number)| == 32 - byte_number as int
+    {
+        if(byte_number == 32) then
+            []
+        else
+            [(n % 256) as uint8] +
+            uint256_to_bytes_helper(n / 256, byte_number+1)
+    }
+
+    // TODO: add documentation
+    function method mixInLength(root: hash32, length: nat) : hash32
+        requires is32BytesChunk(root)
+        ensures is32BytesChunk(mixInLength(root, length))
+    {
+        hash(root + uint256_to_bytes(length))
+    }  
  }
