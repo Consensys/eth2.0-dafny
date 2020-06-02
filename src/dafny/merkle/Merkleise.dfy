@@ -148,7 +148,140 @@ include "../beacon/helpers/Crypto.dfy"
     {   //  Thanks Dafny
     }
 
-    
+    /** Pack.
+     *
+     *  @param  s   A serialised object.
+     *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
+     *              bytes if necessary. It is implied by the spec that at least one chunk is 
+     *              returned (see note below).
+     *
+     *  @note       The spec [1] describes the pack function as:
+     *              ``pack(value): given ordered objects of the same basic type, serialize them,
+     *              pack them into BYTES_PER_CHUNK-byte chunks, right-pad the last chunk with 
+     *              zero bytes, and return the chunks.``
+     *  @note       However, later in the spec [1] the usage context is ``merkleize(pack(value)) 
+     *              if value is a basic object or a vector of basic objects`` implying that the
+     *              input to pack, i.e. value, is a single serialisable object rather than a 'series' 
+     *              but with the restriction value is a bool, uintN, or vector/list of uintNs.
+     *  @note       The py-ssz implementation [2] of the pack function takes an input of already 
+     *              serialised values and hence its input is a sequence of serialised values, rather 
+     *              than a single serialisable object of type bool, uintN, or vector/list of uintNs.         
+     *  @note       This subtle difference between the spec wording [1] and py-ssz [2] shouldn't
+     *              result in any difference to the final output. 
+     *  @note       So as to align this project with the spec [1] as closely as possible, pack will
+     *              take a single serialisable object of type bool, uintN, or vector/list of uintNs
+     *              as its input and thus it does indeed take `ordered objects`: if a bool or uintN 
+     *              then it is thought of as inputing a sequence of length 1, and if a vector/list  
+     *              of uintN then it is thought of as inputing a sequence of possible larger length. 
+     *              An empty list, [], is a possible input.          
+     */
+    function method pack(s: Serialisable): seq<chunk>
+        requires !(s.Container? || s.Bitlist?)
+        requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+        requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
+         // at least one chunk is always produced, even if the EMPTY_CHUNK for input of an empty list 
+        ensures 1 <= |pack(s)|
+    {
+        match s
+            case Bool(b) => toChunks(serialise(Bool(b)))
+            case Uint8(_) =>  toChunks(serialise(s))
+            case Uint16(_) => toChunks(serialise(s))
+            case Uint32(_) => toChunks(serialise(s))
+            case Uint64(_) => toChunks(serialise(s))
+            case Uint128(_) => toChunks(serialise(s))
+            case Uint256(_) => toChunks(serialise(s))
+            case Bytes(bs) =>   toChunksProp2(bs);
+                                toChunks(serialise(s))
+            case List(l,_,limit) => toChunks(serialiseSeqOfBasics(l)) 
+            case Vector(v) => toChunks(serialiseSeqOfBasics(v)) 
+    } 
+
+    /** 
+    *   Properties of pack 
+    */
+    lemma basicTypesPackToChunkCountChunks(s:Serialisable)
+        // basic types, uintN and bool, pack into chunkCount(s) chunks
+        requires isBasicTipe(typeOf(s))
+        ensures |pack(s)| == chunkCount(s)
+    {
+        // Thanks Dafny
+    }
+
+    lemma byteVectorsPackToChunkCountChunks(s:Serialisable)
+        // vectors of uintNs, i.e. fixed length collections, pack into chunkCount(s) chunks
+        requires s.Bytes? 
+        ensures |pack(s)| == chunkCount(s)
+    {
+        calc == {
+            |pack(s)|;
+            ==
+            |toChunks(serialise(s))|;
+            ==
+            |toChunks(s.bs)|;
+            ==
+                {toChunksProp2(s.bs);} 
+            ceil(|s.bs|, BYTES_PER_CHUNK);
+            ==
+            chunkCount(s);
+        }
+    }
+
+    lemma basicTypeVectorsPackToChunkCountChunks(s:Serialisable)
+        // vectors of uintNs, i.e. fixed length collections, pack into chunkCount(s) chunks
+        requires s.Vector? &&  match s case Vector(v) => isBasicTipe(typeOf(v[0]))
+        ensures |pack(s)| == chunkCount(s)
+    {
+        if |s.v| > 0 {
+            calc == {
+                |pack(s)|;
+                ==
+                |toChunks(serialise(s))|;
+                ==
+                |toChunks(serialiseSeqOfBasics(s.v))|;
+                ==
+                    {toChunksProp2(serialiseSeqOfBasics(s.v));} 
+                ceil(|serialiseSeqOfBasics(s.v)|, BYTES_PER_CHUNK);
+                ==
+                chunkCount(s); // ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
+            }
+        }
+    }
+
+    lemma basicTypeListsPackToChunkCountChunks(s:Serialisable)
+        // lists of uintNs, i.e. variable length collections, pack into <= chunkCount(s) chunks
+        requires s.List? &&  match s case List(_,t,_) => isBasicTipe(t)
+        ensures |pack(s)| <= chunkCount(s)
+    {
+        if (|s.l| == 0)
+        {
+            // Thanks Dafny
+        }
+        else {
+            calc == {
+                |pack(s)|;
+                ==
+                |toChunks(serialise(s))|;
+                ==
+                |toChunks(serialiseSeqOfBasics(s.l))|;
+                ==
+                    {toChunksProp2(serialiseSeqOfBasics(s.l));} 
+                ceil(|serialiseSeqOfBasics(s.l)|, BYTES_PER_CHUNK);
+                ==
+                ceil(|s.l| * |serialise(s.l[0])|, BYTES_PER_CHUNK);
+                ==
+                ceil(|s.l| * sizeOf(s.l[0]), BYTES_PER_CHUNK);
+                == calc {
+                        isBasicTipe(typeOf(s.l[0]));
+                        sizeOf(s.l[0]) == sizeOf(default(s.t));
+                    }
+                ceil(|s.l| * sizeOf(default(s.t)), BYTES_PER_CHUNK);
+                <=
+                chunkCount(s); // ceil(limit * sizeOf(default(t)), BYTES_PER_CHUNK)
+            }
+        }
+    }
+
+    /** Pack helper functions. */
 
     /** rightPadZeros.
      *
@@ -165,12 +298,13 @@ include "../beacon/helpers/Crypto.dfy"
 
     /** toChunks.
      *
-     *  @param  b   A sequence of bytes i.e. a Bytes object.
+     *  @param  b   A sequence of bytes.
      *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if b % 32 != 0 
      *
      *  @note       This version of toChunks is suggested as an alternative to the in py-ssz,
      *              as this version ensures that even if |b| == 0 an EMPTY CHUNK will still 
-     *              be returned. It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
+     *              be returned. 
+     *  @note       It also satisfies the toChunksProp1 and toChunksProp2 lemmas.
      *
      */
     function method toChunks(b: bytes): seq<chunk>
@@ -186,7 +320,7 @@ include "../beacon/helpers/Crypto.dfy"
 
     /** toChunks (py-ssz version).
      *
-     *  @param  b   A sequence of bytes i.e. a Bytes object.
+     *  @param  b   A sequence of bytes.
      *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if b % 32 != 0 
      *
      *  @note       The py-ssz implementation can result in a 0 chunk output (empty seq)
@@ -210,147 +344,16 @@ include "../beacon/helpers/Crypto.dfy"
         requires |b| == 0
         ensures |toChunks(b)| == 1
     {
+        // Thanks Dafny
     }
 
     lemma  {:induction b} toChunksProp2(b: bytes)
         requires |b| > 0
         ensures 1 <= |toChunks(b)| == ceil(|b|, 32) 
     {
+        // Thanks Dafny
     }
 
-    /** Pack.
-     *
-     *  @param  s   A sequence of serialised objects (seq<byte>).
-     *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
-     *              bytes if necessary. It is implied by the spec that at least one chunk is 
-     *              returned (see note below).
-     *
-     *  @note       The pack function isn't type based.
-     *  @note       The spec (eth2.0-specs/ssz/simple-serialize.md) says 'Given ordered objects 
-     *              of the same basic type, serialize them, pack them into BYTES_PER_CHUNK-byte 
-     *              chunks, right-pad the last chunk with zero bytes, and return the chunks.'
-     *  @note       The py-ssz implementation checks for |seq<Bytes>| == 0 for which it returns
-     *              the EMPTY_CHUNK. However, if the length of the input is greater than 0, i.e.
-     *              |seq<Bytes>| > 0, a toChunks function is called and the toChunks function in
-     *              the py-ssz implementation can return an empty seq and therefore a zero
-     *              chunk output.           
-     */
-     // Applicable to uintN, bool, or list/vector of uintN
-     // Can't be a list/vector of bool's as bitlists/bitvectors are dealth with separately
-     // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
-
-    //  function pack(s: seq<Serialisable>) : seq<chunk>
-    //     requires forall i :: 0 <= i < |s| ==> typeOf(s[i]) in {Uint8_, Bool_}
-    //     requires forall i :: 1 <= i < |s| ==> typeOf(s[i]) in {Uint8_}
-    //     requires forall i,j :: 0 <= i < j < |s| ==> typeOf(s[i]) == typeOf(s[j])
-    //     // no upper bound on length of any individual serialised element???
-    //     ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
-    //     ensures 1 <= |pack(s)| 
-    // {        
-    //     if |s| == 0 then [EMPTY_CHUNK] // can theoretically have list[uint8, 0]
-    //     // else toChunks(concatSerialisedElements(s))  
-    //     else toChunks(serialiseObjects(s))
-    // }
-    function method pack(s: Serialisable): seq<chunk>
-        requires !(s.Container? || s.Bitlist?)
-        requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
-        requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
-    {
-        match s
-            case Bool(b) => packBool(b)
-            case Uint8(_) => packUint(s)
-            case Uint16(_) => packUint(s)
-            case Uint32(_) => packUint(s)
-            case Uint64(_) => packUint(s)
-            case Uint128(_) => packUint(s)
-            case Uint256(_) => packUint(s)
-            case Bytes(bs) => packBytes(bs)
-            case List(l,_,limit) => packSequenceOfBasics(l)
-            case Vector(v) => packSequenceOfBasics(v)
-    } 
-
-    /** 
-     * pack functions for specific types
-     */
-    function method packBool(b: bool): seq<chunk>
-        ensures |packBool(b)| == 1
-    {
-        toChunks(serialise(Bool(b)))
-    }
-
-    function method packUint(n: Serialisable): seq<chunk>
-        requires n.Uint8? || n.Uint16? || n.Uint32? || n.Uint64? || n.Uint128? || n.Uint256?
-        ensures |packUint(n)| == 1
-    {
-        toChunks(serialise(n))
-    }
-
-    function method packBytes(bs: seq<byte>): seq<chunk>
-        requires |bs| > 0
-        ensures |packBytes(bs)| == chunkCountBytes(bs)
-    {
-        toChunksProp2(bs);
-        toChunks(serialise(Bytes(bs)))
-    }
-
-    function method packSequenceOfBasics(l: seq<Serialisable>): seq<chunk>
-        requires forall i | 0 <= i < |l| :: isBasicTipe(typeOf(l[i]))
-        requires forall i,j | 0 <= i < |l| && 0 <= j < |l| :: typeOf(l[i]) == typeOf(l[j])
-    {
-        toChunks(serialiseSeqOfBasics(l))
-    }    
-
-    lemma lengthOfSerialisationOfSequenceOfBasics(s:Serialisable)
-        requires s.List?
-        requires isBasicTipe(s.t)
-        ensures |packSequenceOfBasics(s.l)| <= chunkCountSequenceOfBasic(s.t, s.limit)
-    {
-            if (|s.l| == 0) {
-                // Thanks Dafny
-            } else {
-                calc == {
-                    |packSequenceOfBasics(s.l)|;
-                    ==
-                    |toChunks(serialiseSeqOfBasics(s.l))|;
-                    ==
-                        {toChunksProp2(serialiseSeqOfBasics(s.l));} 
-                    ceil(|serialiseSeqOfBasics(s.l)|, BYTES_PER_CHUNK);
-                    ==
-                    ceil(|s.l|*|serialise(s.l[0])|, BYTES_PER_CHUNK);
-                    <=
-                    chunkCountSequenceOfBasic(s.t, s.limit);
-                }
-            }
-        }
-    /** Pack.
-     *
-     *  @param  s   A sequence of serialised objects (seq<byte>).
-     *  @returns    A sequence of 32-byte chunks, the final chunk is right padded with zero 
-     *              bytes if necessary. It is implied by the spec that at least one chunk is 
-     *              returned (see note below).
-     *
-     *  @note       The pack function isn't type based.
-     *  @note       The spec (eth2.0-specs/ssz/simple-serialize.md) says 'Given ordered objects 
-     *              of the same basic type, serialize them, pack them into BYTES_PER_CHUNK-byte 
-     *              chunks, right-pad the last chunk with zero bytes, and return the chunks.'
-     *  @note       The py-ssz implementation checks for |seq<Bytes>| == 0 for which it returns
-     *              the EMPTY_CHUNK. However, if the length of the input is greater than 0, i.e.
-     *              |seq<Bytes>| > 0, a toChunks function is called and the toChunks function in
-     *              the py-ssz implementation can return an empty seq and therefore a zero
-     *              chunk output.           
-     */
-    // Applicable to uintN, bool, or list/vector of uintN
-    // Can't be a list/vector of bool's as bitlists/bitvectors are dealth with separately
-    // Treat uint or bool as sequence of length 1 e.g. call pack([uint8])
-    //  function pack(s: seq<Bytes>) : seq<chunk>
-    //     // no upper bound on length of any individual serialised element???
-    //     ensures forall i :: 0 <= i < |pack(s)| ==> is32BytesChunk(pack(s)[i])
-    //     ensures 1 <= |pack(s)| 
-    //  {        
-    //     if |s| == 0 then [EMPTY_CHUNK]
-    //     // else toChunks(concatSerialisedElements(s))  
-    //     else toChunks(flatten(s))  
-    // }
 
     /** bitfieldBytes.
      *
@@ -579,7 +582,8 @@ include "../beacon/helpers/Crypto.dfy"
             //merkleise(seqMap(fl,(f:Serialisable) => getHashTreeRoot(f)),-1)
 
             case List(l,t,limit) =>     if isBasicTipe(t) then
-                                            lengthOfSerialisationOfSequenceOfBasics(s);
+                                            //lengthOfSerialisationOfSequenceOfBasics(s);
+                                            basicTypeListsPackToChunkCountChunks(s);
                                             mixInLength(
                                                 merkleise(pack(s),chunkCount(s)),
                                                 |l|)
