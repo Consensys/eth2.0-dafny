@@ -147,32 +147,7 @@ include "../beacon/helpers/Crypto.dfy"
     {   //  Thanks Dafny
     }
 
-    lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
-        requires |xl| <= limit
-        ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
-    {
-            if (|xl| == 0) {
-                calc == {
-                    // thanks Dafny
-                }
-            } else {
-                calc == {
-                    |bitfieldBytes(xl)|;
-                    ==
-                    |toChunks(fromBitsToBytes(xl)) |;
-                    ==
-                    {toChunksProp2(fromBitsToBytes(xl));} ceil(|fromBitsToBytes(xl)|, BYTES_PER_CHUNK);
-                    ==
-                    ceil(|xl|, BITS_PER_BYTE * BYTES_PER_CHUNK);
-                    ==
-                    ceil(|xl|, BITS_PER_CHUNK);
-                    <=
-                    ceil(limit, BITS_PER_CHUNK);
-                    ==
-                    chunkCountBitlist(limit);
-                }
-            }
-        }
+    
 
     /** rightPadZeros.
      *
@@ -406,6 +381,32 @@ include "../beacon/helpers/Crypto.dfy"
     }
 
     
+    lemma lengthBitfieldBytes(xl: seq<bool>, limit: nat)
+        requires |xl| <= limit
+        ensures |bitfieldBytes(xl)| <= chunkCountBitlist(limit)
+    {
+        if (|xl| == 0) {
+            calc == {
+                // thanks Dafny
+            }
+        } else {
+            calc == {
+                |bitfieldBytes(xl)|;
+                ==
+                |toChunks(fromBitsToBytes(xl)) |;
+                ==
+                {toChunksProp2(fromBitsToBytes(xl));} ceil(|fromBitsToBytes(xl)|, BYTES_PER_CHUNK);
+                ==
+                ceil(|xl|, BITS_PER_BYTE * BYTES_PER_CHUNK);
+                ==
+                ceil(|xl|, BITS_PER_CHUNK);
+                <=
+                ceil(limit, BITS_PER_CHUNK);
+                ==
+                chunkCountBitlist(limit);
+            }
+        }
+    }
 
     lemma propPadPow2Chunks(chunks: seq<chunk>)
         requires 1 <= |chunks| 
