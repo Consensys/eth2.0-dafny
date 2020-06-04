@@ -262,9 +262,22 @@ module StringConversions
     function method itos(n:nat):string
     {
         if n==0 then
+           "0"
+        else
+            itosrec(n)
+    }
+
+    /** Helper for `itos`
+     * @param n Natural number
+     * @returns If `n > 0` then the string representation of `n` else the empty
+     *          string
+     */
+    function method itosrec(n:nat):string
+    {
+        if n==0 then
            ""
         else
-            itos(n/10) + [dtoc(n%10)]
+            itosrec(n/10) + [dtoc(n%10)]
     }
 
     /** Join all items of a sequence of String into a String
