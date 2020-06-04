@@ -64,7 +64,7 @@ module SeqHelpers {
     }
 
     /**
-     *  Lenght of shifted sub-sections.
+     *  Length of shifted sub-sections.
      *
      *  s[k..i] = s[k], ..., s[i - 1]
      *  s[k..] = s[k], ..., s[|s| - 1]
