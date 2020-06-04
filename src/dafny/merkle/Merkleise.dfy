@@ -185,11 +185,11 @@ include "../beacon/helpers/Crypto.dfy"
      *              An empty list, [], is a possible input.          
      */
     function method pack(s: Serialisable): seq<chunk>
-        requires !(s.Container? || s.Bitlist?)
+        requires !(s.Container? || s.Bitlist?  || s.Bitvector?)
         requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
         requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
          // at least one chunk is always produced, even if the EMPTY_CHUNK for input of an empty list 
-        ensures 1 <= |pack(s)|
+        ensures 0 <= |pack(s)|
     {
         match s
             case Bool(b) => toChunks(serialise(Bool(b)))
@@ -201,8 +201,11 @@ include "../beacon/helpers/Crypto.dfy"
             case Uint256(_) => toChunks(serialise(s))
             case Bytes(bs) =>   toChunksProp2(bs);
                                 toChunks(serialise(s))
-            case Bitvector(xl) => toChunks(serialise(s))
-            case List(l,_,limit) => toChunks(serialiseSeqOfBasics(l)) 
+            case List(l,_,limit) => if |l| == 0 then
+                                        []
+                                    else
+                                        toChunks(serialiseSeqOfBasics(l))
+
             case Vector(v) => toChunks(serialiseSeqOfBasics(v)) 
     } 
 

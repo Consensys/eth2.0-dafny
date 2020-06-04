@@ -101,7 +101,6 @@ module Eth2Types {
             case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
 
             case List(l, t, limit) =>   && |l| <= limit
-                                        && limit > 0
                                         && t != Bool_
                                         && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
                                         && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
