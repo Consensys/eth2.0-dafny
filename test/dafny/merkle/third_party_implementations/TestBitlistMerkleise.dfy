@@ -25,19 +25,27 @@ include "../../../lowlevel_modules/CommandLine.dfy"
 include "ThirdPartyMerkleisation.dfy"
 include "../../../lowlevel_modules/Rand.dfy"
 
+datatype FailureReason = Limit | Content
+
 /**
  * Returns random sequence of booleans of size between 0 and 2000-1
  */
-function method getRandomBoolSeq(): seq<bool>
-ensures 0 <= |getRandomBoolSeq()| < 2000
+function method getRandomBoolSeq(): Eth2Types.Serialisable
+ensures getRandomBoolSeq().Bitlist?
+ensures 0 <= |getRandomBoolSeq().xl| < 2000
+ensures getRandomBoolSeq().limit >= |getRandomBoolSeq().xl|
 {
     // Bitlist length is a randomised number between 0 and 2000-1
     var numBits := Rand.Rand() % 2000;
+    var limit := Rand.Rand() % 100 + numBits;
 
-    Helpers.initSeq<bool>(
-            (x:nat) => 
-                if Rand.Rand()%2 == 0 then false else true, 
-            numBits as nat)
+    Eth2Types.Bitlist(
+        Helpers.initSeq<bool>(
+                (x:nat) => 
+                    if Rand.Rand()%2 == 0 then false else true, 
+                numBits as nat),
+        limit
+    )
 
 }
 
@@ -52,18 +60,41 @@ ensures 0 <= |getRandomBoolSeq()| < 2000
  * bit is appended to it before passing it to the PrysmaticLab `BitlistRoot`
  * function which will cause the verification to fail.
  */
-predicate method verifyBoolSeq(s:seq<bool>, failPercentage: nat)
+predicate method verifyBoolSeq(bitlist: Eth2Types.Serialisable, failPercentage: nat, failureReason: FailureReason)
+requires bitlist.Bitlist?
 {
-    var dfyBitlist := Eth2Types.Bitlist(s);
-    var dfyHashRoot := SSZ_Merkleise.getHashTreeRoot(dfyBitlist);
+    var dfyHashRoot := SSZ_Merkleise.getHashTreeRoot(bitlist);
 
-    var ThirdPartyBitlist := if |s| >= 2000 * (100 - failPercentage) /100 then s + [true] else s;
+    var ThirdPartyBitlist :=    if |bitlist.xl| >= 2000 * (100 - failPercentage) /100 then 
+                                    match failureReason
+                                        case Content =>
+                                            if |bitlist.xl| > 0  then
+                                                Eth2Types.Bitlist(
+                                                    [!bitlist.xl[0]] + bitlist.xl[1..]
+                                                    ,
+                                                    bitlist.limit
+                                                )
+                                            else
+                                                Eth2Types.Bitlist(
+                                                    [true]
+                                                    ,
+                                                    1
+                                                )
+                                        case Limit =>
+                                            Eth2Types.Bitlist(
+                                                    bitlist.xl
+                                                    ,
+                                                    bitlist.limit * 2
+                                                )
 
-    var bfbsn := |SSZ_Merkleise.bitfieldBytes(s)| * 256;
+                                else
+                                    bitlist
+                                ;
+
     var ThirdParthyHash := ThirdPartyMerkleisation.BitlistRoot(
-                                ThirdPartyBitlist,
-                                BitListSeDes.fromBitlistToBytes(ThirdPartyBitlist),
-                                bfbsn);
+                                ThirdPartyBitlist.xl,
+                                BitListSeDes.fromBitlistToBytes(ThirdPartyBitlist.xl),
+                                ThirdPartyBitlist.limit);
 
     dfyHashRoot == ThirdParthyHash
 }
@@ -73,25 +104,33 @@ predicate method verifyBoolSeq(s:seq<bool>, failPercentage: nat)
  * 
  * @returns A sequence of randomly generated test items
  */
-function method CompileRecTest(numTests:nat, percFailure:nat) :seq<DafTest.TestItem>
+function method CompileRecTest(numTests:nat, percFailure:nat, failureReason: FailureReason) :seq<DafTest.TestItem>
 requires 0 <= percFailure <= 100
-ensures |CompileRecTest(numTests,percFailure)| == numTests
+ensures |CompileRecTest(numTests,percFailure, failureReason)| == numTests
 {
     if numTests == 0 then
         []
     else
-        var boolseq := getRandomBoolSeq();
+        var bitlist := getRandomBoolSeq();
 
-        [DafTest.TestItem(
+        [createTestItem(bitlist,percFailure, failureReason)] +
+        CompileRecTest(numTests-1,percFailure, failureReason)
+}
+
+function method createTestItem(bitlist: Eth2Types.Serialisable, percFailure: nat, failureReason: FailureReason): DafTest.TestItem
+requires bitlist.Bitlist?
+{
+    DafTest.TestItem(
                 "Test for Bitlist of size " + 
-                StringConversions.itos(|boolseq|) + 
+                StringConversions.itos(|bitlist.xl|) + 
+                " and limit " +
+                StringConversions.itos(bitlist.limit) + 
                 ":\n" + 
-                StringConversions.bitlistToString(boolseq)
+                StringConversions.bitlistToString(bitlist.xl)
             ,
-                () => verifyBoolSeq(boolseq,percFailure)
-        )] +
-        CompileRecTest(numTests-1,percFailure)
-}    
+                () => verifyBoolSeq(bitlist,percFailure, failureReason)
+    )
+}
 
 /**
  * @param args Command line arguments
@@ -100,10 +139,11 @@ ensures |CompileRecTest(numTests,percFailure)| == numTests
  */
 predicate method correctInputParameters(args: seq<string>)
 {
-    && |args| == 3
+    && |args| == 4
     && StringConversions.isNumber(args[1])
     && StringConversions.isNumber(args[2])
     && 0 <= StringConversions.atoi(args[2]) <= 100
+    && args[3] in {"content", "limit"}
 }
 
 /**
@@ -116,17 +156,28 @@ method Main()
     if(correctInputParameters(args))
     {
         var numTests := StringConversions.atoi(args[1]);
-        var percFailure := StringConversions.atoi(args[2]); 
+        var percFailure := StringConversions.atoi(args[2]);
+        var failureReason := if args[3] == "content" then Content else Limit;
 
-        var merkleTestSuite := DafTest.TestSuite("Bitlist Merkleisation",
-                                    CompileRecTest(numTests,percFailure));
+        assert failureReason.Limit? <==> args[3] == "limit";
+
+        var fixedTest := [createTestItem(Eth2Types.Bitlist([],0),percFailure,failureReason),
+                          createTestItem(Eth2Types.Bitlist([],1),percFailure,failureReason)];
+
+        var tests :=    fixedTest +
+                        CompileRecTest(numTests,percFailure, failureReason);
+
+
+        var merkleTestSuite := DafTest.TestSuite("Bitlist Merkleisation",tests[..numTests]);
 
         DafTest.executeTests(merkleTestSuite);
     }
     else
     {
-        print "First argument must be a natural number indicating the number of tests\n";
-        print "The second argument must be a natural number between 0 and 100 (included) which specifies the average percentage of tests that should fail\n";
+        print "First argument must be a natural number indicating the number of tests.\n";
+        print "The second argument must be a natural number between 0 and 100 (included) which specifies the average percentage of tests that should fail.\n";
+        print "The third argument must be either the string \"content\" or the string \"limit\". "+
+              "This argument indicates whether the tests expected to fail should fail because of a variation in the bitlist content or in the bitlist limit.\n";
     }
 }
 

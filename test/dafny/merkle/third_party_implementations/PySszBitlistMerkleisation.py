@@ -28,12 +28,20 @@ import argparse
 
 
 if __name__ == "__main__":
+    # Setup argument parser
+    # The only requires command line argument is the bitlist limit
+    # The bitlist content is supplied via stdin
     parser = argparse.ArgumentParser()
-    parser.add_argument('bitlist',default="",nargs='?')
+    parser.add_argument('limit', type=int)
     args = parser.parse_args()
 
-    bl = tuple(False if c == '0' else True for c in args.bitlist)
-    # print(bl)
-    hash = Bitlist(len(bl)).get_hash_tree_root(bl)
-    # print(hash)
+    # Binary read from stdin
+    stdin = sys.stdin.buffer.read()    
+
+    bl = tuple(False if b == 0 else True for b in stdin)
+
+    # Execute function/method to test
+    hash = Bitlist(args.limit).get_hash_tree_root(bl)
+
+    # Write result to stdout in binary
     sys.stdout.buffer.write(hash)

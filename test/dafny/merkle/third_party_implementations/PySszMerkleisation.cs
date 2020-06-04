@@ -21,35 +21,68 @@ using System.IO;
 namespace thirdpartymerkleisation
 {
     public partial class __default {
+        
+        /** Invoke PySSZ through an helper Python script to calculate the Merkle
+         *  hash root of a Bitlist
+         *
+         *  @param bitlist The bitlist as a raw sequence of bool (without the
+         *                 bit used as a sentinel for the length)
+         *  @param bitlistInBytes   The raw bitlist (i.e. without the bit used 
+         *                          as a sentinel for the length)encoded as a 
+         *                          sequence of bytes. 
+         *  @param limit The bitlist limit
+         *  @returns The hashtree root of the supplied bitlist
+         * 
+         *  @note The reason for having both bitlist and bitlistInBytes parameters
+         *  is that the former is used by the PySSZ bridge and the latter is used
+         *  by the PrysmaticLab bridge.
+         */
         public static Dafny.Sequence<byte>  BitlistRoot(Dafny.Sequence<bool> bitlist, Dafny.Sequence<byte> bitlistInBytes, BigInteger limit)
         {
-                string bl = "";
+                // Convert bitlist into a byte array
+                byte[] bl = new byte[bitlist.Elements.Length];
                 for(int i = 0; i<bitlist.Elements.Length;i++)
                 {
                     if(bitlist.Elements[i])
                     {
-                        bl +="1";
+                        bl[i] = 1;
                     }
                     else
                     {
-                        bl+="0";
+                        bl[i] = 0;
                     }
                 }
-                // Console.Write(bl);
+
+                // Set command and command line
                 ProcessStartInfo start = new ProcessStartInfo();
                 start.FileName = "python3";
-                start.Arguments="PySszBitlistMerkleisation.py" + " " + bl;
+                start.Arguments="PySszBitlistMerkleisation.py " + limit;
+
+                // Set redirections for stdout and stdin
                 start.UseShellExecute = false;
                 start.RedirectStandardOutput = true;
+                start.RedirectStandardInput = true;
 
+                // Start the process
                 Process cmdProcess = new Process();
-                cmdProcess.EnableRaisingEvents = true;
                 cmdProcess.StartInfo = start;
-                cmdProcess.Start();                
+                cmdProcess.Start();    
 
+                // Write to the process stdin in binary format and then closes
+                // the stream
+                var bw = new BinaryWriter(cmdProcess.StandardInput.BaseStream);
+                bw.Write(bl); 
+                cmdProcess.StandardInput.Close();  
+
+                cmdProcess.WaitForExit();                           
+
+                // Read from the process stdout in binary format and store the
+                // read data in a byte array
                 var br = new BinaryReader(cmdProcess.StandardOutput.BaseStream);
                 byte[] retBytes = br.ReadBytes(32);
-                // Console.Write("\n            " + Encoding.Default.GetString(retBytes));
+
+                // Convert the C# byte array containing the data read from the
+                // process stdout to a Dafny sequence of byte
                 return Dafny.Sequence<byte>.FromElements(retBytes);
         }
 
