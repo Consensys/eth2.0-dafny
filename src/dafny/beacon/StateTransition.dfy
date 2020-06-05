@@ -187,8 +187,8 @@ module StateTransition {
         }
 
         /**
-        *  Compute the state obtained after adding a block.
-        */
+         *  Compute the state obtained after adding a block.
+         */
         method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires b.parent_root != EMPTY_BYTES32
@@ -221,33 +221,33 @@ module StateTransition {
         }
 
         /**
-        *  Advance current state to a given slot.
-        *
-        *  This mainly consists in advancing the slot number to
-        *  a target future `slot` number and updating/recording the history of intermediate
-        *  states (and block headers). 
-        *  Under normal circumstances, where a block is received at each slot,
-        *  this involves only one iteration of the loop.
-        *  Otherwise, the first iteration of the loop `finalises` the block header
-        *  of the previous slot before recortding it, 
-        *  and subsequent rounds advance the slot number and record the history of states
-        *  and blocks for each slot.
-        *
-        *  @param  s       A state
-        *  @param  slot    The slot to advance to. This is usually the slot of newly
-        *                  proposed block.
-        *  @returns        The state obtained after advancing the history to slot.
-        *      
-        *   @note          The specs have the the first processSlot integrated
-        *                  in the while loop. However, because s.slot < slot,
-        *                  the while bdoy must be executed at least one time.
-        *                  To simplify the proof, we have taken this first iteration
-        *                  outside of the loop. It does not change the semantics
-        *                  but enables us to use the state obtained after the first
-        *                  iteration the loop and prove it is the same as 
-        *                  resolveStateRoot(s); 
-        *
-        */
+         *  Advance current state to a given slot.
+         *
+         *  This mainly consists in advancing the slot number to
+         *  a target future `slot` number and updating/recording the history of intermediate
+         *  states (and block headers). 
+         *  Under normal circumstances, where a block is received at each slot,
+         *  this involves only one iteration of the loop.
+         *  Otherwise, the first iteration of the loop `finalises` the block header
+         *  of the previous slot before recortding it, 
+         *  and subsequent rounds advance the slot number and record the history of states
+         *  and blocks for each slot.
+         *
+         *  @param  s       A state
+         *  @param  slot    The slot to advance to. This is usually the slot of newly
+         *                  proposed block.
+         *  @returns        The state obtained after advancing the history to slot.
+         *      
+         *   @note          The specs have the the first processSlot integrated
+         *                  in the while loop. However, because s.slot < slot,
+         *                  the while bdoy must be executed at least one time.
+         *                  To simplify the proof, we have taken this first iteration
+         *                  outside of the loop. It does not change the semantics
+         *                  but enables us to use the state obtained after the first
+         *                  iteration the loop and prove it is the same as 
+         *                  resolveStateRoot(s); 
+         *
+         */
         method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.slot < slot  //  update in 0.12.0 (was <= before)
@@ -291,21 +291,21 @@ module StateTransition {
         }
 
        /** 
-        *   Cache data for a slot.
-        *
-        *   This function also finalises the block header of the last block
-        *   so that it records the hash of the state `s`. 
-        *
-        *   @param  s   A state.
-        *   @returns    A new state where `s` has been added/cached to the history and
-        *               the block header tracks the hash of the most recent received
-        *                   block.
-        *
-        *   @note       This function method could be a method (as per the Eth2 specs).
-        *               However, this requires to expose the properties of the computation
-        *               as methods are not inlined. 
-        *   @todo       Make this a method to have a def closer to Eth2 implementation.  
-        */
+         *   Cache data for a slot.
+         *
+         *   This function also finalises the block header of the last block
+         *   so that it records the hash of the state `s`. 
+         *
+         *   @param  s   A state.
+         *   @returns    A new state where `s` has been added/cached to the history and
+         *               the block header tracks the hash of the most recent received
+         *                   block.
+         *
+         *   @note       This function method could be a method (as per the Eth2 specs).
+         *               However, this requires to expose the properties of the computation
+         *               as methods are not inlined. 
+         *   @todo       Make this a method to have a def closer to Eth2 implementation.  
+         */
         method processSlot(s: BeaconState) returns (s' : BeaconState)
             requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
@@ -334,8 +334,8 @@ module StateTransition {
         }
 
         /**
-        *  Verify that a block is valid.
-        */
+         *  Verify that a block is valid.
+         */
         method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             ensures s'.latest_block_header.parent_root == b.parent_root
@@ -345,9 +345,9 @@ module StateTransition {
         }
 
        /**
-        *  Check whether a block is valid and prepare and initialise new state
-        *  with a corresponding block header. 
-        */
+         *  Check whether a block is valid and prepare and initialise new state
+         *  with a corresponding block header. 
+         */
         method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
             ensures s'.latest_block_header.parent_root == b.parent_root
