@@ -18,8 +18,8 @@ include "../utils/Eth2Types.dfy"
 // include "Attestations.dfy"
 include "Validators.dfy"
 
-module BeaconChain {
-
+module BeaconChain { 
+    
     //  Import some constants and types
     import opened Constants
     import opened NativeTypes
@@ -95,7 +95,7 @@ module BeaconChain {
      *                          [beacon operation] objects as well as a few proposer 
      *                          input fields.
      */  
-    datatype BeaconBlock = BeaconBlock(
+    datatype BeaconBlock = BeaconBlock( 
         slot: Slot,
         // proposer_index: ValidatorIndex,
         parent_root: Root,
