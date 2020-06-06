@@ -192,8 +192,11 @@ module StateTransition {
         method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
             requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires b.parent_root != EMPTY_BYTES32
+            requires s.latest_block_header.parent_root in store
+            requires hash_tree_root(b) !in store.Keys
+            requires store[s.latest_block_header.parent_root].slot == s.slot
+            requires s.latest_block_header.slot == s.slot
             requires isConsistent()
-
             requires s.slot < b.slot
             //  The proposed block must have the same parent to the state reached
             //  at the beginning of slot `slot` fron the the current state `s`
@@ -205,17 +208,34 @@ module StateTransition {
             //  finalise slots before b.slot
             var s1 := processSlots(s, b.slot);
 
+            assert(s1.latest_block_header.parent_root == s.latest_block_header.parent_root);
+            assert(s1 == forwardStateToSlot(resolveStateRoot(s), b.slot));
             //  Because of Req1, `s1`, the state obtained after resolving and forwarding to
             //  `slot` agrees with `b` on the parent_block's root
             assert(s1.latest_block_header.parent_root == b.parent_root);
+            assert(s1.latest_block_header.parent_root == s.latest_block_header.parent_root);
             assert(s1.latest_block_header.parent_root != EMPTY_BYTES32);
             assert(isConsistent());
 
             //  Process block
             s' := processBlock(s1, b);
-            // assert(store[b.parent_root].slot < b.slot);
+            assert(s'.latest_block_header.parent_root == b.parent_root);
+            assert(store[s'.latest_block_header.parent_root].slot == s.slot);
+
             //  Add the block to the global Store
             store := store[hash_tree_root(b) := b];
+
+            //  specify that s.latest_block_header.parent_root != hash_tree_root(b)
+            assert(b.parent_root != EMPTY_BYTES32);
+            assert(b.parent_root in store.Keys);
+            assert(b.parent_root == s.latest_block_header.parent_root);
+            assert(store[b.parent_root] == store[s.latest_block_header.parent_root]);
+            assert(store[b.parent_root].slot == store[s.latest_block_header.parent_root].slot);
+            assert(store[s.latest_block_header.parent_root].slot == s.slot);
+            assert(store[b.parent_root].slot < b.slot);
+            assert(isConsistent());
+
+
 
             //  Validate state block
         }
@@ -404,7 +424,8 @@ module StateTransition {
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
         ensures forwardStateToSlot(s, slot).slot == slot
-        
+        ensures forwardStateToSlot(s, slot).latest_block_header ==  s.latest_block_header
+
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
@@ -426,6 +447,7 @@ module StateTransition {
     function nextSlot(s : BeaconState) : BeaconState 
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        ensures nextSlot(s).latest_block_header ==  s.latest_block_header
     {
         //  Add header root to history of block_roots
         var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s.latest_block_header)];
