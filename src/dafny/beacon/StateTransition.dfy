@@ -190,19 +190,26 @@ module StateTransition {
          *  Compute the state obtained after adding a block.
          */
         method stateTransition(s: BeaconState, b: BeaconBlockHeader, ghost h: History) returns (s' : BeaconState )
+            //  make sure the last state was one right after addition of new block
             requires s.latest_block_header.state_root == EMPTY_BYTES32
+            //  @FIXME parent_root cannot be genesis block?? 
             requires b.parent_root != EMPTY_BYTES32
+            //  current parent.root must be in store
             requires s.latest_block_header.parent_root in store
+            //  new block must have a hash that is not equal to an already stored block
             requires hash_tree_root(b) !in store.Keys
+
+            //  latest block header and state agree on slot number
             requires store[s.latest_block_header.parent_root].slot == s.slot
-            requires s.latest_block_header.slot == s.slot
+            // requires s.latest_block_header.slot == s.slot
             requires isConsistent()
+            //  a new block must be proposed for a slot that is later than s.slot
             requires s.slot < b.slot
             //  The proposed block must have the same parent to the state reached
             //  at the beginning of slot `slot` fron the the current state `s`
             requires b.parent_root == forwardStateToSlot(resolveStateRoot(s), b.slot).latest_block_header.parent_root //    Req1
 
-            // ensures isConsistent()
+            ensures isConsistent()
             modifies this
         {
             //  finalise slots before b.slot
@@ -234,8 +241,6 @@ module StateTransition {
             assert(store[s.latest_block_header.parent_root].slot == s.slot);
             assert(store[b.parent_root].slot < b.slot);
             assert(isConsistent());
-
-
 
             //  Validate state block
         }
