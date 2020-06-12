@@ -342,11 +342,6 @@ module StateTransition {
 
 
         {
-            // calc {
-            //     hash_tree_root(b) in store.blocks.Keys ;
-            //     ==> 
-            //     store.blocks[hash_tree_root(b)] == b;
-            // }
             // assert(hash_tree_root(b) !in store.blocks.Keys);
             // pre_state = store.block_states[block.parent_root].copy()
             // Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
