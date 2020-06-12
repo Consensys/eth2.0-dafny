@@ -214,6 +214,8 @@ module StateTransition {
          */
         var store : Store
 
+        ghost var acceptedBlocks : set<BeaconBlockHeader>
+
         // var state : BeaconState
 
         /**
@@ -222,11 +224,34 @@ module StateTransition {
         constructor ()  
         {  
             store := GENESIS_STORE;
+            acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
             // state := GENESIS_STATE;
         }
 
-        // predicate 
-        // lemma blocksInStoreFormaChain(b : )
+        predicate storeInvariant1() 
+            reads this
+        {
+            forall b :: b in acceptedBlocks ==> 
+                hash_tree_root(b) in store.blocks.Keys 
+                && store.blocks[hash_tree_root(b)] == b
+        }
+
+        predicate storeInvariant2() 
+            reads this 
+        {
+            forall b :: b in acceptedBlocks ==> 
+                hash_tree_root(b) in store.block_states.Keys 
+                && store.block_states[hash_tree_root(b)].latest_block_header == b .(state_root := EMPTY_BYTES32) 
+        }
+
+        /**
+         *  Sanity check for genesis state and block.
+         */
+        lemma foo() 
+            ensures GENESIS_STATE.latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32)
+        {
+
+        }
 
         /**
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
@@ -237,11 +262,23 @@ module StateTransition {
          */
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
+            requires storeInvariant1()
+            requires storeInvariant2()
+
+            /** @todo remove the next requires as it should follow from
+            the fact that b must have a slot > pre_state and thus cannot
+            be in blocks.Values and  its hasj cannot be in the keys. */
+            requires hash_tree_root(b) !in store.blocks.Keys
+
             requires b.parent_root in store.block_states
             requires pre_state == store.block_states[b.parent_root]
 
             requires pre_state.slot < b.slot
             requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) //    Req1
+
+            ensures acceptedBlocks == old(acceptedBlocks) + { b };
+            ensures storeInvariant1()
+            ensures storeInvariant2()
 
             modifies this
 
@@ -252,15 +289,17 @@ module StateTransition {
 
             // Add new block to the store
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
+            acceptedBlocks := acceptedBlocks + { b };
 
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
-
+            // assert(storeInvariant2());
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b);
+           
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
         }
@@ -274,6 +313,15 @@ module StateTransition {
             //  a new block must be proposed for a slot that is later than s.slot
             requires s.slot < b.slot
             requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(s), b.slot).latest_block_header) //    Req1
+
+            /** The store is not modified. */
+            ensures store == old(store)
+
+            /** The set of already ccepted blocks is not modified. */
+            ensures acceptedBlocks == old(acceptedBlocks)
+
+            /** The next state latest_block_header is same as b except for state_root that is 0. */
+            ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
 
             modifies this
         {
@@ -320,6 +368,9 @@ module StateTransition {
             ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
             ensures store == old(store)
             ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root  
+            
+            /** The store is not modified. */
+            ensures store == old(store)
 
             //  Termination ranking function
             decreases slot - s.slot
@@ -375,6 +426,9 @@ module StateTransition {
             ensures  s.latest_block_header.state_root != EMPTY_BYTES32 ==>
                 s' == nextSlot(s).(slot := s.slot)
             ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+
+            /** The store is not modified. */
+            ensures store == old(store)
         {
             s' := s;
 
@@ -407,6 +461,9 @@ module StateTransition {
             ensures s'.latest_block_header.parent_root == b.parent_root
             ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
             ensures s'.slot == s.slot
+
+            /** The store is not modified. */
+            ensures store == old(store)
         {
             //  Start by creating a block header from the ther actual block.
             s' := processBlockHeader(s, b); 
@@ -431,6 +488,9 @@ module StateTransition {
             ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
             ensures s'.latest_block_header.parent_root == b.parent_root
             ensures s'.slot == s.slot
+
+            /** The store is not modified. */
+            ensures store == old(store)
         {
             s':= s.(
                 latest_block_header := BeaconBlockHeader(
