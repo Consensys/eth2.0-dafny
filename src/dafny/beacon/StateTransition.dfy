@@ -51,9 +51,11 @@ module StateTransition {
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != EMPTY_BYTES32
 
+    /** Collision free hasj function. */
     lemma {:axiom} foo<T(==)>(t1: T, t2: T) 
-        ensures t1 != t2 ==> hash_tree_root(t1) != hash_tree_root(t2)
+        ensures t1 == t2 <==> hash_tree_root(t1) == hash_tree_root(t2)
 
+   
     /** 
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
      * The beacon chain’s state (BeaconState) is the core object around 
@@ -202,6 +204,7 @@ module StateTransition {
     {   //  Thanks Dafny
     }
 
+    
     /**
      *  A Beacon Chain environement i.e. with Store etc
      */
@@ -219,12 +222,11 @@ module StateTransition {
          */
         ghost var acceptedBlocks : set<BeaconBlockHeader>
 
-        // var state : BeaconState
-
         /**
          *  Start with the genesis store and one accepted block, GENESIS_BLOCK_HEADER
          */
         constructor ()  
+            ensures storeInvariant0()
             ensures storeInvariant1()
 
             /** Trying to verify  storeInvariant2 generates boogie name error. */
@@ -232,11 +234,20 @@ module StateTransition {
             /** Verify storeInvariant2() manually. */
             ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
             ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
+            ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
             ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
+
+            ensures storeInvariant3()
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
-            // state := GENESIS_STATE;
+        }
+
+        /** The keys in the store maps are in sync. */
+        predicate storeInvariant0() 
+            reads this
+        {
+            store.blocks.Keys == store.block_states.Keys 
         }
 
         /**
@@ -264,6 +275,35 @@ module StateTransition {
         }
 
         /**
+         *  In this invariant it would be nice to have:
+         *   hash_tree_root(b) in keys ==> b in acceptedBlocks (or Values)
+         *  This would enable us to conclude that 
+         *              hash_tree_root(b) !in store.blocks.Keys from  b !in acceptedBlocks
+         *  and then we can omit
+         *              requires hash_tree_root(b) !in store.blocks.Keys
+         *  in on_block.
+         */
+        predicate storeInvariant3() 
+            reads this
+        {
+            acceptedBlocks == store.blocks.Values
+
+        }
+
+        /**
+         *  Store is valid if all the invariants are satisfied,
+         */
+        predicate storeIsValid() 
+            reads this
+        {
+            true 
+            && storeInvariant0()
+            && storeInvariant1()
+            && storeInvariant2()
+            && storeInvariant3()
+        }
+
+        /**
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
          *                      This is not a real parameter as it is constrained to be
          *                      the state that corresponds to the bloc parent_root but here
@@ -272,12 +312,14 @@ module StateTransition {
          */
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
-            requires storeInvariant1()
-            requires storeInvariant2()
+            requires storeIsValid()
 
             /** @todo remove the next requires as it should follow from
             the fact that b must have a slot > pre_state and thus cannot
-            be in blocks.Values and  its hasj cannot be in the keys. */
+            be in blocks.Values and  its has cannot be in the keys. 
+            See invariant3().
+            */
+            requires b !in acceptedBlocks
             requires hash_tree_root(b) !in store.blocks.Keys
 
             requires b.parent_root in store.block_states
@@ -294,12 +336,18 @@ module StateTransition {
             requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) 
 
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
-            ensures storeInvariant1()
-            ensures storeInvariant2()
+            ensures storeIsValid()
 
             modifies this
 
+
         {
+            // calc {
+            //     hash_tree_root(b) in store.blocks.Keys ;
+            //     ==> 
+            //     store.blocks[hash_tree_root(b)] == b;
+            // }
+            // assert(hash_tree_root(b) !in store.blocks.Keys);
             // pre_state = store.block_states[block.parent_root].copy()
             // Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
             // assert get_current_slot(store) >= block.slot
