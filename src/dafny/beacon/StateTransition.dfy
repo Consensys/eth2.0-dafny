@@ -226,18 +226,19 @@ module StateTransition {
          *  Start with the genesis store and one accepted block, GENESIS_BLOCK_HEADER
          */
         constructor ()  
-            ensures storeInvariant0()
-            ensures storeInvariant1()
 
             /** Trying to verify  storeInvariant2 generates boogie name error. */
             // ensures storeInvariant2()
             /** Verify storeInvariant2() manually. */
-            ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
+            // ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
             ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
-            ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
+            // ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
             ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
 
-            ensures storeInvariant3()
+            //  for some reason removing the previous ensures creates a name resolution error in
+            //  Dafny.
+            ensures storeIsValid()
+
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
