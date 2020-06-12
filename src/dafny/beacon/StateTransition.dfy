@@ -214,20 +214,34 @@ module StateTransition {
          */
         var store : Store
 
+        /**
+         *  Track the set of blocks that have been added to the store.
+         */
         ghost var acceptedBlocks : set<BeaconBlockHeader>
 
         // var state : BeaconState
 
         /**
-         *  Start with the genesis store
+         *  Start with the genesis store and one accepted block, GENESIS_BLOCK_HEADER
          */
         constructor ()  
+            ensures storeInvariant1()
+
+            /** Trying to verify  storeInvariant2 generates boogie name error. */
+            // ensures storeInvariant2()
+            /** Verify storeInvariant2() manually. */
+            ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
+            ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
+            ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
             // state := GENESIS_STATE;
         }
 
+        /**
+         *  Every accepted block is in the store its key is is the hash_tree_root,
+         */
         predicate storeInvariant1() 
             reads this
         {
@@ -236,12 +250,17 @@ module StateTransition {
                 && store.blocks[hash_tree_root(b)] == b
         }
 
+        /** 
+         *  Every accepted block `b` has an associated state in block_states and
+         *  the corresponding state has a latest_block_header that is the block `b`
+         *  with its state_root field nullified.
+         */
         predicate storeInvariant2() 
             reads this 
         {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
-                && store.block_states[hash_tree_root(b)].latest_block_header == b .(state_root := EMPTY_BYTES32) 
+                && store.block_states[hash_tree_root(b)].latest_block_header == b.(state_root := EMPTY_BYTES32) 
         }
 
         /**
