@@ -264,15 +264,6 @@ module StateTransition {
         }
 
         /**
-         *  Sanity check for genesis state and block.
-         */
-        lemma foo() 
-            ensures GENESIS_STATE.latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32)
-        {
-
-        }
-
-        /**
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
          *                      This is not a real parameter as it is constrained to be
          *                      the state that corresponds to the bloc parent_root but here
@@ -290,10 +281,17 @@ module StateTransition {
             requires hash_tree_root(b) !in store.blocks.Keys
 
             requires b.parent_root in store.block_states
-            requires pre_state == store.block_states[b.parent_root]
 
+            //  R1: set pre_state using the store
+            requires pre_state == store.block_states[b.parent_root]
+            //  R2: Necessary for process_slots to go ahead
             requires pre_state.slot < b.slot
-            requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) //    Req1
+
+            //  R3: it does not follow from R1 but is necessary to make sure
+            //  process_slots can go ahead.
+            //  It states that the block should be attached to a state that is obtained
+            //  by fast forwarding pre_state to the slot of `b`.
+            requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) 
 
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
             ensures storeInvariant1()
