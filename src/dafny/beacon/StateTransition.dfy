@@ -212,7 +212,9 @@ module StateTransition {
          *
          *  The store.Keys contain the hash tree root of the corresponding store.Values.
          */
-        var store :Store
+        var store : Store
+
+        // var state : BeaconState
 
         /**
          *  Start with the genesis store
@@ -220,15 +222,55 @@ module StateTransition {
         constructor ()  
         {  
             store := GENESIS_STORE;
+            // state := GENESIS_STATE;
         }
 
+        // predicate 
+        // lemma blocksInStoreFormaChain(b : )
+
+        /**
+         *  @param  pre_state   The last beacon state that the block is supposed to attach to.
+         *                      This is not a real parameter as it is constrained to be
+         *                      the state that corresponds to the bloc parent_root but here
+         *                      for convenience and readability.
+         *  @param  b           A block to be added to the chain.
+         */
+        method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
+
+            requires b.parent_root in store.block_states
+            requires pre_state == store.block_states[b.parent_root]
+
+            requires pre_state.slot < b.slot
+            requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) //    Req1
+
+            modifies this
+
+        {
+            // pre_state = store.block_states[block.parent_root].copy()
+            // Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
+            // assert get_current_slot(store) >= block.slot
+
+            // Add new block to the store
+            store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
+
+            // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
+            // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
+            // assert block.slot > finalized_slot
+            // Check block is a descendant of the finalized block at the checkpoint finalized slot
+            // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
+
+            // Check the block is valid and compute the post-state
+            var new_state := stateTransition(pre_state, b);
+            // Add new state for this block to the store
+            store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+        }
         
         /**
          *  Compute the state obtained after adding a block.
          */
-        method stateTransition(s: BeaconState, b: BeaconBlockHeader, store: set<BeaconBlockHeader>) returns (s' : BeaconState, store' : set<BeaconBlockHeader> )
+        method stateTransition(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState)
             //  make sure the last state was one right after addition of new block
-            requires s.latest_block_header.state_root == EMPTY_BYTES32
+            // requires s.latest_block_header.state_root == EMPTY_BYTES32
             //  a new block must be proposed for a slot that is later than s.slot
             requires s.slot < b.slot
             requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(s), b.slot).latest_block_header) //    Req1
@@ -273,21 +315,22 @@ module StateTransition {
          *
          */
         method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
-            requires s.latest_block_header.state_root == EMPTY_BYTES32
             requires s.slot < slot  //  update in 0.12.0 (was <= before)
+
             ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
             ensures store == old(store)
             ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root  
 
+            //  Termination ranking function
             decreases slot - s.slot
         {
-            //  start from the current state and update with processSlot.
+            //  Start from the current state and update it with processSlot.
             //  First iteration of the loop in process_slots (Eth2)
             s' := processSlot(s);
             s':= s'.(slot := s'.slot + 1) ;
-            //  The following asserts are not needed for the proof but here for readability. 
-            assert(s' == resolveStateRoot(s));
-            //  s' block header state_root should now be resolved
+            //  The following asserts are not needed for the proof but provided for readability. 
+            assert(s' == resolveStateRoot(s));  
+            //  s'.block header state_root should now be resolved
             assert(s'.latest_block_header.state_root != EMPTY_BYTES32);
 
             //  Now fast forward to slot
@@ -298,38 +341,31 @@ module StateTransition {
                 invariant s' == forwardStateToSlot(resolveStateRoot(s), s'.slot) // Inv1
                 decreases slot - s'.slot 
             {
-                //  Record the value of s' 
-                ghost var s1 := s';
                 s':= processSlot(s');
 
                 //  s'.slot is now processed: history updated and block header resolved
                 //  The state's slot is processed and we can advance to the next slot.
                 s':= s'.(slot := s'.slot + 1) ;
-
-                //  The following two predicates are not invariant as they do not hold
-                //  before the first iteration of the loop.
-                //  However, they hold after at least one iteration and 
-                //  are useful to prove Inv1
-                assert(s1.slot <= s'.slot - 1) ;
-                assert(s' == nextSlot(s1));
             }
         }
 
        /** 
-         *   Cache data for a slot.
+         *  Cache data for a slot.
          *
-         *   This function also finalises the block header of the last block
-         *   so that it records the hash of the state `s`. 
+         *  This function also finalises the block header of the last block
+         *  so that it records the hash of the state `s`. 
          *
-         *   @param  s   A state.
-         *   @returns    A new state where `s` has been added/cached to the history and
-         *               the block header tracks the hash of the most recent received
-         *                   block.
+         *  @param  s   A state.
+         *  @returns    A new state where `s` has been added/cached to the history and
+         *              the block header tracks the hash of the most recent received
+         *              block.
          *
-         *   @note       This function method could be a method (as per the Eth2 specs).
-         *               However, this requires to expose the properties of the computation
-         *               as methods are not inlined. 
-         *   @todo       Make this a method to have a def closer to Eth2 implementation.  
+         *  @note       This function method could be a method (as per the Eth2 specs).
+         *              However, this requires to expose the properties of the computation
+         *              as methods are not inlined. 
+         *  @note       Matches eth2.0 specs, need to uncomment update of state/block_roots.
+         *
+         *  @todo       Make this a method to have a def closer to Eth2 implementation.  
          */
         method processSlot(s: BeaconState) returns (s' : BeaconState)
             requires s.slot as nat + 1 < 0x10000000000000000 as nat
@@ -361,26 +397,37 @@ module StateTransition {
 
         /**
          *  Verify that a block is valid.
+         *
+         *  @note   Matches eth2.0 specs, need to implement randao, eth1, operations. 
          */
         method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
             requires b.slot == s.slot
-            // requires b.slot > s.latest_block_header.slot
             requires b.parent_root == hash_tree_root(s.latest_block_header)
+
             ensures s'.latest_block_header.parent_root == b.parent_root
             ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
             ensures s'.slot == s.slot
         {
             //  Start by creating a block header from the ther actual block.
             s' := processBlockHeader(s, b); 
+            
+            //  process_randao(s, b.body)
+            //  process_eth1_data(s, b.body)
+            //  process_operations(s, b.body)
         }
 
        /**
          *  Check whether a block is valid and prepare and initialise new state
          *  with a corresponding block header. 
+         *
+         *  @note   Matches eth2.0 specs except proposer slashing verification
          */
         method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
-            requires b.slot == s.slot
-            // requires b.slot > s.latest_block_header.slot
+            //  Verify that the slots match
+            requires b.slot == s.slot  
+            // Verify that the parent matches
+            requires b.parent_root == hash_tree_root(s.latest_block_header) 
+
             ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
             ensures s'.latest_block_header.parent_root == b.parent_root
             ensures s'.slot == s.slot
@@ -408,18 +455,19 @@ module StateTransition {
      *              in s'.block_roots
      */
     function resolveStateRoot(s: BeaconState): BeaconState 
-        //  The state_root of `s` must be unresolved.
-        requires s.latest_block_header.state_root == EMPTY_BYTES32
         //  Make sure s.slot does not  overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
     {
-        var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
+        // var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
         BeaconState(
             // slot unchanged
             s.slot + 1,
-            //  block header state_root set to `s` root
-            new_latest_block_header
+            if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
+                s.latest_block_header.(state_root := hash_tree_root(s))
+            else 
+                s.latest_block_header
             //  add new block_header root to block_roots history.
             // s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
             //  add previous state root to state_roots history
@@ -437,9 +485,11 @@ module StateTransition {
      */
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
+
         ensures forwardStateToSlot(s, slot).slot == slot
         ensures forwardStateToSlot(s, slot).latest_block_header ==  s.latest_block_header
 
+        //  termination ranking function
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
