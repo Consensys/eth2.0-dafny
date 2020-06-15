@@ -117,7 +117,7 @@ module ForkChoice {
     }
 
     /**
-     *  A Beacon Chain environement i.e. with Store etc
+     *  A Beacon Chain environement (storage) i.e. with Store etc.
      */
     class Env {
 
@@ -130,6 +130,10 @@ module ForkChoice {
 
         /**
          *  Track the set of blocks that have been added to the store.
+         *  A block is added to accepted block whenever the pre-conditions
+         *  of `on_block`  are satisfied. This include R3 which specifies that 
+         *  the block is `valid` i.e. `state_transition` can be computed (guarantee of
+         *  no failed asserts.)
          */
         ghost var acceptedBlocks : set<BeaconBlockHeader>
 
@@ -157,7 +161,9 @@ module ForkChoice {
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
         }
 
-        /** The keys in the store maps are in sync. */
+        /** 
+         *  The set of keys in the store.blocks is the same as store.block_states.Keys. 
+         */
         predicate storeInvariant0() 
             reads this
         {
@@ -165,7 +171,7 @@ module ForkChoice {
         }
 
         /**
-         *  Every accepted block is in the store its key is is the hash_tree_root,
+         *  Every accepted block is in the store its key is is the hash_tree_root.
          */
         predicate storeInvariant1() 
             reads this
@@ -202,9 +208,11 @@ module ForkChoice {
             reads this
         {
             acceptedBlocks == store.blocks.Values
-
         }
 
+        /**
+         *  For every block, the slot of its parent root is stricly less than its slot. 
+         */
         predicate storeInvariant4() 
             reads this
         {
@@ -244,6 +252,26 @@ module ForkChoice {
         }
 
         /**
+         *  Whether a block is valid in a given state.
+         *
+         *  @param  s   A beacon state.
+         *  @param  b   A block.
+         *
+         *  @returns    true iff `b` can be successfully added to the state `s`.
+         */
+        predicate isValid(s : BeaconState, b : BeaconBlockHeader) 
+        {
+            s.slot < b.slot 
+            //  Fast forward s to b.slot and check `b` can be attached to the
+            //  resulting state's latest_block_header.
+            && b.parent_root == 
+                hash_tree_root(
+                    forwardStateToSlot(resolveStateRoot(s), 
+                    b.slot
+                ).latest_block_header) 
+        }
+
+        /**
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
          *                      This is not a real parameter as it is constrained to be
          *                      the state that corresponds to the bloc parent_root but here
@@ -253,7 +281,7 @@ module ForkChoice {
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
             requires storeIsValid()
-            requires storeInvariant4()
+            // requires storeInvariant4()
             requires storeInvariant5()
 
             /** @todo remove the next requires as it should follow from
@@ -262,28 +290,24 @@ module ForkChoice {
             See invariant3().
             */
             requires b !in acceptedBlocks
+            //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
-
             requires b.parent_root in store.block_states
-
-            //  R1: set pre_state using the store
+            //  R1: set pre_state using the store.
             requires pre_state == store.block_states[b.parent_root]
-            //  R2: Necessary for process_slots to go ahead
-            requires pre_state.slot < b.slot
+            //  R2 : requires that `b` can be added to pre_state.
+            requires isValid(pre_state, b)
 
-            //  R3: it does not follow from R1 but is necessary to make sure
-            //  process_slots can go ahead.
-            //  It states that the block should be attached to a state that is obtained
-            //  by fast forwarding pre_state to the slot of `b`.
-            requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(pre_state), b.slot).latest_block_header) 
-
+            //  Record block.
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
+            //  Progress: the store size increases.
+            ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
+            ensures |store.blocks| == |old(store.blocks)| + 1
+            //  Preserves store validity.
             ensures storeIsValid()
             // ensures storeInvariant4()
 
             modifies this
-
-
         {
             // assert(hash_tree_root(b) !in store.blocks.Keys);
             // pre_state = store.block_states[block.parent_root].copy()
@@ -298,7 +322,7 @@ module ForkChoice {
             assert(b.parent_root in store.block_states.Keys);
             assert(store.block_states[b.parent_root].slot < b.slot);
             assert(pre_state.slot < b.slot);    //  @todo remove requires
-            // assert(storeInvariant4());
+            // assert(storeInvariant5());
             // assert(store.blocks[b.parent_root].slot < b.slot);
             // assert(storeInvariant4());
 
@@ -308,14 +332,11 @@ module ForkChoice {
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
 
-
             // assert(storeInvariant2());
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b);
            
-            assert(forall bb :: bb in acceptedBlocks && bb != GENESIS_BLOCK_HEADER && bb != b==>
-                bb.parent_root in store.blocks.Keys
-                && store.blocks[bb.parent_root].slot < bb.slot ) ;
+           
 
             // @todo need to prove invariant5 for the new block b only
             assert(b.parent_root in store.blocks.Keys);
@@ -323,10 +344,17 @@ module ForkChoice {
             assert(pre_state.slot < b.slot);    //  @todo remove requires
             assert(store.block_states[b.parent_root].slot == pre_state.slot);
 
-            // assert(storeInvariant4());
+            assert(hash_tree_root(b) !in store.block_states.Keys);
+
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+            // assert(storeInvariant5());
             
+             //  invariant 5 ?
+            // assert(forall bb :: bb in acceptedBlocks && bb != GENESIS_BLOCK_HEADER && bb != b ==>
+                // bb.parent_root in store.blocks.Keys
+                // && store.blocks[bb.parent_root].slot < bb.slot ) ;
+
             assert(b.parent_root in store.blocks.Keys);
             assert(b.parent_root in store.blocks.Keys);
 
