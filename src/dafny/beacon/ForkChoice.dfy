@@ -252,26 +252,6 @@ module ForkChoice {
         }
 
         /**
-         *  Whether a block is valid in a given state.
-         *
-         *  @param  s   A beacon state.
-         *  @param  b   A block.
-         *
-         *  @returns    true iff `b` can be successfully added to the state `s`.
-         */
-        predicate isValid(s : BeaconState, b : BeaconBlockHeader) 
-        {
-            s.slot < b.slot 
-            //  Fast forward s to b.slot and check `b` can be attached to the
-            //  resulting state's latest_block_header.
-            && b.parent_root == 
-                hash_tree_root(
-                    forwardStateToSlot(resolveStateRoot(s), 
-                    b.slot
-                ).latest_block_header) 
-        }
-
-        /**
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
          *                      This is not a real parameter as it is constrained to be
          *                      the state that corresponds to the bloc parent_root but here
