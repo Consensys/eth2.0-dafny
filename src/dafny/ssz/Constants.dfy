@@ -4,10 +4,12 @@
   *
   */
 
-include "../utils/NativeTypes.dfy"
+include "../utils/Eth2Types.dfy"
 
 module Constants {  
   import opened NativeTypes
+
+  import opened Eth2Types
 
   //  Powers of 2
   const TWO_UP_0 := 1;
@@ -121,7 +123,16 @@ module Constants {
   /** Create an additional constant to store the number of bits per chunk */
   const BITS_PER_CHUNK := BYTES_PER_CHUNK * BITS_PER_BYTE ;
 
-  /** A 0 Byte, all bits set to false. */
+  /** A 0 byte, all bits set to false. */
   const FALSE_BYTE := [false, false, false, false, false, false, false, false]
   
-}
+  /** An empty chunk, all 32 bytes set to zero */
+  const EMPTY_CHUNK:seq<byte> := [0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0]
+} 

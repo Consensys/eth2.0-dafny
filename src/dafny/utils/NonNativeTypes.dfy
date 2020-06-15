@@ -12,36 +12,17 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+ module NonNativeTypes {
 
-/**
- *  Boolean serialisation, desrialisation.
- *
- */
-module BoolSeDes {
-
-    import opened NativeTypes
-    import opened Eth2Types
-
-    /**
-     *  Convert a bool into a byte.
+    /** The type `uint128` correspond to the restriction of the `int` type to
+     * positive numbers that can be expressed in binary form with no more than 128
+     * bits 
      */
-    function method boolToBytes(b: bool) : seq<byte> 
-        ensures | boolToBytes(b) | == 1 
-    {
-        if b then 
-            [1 as byte]
-        else 
-            [0 as byte]
-    }
+    newtype uint128 = i:int | 0 <= i < 0x100000000000000000000000000000000
 
-    /** 
-     *  Convert a byte into a bool.
-     */
-    function method byteToBool(b: byte) : bool
-    {
-       (b as nat) > 0
-    }
-
-}
+    /** The type `uint256` correspond to the restriction of the `int` type to
+    * positive numbers that can be expressed in binary form with no more than 256
+    * bits 
+    */
+    newtype uint256 = i:int | 0 <= i < 0x10000000000000000000000000000000000000000000000000000000000000000       
+ }

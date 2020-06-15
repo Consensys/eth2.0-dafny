@@ -12,36 +12,21 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+using System;
+using System.Numerics;
 
-/**
- *  Boolean serialisation, desrialisation.
- *
- */
-module BoolSeDes {
+namespace commandline
+{
+    public partial class __default {
+        public static BigInteger GetNumComandLineParamters()
+        {
+            return System.Environment.GetCommandLineArgs().Length;
+        }
 
-    import opened NativeTypes
-    import opened Eth2Types
-
-    /**
-     *  Convert a bool into a byte.
-     */
-    function method boolToBytes(b: bool) : seq<byte> 
-        ensures | boolToBytes(b) | == 1 
-    {
-        if b then 
-            [1 as byte]
-        else 
-            [0 as byte]
+        public static Dafny.Sequence<char> GetCommandLineParamter(BigInteger i)
+        {
+            return Dafny.Sequence<char>.FromElements(System.Environment.GetCommandLineArgs()[(ulong)i].ToCharArray());
+        }        
     }
-
-    /** 
-     *  Convert a byte into a bool.
-     */
-    function method byteToBool(b: byte) : bool
-    {
-       (b as nat) > 0
-    }
-
+    
 }

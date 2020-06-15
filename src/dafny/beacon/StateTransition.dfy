@@ -29,7 +29,7 @@ module StateTransition {
     import opened Helpers
 
     /** The default zeroed Bytes32.  */
-    const SEQ_EMPTY_32_BYTES := timeSeq<Byte>(0,32)
+    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
     
     const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
 

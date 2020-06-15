@@ -169,4 +169,78 @@ module MathHelpers {
                 2 * power2(n);
             }  
     }
+
+    /** 
+     *  Test if n is a power of 2. 
+     */
+    predicate isPowerOf2(n: nat)
+    {
+        exists k:nat:: power2(k)==n 
+        // alternative methods:
+        //(n == get_next_power_of_two(n))
+        //x > 0 && ( x == 1 || ((x % 2 == 0) && isPowerOf2(x/2)) )
+    }
+
+    /**     
+     *  get_next_power_of_two is idempotent. 
+     */
+    lemma getNextPow2isIdempotent(n: nat)
+        ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
+    {
+        //Thanks Dafny
+    }
+
+    /**     
+     *  Show get_next_power_of_two(n) is at least n. 
+     */
+     lemma getNextPow2LowerBound(n: nat)
+        ensures n <= get_next_power_of_two(n)
+    {
+        // Thanks Dafny
+    }
+
+    /**     
+     *  Show get_next_power_of_two(n) is gives a power of 2. 
+     */
+     lemma nextPow2IsPow2(n: nat)
+        ensures isPowerOf2(get_next_power_of_two(n))
+        //ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
+    {
+        if n <= 1 {
+            assert(get_next_power_of_two(n) == power2(0)) ;
+        } else {
+            //  Induction on (n + 1)/2
+            var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
+            calc {
+                get_next_power_of_two(n);
+                ==  //  Definition of 
+                2 * get_next_power_of_two( (n + 1) / 2);
+                == //   Use Induction assumption in (n + 1)/2
+                2 * power2(k);
+                ==  //  Definition of
+                power2(k + 1);
+            }
+        }
+    }
+
+    /**     
+     *  Show that if n > 1 and n is a power of 2 then n/2 is also a power of 2. 
+     */
+     lemma halfPow2IsPow2(n: nat)
+        requires n > 1
+        requires isPowerOf2(n)
+        ensures isPowerOf2(n/2)
+    {
+        var k:nat :| power2(k)==n ;
+        assert(n>=2);
+        assert(k>=1);
+        calc {
+            isPowerOf2(n/2); 
+            ==
+            isPowerOf2(power2(k)/2); 
+            ==
+            isPowerOf2(power2(k-1)); 
+        }
+    }
+
 }

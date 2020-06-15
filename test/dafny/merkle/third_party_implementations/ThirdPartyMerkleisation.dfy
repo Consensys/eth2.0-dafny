@@ -12,36 +12,12 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+include "../../../../src/dafny/utils/Helpers.dfy"
+include "../../../../src/dafny/utils/Eth2Types.dfy"
 
-/**
- *  Boolean serialisation, desrialisation.
- *
- */
-module BoolSeDes {
-
-    import opened NativeTypes
+module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
     import opened Eth2Types
-
-    /**
-     *  Convert a bool into a byte.
-     */
-    function method boolToBytes(b: bool) : seq<byte> 
-        ensures | boolToBytes(b) | == 1 
-    {
-        if b then 
-            [1 as byte]
-        else 
-            [0 as byte]
-    }
-
-    /** 
-     *  Convert a byte into a bool.
-     */
-    function method byteToBool(b: byte) : bool
-    {
-       (b as nat) > 0
-    }
-
+    import opened NativeTypes
+    function method {:extern} BitlistRoot(rbl: seq<bool>, brbl:seq<byte>, limit:nat): hash32
+    function method {:extern} BytesRoot(bs: seq<byte>): hash32
 }

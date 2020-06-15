@@ -11,37 +11,20 @@
  * License for the specific language governing permissions and limitations 
  * under the License.
  */
+ 
+package commandline
 
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+import (
+	_dafny "dafny"
+	"os"
+)
 
-/**
- *  Boolean serialisation, desrialisation.
- *
- */
-module BoolSeDes {
 
-    import opened NativeTypes
-    import opened Eth2Types
+func GetNumComandLineParamters() _dafny.Int {
+	return _dafny.IntOf(len(os.Args))
+}
 
-    /**
-     *  Convert a bool into a byte.
-     */
-    function method boolToBytes(b: bool) : seq<byte> 
-        ensures | boolToBytes(b) | == 1 
-    {
-        if b then 
-            [1 as byte]
-        else 
-            [0 as byte]
-    }
+func GetCommandLineParamter(i _dafny.Int) _dafny.Seq {
 
-    /** 
-     *  Convert a byte into a bool.
-     */
-    function method byteToBool(b: byte) : bool
-    {
-       (b as nat) > 0
-    }
-
+	return _dafny.SeqOfString(os.Args[i.Int()])
 }

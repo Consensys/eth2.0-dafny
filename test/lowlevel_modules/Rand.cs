@@ -12,36 +12,18 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+using System;
+using System.Numerics;
 
-/**
- *  Boolean serialisation, desrialisation.
- *
- */
-module BoolSeDes {
 
-    import opened NativeTypes
-    import opened Eth2Types
-
-    /**
-     *  Convert a bool into a byte.
-     */
-    function method boolToBytes(b: bool) : seq<byte> 
-        ensures | boolToBytes(b) | == 1 
-    {
-        if b then 
-            [1 as byte]
-        else 
-            [0 as byte]
+namespace myrand
+{
+    
+    public partial class __default {
+        private static Random rnd = new Random();
+        public static BigInteger Rand()
+        {
+            return (BigInteger) rnd.Next();
+        }
     }
-
-    /** 
-     *  Convert a byte into a bool.
-     */
-    function method byteToBool(b: byte) : bool
-    {
-       (b as nat) > 0
-    }
-
 }

@@ -78,7 +78,7 @@ include "Constants.dfy"
      *  @example: l = [0,1,0,0] yields l' = [0,1,0,0] + [1]
      *  l'' = [0,1,0,0,1] + [0,0,0] (add 3 0's to ensure the size of l'' is 
      *  multiple of 8).
-     *  l'' is a Byte and is encoded as a uint8 `n` as follows: the bitvector 
+     *  l'' is a byte and is encoded as a uint8 `n` as follows: the bitvector 
      *  representation of n is reverse(l''). `n` in hexadecimal is thus: 0001.0010 
      *  which is the uint8 0x12.
      *
@@ -88,7 +88,7 @@ include "Constants.dfy"
      *  and the encoding of l is: [1000.0000, 0000.0000] i.e. [0x01 , 0x00] 
      *  
      */
-    function method fromBitlistToBytes(l : seq<bool>) : seq<Byte> 
+    function method fromBitlistToBytes(l : seq<bool>) : seq<byte> 
         ensures | fromBitlistToBytes(l) | == ceil( |l| + 1, BITS_PER_BYTE)
         ensures fromBitlistToBytes(l)[|fromBitlistToBytes(l)| - 1] >= 1
         
@@ -116,7 +116,7 @@ include "Constants.dfy"
      *              of which is >= 1.
      *  @returns    The sequence of bits upto (and except) the last true bit. 
      */
-    function method fromBytesToBitList(xb : seq<Byte>) : seq<bool> 
+    function method fromBytesToBitList(xb : seq<byte>) : seq<bool> 
         requires |xb| >= 1
         requires xb[|xb|-1] >= 1
         ensures BITS_PER_BYTE * (|xb| - 1) >= 0
@@ -146,7 +146,8 @@ include "Constants.dfy"
         //  The structure of the proof is split in 3 cases to follow
         //  the definition of fromBitlistToBytes and make it easier to prove
         if ( |l| < BITS_PER_BYTE - 1 ) {
-            //  Thanks Dafny
+            // The following lemma help reduce theverification time
+            decodeOfEncode8BitsIsIdentity(l + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|l| + 1) % BITS_PER_BYTE )]);
         } else if ( |l| == BITS_PER_BYTE - 1 ) {
             //  Thanks Dafny
         } else {
@@ -154,7 +155,14 @@ include "Constants.dfy"
                 fromBytesToBitList( fromBitlistToBytes (l) );
                 == //   Definition of fromBitlistToBytes
                 fromBytesToBitList([list8BitsToByte(l[..BITS_PER_BYTE])] + fromBitlistToBytes(l[BITS_PER_BYTE..]));
-                == { simplifyFromByteToListFirstArg(
+                == { 
+                        // The following assert statement help the verifier to
+                        // check that the preconditions for the
+                        // simplifyFromByteToListFirstArg lemma are satisfied
+                        // which helps reduce the verification time
+                        assert  |fromBitlistToBytes(l[BITS_PER_BYTE..])| >=1;
+                        
+                        simplifyFromByteToListFirstArg(
                         list8BitsToByte(l[..BITS_PER_BYTE]), 
                         fromBitlistToBytes(l[BITS_PER_BYTE..])
                         ) ;  
@@ -173,14 +181,43 @@ include "Constants.dfy"
     /**
      *  Encoding a decoded `xb` returns `xb`.
      */
-    lemma {:induction xb} bitlistEncodeDecodeIsIdentity(xb: seq<Byte>) 
+    lemma {:induction xb} bitlistEncodeDecodeIsIdentity(xb: seq<byte>) 
         requires |xb| >= 1
         requires xb[|xb| - 1] >= 1
         ensures fromBitlistToBytes(fromBytesToBitList(xb)) == xb
     {
-        if ( |xb| == 1 ) {
-            //  Thanks Dafny
-        } else {
+        //  The structure of the proof is split in 3 cases to follow
+        //  the definition of fromBitlistToBytes and make it easier to prove
+        if ( |xb| == 1 && xb[0] >= 0x80) 
+        {
+            calc == {
+                fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
+                [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                xb;
+            }
+        }
+        else if ( |xb| == 1 && xb[0] < 0x80) 
+        {
+                calc == {
+                    fromBitlistToBytes(fromBytesToBitList(xb)) ;
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                }
+
+                var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
+                var blPadded:= bl + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|bl| + 1) % BITS_PER_BYTE )];
+
+                calc == {
+                    fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                    [ list8BitsToByte(blPadded)];
+                    [ list8BitsToByte( byteTo8Bits(xb[0]))];
+                        {encodeOfDecodeByteIsIdentity(xb[0]);}
+                    xb;
+                }
+        } else // |xb| > 1
+        {
             calc == {
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
                 ==  //  Definition of fromBytesToBitList
@@ -214,7 +251,7 @@ include "Constants.dfy"
     /**
      *  Deserialise is injective for sequences of bytes.
      */
-    lemma {:induction xa, xb} bitlistDeserialiseIsInjective(xa: seq<Byte>, xb : seq<Byte>)
+    lemma {:induction xa, xb} bitlistDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>)
         requires |xa| >= 1
         requires xa[|xa| - 1] >= 1
         requires |xb| >= 1
@@ -235,7 +272,7 @@ include "Constants.dfy"
     /**
      *  Rewriting (simplification) rule for fromBytesToBitList.
      */
-    lemma {:induction m} simplifyFromByteToListFirstArg(b : Byte, m : seq<Byte>) 
+    lemma {:induction m} simplifyFromByteToListFirstArg(b : byte, m : seq<byte>) 
         requires |m| >= 1
         requires m[|m| - 1] >= 1
         ensures fromBytesToBitList([b] + m) == 
@@ -269,7 +306,7 @@ include "Constants.dfy"
     /**
      *  Rewriting (simplification) rule for fromBitlistToBytes.
      */
-    lemma {:induction xl} simplifyFromBitListToByteFirstArg(e: Byte, xl : seq<bool>) 
+    lemma {:induction xl} simplifyFromBitListToByteFirstArg(e: byte, xl : seq<bool>) 
         ensures fromBitlistToBytes(byteTo8Bits(e) + xl) == 
             [ e ] + fromBitlistToBytes(xl) 
     { 
@@ -278,7 +315,7 @@ include "Constants.dfy"
             == 
             [ list8BitsToByte((byteTo8Bits(e) + xl)[..BITS_PER_BYTE]) ] + 
                 fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ; 
-            == 
+            ==  {encodeOfDecodeByteIsIdentity(e);}
             [e] + fromBitlistToBytes((byteTo8Bits(e) + xl)[BITS_PER_BYTE..]) ;
         }
     }
@@ -286,7 +323,7 @@ include "Constants.dfy"
     /**
      *  fromBitlistToBytes surjective on |xb| >= 1 && xb[|xb| - 1] >= 1
      */
-    lemma {:induction xb} surjective(xb : seq<Byte>) 
+    lemma {:induction xb} surjective(xb : seq<byte>) 
         requires |xb| >= 1 
         requires xb[|xb| - 1] >= 1
         ensures exists l : seq<bool> {:induction l} :: xb == fromBitlistToBytes(l) 

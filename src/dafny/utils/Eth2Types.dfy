@@ -13,7 +13,9 @@
  */
 
 include "NativeTypes.dfy"
+include "NonNativeTypes.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/MathHelpers.dfy"
 
 /** 
  * Define the types used in the Eth2.0 spec.
@@ -23,20 +25,26 @@ include "../utils/Helpers.dfy"
 module Eth2Types {
 
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Helpers
+    import opened MathHelpers
 
     //  The Eth2 basic types.
 
-    /** The type `Byte` corresponds to a 'uint8' */
-    type Byte = uint8
+    /** The type `byte` corresponds to a 'uint8' */
+    type byte = uint8
     /** The type `bytes` corresponds to a sequence of 'Bytes's */
-    type bytes = seq<Byte>
-    
+    type bytes = seq<byte>
+
+    datatype BitlistWithLength = BitlistWithLength(s:seq<bool>,limit:nat)
+
+    type CorrectBitlist = u:BitlistWithLength | |u.s| <= u.limit witness BitlistWithLength([],0)
+
     /** The default zeroed Bytes32.  */
-    // const SEQ_EMPTY_32_BYTES := timeSeq<Byte>(0,32)
+    // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 
     /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
-    type Seq32Byte = x:seq<Byte> | |x| == 32 witness timeSeq(0 as Byte, 32)
+    type Seq32Byte = x:seq<byte> | |x| == 32 witness timeSeq(0 as byte, 32)
     // SEQ_EMPTY_32_BYTES
 
     /** Create type synonym for a chunk */
@@ -46,16 +54,109 @@ module Eth2Types {
     type hash32 = Seq32Byte
 
     /** The serialisable objects. */
-    datatype Serialisable = 
-            Uint8(n: uint8)
+    datatype RawSerialisable = 
+            Uint8(n: nat)
+        |   Uint16(n: nat)
+        |   Uint32(n: nat)
+        |   Uint64(n: nat)
+        |   Uint128(n: nat)
+        |   Uint256(n: nat)
         |   Bool(b: bool)
-        |   Bitlist(xl: seq<bool>)
-        |   Bytes32(bs: Seq32Byte)
+        |   Bitlist(xl: seq<bool>, limit:nat)
+        |   Bitvector(xl: seq<bool>)
+        |   Bytes(bs: seq<byte>)
+        |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
+        |   Vector(v:seq<RawSerialisable>)
+        |   Container(fl: seq<RawSerialisable>)
 
-    /** The type `Bytes32` corresponding to a Serialisable built using the
-     * `Bytes32` constructor 
+    /** Well typed predicate for `RawSerialisable`s
+     * @param s `RawSerialisable` value
+     * @returns `true` iff `s` is a legal value for serialisation and
+     *           merkleisation
+     */    
+    predicate wellTyped(s:RawSerialisable)
+    decreases s, 0
+    {
+        match s 
+            case Bool(_) => true
+    
+            case Uint8(n) => n < 0x100
+
+            case Uint16(n) => n < 0x10000
+
+            case Uint32(n) => n < 0x100000000
+
+            case Uint64(n) => n < 0x10000000000000000
+
+            case Uint128(n) => n < 0x100000000000000000000000000000000
+
+            case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
+
+            case Bitlist(xl,limit) => |xl| <= limit
+
+            case Bitvector(xl) => |xl| > 0
+
+            case Bytes(bs) => |bs| > 0
+
+            case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+
+            case List(l, t, limit) =>   && |l| <= limit
+                                        && t != Bool_
+                                        && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
+                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
+
+            case Vector(v) =>   && |v| > 0
+                                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                                && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
+                                && (typeOf(v[0])) != Bool_
+
+    }
+
+    /**
+     * The type `Serialisable` corresponds to well typed `RawSerialisable`s
      */
-    type Bytes32 = s:Serialisable | && s.Bytes32? witness Bytes32(timeSeq(0 as Byte, 32))
+    type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
+
+    /**
+     * Helper function to cast a well typed `RawSerialisable` to a
+     * `Serialisable`. Its mainly usage is for the cases where `Serialisable` is
+     * used as type parameter.
+     * 
+     * @param s RawSerialisable value
+     * @returns `s` typed as `Serialisable`
+     */
+    function method castToSerialisable(s:RawSerialisable):Serialisable
+    requires wellTyped(s)
+    {
+        s
+    }
+
+    // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
+
+    /** The type `Bytes4` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 4 `byte`s to it
+     */
+    type Bytes4 = s:Serialisable |  s.Bytes? && |s.bs| == 4
+                                    witness Bytes(timeSeq(0 as byte, 4))
+
+    /** The type `Bytes32` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 32 `byte`s to it
+     */
+    type Bytes32 = s:Serialisable | s.Bytes? && |s.bs| == 32
+                                    witness Bytes(timeSeq(0 as byte, 32))
+
+    /** The type `Bytes48` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 48 `byte`s to it
+     */
+    type Bytes48 = s:Serialisable | s.Bytes? && |s.bs| == 48
+                                    witness Bytes(timeSeq(0 as byte, 48))
+
+    /** The type `Bytes96` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 96 `byte`s to it
+     */
+    type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
+                                    witness Bytes(timeSeq(0 as byte, 96))
+
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
@@ -70,9 +171,37 @@ module Eth2Types {
      */
     datatype Tipe =
             Uint8_
+        |   Uint16_
+        |   Uint32_
+        |   Uint64_
+        |   Uint128_
+        |   Uint256_
         |   Bool_
-        |   Bitlist_
-        |   Bytes32_
+        |   Bitlist_(limit:nat)
+        |   Bitvector_(len:nat)
+        |   Bytes_(len:nat)
+        |   Container_
+        |   List_(t:Tipe, limit:nat)
+        |   Vector_(t:Tipe, len:nat)
+
+    /**
+     * Check if a `Tipe` is the representation of a basic `Serialisable` type
+     *
+     * @param t The `Tipe` value
+     * @returns `true` iff `t` is the representation of a basic `Serialisable`
+     *          type
+     */
+    predicate method isBasicTipe(t:Tipe)
+    {
+        !
+        (   || t.Bitlist_?
+            || t.Bitvector_?
+            || t.Bytes_?
+            || t.Container_?
+            || t.List_?
+            || t.Vector_?
+        )
+    }
 
    /**  The Tipe of a serialisable.
      *  This function allows to obtain the type of a `Serialisable`.
@@ -80,27 +209,49 @@ module Eth2Types {
      *  @param  s   A serialisable.
      *  @returns    Its tipe.
      */
-    function typeOf(s : Serialisable) : Tipe {
+    function method typeOf(s : RawSerialisable) : Tipe 
+    requires wellTyped(s)
+    decreases s
+    {
             match s 
                 case Bool(_) => Bool_
         
                 case Uint8(_) => Uint8_
 
-                case Bitlist(_) => Bitlist_
+                case Uint16(_) => Uint16_
 
-                case Bytes32(_) => Bytes32_
+                case Uint32(_) => Uint32_
+
+                case Uint64(_) => Uint64_
+
+                case Uint128(_) => Uint128_
+
+                case Uint256(_) => Uint256_
+
+                case Bitlist(_,limit) => Bitlist_(limit)
+
+                case Bitvector(bs) => Bitvector_(|bs|)
+
+                case Bytes(xl) => Bytes_(|xl|)
+
+                case Container(_) => Container_
+
+                case List(l, t, limit) =>   List_(t, limit)
+
+                case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
+
     /**
-     * Bitwise exclusive-or of two `Byte` value
+     * Bitwise exclusive-or of two `byte` value
      *
      * @param a  First value
      * @param b  Second value
      * @returns  Bitwise exclusive-or of `a` and `b`
      */
-    function byteXor(a:Byte, b:Byte): Byte
+    function byteXor(a:byte, b:byte): byte
     {
-        ((a as bv8)^(b as bv8)) as Byte
+        ((a as bv8)^(b as bv8)) as byte
     }      
 
     //  Old section
@@ -120,7 +271,7 @@ module Eth2Types {
     type Hash = Bytes32
 
     //  TODO: change the Bytes type
-    // type SerialisedBytes = seq<Byte> 
+    // type SerialisedBytes = seq<byte> 
     
     type BLSPubkey = String
     type BLSSignature = String      //a BLS12-381 signature.
