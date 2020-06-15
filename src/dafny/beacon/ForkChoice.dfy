@@ -12,27 +12,18 @@
  * under the License.
  */
 
-include "../ssz/Constants.dfy"
-include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
-include "../ssz/Constants.dfy"
-include "../utils/Helpers.dfy"
-include "Validators.dfy"
 include "BeaconChain.dfy"
 include "StateTransition.dfy"
 
 /**
  * Fork choice rule for the Beacon Chain.
  */
-module FirkChoice {
+module ForkChoice {
     
-    //  Import some constants and types
-    import opened NativeTypes
     import opened Eth2Types
-    import opened Constants
     import opened BeaconChain
     import opened StateTransition
-    import opened Helpers
 
     /**
      *  The default block header.
