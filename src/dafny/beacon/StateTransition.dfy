@@ -12,13 +12,10 @@
  * under the License.
  */
 
-include "BeaconChain.dfy"
-include "../ssz/Constants.dfy"
-include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
-include "../ssz/Constants.dfy"
 include "../utils/Helpers.dfy"
-include "Validators.dfy"
+include "../ssz/Constants.dfy"
+include "BeaconChain.dfy"
 
 /**
  * State transition function for the Beacon Chain.
@@ -26,7 +23,6 @@ include "Validators.dfy"
 module StateTransition {
     
     //  Import some constants and types
-    import opened NativeTypes
     import opened Eth2Types
     import opened Constants
     import opened BeaconChain
