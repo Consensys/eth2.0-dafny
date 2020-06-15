@@ -17,12 +17,15 @@ include "../../../src/dafny/utils/Eth2Types.dfy"
 include "../../../src/dafny/utils/Helpers.dfy"
 include "../../../src/dafny/ssz/BytesAndBits.dfy"
 include "../../../src/dafny/ssz/BitListSeDes.dfy"
+include "../../../src/dafny/ssz/BitVectorSeDes.dfy"
 
 module StringConversions
 {
     import opened NativeTypes
     import opened Eth2Types
     import opened BitListSeDes
+    import opened BitVectorSeDes
+
 
     /**
      * Converts a nibble to char
@@ -196,6 +199,23 @@ module StringConversions
             ""
         else
             [(if bl[0] then '1' else '0')] + bitlistToString(bl[1..])   
+    } 
+
+    /**
+     * @param bv Bitvector to convert to string
+     * 
+     * @returns String representation of `bv`
+     */
+    function method bitvectorToString(bv:seq<bool>): string
+    ensures |bitvectorToString(bv)| == |bv|
+    ensures forall i | 0 <= i < |bv| :: 
+            if bv[i] then bitvectorToString(bv)[i] == '1' 
+            else bitvectorToString(bv)[i] == '0'
+    {
+        if |bv| == 0 then 
+            ""
+        else
+            [(if bv[0] then '1' else '0')] + bitvectorToString(bv[1..])   
     } 
 
     /**

@@ -88,6 +88,57 @@ namespace thirdpartymerkleisation
         }
 
         /** Invoke PySSZ through an helper Python script to calculate the Merkle
+         *  hash root of a bitvector
+         */
+        public static Dafny.Sequence<byte>  BitvectorRoot(Dafny.Sequence<bool> bitvector, Dafny.Sequence<byte> bitvectorInBytes)
+        {               
+                // Convert bitvector into a byte array
+                byte[] bv = new byte[bitvector.Elements.Length];
+                for(int i = 0; i<bitvector.Elements.Length;i++)
+                {
+                    if(bitvector.Elements[i])
+                    {
+                        bv[i] = 1;
+                    }
+                    else
+                    {
+                        bv[i] = 0;
+                    }
+                }
+                
+                ProcessStartInfo start = new ProcessStartInfo();
+
+                // Set command and command line
+                start.FileName = "python3";
+                start.Arguments="PySszBitvectorMerkleisation.py";
+
+                // Set redirections for stdin and stdout
+                start.UseShellExecute = false;
+                start.RedirectStandardOutput = true;
+                start.RedirectStandardInput = true;
+
+                // Start the process 
+                Process cmdProcess = new Process();
+                cmdProcess.StartInfo = start;
+                cmdProcess.Start();
+
+                // Write to the process stdin in binary format and then closes
+                // the stream
+                var bw = new BinaryWriter(cmdProcess.StandardInput.BaseStream);
+                bw.Write(bv); 
+                cmdProcess.StandardInput.Close();   
+
+                // Read from the process stdout in binary format and store the
+                // read data in a byte array
+                var br = new BinaryReader(cmdProcess.StandardOutput.BaseStream);
+                byte[] retBytes = br.ReadBytes(32);
+
+                // Convert the C# byte array containing the data read from the
+                // process stdout to a Dafny sequence of byte
+                return Dafny.Sequence<byte>.FromElements(retBytes);
+        }        
+        
+        /** Invoke PySSZ through an helper Python script to calculate the Merkle
          *  hash root of a Vector of Bytes
          */
         public static Dafny.Sequence<byte>  BytesRoot(Dafny.Sequence<byte> bs)

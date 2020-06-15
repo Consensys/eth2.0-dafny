@@ -19,6 +19,7 @@ module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
     import opened Eth2Types
     import opened NativeTypes
     function method {:extern} BitlistRoot(rbl: seq<bool>, brbl:seq<byte>, limit:nat): hash32
+    function method {:extern} BitvectorRoot(rbv: seq<bool>, brbv:seq<byte>): hash32
     function method {:extern} BytesRoot(bs: seq<byte>): hash32
     
     function method {:extern} ListUint64Root(l: seq<nat>, limit:nat): hash32

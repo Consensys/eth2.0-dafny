@@ -33,3 +33,19 @@ The following commands must be executed within the directory including this READ
 where `number-of-tests`, `average-failure-percentage` and `failure-reason` are as detailed in the Prysamtic Lab Bitlist Merkleisation Implementation section above.
 
 **Note:** The executable for the Prysamtic Lab Bitlist Merkleisation Implementation has no extension, whereas the executable for the Py-SSZ Bitlist Merkleisation Implementation has `.exe` extension.
+
+# Test of the Py-SSZ Bitvector Merkleisation Implementation
+The following instructions detail how to compile and execute the test for the [Py-SSZ](https://github.com/ethereum/py-ssz) Bitlist Merkleisation Implementation.
+
+## Prerequisites
+- Python3
+- `pip3 install ssz`
+
+## Commands
+
+The following commands must be executed within the directory including this README.md file.
+```
+./compilePySszBitvectorMerkleisationTest.sh
+./TestBitvectorMerkleise.exe <number-of-tests> <average-failure-percentage> 
+```
+where `number-of-tests` and `average-failure-percentage` are as detailed in the Prysamtic Lab Bitlist Merkleisation Implementation section above.
