@@ -19,5 +19,12 @@ module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
     import opened Eth2Types
     import opened NativeTypes
     function method {:extern} BitlistRoot(rbl: seq<bool>, brbl:seq<byte>, limit:nat): hash32
+    function method {:extern} BitvectorRoot(rbv: seq<bool>, brbv:seq<byte>): hash32
     function method {:extern} BytesRoot(bs: seq<byte>): hash32
+    
+    function method {:extern} ListUint64Root(l: seq<nat>, limit:nat): hash32
+    requires forall i |  0 <= i < |l| :: l[i] < 0x10000000000000000
+
+    function method {:extern} ListBytes32Root(l: seq<seq<byte>>, limit:nat): hash32
+    requires forall i |  0 <= i < |l| :: |l[i]| == 32
 }
