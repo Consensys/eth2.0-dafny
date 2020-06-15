@@ -238,6 +238,8 @@ module StateTransition {
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
             ensures storeIsValid()
+            ensures storeInvariant4()
+            ensures storeInvariant5()
 
         {  
             store := GENESIS_STORE;
@@ -273,6 +275,7 @@ module StateTransition {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
                 && store.block_states[hash_tree_root(b)].latest_block_header == b.(state_root := EMPTY_BYTES32) 
+                // && store.block_states[hash_tree_root(b)].slot <= b.slot
         }
 
         /**
@@ -290,6 +293,31 @@ module StateTransition {
             acceptedBlocks == store.blocks.Values
 
         }
+
+        predicate storeInvariant4() 
+            reads this
+        {
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+                b.parent_root in store.blocks.Keys
+                && store.blocks[b.parent_root].slot < b.slot 
+        }
+
+        predicate storeInvariant5() 
+            reads this
+        {
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+                b.parent_root in store.blocks.Keys
+                && b.parent_root in store.block_states.Keys
+                && store.blocks[b.parent_root].slot == store.block_states[b.parent_root].slot
+        }
+
+        // predicate coReachOfGenesisBlock(b: BeaconBlockHeader ) 
+        // {
+        //     if ( b == GENESIS_BLOCK_HEADER ) then   
+        //         true 
+        //     else 
+
+        // }
 
         /**
          *  Store is valid if all the invariants are satisfied,
@@ -314,6 +342,8 @@ module StateTransition {
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
             requires storeIsValid()
+            requires storeInvariant4()
+            requires storeInvariant5()
 
             /** @todo remove the next requires as it should follow from
             the fact that b must have a slot > pre_state and thus cannot
@@ -338,6 +368,7 @@ module StateTransition {
 
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
             ensures storeIsValid()
+            // ensures storeInvariant4()
 
             modifies this
 
@@ -352,17 +383,47 @@ module StateTransition {
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
 
+            assert(b.parent_root in store.blocks.Keys);
+            assert(b.parent_root in store.block_states.Keys);
+            assert(store.block_states[b.parent_root].slot < b.slot);
+            assert(pre_state.slot < b.slot);    //  @todo remove requires
+            // assert(storeInvariant4());
+            // assert(store.blocks[b.parent_root].slot < b.slot);
+            // assert(storeInvariant4());
+
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
+
+
             // assert(storeInvariant2());
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b);
            
+            assert(forall bb :: bb in acceptedBlocks && bb != GENESIS_BLOCK_HEADER && bb != b==>
+                bb.parent_root in store.blocks.Keys
+                && store.blocks[bb.parent_root].slot < bb.slot ) ;
+
+            // @todo need to prove invariant5 for the new block b only
+            assert(b.parent_root in store.blocks.Keys);
+
+            assert(pre_state.slot < b.slot);    //  @todo remove requires
+            assert(store.block_states[b.parent_root].slot == pre_state.slot);
+
+            // assert(storeInvariant4());
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+            
+            assert(b.parent_root in store.blocks.Keys);
+            assert(b.parent_root in store.blocks.Keys);
+
+            // assert(new_state.slot == store.blocks[b.parent_root].slot);
+            assert(pre_state.slot < b.slot);    //  @todo remove requires
+            assert(store.block_states[b.parent_root].slot == pre_state.slot);
+            // assert(store.blocks[b.parent_root].slot < b.slot );
+
         }
         
         /**
@@ -383,6 +444,8 @@ module StateTransition {
 
             /** The next state latest_block_header is same as b except for state_root that is 0. */
             ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
+
+            ensures s'.slot == b.slot
 
             modifies this
         {
