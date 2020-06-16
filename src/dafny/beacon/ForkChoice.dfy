@@ -291,7 +291,6 @@ module ForkChoice {
             ensures |store.blocks| == |old(store.blocks)| + 1
             //  Preserves store validity.
             ensures storeIsValid()
-            // ensures storeInvariant4()
 
             modifies this
         {
