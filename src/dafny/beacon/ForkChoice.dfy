@@ -306,10 +306,6 @@ module ForkChoice {
             assert(b.parent_root in store.blocks.Keys);
             assert(b.parent_root in store.block_states.Keys);
             assert(store.block_states[b.parent_root].slot < b.slot);
-            assert(pre_state.slot < b.slot);    //  @todo remove requires
-            // assert(storeInvariant5());
-            // assert(store.blocks[b.parent_root].slot < b.slot);
-            // assert(storeInvariant4());
 
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
