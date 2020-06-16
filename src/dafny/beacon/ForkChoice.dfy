@@ -273,15 +273,7 @@ module ForkChoice {
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
             requires storeIsValid()
-            // requires storeInvariant4()
-            requires storeInvariant5()
 
-            /** @todo remove the next requires as it should follow from
-            the fact that b must have a slot > pre_state and thus cannot
-            be in blocks.Values and  its has cannot be in the keys. 
-            See invariant3().
-            */
-            requires b !in acceptedBlocks
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
             requires b.parent_root in store.block_states
