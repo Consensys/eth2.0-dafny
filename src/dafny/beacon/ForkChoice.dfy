@@ -265,21 +265,57 @@ module ForkChoice {
                 && store.blocks[b.parent_root].slot < store.blocks[hash_tree_root(b)].slot
         }
 
-        // function ancestors(b: BeaconBlockHeader, store: Store) : set<BeaconBlockHeader>
-        //     requires isValid(store)
-        // {
-        //     if ( b == GENESIS_BLOCK_HEADER ) 
-        //         { GENESIS_BLOCK_HEADER }
-        //     else 
-        //         GENESIS_BLOCK_HEADER + ancestors( store)
-        // }
-        // predicate coReachOfGenesisBlock(b: BeaconBlockHeader ) 
-        // {
-        //     if ( b == GENESIS_BLOCK_HEADER ) then   
-        //         true 
-        //     else 
+        /**
+         *  Collect the ancestors of a given key in the store.
+         *
+         *  @param  r       A root that is a (block) store key.
+         *  @param  store   A store.
+         */
+        function ancestors(r: Root, store: Store) : seq<BeaconBlockHeader>
+            requires r in store.blocks.Keys
+            requires storeIsValid(store)
 
-        // }
+            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
+            ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
+            ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
+                ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
+            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
+
+            reads this
+
+            decreases store.blocks[r].slot
+        {
+            if ( store.blocks[r].slot == 0 ) then
+                //  By invariant 0a
+                [ GENESIS_BLOCK_HEADER ]
+            else 
+                [ store.blocks[r] ] + ancestors(store.blocks[r].parent_root, store)
+        }
+       
+        /**
+         *  The proof that a store is chain follows directly from the properties
+         *  of ancestors.
+         *  
+         *  @param  r       A root.
+         *  @param  store   A store.
+         *  @returns        Proof that a valid store is always a chain.
+         */
+        lemma aValidStoreIsAChain(r: Root, store: Store)    
+            requires r in store.blocks.Keys
+            requires storeIsValid(store)
+
+            //  Length (number) of ancestors is less than the slot of Root.
+            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
+            //  The GENESIS_BLOCK_HEADER is always in the ancestors.
+            ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
+            //  At each level in the sequence, the slot number decreases.
+            ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
+                ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
+            //  The last block in the chain is the GENESIS_BLOCK_HEADER
+            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
+        {
+            //  Thanks Dafny and follows directly from proof of ancestors.
+        }
 
         /**
          *  Store is valid if all the invariants are satisfied,
@@ -289,6 +325,7 @@ module ForkChoice {
         {
             true 
             && storeInvariant0(store)
+            && storeInvariant0a(store)
             && storeInvariant1(store)
             && storeInvariant2(store)
             && storeInvariant3(store)
