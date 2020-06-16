@@ -31,6 +31,9 @@ module StateTransition {
     /** The default zeroed Bytes32.  */
     const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
     
+    /**
+     *  The default (empty) Bytes32
+     */
     const EMPTY_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
 
     /** The historical roots type.  */
