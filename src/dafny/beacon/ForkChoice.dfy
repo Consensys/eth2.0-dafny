@@ -375,10 +375,6 @@ module ForkChoice {
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
 
-            assert(b.parent_root in store.blocks.Keys);
-            assert(b.parent_root in store.block_states.Keys);
-            assert(store.block_states[b.parent_root].slot < b.slot);
-
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
