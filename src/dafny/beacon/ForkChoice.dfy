@@ -219,6 +219,9 @@ module ForkChoice {
                 && store.blocks[b.parent_root].slot < b.slot 
         }
 
+        /**
+         *  The slots for corresponding block and state in the store are equal.
+         */
         predicate storeInvariant5() 
             reads this
         {
