@@ -153,9 +153,6 @@ module ForkChoice {
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
             ensures storeIsValid()
-            ensures storeInvariant4()
-            ensures storeInvariant5()
-
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
