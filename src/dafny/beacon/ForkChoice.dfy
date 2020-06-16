@@ -231,6 +231,17 @@ module ForkChoice {
                 && store.blocks[b.parent_root].slot == store.block_states[b.parent_root].slot
         }
 
+        /**
+         *  The slots in store.blocks ans store.block_states are in sync for each key.
+         */
+        predicate storeInvariant7() 
+            reads this
+        {
+            forall b :: b in store.blocks.Keys ==>
+                && b  in store.block_states.Keys
+                && store.blocks[b].slot == store.block_states[b].slot
+        }
+
         // predicate coReachOfGenesisBlock(b: BeaconBlockHeader ) 
         // {
         //     if ( b == GENESIS_BLOCK_HEADER ) then   
