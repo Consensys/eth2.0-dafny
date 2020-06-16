@@ -152,7 +152,7 @@ module ForkChoice {
 
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
-            ensures storeIsValid()
+            ensures storeIsValid(store)
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
@@ -161,7 +161,7 @@ module ForkChoice {
         /** 
          *  The set of keys in the store.blocks is the same as store.block_states.Keys. 
          */
-        predicate storeInvariant0() 
+        predicate storeInvariant0(store: Store) 
             reads this
         {
             store.blocks.Keys == store.block_states.Keys 
@@ -170,7 +170,7 @@ module ForkChoice {
         /**
          *  Every accepted block is in the store its key is is the hash_tree_root.
          */
-        predicate storeInvariant1() 
+        predicate storeInvariant1(store: Store) 
             reads this
         {
             forall b :: b in acceptedBlocks ==> 
@@ -183,7 +183,7 @@ module ForkChoice {
          *  the corresponding state has a latest_block_header that is the block `b`
          *  with its state_root field nullified.
          */
-        predicate storeInvariant2() 
+        predicate storeInvariant2(store: Store) 
             reads this 
         {
             forall b :: b in acceptedBlocks ==> 
@@ -202,7 +202,7 @@ module ForkChoice {
          *              requires hash_tree_root(b) !in store.blocks.Keys
          *  in on_block.
          */
-        predicate storeInvariant3() 
+        predicate storeInvariant3(store: Store) 
             reads this
         {
             acceptedBlocks == store.blocks.Values
@@ -211,7 +211,7 @@ module ForkChoice {
         /**
          *  For every block, the slot of its parent root is stricly less than its slot. 
          */
-        predicate storeInvariant4() 
+        predicate storeInvariant4(store: Store) 
             reads this
         {
             forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
@@ -222,7 +222,7 @@ module ForkChoice {
         /**
          *  The slots for corresponding block and state in the store are equal.
          */
-        predicate storeInvariant5() 
+        predicate storeInvariant5(store: Store) 
             reads this
         {
             forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
@@ -234,7 +234,7 @@ module ForkChoice {
         /**
          *  The slots in store.blocks ans store.block_states are in sync for each key.
          */
-        predicate storeInvariant6() 
+        predicate storeInvariant6(store: Store) 
             reads this
         {
             forall b :: b in store.blocks.Keys ==>
@@ -242,6 +242,27 @@ module ForkChoice {
                 && store.blocks[b].slot == store.block_states[b].slot
         }
 
+        /**
+         *  The chain b.slot -> b.parent_root.slot -> b.parent_root^2.slot -> ... is 
+         *  strictly decreasding.
+         */
+        predicate storeInvariant7(store: Store) 
+            reads this
+        {
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+                hash_tree_root(b) in store.blocks.Keys
+                && b.parent_root in store.blocks.Keys
+                && store.blocks[b.parent_root].slot < store.blocks[hash_tree_root(b)].slot
+        }
+
+        // function ancestors(b: BeaconBlockHeader, store: Store) : set<BeaconBlockHeader>
+        //     requires isValid(store)
+        // {
+        //     if ( b == GENESIS_BLOCK_HEADER ) 
+        //         { GENESIS_BLOCK_HEADER }
+        //     else 
+        //         GENESIS_BLOCK_HEADER + ancestors( store)
+        // }
         // predicate coReachOfGenesisBlock(b: BeaconBlockHeader ) 
         // {
         //     if ( b == GENESIS_BLOCK_HEADER ) then   
@@ -253,17 +274,18 @@ module ForkChoice {
         /**
          *  Store is valid if all the invariants are satisfied,
          */
-        predicate storeIsValid() 
+        predicate storeIsValid(store: Store) 
             reads this
         {
             true 
-            && storeInvariant0()
-            && storeInvariant1()
-            && storeInvariant2()
-            && storeInvariant3()
-            && storeInvariant4()
-            && storeInvariant5()
-            && storeInvariant6()
+            && storeInvariant0(store)
+            && storeInvariant1(store)
+            && storeInvariant2(store)
+            && storeInvariant3(store)
+            && storeInvariant4(store)
+            && storeInvariant5(store)
+            && storeInvariant6(store)
+            && storeInvariant7(store)
         }
 
         /**
@@ -275,7 +297,7 @@ module ForkChoice {
          */
         method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
-            requires storeIsValid()
+            requires storeIsValid(store)
 
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
@@ -293,7 +315,7 @@ module ForkChoice {
             //  The store size increases
             ensures |store.blocks| == |old(store.blocks)| + 1
             //  Preserves store validity.
-            ensures storeIsValid()
+            ensures storeIsValid(store)
 
             modifies this
         {
