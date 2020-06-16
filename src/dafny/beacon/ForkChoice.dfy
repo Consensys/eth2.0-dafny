@@ -287,6 +287,7 @@ module ForkChoice {
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
             //  Progress: the store size increases.
             ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
+            //  The store size increases
             ensures |store.blocks| == |old(store.blocks)| + 1
             //  Preserves store validity.
             ensures storeIsValid()
