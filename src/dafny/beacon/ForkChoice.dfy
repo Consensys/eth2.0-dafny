@@ -234,7 +234,7 @@ module ForkChoice {
         /**
          *  The slots in store.blocks ans store.block_states are in sync for each key.
          */
-        predicate storeInvariant7() 
+        predicate storeInvariant6() 
             reads this
         {
             forall b :: b in store.blocks.Keys ==>
@@ -263,7 +263,7 @@ module ForkChoice {
             && storeInvariant3()
             && storeInvariant4()
             && storeInvariant5()
-            && storeInvariant7()
+            && storeInvariant6()
         }
 
         /**
