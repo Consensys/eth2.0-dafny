@@ -261,6 +261,9 @@ module ForkChoice {
             && storeInvariant1()
             && storeInvariant2()
             && storeInvariant3()
+            && storeInvariant4()
+            && storeInvariant5()
+            && storeInvariant7()
         }
 
         /**
