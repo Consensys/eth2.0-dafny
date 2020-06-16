@@ -148,8 +148,13 @@ module StateTransition {
         ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
         /** s' slot is now adjusted to the slot of b. */
         ensures s'.slot == b.slot
-
-        // modifies this
+        /** s' parent_root is the hash of the state obtained by resolving/forwarding s to
+            the slot of b.  */
+        ensures s'.latest_block_header.parent_root  == 
+            hash_tree_root(
+                forwardStateToSlot(resolveStateRoot(s), b.slot)
+                .latest_block_header
+            )
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
@@ -279,6 +284,7 @@ module StateTransition {
         requires b.parent_root == hash_tree_root(s.latest_block_header)
 
         ensures s'.latest_block_header.parent_root == b.parent_root
+        ensures s'.latest_block_header.parent_root == hash_tree_root(s.latest_block_header) 
         ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
         ensures s'.slot == s.slot
     {
@@ -305,6 +311,7 @@ module StateTransition {
         ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
         ensures s'.latest_block_header.parent_root == b.parent_root
         ensures s'.slot == s.slot
+        ensures s'.latest_block_header.parent_root == hash_tree_root(s.latest_block_header) 
     {
         s':= s.(
             latest_block_header := BeaconBlockHeader(
