@@ -47,9 +47,12 @@ module StateTransition {
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != EMPTY_BYTES32
 
-    /** Collision free hasj function. */
-    lemma {:axiom} foo<T(==)>(t1: T, t2: T) 
-        ensures t1 == t2 <==> hash_tree_root(t1) == hash_tree_root(t2)
+    /** Collision free hash function. 
+     *  This does not seem to affect the proofs so far, so
+     *  this lemma is commented out.
+     **/
+    // lemma {:axiom} foo<T(==)>(t1: T, t2: T) 
+        // ensures t1 == t2 <==> hash_tree_root(t1) == hash_tree_root(t2)
 
    
     /** 
