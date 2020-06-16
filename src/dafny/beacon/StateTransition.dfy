@@ -107,8 +107,8 @@ module StateTransition {
      */
     datatype BeaconState = BeaconState(
         slot: Slot,
-        latest_block_header: BeaconBlockHeader
-        // block_roots: VectorOfHistRoots,
+        latest_block_header: BeaconBlockHeader,
+        block_roots: VectorOfHistRoots
         // state_roots: VectorOfHistRoots
     )
 
@@ -271,7 +271,7 @@ module StateTransition {
         //  Cache block root
         var previous_block_root := hash_tree_root(s'.latest_block_header);
 
-        // s' := s'.(block_roots := s'.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_block_root]);
+        s' := s'.(block_roots := s'.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_block_root]);
     }
 
     /**
@@ -340,16 +340,24 @@ module StateTransition {
         //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
     {
-        // var new_latest_block_header := s.latest_block_header.(state_root := hash_tree_root(s));
-        BeaconState(
-            // slot unchanged
-            s.slot + 1,
+        var new_latest_block_header := 
             if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
                 s.latest_block_header.(state_root := hash_tree_root(s))
             else 
                 s.latest_block_header
+            ;
+        
+        // s.latest_block_header.(state_root := hash_tree_root(s));
+        BeaconState(
+            // slot unchanged
+            s.slot + 1,
+            // if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
+            //     s.latest_block_header.(state_root := hash_tree_root(s))
+            // else 
+            //     s.latest_block_header,
+            new_latest_block_header,
             //  add new block_header root to block_roots history.
-            // s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
+            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)]
             //  add previous state root to state_roots history
             // s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
         )
@@ -394,11 +402,14 @@ module StateTransition {
         // ensures nextSlot(s).latest_block_header ==  s.latest_block_header
     {
         //  Add header root to history of block_roots
-        // var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s.latest_block_header)];
+        var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s.latest_block_header)];
         //  Add state root to history of state roots
         // var new_state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)];
         //  Increment slot and copy latest_block_header
         // BeaconState(s.slot + 1, s.latest_block_header, new_block_roots, new_state_roots)
-        s.(slot := s.slot + 1)
+        s.(
+            slot := s.slot + 1,
+            block_roots := new_block_roots
+        )
     }
 }
