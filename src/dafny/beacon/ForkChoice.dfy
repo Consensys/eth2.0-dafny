@@ -276,10 +276,11 @@ module ForkChoice {
 
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
-            requires b.parent_root in store.block_states
-            //  R1: set pre_state using the store.
+            requires b.parent_root in store.block_states    //  equivalent to being in blocks
+            //  R1: set pre_state according to what b.parent_root is in the store.
             requires pre_state == store.block_states[b.parent_root]
-            //  R2 : requires that `b` can be added to pre_state.
+            //  R2 : requires that `b` can be added to pre_state i.e. state_transition 
+            //  pre-conditions are satisfied..
             requires isValid(pre_state, b)
 
             //  Record block.
