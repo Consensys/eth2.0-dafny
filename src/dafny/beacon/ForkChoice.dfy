@@ -191,7 +191,8 @@ module ForkChoice {
         {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
-                && store.block_states[hash_tree_root(b)].latest_block_header == b.(state_root := EMPTY_BYTES32) 
+                && store.block_states[hash_tree_root(b)].latest_block_header == 
+                        b.(state_root := EMPTY_BYTES32) 
                 // && store.block_states[hash_tree_root(b)].slot <= b.slot
         }
 
