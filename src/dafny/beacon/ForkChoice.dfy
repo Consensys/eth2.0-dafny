@@ -168,6 +168,16 @@ module ForkChoice {
         }
 
         /**
+         *  The only block with slot 0 is the GENESIS_BLOCK.
+         */
+        predicate storeInvariant0a(store: Store) 
+            reads this
+        {
+            forall r :: r in store.blocks.Keys ==>
+                store.blocks[r].slot == 0 ==> store.blocks[r] == GENESIS_BLOCK_HEADER
+        }
+
+        /**
          *  Every accepted block is in the store its key is is the hash_tree_root.
          */
         predicate storeInvariant1(store: Store) 
