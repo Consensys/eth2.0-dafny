@@ -313,37 +313,11 @@ module ForkChoice {
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
 
-            // assert(storeInvariant2());
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b);
            
-           
-
-            // @todo need to prove invariant5 for the new block b only
-            assert(b.parent_root in store.blocks.Keys);
-
-            assert(pre_state.slot < b.slot);    //  @todo remove requires
-            assert(store.block_states[b.parent_root].slot == pre_state.slot);
-
-            assert(hash_tree_root(b) !in store.block_states.Keys);
-
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
-            // assert(storeInvariant5());
-            
-             //  invariant 5 ?
-            // assert(forall bb :: bb in acceptedBlocks && bb != GENESIS_BLOCK_HEADER && bb != b ==>
-                // bb.parent_root in store.blocks.Keys
-                // && store.blocks[bb.parent_root].slot < bb.slot ) ;
-
-            assert(b.parent_root in store.blocks.Keys);
-            assert(b.parent_root in store.blocks.Keys);
-
-            // assert(new_state.slot == store.blocks[b.parent_root].slot);
-            assert(pre_state.slot < b.slot);    //  @todo remove requires
-            assert(store.block_states[b.parent_root].slot == pre_state.slot);
-            // assert(store.blocks[b.parent_root].slot < b.slot );
-
         }
         
     }
