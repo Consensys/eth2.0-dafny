@@ -361,6 +361,13 @@ module ForkChoice {
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
             //  Progress: the store size increases.
             ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
+            //  Old blocks are not modified
+            ensures forall k :: k in old(acceptedBlocks) ==> k in acceptedBlocks
+            //  Old store items are preserved
+            ensures forall k :: k in old(store).blocks.Keys ==> k in store.blocks.Keys 
+                && old(store).blocks[k] == store.blocks[k]
+                && k in store.block_states.Keys
+                && old(store).block_states[k] == store.block_states[k]
             //  Progress: The store size increases.
             ensures |store.blocks| == |old(store.blocks)| + 1
             //  Inductive invariant: store validity is preserved.
