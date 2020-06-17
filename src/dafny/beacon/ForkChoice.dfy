@@ -308,13 +308,13 @@ module ForkChoice {
             ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
             //  The GENESIS_BLOCK_HEADER is always in the ancestors.
             ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
-            //  At each level in the sequence, the slot number decreases.
+            //  At each level in the ancestors' sequence, the slot number decreases.
             ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
                 ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
             //  The last block in the chain is the GENESIS_BLOCK_HEADER
             ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
         {
-            //  Thanks Dafny and follows directly from proof of ancestors.
+            //  Follows directly from proof post-conditions of ancestors which is elegant!
         }
 
         /**
@@ -348,20 +348,22 @@ module ForkChoice {
 
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
-            requires b.parent_root in store.block_states    //  equivalent to being in blocks
+            //  The proposed parent_root should be in the domain of the store.blocks
+            //  This is equivalent to being in the store.block_states by Invariant0
+            requires b.parent_root in store.blocks
             //  R1: set pre_state according to what b.parent_root is in the store.
             requires pre_state == store.block_states[b.parent_root]
-            //  R2 : requires that `b` can be added to pre_state i.e. state_transition 
+            //  R2 : requires that `b` can be added to pre_state i.e. state_transition's
             //  pre-conditions are satisfied..
             requires isValid(pre_state, b)
 
-            //  Record block.
+            //  Record block in the observer (ghost var) block list.
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
             //  Progress: the store size increases.
             ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
-            //  The store size increases
+            //  Progress: The store size increases.
             ensures |store.blocks| == |old(store.blocks)| + 1
-            //  Preserves store validity.
+            //  Inductive invariant: store validity is preserved.
             ensures storeIsValid(store)
 
             modifies this
