@@ -205,7 +205,7 @@ module ForkChoice {
 
         /**
          *  In this invariant it would be nice to have:
-         *   hash_tree_root(b) in keys ==> b in acceptedBlocks (or Values)
+         *  hash_tree_root(b) in keys ==> b in acceptedBlocks (or Values)
          *  This would enable us to conclude that 
          *              hash_tree_root(b) !in store.blocks.Keys from  b !in acceptedBlocks
          *  and then we can omit
@@ -364,7 +364,8 @@ module ForkChoice {
             //  Immutability: Old blocks are not modified
             ensures forall k :: k in old(acceptedBlocks) ==> k in acceptedBlocks
             //  Immutability of the chain: Old store items are preserved
-            ensures forall k :: k in old(store).blocks.Keys ==> k in store.blocks.Keys 
+            ensures forall k :: k in old(store).blocks.Keys ==> 
+                k in store.blocks.Keys 
                 && old(store).blocks[k] == store.blocks[k]
                 && k in store.block_states.Keys
                 && old(store).block_states[k] == store.block_states[k]
