@@ -350,14 +350,9 @@ module StateTransition {
                 s.latest_block_header
             ;
         
-        // s.latest_block_header.(state_root := hash_tree_root(s));
         BeaconState(
             // slot unchanged
             s.slot + 1,
-            // if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
-            //     s.latest_block_header.(state_root := hash_tree_root(s))
-            // else 
-            //     s.latest_block_header,
             new_latest_block_header,
             //  add new block_header root to block_roots history.
             s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
