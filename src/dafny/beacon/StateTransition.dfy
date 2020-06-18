@@ -133,6 +133,13 @@ module StateTransition {
                 forwardStateToSlot(resolveStateRoot(s), 
                 b.slot
             ).latest_block_header) 
+        &&  b.state_root == hash_tree_root(
+                addBlockToState(
+                    forwardStateToSlot(resolveStateRoot(s), b.slot), 
+                    b
+                )
+            )
+            
     }
 
     /**
@@ -140,19 +147,7 @@ module StateTransition {
      */
     method stateTransition(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
-        // requires s.latest_block_header.state_root == EMPTY_BYTES32
-        //  a new block must be proposed for a slot that is later than s.slot
-        requires s.slot < b.slot
-        requires b.parent_root == hash_tree_root(forwardStateToSlot(resolveStateRoot(s), b.slot).latest_block_header) //    Req1
-        //  Used in the specs to validate the block.
-        //  The block must be added to the state 
-        requires b.state_root == hash_tree_root(
-                addBlockToState(
-                    forwardStateToSlot(resolveStateRoot(s), b.slot), 
-                    b
-                )
-            )
-        //  @todo replace previous requirements by isValid()
+        requires isValid(s, b)
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
         ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
@@ -172,12 +167,11 @@ module StateTransition {
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
 
-        // Verify state root
+        // Verify state root (from eth2.0 specs)
+        // A proof that this assert statement is never violated when isValid() is true.
         // if validate_result:
         assert (b.state_root == hash_tree_root(s'));
-        // assert (b.state_root == EMPTY_BYTES32);
 
-        //  Validate state block.
     }  
 
     /**
@@ -212,7 +206,6 @@ module StateTransition {
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
 
         ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
-        // ensures store == old(store)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root  
         
         //  Termination ranking function
@@ -272,7 +265,7 @@ module StateTransition {
     {
         s' := s;
 
-        // Cache state root
+        //  Cache state root
         //  Record the hash of the previous state in the history.
         var previous_state_root := hash_tree_root(s); 
 
