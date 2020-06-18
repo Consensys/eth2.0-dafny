@@ -74,7 +74,7 @@ module Constants {
   // Configuration -- Time parameters
   const  SECONDS_PER_SLOT:= 12 ;                            
   const  MIN_ATTESTATION_INCLUSION_DELAY:= TWO_UP_0 ; // 2 ^ 0           
-  const  SLOTS_PER_EPOCH:= TWO_UP_5; // 2 ^Int 5                           
+  const  SLOTS_PER_EPOCH : uint64 := TWO_UP_5 as uint64; // 2 ^Int 5                           
   const  MIN_SEED_LOOKAHEAD:= TWO_UP_0 ; // 2 ^ 0                        
   const  MAX_SEED_LOOKAHEAD:= TWO_UP_2 ; // 2 ^ 2                        
   const  SLOTS_PER_ETH1_VOTING_PERIOD:= TWO_UP_10; // 2 ^ 10             

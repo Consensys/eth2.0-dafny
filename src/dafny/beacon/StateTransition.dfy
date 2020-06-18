@@ -229,7 +229,10 @@ module StateTransition {
             decreases slot - s'.slot 
         {
             s':= processSlot(s');
-
+            //  Process epoch on the start slot of the next epoch
+            if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
+                s' := processEpoch(s');
+            }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
@@ -292,7 +295,6 @@ module StateTransition {
         requires b.parent_root == hash_tree_root(s.latest_block_header)
 
         ensures s' == addBlockToState(s, b)
-
     {
         //  Start by creating a block header from the ther actual block.
         s' := processBlockHeader(s, b); 
@@ -325,6 +327,16 @@ module StateTransition {
         );
     }
     
+    /**
+     *  At epoch boundaries, update justifications, rewards, penalities,
+     *  resgistry, slashing, and final updates.
+     */
+    method processEpoch(s: BeaconState) returns (s' : BeaconState) 
+        ensures s' == s
+    {
+        return s;
+    }
+
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
