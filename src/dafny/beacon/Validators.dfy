@@ -39,14 +39,14 @@ module Validators {
      *  @param  withdrawable_epoch              When validator can withdraw funds.
      */
     datatype Validator = Validator(
-        pubkey: BLSPubkey,
-        withdrawalCredentials: Hash,
-        effectiveBalance: int,
-        slashed: bool,
-        activationEligibilityEpoch: int,
-        activationEpoch: int,
-        exitEpoch: int,
-        withdrawableEpoch: int
+        // pubkey: BLSPubkey,
+        // withdrawalCredentials: Hash,
+        effectiveBalance: Gwei,
+        // slashed: bool,
+        activationEligibilityEpoch: Epoch,
+        activationEpoch: Epoch
+        // exitEpoch: int,
+        // withdrawableEpoch: int
     )
     
      /**

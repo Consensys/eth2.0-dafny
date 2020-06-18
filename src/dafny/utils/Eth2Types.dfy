@@ -277,7 +277,9 @@ module Eth2Types {
     type BLSSignature = String      //a BLS12-381 signature.
 
     type Slot = uint64
-    type Gwei = int
+    type Gwei = uint64
+
+    type Epoch = uint64
 
     // Custom types
 
