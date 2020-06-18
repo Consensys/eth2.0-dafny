@@ -353,8 +353,9 @@ module ForkChoice {
             requires b.parent_root in store.blocks
             //  R1: set pre_state according to what b.parent_root is in the store.
             requires pre_state == store.block_states[b.parent_root]
-            //  R2 : requires that `b` can be added to pre_state i.e. state_transition's
-            //  pre-conditions are satisfied..
+
+            //  isValid : requires that `b` can be added to pre_state i.e. state_transition's
+            //  pre-conditions are satisfied.
             requires isValid(pre_state, b)
 
             //  Record block in the observer (ghost var) block list.
