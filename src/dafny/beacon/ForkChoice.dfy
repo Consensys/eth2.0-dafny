@@ -15,6 +15,7 @@
 include "../utils/Eth2Types.dfy"
 include "BeaconChain.dfy"
 include "StateTransition.dfy"
+include "Helpers.dfy"
 
 /**
  * Fork choice rule for the Beacon Chain.
@@ -24,6 +25,7 @@ module ForkChoice {
     import opened Eth2Types
     import opened BeaconChain
     import opened StateTransition
+    import opened BeaconHelpers
 
     /**
      *  The default block header.
