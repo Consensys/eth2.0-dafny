@@ -22,7 +22,7 @@ include "BeaconChain.dfy"
  */
 module StateTransition {
     
-    //  Import some constants and types
+    //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
     import opened Constants
     import opened BeaconChain
@@ -37,28 +37,35 @@ module StateTransition {
     const EMPTY_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
 
     /** The historical roots type.  */
-    const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
-
     type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness EMPTY_HIST_ROOTS
+
+    /** Empty vector of historical roots. */
+    const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
     /**
      *  Compute Root/Hash/Bytes32 for different types.
      *  
-     *  @todo   Use the hash_tree_root from Merkle.
+     *  @todo   Use the hash_tree_root from Merkle?.
+     *  @note   The property of hash_tree_root below is enough for 
+     *          proving some invariants. So we may use a module refinement
+     *          to integrate the actual hash_tree_root from Merkle module.
      */
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != EMPTY_BYTES32
 
     /** Collision free hash function. 
-     *  This does not seem to affect the proofs so far, so
-     *  this lemma is commented out.
+     *  
+     *  @note   This does not seem to affect the proofs so far, so
+     *          this lemma is commented out, but left in the code
+     *          for future reference.
      **/
     // lemma {:axiom} foo<T(==)>(t1: T, t2: T) 
         // ensures t1 == t2 <==> hash_tree_root(t1) == hash_tree_root(t2)
 
-   
     /** 
+     *  The Beacon state type.
+     *
      * @link{https://notes.ethereum.org/@djrtwo/Bkn3zpwxB?type=view} 
      * The beacon chain’s state (BeaconState) is the core object around 
      * which the specification is built. The BeaconState encapsulates 
@@ -67,7 +74,7 @@ module StateTransition {
      *  - in what state each of them is in, 
      *  - which chain in the block tree this state belongs to, and 
      *  - a hash-reference to the Ethereum 1 chain.
-
+     *
      * Beginning with the genesis state, the post state of a block is 
      * considered valid if it passes all of the guards within the state 
      * transition function. Thus, the precondition of a block is 
@@ -107,6 +114,10 @@ module StateTransition {
      *                                          The state root for a slot is stored at the 
      *                                          start of the next slot to avoid a circular 
      *                                          dependency
+     *
+     * @note                                    Some fields are not integrated yet but
+     *                                          a complete def can be found in the archive
+     *                                          branch.
      */
     datatype BeaconState = BeaconState(
         slot: Slot,
@@ -125,6 +136,7 @@ module StateTransition {
      */
     predicate isValid(s : BeaconState, b : BeaconBlockHeader) 
     {
+        //  block slot should be in the future.
         s.slot < b.slot 
         //  Fast forward s to b.slot and check `b` can be attached to the
         //  resulting state's latest_block_header.
@@ -133,17 +145,22 @@ module StateTransition {
                 forwardStateToSlot(resolveStateRoot(s), 
                 b.slot
             ).latest_block_header) 
+        //  Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
                 addBlockToState(
                     forwardStateToSlot(resolveStateRoot(s), b.slot), 
                     b
                 )
             )
-            
     }
 
     /**
      *  Compute the state obtained after adding a block.
+     *  
+     *  @param      s   A beacon state.
+     *  @param      b   A block.
+     *  @returns        The state obtained after adding `b` to the current state.
+     *                  
      */
     method stateTransition(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
@@ -168,10 +185,11 @@ module StateTransition {
         s' := processBlock(s1, b);  
 
         // Verify state root (from eth2.0 specs)
-        // A proof that this assert statement is never violated when isValid() is true.
-        // if validate_result:
+        // A proof that this function is correct establishes that this assert statement 
+        // is never violated (i.e. when isValid() is true.)
+        // In the Eth2.0 specs this check is conditional and enabled by default.
+        //  if validate_result:
         assert (b.state_root == hash_tree_root(s'));
-
     }  
 
     /**
@@ -190,7 +208,7 @@ module StateTransition {
      *  @param  s       A state
      *  @param  slot    The slot to advance to. This is usually the slot of newly
      *                  proposed block.
-     *  @returns        The state obtained after advancing the history to slot.
+     *  @returns        The state obtained after advancing the histories to slot.
      *      
      *  @note          The specs have the the first processSlot integrated
      *                  in the while loop. However, because s.slot < slot,
@@ -268,8 +286,7 @@ module StateTransition {
     {
         s' := s;
 
-        //  Cache state root
-        //  Record the hash of the previous state in the history.
+        //  Cache state root. Record the hash of the previous state in the history.
         var previous_state_root := hash_tree_root(s); 
 
         s' := s'.(state_roots := s'.state_roots[(s'.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_state_root]);
@@ -282,11 +299,16 @@ module StateTransition {
         //  Cache block root
         var previous_block_root := hash_tree_root(s'.latest_block_header);
 
+        //  Compute the final value of the new state.
         s' := s'.(block_roots := s'.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_block_root]);
     }
 
     /**
      *  Verify that a block is valid.
+     *  
+     *  @param      s   A beacon state.   
+     *  @param      b   A block header.
+     *  @returns        The state obtained after processing `b`.
      *
      *  @note   Matches eth2.0 specs, need to implement randao, eth1, operations. 
      */
@@ -308,7 +330,11 @@ module StateTransition {
      *  Check whether a block is valid and prepare and initialise new state
      *  with a corresponding block header. 
      *
-     *  @note   Matches eth2.0 specs except proposer slashing verification
+     *  @param  s   A beacon state.
+     *  @param  b   A block header.
+     *  @returns    The state obtained processing the block header.
+     *
+     *  @note   Matches eth2.0 specs except proposer slashing verification.
      */
     method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
         //  Verify that the slots match
@@ -330,6 +356,10 @@ module StateTransition {
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,
      *  resgistry, slashing, and final updates.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    
+     *  @todo       To be specified and implemented. currently returns s.
      */
     method processEpoch(s: BeaconState) returns (s' : BeaconState) 
         ensures s' == s
