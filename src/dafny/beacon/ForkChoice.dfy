@@ -52,7 +52,7 @@ module ForkChoice {
     )
 
     /**
-     *  The store recording the blocks and the states.
+     *  The store (memory) recording the blocks and the states.
      *  
      *  @param  blocks          maps hash_tree_root(b) to b
      *  @param  block_states    maps a Root (hash_tree_root of a block) to a state.
@@ -60,7 +60,7 @@ module ForkChoice {
      *  @note                   From the spec 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
      *  @todo                   It seems that blocks and block_states should have the same
-     *                          keys at any time. We may prove it.
+     *                          keys at any time. This is proved in invariant0.
      */
     datatype Store = Store (
         blocks : map<Root, BeaconBlockHeader>,
@@ -68,7 +68,7 @@ module ForkChoice {
     )
 
     /**
-     *  This function is specialised for the genesis state.
+     *  This function provides the genesis store.
      *
      *  @param  anchor_state    A state to be regarded as a trusted state, to not 
      *                          roll back beyond. This should be the genesis state for a full client.
@@ -119,7 +119,7 @@ module ForkChoice {
     }
 
     /**
-     *  A Beacon Chain environement (storage) i.e. with Store etc.
+     *  A Beacon Chain environement (mutable) i.e. with Store etc.
      */
     class Env {
 
@@ -162,6 +162,8 @@ module ForkChoice {
 
         /** 
          *  The set of keys in the store.blocks is the same as store.block_states.Keys. 
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant0(store: Store) 
             reads this
@@ -171,6 +173,8 @@ module ForkChoice {
 
         /**
          *  The only block with slot 0 is the GENESIS_BLOCK.
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant0a(store: Store) 
             reads this
@@ -181,6 +185,8 @@ module ForkChoice {
 
         /**
          *  Every accepted block is in the store its key is is the hash_tree_root.
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant1(store: Store) 
             reads this
@@ -194,6 +200,8 @@ module ForkChoice {
          *  Every accepted block `b` has an associated state in block_states and
          *  the corresponding state has a latest_block_header that is the block `b`
          *  with its state_root field nullified.
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant2(store: Store) 
             reads this 
@@ -213,6 +221,8 @@ module ForkChoice {
          *  and then we can omit
          *              requires hash_tree_root(b) !in store.blocks.Keys
          *  in on_block.
+         *
+         *  @param  store   A store.    
          */
         predicate storeInvariant3(store: Store) 
             reads this
@@ -222,6 +232,8 @@ module ForkChoice {
 
         /**
          *  For every block, the slot of its parent root is stricly less than its slot. 
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant4(store: Store) 
             reads this
@@ -233,6 +245,8 @@ module ForkChoice {
 
         /**
          *  The slots for corresponding block and state in the store are equal.
+         *
+         *  @param  store   A store.        
          */
         predicate storeInvariant5(store: Store) 
             reads this
@@ -245,6 +259,8 @@ module ForkChoice {
 
         /**
          *  The slots in store.blocks ans store.block_states are in sync for each key.
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant6(store: Store) 
             reads this
@@ -257,6 +273,8 @@ module ForkChoice {
         /**
          *  The chain b.slot -> b.parent_root.slot -> b.parent_root^2.slot -> ... is 
          *  strictly decreasding.
+         *
+         *  @param  store   A store.
          */
         predicate storeInvariant7(store: Store) 
             reads this
@@ -272,6 +290,7 @@ module ForkChoice {
          *
          *  @param  r       A root that is a (block) store key.
          *  @param  store   A store.
+         *  @returbs        The transitive closure of the parent_root relation.
          */
         function ancestors(r: Root, store: Store) : seq<BeaconBlockHeader>
             requires r in store.blocks.Keys
@@ -285,6 +304,7 @@ module ForkChoice {
 
             reads this
 
+            //  Computation always terminate as slot number decreases.
             decreases store.blocks[r].slot
         {
             if ( store.blocks[r].slot == 0 ) then
@@ -316,11 +336,14 @@ module ForkChoice {
             //  The last block in the chain is the GENESIS_BLOCK_HEADER
             ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
         {
+            //  Thanks Dafny!
             //  Follows directly from proof post-conditions of ancestors which is elegant!
         }
 
         /**
-         *  Store is valid if all the invariants are satisfied,
+         *  Store is valid if all the invariants are satisfied.
+         *
+         *  @param  store   A store.
          */
         predicate storeIsValid(store: Store) 
             reads this
@@ -338,6 +361,8 @@ module ForkChoice {
         }
 
         /**
+         *  Add a block to the store.
+         *  
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
          *                      This is not a real parameter as it is constrained to be
          *                      the state that corresponds to the bloc parent_root but here
@@ -377,6 +402,7 @@ module ForkChoice {
             //  Inductive invariant: store validity is preserved.
             ensures storeIsValid(store)
 
+            //  Modifies the store.
             modifies this
         {
             // assert(hash_tree_root(b) !in store.blocks.Keys);
@@ -400,6 +426,5 @@ module ForkChoice {
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
         }
-        
     }
 }
