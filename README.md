@@ -7,6 +7,8 @@
  [![lemmas](https://img.shields.io/badge/Lemmas-54-yellow.svg)](https://shields.io/) 
  [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
 
+[![HitCount](http://hits.dwyl.com/https://githubcom/PegaSysEng/eth20-dafny.svg)](http://hits.dwyl.com/https://githubcom/PegaSysEng/eth20-dafny)
+
 # Overview 
 
 ## Objectives
