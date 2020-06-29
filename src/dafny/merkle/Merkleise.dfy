@@ -17,6 +17,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
 include "../ssz/Constants.dfy"
+include "../ssz/Eth2TypeDependentConstants.dfy"
 include "../ssz/Serialise.dfy"
 include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
@@ -43,6 +44,7 @@ include "../beacon/helpers/Crypto.dfy"
     import opened NativeTypes
     import opened Eth2Types
     import opened Constants
+    import opened Eth2TypeDependentConstants
     import opened IntSeDes
     import opened BoolSeDes
     import opened BitListSeDes
@@ -68,30 +70,32 @@ include "../beacon/helpers/Crypto.dfy"
      *              
      */
     function method chunkCount(s: Serialisable): nat
-        requires typeOf(s) != Container_
         ensures 0 <= chunkCount(s) // no upper limit is defined in the spec
     {
+        if !isContainer(s) then
         match s
-            case Bool(b) => 1
-            case Uint8(_) => 1
-            case Uint16(_) => 1
-            case Uint32(_) => 1
-            case Uint64(_) => 1
-            case Uint128(_) => 1
-            case Uint256(_) => 1
-            case Bitlist(_,limit) => chunkCountBitlist(limit) 
-            case Bitvector(xl) => chunkCountBitvector(xl) 
-            case Bytes(bs) => chunkCountBytes(bs)
-            case List(l,t,limit) => if isBasicTipe(t) then 
-                                        chunkCountSequenceOfBasic(t,limit)
+                case Bool(b) => 1
+                case Uint8(_) => 1
+                case Uint16(_) => 1
+                case Uint32(_) => 1
+                case Uint64(_) => 1
+                case Uint128(_) => 1
+                case Uint256(_) => 1
+                case Bitlist(_,limit) => chunkCountBitlist(limit) 
+                case Bitvector(xl) => chunkCountBitvector(xl) 
+                case Bytes(bs) => chunkCountBytes(bs)
+                case List(l,t,limit) => if isBasicTipe(t) then 
+                                            chunkCountSequenceOfBasic(t,limit)
+                                        else
+                                            limit
+
+                case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then 
+                                        chunkCountSequenceOfBasic(typeOf(v[0]),|v|)
                                     else
-                                        limit
+                                        |v|
 
-            case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then 
-                                    chunkCountSequenceOfBasic(typeOf(v[0]),|v|)
-                                else
-                                    |v|
-
+        else
+            |sequenceOfFields(s)|
     } 
 
     /** 
@@ -185,7 +189,7 @@ include "../beacon/helpers/Crypto.dfy"
      *              An empty list, [], is a possible input.          
      */
     function method pack(s: Serialisable): seq<chunk>
-        requires !(s.Container? || s.Bitlist?  || s.Bitvector?)
+        requires !(isContainer(s) || s.Bitlist?  || s.Bitvector?)
         requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
         requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
          // at least one chunk is always produced, even if the EMPTY_CHUNK for input of an empty list 
@@ -508,36 +512,34 @@ include "../beacon/helpers/Crypto.dfy"
      */
     function method getHashTreeRoot(s : Serialisable) : hash32
         ensures is32BytesChunk(getHashTreeRoot(s))
+        ensures isContainer(s) ==> getHashTreeRoot(s) != SEQ_EMPTY_32_BYTES
+        decreases s
     {
-        match s 
-            case Bool(_) => merkleise(pack(s), -1)
+        if !isContainer(s) then
+            match s 
+                case Bool(_) => merkleise(pack(s), -1)
 
-            case Uint8(_) => merkleise(pack(s), -1)
+                case Uint8(_) => merkleise(pack(s), -1)
 
-            case Uint16(_) => merkleise(pack(s), -1)
+                case Uint16(_) => merkleise(pack(s), -1)
 
-            case Uint32(_) => merkleise(pack(s), -1)
+                case Uint32(_) => merkleise(pack(s), -1)
 
-            case Uint64(_) => merkleise(pack(s), -1)
+                case Uint64(_) => merkleise(pack(s), -1)
 
-            case Uint128(_) => merkleise(pack(s), -1)
+                case Uint128(_) => merkleise(pack(s), -1)
 
-            case Uint256(_) => merkleise(pack(s), -1)
+                case Uint256(_) => merkleise(pack(s), -1)
 
-            case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
-                                packBitsToChunkCountProp(xl, limit);
-                                mixInLength(merkleise(packBits(xl), chunkCount(s)), |xl|)  
+                case Bitlist(xl,limit) =>   //bitlistLimit(s,limit);
+                                    packBitsToChunkCountProp(xl, limit);
+                                    mixInLength(merkleise(packBits(xl), chunkCount(s)), |xl|)  
 
-            case Bitvector(xl) =>   packBitsToChunkCountProp(xl, |xl|);
-                                    merkleise(packBits(xl), chunkCount(s))                                
+                case Bitvector(xl) =>   packBitsToChunkCountProp(xl, |xl|);
+                                        merkleise(packBits(xl), chunkCount(s))                                
 
-            case Bytes(_) => merkleise(pack(s), -1)
+                case Bytes(_) => merkleise(pack(s), -1)
 
-            case Container(fl) => merkleise(prepareSeqOfSerialisableForMerkleisation(fl),-1)
-            // Note: if `seqMap(fl,(f:Serialisable) => getHashTreeRoot(f))` is
-            // used in place of `prepareSeqOfSerialisableForMerkleisation(fl)`,
-            // like below, then Dafny is unable to prove termination:
-            //merkleise(seqMap(fl,(f:Serialisable) => getHashTreeRoot(f)),-1)
 
             case List(l,t,limit) =>     if isBasicTipe(t) then
                                             //lengthOfSerialisationOfSequenceOfBasics(s);
@@ -547,14 +549,25 @@ include "../beacon/helpers/Crypto.dfy"
                                                 |l|)
                                         else
                                             mixInLength(
-                                                merkleise(prepareSeqOfSerialisableForMerkleisation(l),chunkCount(s)),
+                                                merkleise(prepareSeqOfSerialisableForMerkleisation(l,s),chunkCount(s)),
                                                 |l|
                                             )
 
             case Vector(v) =>   if isBasicTipe(typeOf(v[0])) then
                                     merkleise(pack(s), -1)
                                 else
-                                   merkleise(prepareSeqOfSerialisableForMerkleisation(v),-1)
+                                   merkleise(prepareSeqOfSerialisableForMerkleisation(v,s),-1)
+        else
+            merkleiseContainer(s)                        
+    }
+
+    function method merkleiseContainer(s:Serialisable): hash32
+    requires isContainer(s)
+    decreases s, 0
+    {
+            var fields := sequenceOfFields(s);
+            assert forall i | 0 <= i < |fields| :: fields[i] < s;
+            merkleise(prepareSeqOfSerialisableForMerkleisation(fields,s),-1)       
     }
 
     /** Helper functions for getHashTreeRoot. */
@@ -567,15 +580,17 @@ include "../beacon/helpers/Crypto.dfy"
      * @return Sequence of `chunk` to be given in input to the `merkleise`
      *         function to merkleise a container `c` where `ss == c.fl`
      */
-    function method prepareSeqOfSerialisableForMerkleisation(ss:seq<Serialisable>): seq<chunk>
-    ensures |prepareSeqOfSerialisableForMerkleisation(ss)| == |ss|
-    ensures forall i | 0 <= i < |ss| :: prepareSeqOfSerialisableForMerkleisation(ss)[i] == getHashTreeRoot(ss[i])
+    function method prepareSeqOfSerialisableForMerkleisation(ss:seq<Serialisable>, ghost s:Serialisable): seq<chunk>
+    requires forall i | 0 <= i < |ss| :: ss[i] < s;
+    ensures |prepareSeqOfSerialisableForMerkleisation(ss, s)| == |ss|
+    ensures forall i | 0 <= i < |ss| :: prepareSeqOfSerialisableForMerkleisation(ss, s)[i] == getHashTreeRoot(ss[i])
+    decreases s, 0, ss
     {
         if(|ss| == 0) then
             []
         else
             [getHashTreeRoot(ss[0])] +
-            prepareSeqOfSerialisableForMerkleisation(ss[1..])
+            prepareSeqOfSerialisableForMerkleisation(ss[1..], s)
     }   
 
     // TODO: add documentation
@@ -604,5 +619,18 @@ include "../beacon/helpers/Crypto.dfy"
         ensures is32BytesChunk(mixInLength(root, length))
     {
         hash(root + uint256_to_bytes(length))
-    }  
+    }
+
+    /**
+     *  Compute Root/Hash/Bytes32 for different types.
+     *  
+     *  @todo   Use the hash_tree_root from Merkle.
+     */
+    function method getHashTreeRootBytes32(t : Serialisable) : Bytes32 
+        ensures isContainer(t) ==> getHashTreeRootBytes32(t) != EMPTY_BYTES32
+        ensures wellTyped(getHashTreeRootBytes32(t))  
+        ensures typeOf(getHashTreeRootBytes32(t)) == Bytes_(32)
+    {
+        Bytes(getHashTreeRoot(t))
+    }
  }

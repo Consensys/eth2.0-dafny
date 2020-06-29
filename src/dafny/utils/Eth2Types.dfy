@@ -16,6 +16,7 @@ include "NativeTypes.dfy"
 include "NonNativeTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
+include "../ssz/Constants.dfy"
 
 /** 
  * Define the types used in the Eth2.0 spec.
@@ -28,6 +29,7 @@ module Eth2Types {
     import opened NonNativeTypes
     import opened Helpers
     import opened MathHelpers
+    import opened Constants
 
     //  The Eth2 basic types.
 
@@ -67,7 +69,39 @@ module Eth2Types {
         |   Bytes(bs: seq<byte>)
         |   List(l:seq<RawSerialisable>, t:Tipe, limit: nat)
         |   Vector(v:seq<RawSerialisable>)
-        |   Container(fl: seq<RawSerialisable>)
+        |   BeaconBlockHeader(
+                slot: RawSerialisable,
+                // proposer_index: RawSerialisable,
+                parent_root: RawSerialisable,
+                state_root: RawSerialisable
+                // body_root: RawSerialisable
+            )
+        |   BeaconState(
+                slot: RawSerialisable,
+                latest_block_header: RawSerialisable,
+                block_roots: RawSerialisable,
+                state_roots: RawSerialisable
+            )
+
+    function method sequenceOfFields(s:Serialisable): seq<Serialisable>
+    requires  isContainer(s)
+    ensures forall i | 0 <= i < |sequenceOfFields(s)| :: sequenceOfFields(s)[i] < s
+    {
+        assert wellTyped(s);
+        match s 
+            case BeaconBlockHeader(f1,f2,f3) => 
+                seqMap([f1,f2,f3],castToSerialisable)
+
+            case BeaconState(f1,f2,f3,f4) => 
+                seqMap([f1,f2,f3,f4],castToSerialisable)
+    }
+
+    predicate wellTypedContainerField(f:RawSerialisable, t:Tipe)
+    ensures wellTypedContainerField(f,t) <==> wellTyped(f) && typeOf(f) == t
+    decreases f
+    {
+        wellTyped(f) && typeOf(f) == t
+    }   
 
     /** Well typed predicate for `RawSerialisable`s
      * @param s `RawSerialisable` value
@@ -75,41 +109,60 @@ module Eth2Types {
      *           merkleisation
      */    
     predicate wellTyped(s:RawSerialisable)
-    decreases s, 0
+    decreases s, 0, 0
+    {
+        if !isContainer(s) then
+            match s 
+                case Bool(_) => true
+        
+                case Uint8(n) => n < 0x100
+
+                case Uint16(n) => n < 0x10000
+
+                case Uint32(n) => n < 0x100000000
+
+                case Uint64(n) => n < 0x10000000000000000
+
+                case Uint128(n) => n < 0x100000000000000000000000000000000
+
+                case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
+
+                case Bitlist(xl,limit) => |xl| <= limit
+
+                case Bitvector(xl) => |xl| > 0
+
+                case Bytes(bs) => |bs| > 0
+
+                case List(l, t, limit) =>   && |l| <= limit
+                                            && t != Bool_
+                                            && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
+                                            && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
+
+                case Vector(v) =>   && |v| > 0
+                                    && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                                    && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
+                                    && (typeOf(v[0])) != Bool_
+        else
+            wellTypedContainer(s)
+                  
+    }
+
+    predicate wellTypedContainer(s:RawSerialisable)
+    requires isContainer(s)
+    decreases s, 0, 0, 0
     {
         match s 
-            case Bool(_) => true
-    
-            case Uint8(n) => n < 0x100
+            case BeaconBlockHeader(slot,parent_root,state_root) =>
+                    && wellTypedContainerField(slot,Uint64_)
+                    && wellTypedContainerField(parent_root,Bytes_(32))
+                    && wellTypedContainerField(state_root,Bytes_(32))
 
-            case Uint16(n) => n < 0x10000
-
-            case Uint32(n) => n < 0x100000000
-
-            case Uint64(n) => n < 0x10000000000000000
-
-            case Uint128(n) => n < 0x100000000000000000000000000000000
-
-            case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
-
-            case Bitlist(xl,limit) => |xl| <= limit
-
-            case Bitvector(xl) => |xl| > 0
-
-            case Bytes(bs) => |bs| > 0
-
-            case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
-
-            case List(l, t, limit) =>   && |l| <= limit
-                                        && t != Bool_
-                                        && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
-                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
-
-            case Vector(v) =>   && |v| > 0
-                                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
-                                && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
-                                && (typeOf(v[0])) != Bool_
-
+            case BeaconState(slot,latest_block_header,block_roots,state_roots) =>
+                    && wellTypedContainerField(slot,Uint64_)
+                    && wellTypedContainerField(latest_block_header, BeaconBlockHeader_)
+                    && wellTypedContainer(latest_block_header)
+                    && wellTypedContainerField(block_roots, Vector_(Bytes_(32),SLOTS_PER_HISTORICAL_ROOT as nat))
+                    && wellTypedContainerField(state_roots, Vector_(Bytes_(32),SLOTS_PER_HISTORICAL_ROOT as nat))
     }
 
     /**
@@ -117,6 +170,17 @@ module Eth2Types {
      */
     type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
 
+
+    type BeaconBlockHeader = s:Serialisable |   && s.BeaconBlockHeader?
+                                                && wellTypedContainer(s)
+                                                witness BeaconBlockHeader(Uint64(0),Bytes(timeSeq(0 as byte, 32)),Bytes(timeSeq(0 as byte, 32)))
+
+    type BeaconState = s:Serialisable |   && s.BeaconState?
+                                          && wellTypedContainer(s)
+                                          witness BeaconState(  Uint64(0),
+                                                                BeaconBlockHeader(Uint64(0),Bytes(timeSeq(0 as byte, 32)),Bytes(timeSeq(0 as byte, 32))),
+                                                                Vector(timeSeq(Bytes(timeSeq(0 as byte, 32)), SLOTS_PER_HISTORICAL_ROOT as nat)),
+                                                                Vector(timeSeq(Bytes(timeSeq(0 as byte, 32)), SLOTS_PER_HISTORICAL_ROOT as nat)))
     /**
      * Helper function to cast a well typed `RawSerialisable` to a
      * `Serialisable`. Its mainly usage is for the cases where `Serialisable` is
@@ -157,6 +221,8 @@ module Eth2Types {
     type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
                                     witness Bytes(timeSeq(0 as byte, 96))
 
+    type Vector4 = s:Serialisable | s.Vector? && |s.v| == 4
+
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
@@ -180,9 +246,16 @@ module Eth2Types {
         |   Bitlist_(limit:nat)
         |   Bitvector_(len:nat)
         |   Bytes_(len:nat)
-        |   Container_
         |   List_(t:Tipe, limit:nat)
         |   Vector_(t:Tipe, len:nat)
+        |   BeaconBlockHeader_
+        |   BeaconState_
+
+    predicate method isContainerTipe(t:Tipe)
+    {
+        || t.BeaconBlockHeader_?
+        || t.BeaconState_?
+    }
 
     /**
      * Check if a `Tipe` is the representation of a basic `Serialisable` type
@@ -197,10 +270,23 @@ module Eth2Types {
         (   || t.Bitlist_?
             || t.Bitvector_?
             || t.Bytes_?
-            || t.Container_?
             || t.List_?
             || t.Vector_?
+            || isContainerTipe(t)
         )
+    }
+
+    predicate method isContainer(s:RawSerialisable)
+    {
+        || s.BeaconBlockHeader?
+        || s.BeaconState?
+    }    
+
+    lemma equivalenceIsContainerIsContainerTipe(s:RawSerialisable)
+    requires wellTyped(s)
+    ensures isContainer(s) <==> isContainerTipe(typeOf(s))
+    {
+        // Thanks Dafny
     }
 
    /**  The Tipe of a serialisable.
@@ -211,7 +297,7 @@ module Eth2Types {
      */
     function method typeOf(s : RawSerialisable) : Tipe 
     requires wellTyped(s)
-    decreases s
+    decreases s, 0
     {
             match s 
                 case Bool(_) => Bool_
@@ -234,11 +320,13 @@ module Eth2Types {
 
                 case Bytes(xl) => Bytes_(|xl|)
 
-                case Container(_) => Container_
-
                 case List(l, t, limit) =>   List_(t, limit)
 
                 case Vector(v) => Vector_(typeOf(v[0]),|v|)
+
+                case BeaconBlockHeader(_,_,_) => BeaconBlockHeader_
+
+                case BeaconState(_,_,_,_) => BeaconState_
     }
 
 

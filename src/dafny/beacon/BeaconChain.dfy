@@ -27,22 +27,6 @@ module BeaconChain {
     // import opened Attestations
     import opened Validators
     
-     /**
-     *  Beacon chain block header.
-     *
-     *  @param  slot
-     *  @param  proposer_index
-     *  @param  parent_root
-     *  @param  state_root
-     *  @param  body_root
-     */
-    datatype BeaconBlockHeader = BeaconBlockHeader(
-        slot: Slot,
-        // proposer_index: ValidatorIndex,
-        parent_root: Root,
-        state_root: Root
-        // body_root: Root
-    )
 
     /**
      *  Beacon block body.
@@ -82,7 +66,7 @@ module BeaconChain {
      *  Seems signed beacon block has merged into this one.
      *  Where is the message?
      *
-     *  @note: Note that hash_tree_root(BeaconBlock) == hash_tree_root(BeaconBlockHeader) 
+     *  @note: Note that getHashTreeRootBytes32(BeaconBlock) == getHashTreeRootBytes32(BeaconBlockHeader) 
      *  and thus signatures of each are equivalent.
      *
      *  @param  slot            The slot for which this block is proposed for. Must be greater 

@@ -14,9 +14,13 @@
 
 include "../../utils/Helpers.dfy"
 include "../../utils/Eth2Types.dfy"
+include "../../ssz/Constants.dfy"
+include "../../ssz/Eth2TypeDependentConstants.dfy"
 
 module {:extern "eth2crypto"} Crypto {
     import opened Eth2Types
+    import opened Constants
+    import opened Eth2TypeDependentConstants
 
     /**
      * Calculate the SHA256 of a sequence of bytes
@@ -26,4 +30,5 @@ module {:extern "eth2crypto"} Crypto {
      * @returns SHA256 hash of `data`
      */
     function method {:extern} hash(data:seq<byte>) : hash32
+    ensures hash(data) != SEQ_EMPTY_32_BYTES
 }

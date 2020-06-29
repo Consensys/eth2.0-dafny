@@ -68,7 +68,7 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires  !(t.Container_? || t.List_? || t.Vector_?)
+    requires  !(isContainerTipe(t) || t.List_? || t.Vector_?)
     requires  t.Bytes_? || t.Bitvector_? ==> match t
                                                 case Bytes_(n) => n > 0
                                                 case Bitvector_(n) => n > 0
@@ -101,7 +101,7 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires  typeOf(s) != Container_
+    requires !isContainer(s)
     requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
     requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
@@ -165,8 +165,9 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires !(s.Container_? || s.List_? || s.Vector_?)
+    requires !(isContainerTipe(s) || s.List_? || s.Vector_?)
     {
+        constAsPowersOfTwo();
         match s
             case Bool_ => if |xs| == 1 then
                                 Success(castToSerialisable(Bool(byteToBool(xs[0]))))
@@ -230,7 +231,7 @@ module SSZ {
      * Well typed deserialisation does not fail. 
      */
     lemma wellTypedDoesNotFail(s : Serialisable) 
-        requires !(s.Container? || s.List? || s.Vector?)
+        requires !(isContainer(s) || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {
          match s
@@ -259,7 +260,7 @@ module SSZ {
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
     lemma seDesInvolutive(s : Serialisable) 
-        requires !(s.Container? || s.List? || s.Vector?)
+        requires !(isContainer(s) || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
         {   
             //  Equalities between upper bounds of uintk types and powers of two 
@@ -315,7 +316,7 @@ module SSZ {
      *  Serialise is injective.
      */
     lemma {:induction s1, s2} serialiseIsInjective(s1: Serialisable, s2 : Serialisable)
-        requires !(s1.Container? || s1.List? || s1.Vector?)
+        requires !(isContainer(s1) || s1.List? || s1.Vector?)
         ensures typeOf(s1) == typeOf(s2) ==> 
                     serialise(s1) == serialise(s2) ==> s1 == s2 
     {

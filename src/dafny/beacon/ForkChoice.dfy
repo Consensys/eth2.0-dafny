@@ -15,6 +15,10 @@
 include "../utils/Eth2Types.dfy"
 include "BeaconChain.dfy"
 include "StateTransition.dfy"
+include "../ssz/Eth2TypeDependentConstants.dfy"
+include "BeaconConstants.dfy"
+include "../utils/Helpers.dfy"
+include "../merkle/Merkleise.dfy"
 
 /**
  * Fork choice rule for the Beacon Chain.
@@ -24,36 +28,17 @@ module ForkChoice {
     import opened Eth2Types
     import opened BeaconChain
     import opened StateTransition
-
-    /**
-     *  The default block header.
-     */
-    const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
-    
-    /**
-     *  Genesis (initial) beacon state.
-     *  
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
-     */
-    const GENESIS_STATE := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS)
-
-    /**
-     *  Genesis block (header).
-     *
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
-     *  @note   In this simplified version blocks are same as headers.
-     */
-    const GENESIS_BLOCK_HEADER := BeaconBlockHeader(
-        0 as Slot,  
-        EMPTY_BYTES32 , 
-        hash_tree_root(GENESIS_STATE)
-    )
+    import opened Helpers
+    import opened Constants
+    import opened Eth2TypeDependentConstants
+    import opened BeaconConstants
+    import opened SSZ_Merkleise
 
     /**
      *  The store recording the blocks and the states.
      *  
-     *  @param  blocks          maps hash_tree_root(b) to b
-     *  @param  block_states    maps a Root (hash_tree_root of a block) to a state.
+     *  @param  blocks          maps getHashTreeRootBytes32(b) to b
+     *  @param  block_states    maps a Root (getHashTreeRootBytes32 of a block) to a state.
      *
      *  @note                   From the spec 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
@@ -74,7 +59,7 @@ module ForkChoice {
      *  @note                   The original code in python starts with:
      *                          var anchor_block_header := anchor_state.latest_block_header;
      *                          if (anchor_block_header.state_root == Bytes32()) {
-     *                              anchor_block_header.state_root := hash_tree_root(anchor_state)
+     *                              anchor_block_header.state_root := getHashTreeRootBytes32(anchor_state)
      *                          };
      *                          It is here implemented by forcing the condition to be true.
      *
@@ -85,13 +70,14 @@ module ForkChoice {
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
      */
-    function method get_forkchoice_store(anchor_state: BeaconState) : Store 
+    function method {:fuel wellTypedContainer,2} get_forkchoice_store(anchor_state: BeaconState) : Store 
         requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
     {
         var anchor_block_header := anchor_state.latest_block_header.(
-            state_root := hash_tree_root(anchor_state)
+            state_root := getHashTreeRootBytes32(anchor_state)
         );
-        var anchor_root := hash_tree_root(anchor_block_header);
+        assert wellTypedContainer(anchor_block_header);
+        var anchor_root := getHashTreeRootBytes32(anchor_block_header);
         Store(
             map[anchor_root := anchor_block_header],    // blocks
             map[anchor_root := anchor_state]            //  block_states
@@ -110,8 +96,8 @@ module ForkChoice {
      */
     lemma genesisStoreHasGenesisBlockAndState() 
         ensures GENESIS_STORE == Store(
-            map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_BLOCK_HEADER],
-            map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_STATE]
+            map[getHashTreeRootBytes32(GENESIS_BLOCK_HEADER) := GENESIS_BLOCK_HEADER],
+            map[getHashTreeRootBytes32(GENESIS_BLOCK_HEADER) := GENESIS_STATE]
         )
     {   //  Thanks Dafny
     }
@@ -146,9 +132,9 @@ module ForkChoice {
             // ensures storeInvariant2()
             /** Verify storeInvariant2() manually. */
             // ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
-            ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
-            // ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
-            ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
+            ensures getHashTreeRootBytes32(GENESIS_BLOCK_HEADER) in store.block_states.Keys
+            // ensures getHashTreeRootBytes32(GENESIS_BLOCK_HEADER) in store.blocks.Keys
+            ensures store.block_states[getHashTreeRootBytes32(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
 
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
@@ -174,18 +160,18 @@ module ForkChoice {
             reads this
         {
             forall r :: r in store.blocks.Keys ==>
-                store.blocks[r].slot == 0 ==> store.blocks[r] == GENESIS_BLOCK_HEADER
+                store.blocks[r].slot.n == 0 ==> store.blocks[r] == GENESIS_BLOCK_HEADER
         }
 
         /**
-         *  Every accepted block is in the store its key is is the hash_tree_root.
+         *  Every accepted block is in the store its key is is the getHashTreeRootBytes32.
          */
         predicate storeInvariant1(store: Store) 
             reads this
         {
             forall b :: b in acceptedBlocks ==> 
-                hash_tree_root(b) in store.blocks.Keys 
-                && store.blocks[hash_tree_root(b)] == b
+                getHashTreeRootBytes32(b) in store.blocks.Keys 
+                && store.blocks[getHashTreeRootBytes32(b)] == b
         }
 
         /** 
@@ -197,19 +183,19 @@ module ForkChoice {
             reads this 
         {
             forall b :: b in acceptedBlocks ==> 
-                hash_tree_root(b) in store.block_states.Keys 
-                && store.block_states[hash_tree_root(b)].latest_block_header == 
+                getHashTreeRootBytes32(b) in store.block_states.Keys 
+                && store.block_states[getHashTreeRootBytes32(b)].latest_block_header == 
                         b.(state_root := EMPTY_BYTES32) 
-                // && store.block_states[hash_tree_root(b)].slot <= b.slot
+                // && store.block_states[getHashTreeRootBytes32(b)].slot.n <= b.slot.n
         }
 
         /**
          *  In this invariant it would be nice to have:
-         *  hash_tree_root(b) in keys ==> b in acceptedBlocks (or Values)
+         *  getHashTreeRootBytes32(b) in keys ==> b in acceptedBlocks (or Values)
          *  This would enable us to conclude that 
-         *              hash_tree_root(b) !in store.blocks.Keys from  b !in acceptedBlocks
+         *              getHashTreeRootBytes32(b) !in store.blocks.Keys from  b !in acceptedBlocks
          *  and then we can omit
-         *              requires hash_tree_root(b) !in store.blocks.Keys
+         *              requires getHashTreeRootBytes32(b) !in store.blocks.Keys
          *  in on_block.
          */
         predicate storeInvariant3(store: Store) 
@@ -226,7 +212,7 @@ module ForkChoice {
         {
             forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
                 b.parent_root in store.blocks.Keys
-                && store.blocks[b.parent_root].slot < b.slot 
+                && store.blocks[b.parent_root].slot.n < b.slot.n 
         }
 
         /**
@@ -238,7 +224,7 @@ module ForkChoice {
             forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
                 b.parent_root in store.blocks.Keys
                 && b.parent_root in store.block_states.Keys
-                && store.blocks[b.parent_root].slot == store.block_states[b.parent_root].slot
+                && store.blocks[b.parent_root].slot.n == store.block_states[b.parent_root].slot.n
         }
 
         /**
@@ -249,7 +235,7 @@ module ForkChoice {
         {
             forall b :: b in store.blocks.Keys ==>
                 && b  in store.block_states.Keys
-                && store.blocks[b].slot == store.block_states[b].slot
+                && store.blocks[b].slot.n == store.block_states[b].slot.n
         }
 
         /**
@@ -260,9 +246,9 @@ module ForkChoice {
             reads this
         {
             forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
-                hash_tree_root(b) in store.blocks.Keys
+                getHashTreeRootBytes32(b) in store.blocks.Keys
                 && b.parent_root in store.blocks.Keys
-                && store.blocks[b.parent_root].slot < store.blocks[hash_tree_root(b)].slot
+                && store.blocks[b.parent_root].slot.n < store.blocks[getHashTreeRootBytes32(b)].slot.n
         }
 
         /**
@@ -271,21 +257,21 @@ module ForkChoice {
          *  @param  r       A root that is a (block) store key.
          *  @param  store   A store.
          */
-        function ancestors(r: Root, store: Store) : seq<BeaconBlockHeader>
+        function {:fuel wellTypedContainer,2} {:fuel getHashTreeRootBytes32,0,0} ancestors(r: Root, store: Store) : seq<BeaconBlockHeader>
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
-            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
+            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot.n  as int)
             ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
             ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
-                ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
+                  ancestors(r, store)[i].slot.n < ancestors(r, store)[i - 1].slot.n
             ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
 
             reads this
 
-            decreases store.blocks[r].slot
+            decreases store.blocks[r].slot.n
         {
-            if ( store.blocks[r].slot == 0 ) then
+            if ( store.blocks[r].slot.n == 0 ) then
                 //  By invariant 0a
                 [ GENESIS_BLOCK_HEADER ]
             else 
@@ -300,17 +286,17 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returns        Proof that a valid store is always a chain.
          */
-        lemma aValidStoreIsAChain(r: Root, store: Store)    
+        lemma {:fuel wellTypedContainer,2} aValidStoreIsAChain(r: Root, store: Store)    
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
             //  Length (number) of ancestors is less than the slot of Root.
-            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
+            ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot.n  as int)
             //  The GENESIS_BLOCK_HEADER is always in the ancestors.
             ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
             //  At each level in the ancestors' sequence, the slot number decreases.
             ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
-                ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
+                ancestors(r, store)[i].slot.n < ancestors(r, store)[i - 1].slot.n
             //  The last block in the chain is the GENESIS_BLOCK_HEADER
             ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
         {
@@ -342,12 +328,12 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
+        method {:fuel wellTypedContainer,3} {:fuel getHashTreeRootBytes32,0,0} on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 
             //  Do not process duplicates and check that the block is not already in.
-            requires hash_tree_root(b) !in store.blocks.Keys
+            requires getHashTreeRootBytes32(b) !in store.blocks.Keys
             //  The proposed parent_root should be in the domain of the store.blocks
             //  This is equivalent to being in the store.block_states by Invariant0
             requires b.parent_root in store.blocks
@@ -377,26 +363,26 @@ module ForkChoice {
 
             modifies this
         {
-            // assert(hash_tree_root(b) !in store.blocks.Keys);
+            // assert(getHashTreeRootBytes32(b) !in store.blocks.Keys);
             // pre_state = store.block_states[block.parent_root].copy()
             // Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
             // assert get_current_slot(store) >= block.slot
 
             // Add new block to the store
-            store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
+            store := store.(blocks := store.blocks[getHashTreeRootBytes32(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
 
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
-            // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
+            // assert get_ancestor(store, getHashTreeRootBytes32(block), finalized_slot) == store.finalized_checkpoint.root
 
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b);
            
             // Add new state for this block to the store
-            store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+            store := store.(block_states := store.block_states[getHashTreeRootBytes32(b) := new_state] );
         }
         
     }
