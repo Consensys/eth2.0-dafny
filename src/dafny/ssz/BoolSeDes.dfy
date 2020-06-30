@@ -37,7 +37,7 @@ module BoolSeDes {
     }
 
     /** 
-     *  Convert a byte into a bool.
+     *  Convert a seq<byte> into a bool.
      */
     function method byteToBool(xb: seq<byte>) : bool
         requires |xb| == 1
