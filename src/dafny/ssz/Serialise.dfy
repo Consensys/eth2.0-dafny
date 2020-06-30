@@ -168,7 +168,7 @@ module SSZ {
     requires !(s.Container_? || s.List_? || s.Vector_?)
     {
         match s
-            case Bool_ => if |xs| == 1 then
+            case Bool_ => if |xs| == 1 && 0 <= xs[0] <= 1 then
                                 Success(castToSerialisable(Bool(byteToBool(xs))))
                             else 
                                 Failure

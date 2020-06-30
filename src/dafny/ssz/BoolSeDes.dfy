@@ -41,6 +41,7 @@ module BoolSeDes {
      */
     function method byteToBool(xb: seq<byte>) : bool
         requires |xb| == 1
+        requires 0 <= xb[0] <= 1
     {
        (xb[0] as nat) > 0
     }
