@@ -89,12 +89,12 @@ module IntSeDes {
     //  Uintk serialisation and deserielisation.
 
     /**
-     * Computes the serialisation of a natural value.
+     *  Computes the serialisation of a natural value.
      *
-     * @param n     The value to serialise.
-     * @param k     The number of bytes for the the result of the serialisation.
+     *  @param n     The value to serialise.
+     *  @param k     The number of bytes for the result of the serialisation.
      *
-     * @returns     The `k`-byte big endian serialisation of `n`.
+     *  @returns     The `k`-byte big endian serialisation of `n`.
      *
      */
     function method uintSe(n: nat, k: nat) : seq<byte>
@@ -110,7 +110,7 @@ module IntSeDes {
             //  ensures pre-cond for recursive call n / 256 < power2(8 * (k - 1))
             //  implied by n < power2(8) * power2(8 * (k - 1)) (productRulePower2)
             productRulePower2(8, 8 * (k - 1));
-            [ (n % 256) as byte] + uintSe( n / 256 , k - 1)
+            [(n % 256) as byte] + uintSe( n / 256, k - 1)
     }
 
     /**
