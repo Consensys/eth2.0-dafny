@@ -25,7 +25,7 @@ module BoolSeDes {
     import opened Eth2Types
 
     /**
-     *  Convert a bool into a byte.
+     *  Convert a bool into a seq<byte>.
      */
     function method boolToBytes(b: bool) : seq<byte> 
         ensures | boolToBytes(b) | == 1 
@@ -39,9 +39,10 @@ module BoolSeDes {
     /** 
      *  Convert a byte into a bool.
      */
-    function method byteToBool(b: byte) : bool
+    function method byteToBool(xb: seq<byte>) : bool
+        requires |xb| == 1
     {
-       (b as nat) > 0
+       (xb[0] as nat) > 0
     }
 
 }

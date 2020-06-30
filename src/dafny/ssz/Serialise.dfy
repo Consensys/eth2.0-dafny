@@ -169,7 +169,7 @@ module SSZ {
     {
         match s
             case Bool_ => if |xs| == 1 then
-                                Success(castToSerialisable(Bool(byteToBool(xs[0]))))
+                                Success(castToSerialisable(Bool(byteToBool(xs))))
                             else 
                                 Failure
                             
