@@ -2,41 +2,46 @@
 
 # Simple SerialiZe (SSZ) Library
 
-This file contains notes about the Eth2.0 specifications of SSZ and links to the corresponding formal definitions in Dafny.
+This section contains notes about the Eth2.0 specifications of SSZ and links to the corresponding formal definitions and correctness proofs in **Dafny**.
+
+**Disclaimer**: It is not the official SSZ specs.
 
 ## Overview
 
-The SSZ functions aims at providing some functionalities to encode data structures as sequences of bytes, via  _serialise_ and decode sequences of bytes to reconstruct a data structure _deserialise_.
+The SSZ functions aims at providing the following functionalities:
 
-Given an object `O`, its serialised version is `serialise(O)` which is a finite sequence of bytes.
-Conversely, given a finite sequence of bytes `xs`, and a data structure's type `Tipe`, `deserialise(xs, Type)` should reconstruct, when possible,  an object of type `Tipe` from the given sequence of bytes.
+1.  _serialise_, encode data structures as sequences of bytes,  and 
+2.  _deserialise_, decode sequences of bytes to reconstruct a given data structure.
 
-## Informal Specifications
+Given an object `O`, its serialised version, `serialise(O)`, is a finite sequence of bytes.
+Conversely, given a finite sequence of bytes `xs`, and a data structure's type `Tipe`, `deserialise(xs)` should reconstruct, when possible,  an object of type `Tipe` from the given sequence of bytes.
+
+## Background
 
 An object that can be serialised is of type `Serialisable` in SSZ (`Serialisable` can be thought of as a trait.)
-Given a type `T`, we write  `T <: Serialisable` if `T` extends (or inherits) `Serialisable`.
+Given a type `T`, we write  `T <: Serialisable` if `T` extends (or "inherits" or "is a") `Serialisable`.
 
-Each type `T <: Serialisable` should offer two  functions:
+Each type `T <: Serialisable` should offer the two functionalities described above:
 
-* `serialise<T> : T --> seq<bytes>`, a total function that returns a sequence of bytes when applied to an object of type `T`, i.e. 
+* `serialise<T> : T --> seq<bytes>`, a total function that returns a sequence of bytes when applied to an object of type `T`, 
  
-* and `deserialise<T> : Seq<bytes>  ~-> T` with `xs` a sequence of bytes, 
-returns an object of type `T` **when it is possible to deserialise `xs` in an object of type `T`**.
-Indeed, `deserialise` may fail when it is not possible to reconstruct an object of the target type from a sequence of bytes and as a consequence, `deserialise` is a _partial function_.
+* and `deserialise<T> : seq<bytes>  ~-> T`, a partial function  that
+returns an object of type `T` **when it is possible to deserialise a sequence of bytes  in an object of type `T`**.
+Indeed, `deserialise<T>` may not be defined for some sequences `xs` (see below for concrete cases.)
 
 
 How objects of type `T <: Serialisable` are serialised and deserialised is explained in the sequel.
 
-## Expected Properties
+## Expected Properties of Serialise/Deserialise
 
-Given an object `O1 : T`, `O2 : T` (read "O of type T") where `T <: Serialisable`, the pair of functions `(serialise<T>, deserialise<T>)` should be:
+Given two objects `O1:T`, `O2:T` (read "Oi of type T") where `T <: Serialisable`, the pair of functions `(serialise<T>, deserialise<T>)` should be:
 
-* Involutive: `deserialise<T>(serialise<T>(O1)) = O1`,
-* Injective: `serialise<T>(O1) = serialise<T>(O2)` implies that `O1 = O2`.
+* **Involutive**: `deserialise<T>( serialise<T>(O1) ) = O1`,
+* **Injective**: `serialise<T>(O1) = serialise<T>(O2)` implies that `O1 = O2`.
 
 ## SSZ in Eth2
 
-In the Eth2 specification, SSZ provides serialisation and deserialisation for
+In the Eth2.0 specifications, SSZ provides serialisation and deserialisation for
 
 * **Basic types** i.e. integers, Booleans,
 * **List** and **vectors of bits**, known as BitLists and BitVectors,
@@ -44,7 +49,12 @@ In the Eth2 specification, SSZ provides serialisation and deserialisation for
 * **Containers** with `Serialisable` fieds,
 * and Unions that we omit in this project.
 
-## Formal Specifications
+In the sequel we introduce formal specifications for the corresponding serialisation and deserialisation functions.
+
+## Formal Specifications, Implemetations and Correctness Proofs
+
+We write the specifications and implementations of the serialisation/deserialisation functions using **logical pre-conditions** to define the domain of each function.
+Moroever, in the correctness proofs, we use provable **logical post-conditions** to establish the correctness properties. 
 
 ### Booleans
 
@@ -52,7 +62,14 @@ Booleans are probably the simplest `Serialisable` to serialise and deserialise.
 The Boolean value `true` (resp. `false`) is serialised into a byte of value `1` (resp. `0`).
 Note that this implies that the co-domain of `serialise<Booleans>` is the set of bytes `{0,1}`. As a result the domain of `deserialise<Booleans>` must be `{0,1}`. 
 
-The complete formal Dafny definition is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BoolSeDes.dfy). 
+The complete formal Dafny definition is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BoolSeDes.dfy) that contains:
+
+ * the **functional specifications** of `serialise<Booleans>` and `deserialise<Booleans>` and,
+ * the **implementations** that are the **executable functional versions** of the specifications.
+
+Technically in Dafny, a `function` is a specification and does not need to have an implementation.
+However, it is possible to make a function executable using the `function method` type.
+
 
 ### Unsigned Integers
 
@@ -69,12 +86,16 @@ The serialisation of `n` over `k` bytes is defined inductively as follows:
 
 ```
 function serialise<nat>(n: nat, k: nat) : seq<byte>
-    requires n < power2(8 * k) 
+  //    Pre-condition
+  requires n < power2(8 * k) 
 {
-    if ( k == 1 ) then 
-        [n as byte]
-    else 
-        [(n % 256) as byte] + uintSe( n / 256, k - 1)
+  if ( k == 1 ) then  
+    //  n's bitvector representation fits in a byte
+    [n as byte]
+  else 
+    //  Compute bitvector representation for n % 256 and append
+    //  serialisation of the remaining bits.
+    [(n % 256) as byte] + uintSe( n / 256, k - 1)
 }
 ```
 
