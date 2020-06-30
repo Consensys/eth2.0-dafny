@@ -1,6 +1,6 @@
 
 
-# Simple SerialiaZe (SSZ) Library
+# Simple SerialiZe (SSZ) Library
 
 This file contains notes about the Eth2.0 specifications of SSZ and links to the corresponding formal definitions in Dafny.
 
