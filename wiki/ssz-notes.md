@@ -127,10 +127,10 @@ More generally,  `deserialise<uintk>`'s domain is the set of sequences `xb` of l
 The complete formal Dafny definition of the serialisation/deserialisation for  `uintN` is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/Serialise.dfy) along with the proof of involution.
 
 Note that the main `deserialise` function (and implementation) returns a `Try<Serialisable>` which is
-(as in other languages) either a `Success<Serialisable>` if the computation succeeds or a `Fail` if it conversion cannot be computed..
+(as in other languages) either a `Success<Serialisable>` if the computation succeeds or a `Fail` if the conversion cannot be computed.
 The lemma `wellTypedDoesNotFail` establishes that when a sequence of bytes is in the domain 
 of a `deserialise<T>` function, it does not fail.
-The lemma `seDesInvolutive` (resp. `serialiseIsInjective`)  formally establish the involutive (resp. injective) property mentioned previously.
+The lemma `seDesInvolutive` (resp. `serialiseIsInjective`)  formally establishes the involutive (resp. injective) property mentioned previously.
 
 ### Bitlists
 
