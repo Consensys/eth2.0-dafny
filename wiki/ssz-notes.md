@@ -75,9 +75,11 @@ However, it is possible to make a function executable using the `function method
 
 The Eth2.0 specifications restrict unsigned integers to a finite number of cases:
 `uintN`: `N`-bit unsigned integer, where `N` in `{8, 16, 32, 64, 128, 256}`.
+The serialisation of `uintN` is defined using the Python (3?) version of `int.to_bytes`, little-endian.
 
-We provide here a general definition of the serialisation of an unsigned mathematical integer (unbounded) over a number of bytes.
-Given a unsigned integer, i.e. a natural number `n`, and `k` another natural which is the number of bytes to serialise `n`, we define `serialise<nat>(n, k)` recursively, and only for values of `k` such the k-bytes that can accommodate the value of `n`.
+We provide here a language-agnostic definition of the serialisation of an unsigned mathematical integer (unbounded) over a number of bytes, and later specialise for the Eth2.0 `uintN`.
+
+Given a unsigned integer, i.e. a natural number `n`, and `k` another natural number which is the number of bytes to serialise `n`, we define `serialise<nat>(n, k)` recursively, and only for values of `k` such k-bytes can accommodate the bitvector representation of `n`.
 
 If follows that we must have `n < 2^(8 * k)` to be able to encode `n` over `k` bytes.
 Hence `serialise<nat>(n, k)` is only defined for values `n, k` such that  `n < 2^(8 * k)`.
@@ -90,7 +92,7 @@ function serialise<nat>(n: nat, k: nat) : seq<byte>
   requires n < power2(8 * k) 
 {
   if ( k == 1 ) then  
-    //  n's bitvector representation fits in a byte
+    //  n's bitvector representation fits in a single byte
     [n as byte]
   else 
     //  Compute bitvector representation for n % 256 and append
@@ -99,13 +101,13 @@ function serialise<nat>(n: nat, k: nat) : seq<byte>
 }
 ```
 
-in other words, if `b[k]b[k-1] ... b[0]`   is the little-endian bitvector representation of `n` over  
+In other words, if `b[k]b[k-1] ... b[0]` is the little-endian bitvector representation of `n` over  
 `8 * k` bits, then `serialise<nat>(n,k) = b[0]b[1] ... b[k]`.  
 The complete formal Dafny definition is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/IntSeDes.dfy) along with the proof that the previous algorithm always terminate.
 Serialisation for `uintN`, where `N` in `{8, 16, 32, 64, 128, 256}` are special cases of the previous
 function.
 
-Deserialising a sequence of bytes `xb` into an unsigned integer works as expected by interpreting `xb` as the reversed sequence of the bitvector representation of the number: there must be at least one byte to deserialise, and the result will be an unsigned integer less than `2^( 8 * |xb|)`:
+Deserialising a sequence of bytes `xb` into an unsigned integer works as expected by interpreting `xb` as the reversed sequence of the bitvector representation of a natural number: there must be at least one byte to deserialise, and the result will be an unsigned integer less than `2^( 8 * |xb|)`:
 
 ```
 function deserialise<nat>(xb : seq<byte>) : nat
@@ -119,11 +121,11 @@ function deserialise<nat>(xb : seq<byte>) : nat
 }
 ```
 
-Note however that deserialising a sequence of bytes `xb` into for `uintN`, where `N` in `{8, 16, 32, 64, 128, 256}` requires special checks to make the target type can represent the bitvector values given by `xb`. 
+Note that deserialising a sequence of bytes `xb` into `uintN`, where `N` in `{8, 16, 32, 64, 128, 256}` requires special checks to make sure the target type can represent the bitvector values given by `xb`. 
 For instance, `deserialise<uint8>`'s domain is the set of sequences `xb` of length `1`.
 More generally,  `deserialise<uintk>`'s domain is the set of sequences `xb` of length `|xb| * 8 = k`.
 
-The complete formal Dafny definition is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/IntSeDes.dfy) along with the proof of involution.
+The complete formal Dafny definition of the serialisation/deserialisation for  `uintN` is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/IntSeDes.dfy) along with the proof of involution.
 
 
 ### Bitlists
