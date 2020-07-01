@@ -68,10 +68,11 @@ module SSZ {
      *
     */
     function method default(t : Tipe) : Serialisable 
-    requires  !(t.Container_? || t.List_? || t.Vector_?)
-    requires  t.Bytes_? || t.Bitvector_? ==> match t
-                                                case Bytes_(n) => n > 0
-                                                case Bitvector_(n) => n > 0
+        requires  !(t.Container_? || t.List_? || t.Vector_?)
+        requires  t.Bytes_? || t.Bitvector_? ==> 
+                match t
+                    case Bytes_(n) => n > 0
+                    case Bitvector_(n) => n > 0
     {
             match t 
                 case Bool_ => Bool(false)
@@ -101,9 +102,9 @@ module SSZ {
      *  @returns    A sequence of bytes encoding `s`.
      */
     function method serialise(s : Serialisable) : seq<byte> 
-    requires  typeOf(s) != Container_
-    requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
-    requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
+        requires  typeOf(s) != Container_
+        requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
+        requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
     {
         //  Equalities between upper bounds of uintk types and powers of two 
         constAsPowersOfTwo();
@@ -141,10 +142,10 @@ module SSZ {
      * @returns  A sequence of bytes encoding `s`.
      */
     function method serialiseSeqOfBasics(s: seq<Serialisable>): seq<byte>
-    requires forall i | 0 <= i < |s| :: isBasicTipe(typeOf(s[i]))
-    requires forall i,j | 0 <= i < |s| && 0 <= j < |s| :: typeOf(s[i]) == typeOf(s[j])
-    ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
-    ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
+        requires forall i | 0 <= i < |s| :: isBasicTipe(typeOf(s[i]))
+        requires forall i,j | 0 <= i < |s| && 0 <= j < |s| :: typeOf(s[i]) == typeOf(s[j])
+        ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
+        ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
     {
         if |s| == 0 then
             []
@@ -165,7 +166,7 @@ module SSZ {
      *              that has not been used in the deserialisation as well.
      */
     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-    requires !(s.Container_? || s.List_? || s.Vector_?)
+        requires !(s.Container_? || s.List_? || s.Vector_?)
     {
         match s
             case Bool_ => if |xs| == 1 && 0 <= xs[0] <= 1 then
@@ -261,55 +262,55 @@ module SSZ {
     lemma seDesInvolutive(s : Serialisable) 
         requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
-        {   
-            //  Equalities between upper bounds of uintk types and powers of two 
-            constAsPowersOfTwo();
+    {   
+        //  Equalities between upper bounds of uintk types and powers of two 
+        constAsPowersOfTwo();
 
-            match s 
-                case Bitlist(xl,limit) => 
-                    calc {
-                        deserialise(serialise(s), typeOf(s));
-                        ==
-                        deserialise(serialise(Bitlist(xl,limit)), Bitlist_(limit));
-                        == 
-                        deserialise(fromBitlistToBytes(xl), Bitlist_(limit));
-                        == { bitlistDecodeEncodeIsIdentity(xl); } 
-                        Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
-                        == { bitlistDecodeEncodeIsIdentity(xl); } 
-                        Success(castToSerialisable(Bitlist(xl,limit)));
-                    }
+        match s 
+            case Bitlist(xl,limit) => 
+                calc {
+                    deserialise(serialise(s), typeOf(s));
+                    ==
+                    deserialise(serialise(Bitlist(xl,limit)), Bitlist_(limit));
+                    == 
+                    deserialise(fromBitlistToBytes(xl), Bitlist_(limit));
+                    == { bitlistDecodeEncodeIsIdentity(xl); } 
+                    Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
+                    == { bitlistDecodeEncodeIsIdentity(xl); } 
+                    Success(castToSerialisable(Bitlist(xl,limit)));
+                }
 
-                case Bitvector(xl) =>
-                    assume deserialise(serialise(s), typeOf(s)) == Success(s);
-                    calc {
-                        deserialise(serialise(s), typeOf(s));
-                        ==
-                        deserialise(serialise(Bitvector(xl)), Bitvector_(|xl|));
-                        ==
-                        deserialise(fromBitvectorToBytes(xl), Bitvector_(|xl|));
-                        == { bitvectorDecodeEncodeIsIdentity(xl); }
-                        Success(castToSerialisable(Bitvector(fromBytesToBitVector(fromBitvectorToBytes(xl), |xl|))));
-                        == { bitvectorDecodeEncodeIsIdentity(xl); }
-                        Success(castToSerialisable(Bitvector(xl)));
-                    }
+            case Bitvector(xl) =>
+                assume deserialise(serialise(s), typeOf(s)) == Success(s);
+                calc {
+                    deserialise(serialise(s), typeOf(s));
+                    ==
+                    deserialise(serialise(Bitvector(xl)), Bitvector_(|xl|));
+                    ==
+                    deserialise(fromBitvectorToBytes(xl), Bitvector_(|xl|));
+                    == { bitvectorDecodeEncodeIsIdentity(xl); }
+                    Success(castToSerialisable(Bitvector(fromBytesToBitVector(fromBitvectorToBytes(xl), |xl|))));
+                    == { bitvectorDecodeEncodeIsIdentity(xl); }
+                    Success(castToSerialisable(Bitvector(xl)));
+                }
 
-                case Bool(_) =>  //  Thanks Dafny
+            case Bool(_) =>  //  Thanks Dafny
 
-                case Uint8(n) => involution(n as nat, 1);
+            case Uint8(n) => involution(n as nat, 1);
 
-                case Uint16(n) => involution(n as nat, 2);
+            case Uint16(n) => involution(n as nat, 2);
 
-                case Uint32(n) => involution(n as nat, 4);
+            case Uint32(n) => involution(n as nat, 4);
 
-                case Uint64(n) => involution(n as nat, 8);
+            case Uint64(n) => involution(n as nat, 8);
 
-                case Uint128(n) =>  involution(n as nat, 16);
+            case Uint128(n) =>  involution(n as nat, 16);
 
-                case Uint256(n) =>  involution(n as nat, 32);
+            case Uint256(n) =>  involution(n as nat, 32);
 
-                case Bytes(_) => // Thanks Dafny
-            
-        }
+            case Bytes(_) => // Thanks Dafny
+        
+    }
 
     /**
      *  Serialise is injective.
