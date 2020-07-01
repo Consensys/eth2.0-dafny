@@ -150,7 +150,7 @@ Given a bitlist (size of which is not necessarily a multiple of 8), a sentinelle
 
 To deserialise a sequence of bytes `xb` into a bitlist, concatenate the bits in each byte and remove the tail `1 0*`.
 
-The functional specifications, implementations and proofs (involutive and injective) are availabel in [this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BitListSeDes.dfy).
+The functional specifications, implementations and proofs (involutive and injective) are available in [this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BitListSeDes.dfy).
 Note that the co-domain of `serialise<bitlist>` is the set of sequences of bytes of length at least `1`, and the last byte must contain at least one bit set to `1`.
 A consequence is that the domain of `deserialise<bitlist>` is restricted to sequences of at least one byte, such that the last byte is not `0x00`.
 
