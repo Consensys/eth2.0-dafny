@@ -28,8 +28,7 @@ Each type `T <: Serialisable` should offer the two functionalities described abo
 * and `deserialise<T> : seq<bytes>  ~-> T`, a partial function  that
 returns an object of type `T` **when it is possible to deserialise a sequence of bytes  in an object of type `T`**.
 Indeed, `deserialise<T>` may not be defined for some sequences `xs` (see below for concrete cases.)
-
-
+ 
 How objects of type `T <: Serialisable` are serialised and deserialised is explained in the sequel.
 
 ## Expected Properties of Serialise/Deserialise
@@ -39,7 +38,7 @@ Given two objects `O1:T`, `O2:T` (read "Oi of type T") where `T <: Serialisable`
 * **Involutive**: `deserialise<T>( serialise<T>(O1) ) = O1`,
 * **Injective**: `serialise<T>(O1) = serialise<T>(O2)` implies that `O1 = O2`.
 
-## SSZ in Eth2
+## SSZ in Eth2  
 
 In the Eth2.0 specifications, SSZ provides serialisation and deserialisation for
 
@@ -51,7 +50,7 @@ In the Eth2.0 specifications, SSZ provides serialisation and deserialisation for
 
 In the sequel we introduce formal specifications for the corresponding serialisation and deserialisation functions.
 
-## Formal Specifications, Implemetations and Correctness Proofs
+## Formal Specifications, Implementations and Correctness Proofs
 
 We write the specifications and implementations of the serialisation/deserialisation functions using **logical pre-conditions** to define the domain of each function.
 Moroever, in the correctness proofs, we use provable **logical post-conditions** to establish the correctness properties. 
