@@ -141,7 +141,7 @@ In this section, we adopt a more functional approach and we define what the enco
 The main idea in the serialisation part is to encode a bitlist in a sequence of bytes by chopping it into chunks of size 8 (the number of bits in a byte).
 However, a bitlist may not have a size that is a multiple of 8, so it is necessary to somehow encode the actual size or last element of the list in the serialisation.
 
-The serialisation process is illustrated below. 
+The serialisation/deserialisation process is illustrated below. 
 
 ![Serialise and Deserialise for bitlists](bitlist-sedes.jpg)
 
@@ -152,6 +152,7 @@ To deserialise a sequence of bytes `xb` into a bitlist, concatenate the bits in 
 
 The functional specifications, implementations and proofs (involutive and injective) are availabel in [this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BitListSeDes.dfy).
 Note that the co-domain of `serialise<bitlist>` is the set of sequences of bytes of length at least `1`, and the last byte must contain at least one bit set to `1`.
+A consequence is that the domain of `deserialise<bitlist>` is restricted to sequences of at least one byte, such that the last byte is not `0x00`.
 
 ## Bitvectors
 TODO
