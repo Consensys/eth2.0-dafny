@@ -134,49 +134,34 @@ The lemma `seDesInvolutive` (resp. `serialiseIsInjective`)  formally establishes
 
 ### Bitlists
 
+The official definition of serialise for bitlists is available [here](https://github.com/ethereum/eth2.0-specs/blob/dev/ssz/simple-serialize.md#bitlistn).
+
+A bitlist is a list of Boolean values.
+In this section, we adopt a more functional approach and we define what the encoding of a bitlist is.
+The main idea in the serialisation part is to encode a bitlist in a sequence of bytes by chopping it into chunks of size 8 (the number of bits in a byte).
+However, a bitlist may not have a size that is a multiple of 8, so it is necessary to somehow encode the actual size or last element of the list in the serialisation.
+
+The serialisation process is illustrated below. 
+
+![Serialise and Deserialise for bitlists](bitlist-sedes.jpg)
 
 
-## Notes
+Given a bitlist (size of which is not necessarily a multiple of 8), a sentinelle `true` (or `1`) is added to the list, and the resulting list is further padded with `0` to obtain a list of size multiple of 8. The number of bytes necessary to encodea bitlist of size `n` is thus the smallest multiple of 8 larger than `n + 1`. 
 
-Current Dafny SSZ module does not constraint the length of serialised object to be deserialised.
-Deserialise may fail if the object cannot be unpacked into the target type.
-We have to account for this behaviour.
+To deserialise a sequence of bytes `xb` into a bitlist, concatenate the bits in each byte and remove the tail `1 0*`.
 
-Two solutions:
+The functional specifications, implementations and proofs (involutive and injective) are availabel in [this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/BitListSeDes.dfy).
+Note that the co-domain of `serialise<bitlist>` is the set of sequences of bytes of length at least `1`, and the last byte must contain at least one bit set to `1`.
 
-* We accept that this can happen at runtime, and we want to prove that in that case we return a Failure (e.g. Try type in Scala) or Option type (or Either type).
-This is what is currently implemented.
-* We only deal with the happy case in the first specification.
+## Bitvectors
+TODO
 
-We may also check that the sequence of bytes to be decoded has been fully consumed at the end of the decoding process.
 
-### Py-ssz
+## Lists
+TODO
 
-The tests for bitvectors seem to assume that every encoded bitvector has a size which is a multiple of 8.
+## Vectors
+TODO
 
-### Java implementation
-
-The java implementation (Cava) does not seem to encode vectors (nor bitvectors).
-It does not support bitList neither.
-It provides encoding for String that are not in simple-serilise.md.
-The encoding does not seem to be recursively defined. For instance there methods
-for encoding List of int8, list of int16 and so on.
-
-## Dafny notes
-
-Match can only be used on datatype not on classes.
-Use of bitvectors is not ideal:
-
-* Seems the cast from/to int is not properly inlined in some proofs
-* Z3 is not very good at bitvector and proofs take ages (when the solver can do it).
-
-For instance Dafny can work out the proof of seDesInvolutive without hints with uint8 but needs a full proof for bv8.
-
-## Todo list
-
-* deserialise: add the non processed part of the sequence to decode to the returned result.
-
-## Reported issues
-
-* [Tuweni encoding of bitlists](https://github.com/apache/incubator-tuweni/issues/49#issue-571773400)
-* [SSZ bitlists/variable parts](https://github.com/ethereum/eth2.0-specs/issues/1630#issue-571003824)
+## Containers
+TODO
