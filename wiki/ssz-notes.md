@@ -125,7 +125,7 @@ Note that deserialising a sequence of bytes `xb` into `uintN`, where `N` in `{8,
 For instance, `deserialise<uint8>`'s domain is the set of sequences `xb` of length `1`.
 More generally,  `deserialise<uintk>`'s domain is the set of sequences `xb` of length `|xb| * 8 = k`.
 
-The complete formal Dafny definition of the serialisation/deserialisation for  `uintN` is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/IntSeDes.dfy) along with the proof of involution.
+The complete formal Dafny definition of the serialisation/deserialisation for  `uintN` is available [in this file](https://github.com/PegaSysEng/eth2.0-dafny/blob/master/src/dafny/ssz/Serialise.dfy) along with the proof of involution.
 
 
 ### Bitlists
