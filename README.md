@@ -24,6 +24,9 @@ This specification is written using pre/post-conditions using the [Hoare logic](
 
 To achieve this, we use the capabilities of the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
 
+Here is a youtube video with a presentation 
+[![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
+
 ## Expected Results
 
 Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasoning engines (SMT-solvers).
