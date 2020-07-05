@@ -49,3 +49,19 @@ The following commands must be executed within the directory including this READ
 ./TestBitvectorMerkleise.exe <number-of-tests> <average-failure-percentage> 
 ```
 where `number-of-tests` and `average-failure-percentage` are as detailed in the Prysamtic Lab Bitlist Merkleisation Implementation section above.
+
+# Test of the Py-SSZ Vector of Uint64 Merkleisation Implementation
+The following instructions detail how to compile and execute the test for the [Py-SSZ](https://github.com/ethereum/py-ssz) Vector of Uint64 Merkleisation Implementation.
+
+## Prerequisites
+- Python3
+- `pip3 install ssz`
+
+## Commands
+
+The following commands must be executed within the directory including this README.md file.
+```
+./compilePySszVectorOfUint64MerkleisationTest.sh
+./TestVectorOfUint64Merkleise.exe <number-of-tests> <average-failure-percentage> 
+```
+where `number-of-tests` and `average-failure-percentage` are as detailed in the Prysamtic Lab Bitlist Merkleisation Implementation section above.

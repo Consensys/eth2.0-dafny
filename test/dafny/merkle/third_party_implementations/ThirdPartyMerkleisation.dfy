@@ -27,4 +27,7 @@ module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
 
     function method {:extern} ListBytes32Root(l: seq<seq<byte>>, limit:nat): hash32
     requires forall i |  0 <= i < |l| :: |l[i]| == 32
+
+    function method {:extern} VectorUint64Root(v: seq<nat>): hash32
+    requires forall i |  0 <= i < |v| :: v[i] < 0x10000000000000000
 }
