@@ -244,5 +244,37 @@ namespace thirdpartymerkleisation
                 // process stdout to a Dafny sequence of byte
                 return Dafny.Sequence<byte>.FromElements(retBytes);
         }
+        public static Dafny.Sequence<byte> VectorUint64Root(Dafny.Sequence<BigInteger> vectorOfUints)
+        {
+                // Build the list of arguments for the Python script
+                List<String> arguments = new List<String>();
+                foreach(BigInteger n in vectorOfUints.Elements)
+                {
+                    arguments.Add(n.ToString());
+                }
+
+                // Set command and command line
+                ProcessStartInfo start = new ProcessStartInfo();
+                start.FileName = "python3";
+                start.Arguments="PySszVectorOfUint64Merkleisation.py " + String.Join(" ",arguments.ToArray());
+
+                // Set redirections for stdout
+                start.UseShellExecute = false;
+                start.RedirectStandardOutput = true;
+
+                // Start the process
+                Process cmdProcess = new Process();
+                cmdProcess.StartInfo = start;
+                cmdProcess.Start();                              
+
+                // Read from the process stdout in binary format and store the
+                // read data in a byte array
+                var br = new BinaryReader(cmdProcess.StandardOutput.BaseStream);
+                byte[] retBytes = br.ReadBytes(32);
+
+                // Convert the C# byte array containing the data read from the
+                // process stdout to a Dafny sequence of byte
+                return Dafny.Sequence<byte>.FromElements(retBytes);
+        } 
     }
 }

@@ -62,15 +62,9 @@ requires bitvector.Bitvector?
     var dfyHashRoot := SSZ_Merkleise.getHashTreeRoot(bitvector);
 
     var ThirdPartyBitvector :=  if |bitvector.xl| >= 2000 * (100 - failPercentage) /100 then 
-                    
-                                    if |bitvector.xl| > 0  then
-                                        Eth2Types.Bitvector(
+                                    Eth2Types.Bitvector(
                                             [!bitvector.xl[0]] + bitvector.xl[1..]
-                                        )
-                                    else
-                                        Eth2Types.Bitvector(
-                                            [true]
-                                        )
+                                    )
                                 else
                                     bitvector
                                 ;
