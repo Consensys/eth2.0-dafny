@@ -167,6 +167,9 @@ module SSZ {
      */
      function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
         requires !(s.Container_? || s.List_? || s.Vector_?)
+        ensures match deserialise(xs, s) 
+            case Success(r) => wellTyped(r)
+            case Failure => true 
     {
         match s
             case Bool_ => if |xs| == 1 && 0 <= xs[0] <= 1 then
@@ -273,6 +276,11 @@ module SSZ {
             case Bytes(bs) => 
     }
 
+
+    // lemma foo(xs : seq<byte>, s : Tipe) 
+    //     requires deserialise(xs, s) != Failure
+    //     ensures 
+
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
@@ -280,36 +288,15 @@ module SSZ {
         requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
     {   
-        //  Equalities between upper bounds of uintk types and powers of two 
+        //  Proofs on equalities between upper bounds of uintk types and powers of two 
         constAsPowersOfTwo();
 
         match s 
             case Bitlist(xl,limit) => 
-                calc {
-                    deserialise(serialise(s), typeOf(s));
-                    ==
-                    deserialise(serialise(Bitlist(xl,limit)), Bitlist_(limit));
-                    == 
-                    deserialise(fromBitlistToBytes(xl), Bitlist_(limit));
-                    == { bitlistDecodeEncodeIsIdentity(xl); } 
-                    Success(castToSerialisable(Bitlist(fromBytesToBitList(fromBitlistToBytes(xl)),limit)));
-                    == { bitlistDecodeEncodeIsIdentity(xl); } 
-                    Success(castToSerialisable(Bitlist(xl,limit)));
-                }
+                bitlistDecodeEncodeIsIdentity(xl);
 
             case Bitvector(xl) =>
-                assume deserialise(serialise(s), typeOf(s)) == Success(s);
-                calc {
-                    deserialise(serialise(s), typeOf(s));
-                    ==
-                    deserialise(serialise(Bitvector(xl)), Bitvector_(|xl|));
-                    ==
-                    deserialise(fromBitvectorToBytes(xl), Bitvector_(|xl|));
-                    == { bitvectorDecodeEncodeIsIdentity(xl); }
-                    Success(castToSerialisable(Bitvector(fromBytesToBitVector(fromBitvectorToBytes(xl), |xl|))));
-                    == { bitvectorDecodeEncodeIsIdentity(xl); }
-                    Success(castToSerialisable(Bitvector(xl)));
-                }
+                bitvectorDecodeEncodeIsIdentity(xl); 
 
             case Bool(_) =>  //  Thanks Dafny
 
