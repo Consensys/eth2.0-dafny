@@ -107,35 +107,35 @@ module Eth2Types {
             //  Lists and vectors.
 
             case Bitlist(xl,limit) =>
-                            //  A bitlist must have less than limit elements
-                            |xl| <= limit
+                //  A bitlist must have less than limit elements
+                |xl| <= limit
 
             case Bitvector(xl) => 
-                            //  Bitvectors must have length >= 1
-                            |xl| > 0
+                //  Bitvectors must have length >= 1
+                |xl| > 0
 
             case Bytes(bs) => 
-                            //  Bytes have length >= 1
-                            |bs| > 0
+                //  Bytes have length >= 1
+                |bs| > 0
 
             case Container(_) => 
-                            //  All the fileds of a container must be well-typed
-                            forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+                //  All the fileds of a container must be well-typed
+                forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
 
             case List(l, t, limit) =>   
-                            //  Lists must have less than limit elements, cannot be of type bool (there
-                            // is bitlist for that) and the type of the elements is welltyped and constant.
-                            |l| <= limit
-                            && t != Bool_
-                            && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
-                            && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
+                //  Lists must have less than limit elements, cannot be of type bool (there
+                // is bitlist for that) and the type of the elements is welltyped and constant.
+                |l| <= limit
+                && t != Bool_
+                && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
+                && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
 
             case Vector(v) =>   
-                            //  Vectors must have less than limit elements, and the type of the elements is welltyped and constant.
-                            |v| > 0
-                            && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
-                            && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
-                            && (typeOf(v[0])) != Bool_
+                //  Vectors must have less than limit elements, and the type of the elements is welltyped and constant.
+                |v| > 0
+                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
+                && (typeOf(v[0])) != Bool_
     }
 
     /**
