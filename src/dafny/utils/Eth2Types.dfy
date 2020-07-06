@@ -53,7 +53,15 @@ module Eth2Types {
     /** Create type synonym for a hash 'root' */
     type hash32 = Seq32Byte
 
-    /** The serialisable objects. */
+    /** The RawSerialisable type.
+     *
+     *  This datatype is an over-approximation of Serialisable for some
+     *  constructors like Bitlist and below. The constraints are defined 
+     *  separately in `Serialisable`. 
+     *
+     *  Ideally we would like to define constraints on the parameters of a constructor
+     *  in the datatype but this is not possible in Dafny.
+     */
     datatype RawSerialisable = 
             Uint8(n: nat)
         |   Uint16(n: nat)
@@ -69,17 +77,21 @@ module Eth2Types {
         |   Vector(v:seq<RawSerialisable>)
         |   Container(fl: seq<RawSerialisable>)
 
-    /** Well typed predicate for `RawSerialisable`s
-     * @param s `RawSerialisable` value
-     * @returns `true` iff `s` is a legal value for serialisation and
-     *           merkleisation
+    /** 
+     *  Define constraints on parameters of constructors of `RawSerialisable`.
+     *
+     *  @param      s   `RawSerialisable` value
+     *  @returns        `true` iff `s` meets some well-formedness constraints (defined on the parameters).
      */    
-    predicate wellTyped(s:RawSerialisable)
-    decreases s, 0
+    predicate wellTyped(s : RawSerialisable)
+        //  The predicate is recursively defined on subtypes so we have to provide a termination clause.
+        decreases s, 0
     {
         match s 
             case Bool(_) => true
     
+            //  The following uintk tyoesd are less than 2^k
+
             case Uint8(n) => n < 0x100
 
             case Uint16(n) => n < 0x10000
@@ -92,28 +104,44 @@ module Eth2Types {
 
             case Uint256(n) => n < 0x10000000000000000000000000000000000000000000000000000000000000000 
 
-            case Bitlist(xl,limit) => |xl| <= limit
+            //  Lists and vectors.
 
-            case Bitvector(xl) => |xl| > 0
+            case Bitlist(xl,limit) =>
+                            //  A bitlist must have less than limit elements
+                            |xl| <= limit
 
-            case Bytes(bs) => |bs| > 0
+            case Bitvector(xl) => 
+                            //  Bitvectors must have length >= 1
+                            |xl| > 0
 
-            case Container(_) => forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
+            case Bytes(bs) => 
+                            //  Bytes have length >= 1
+                            |bs| > 0
 
-            case List(l, t, limit) =>   && |l| <= limit
-                                        && t != Bool_
-                                        && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
-                                        && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
+            case Container(_) => 
+                            //  All the fileds of a container must be well-typed
+                            forall i | 0 <= i < |s.fl| :: wellTyped(s.fl[i])
 
-            case Vector(v) =>   && |v| > 0
-                                && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
-                                && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
-                                && (typeOf(v[0])) != Bool_
+            case List(l, t, limit) =>   
+                            //  Lists must have less than limit elements, cannot be of type bool (there
+                            // is bitlist for that) and the type of the elements is welltyped and constant.
+                            |l| <= limit
+                            && t != Bool_
+                            && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
+                            && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
 
+            case Vector(v) =>   
+                            //  Vectors must have less than limit elements, and the type of the elements is welltyped and constant.
+                            |v| > 0
+                            && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
+                            && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
+                            && (typeOf(v[0])) != Bool_
     }
 
     /**
-     * The type `Serialisable` corresponds to well typed `RawSerialisable`s
+     *  The type `Serialisable` corresponds to well typed `RawSerialisable`s.
+     *  
+     *  The type inhabited and a witness is Uint8(0).
      */
     type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
 
