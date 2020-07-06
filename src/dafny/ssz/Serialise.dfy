@@ -223,8 +223,8 @@ module SSZ {
                                 Failure
                                 
             case Bitlist_(limit) => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
-                                        //  Check that the decoded bitlist can fit within limit.
                                         var desBl := fromBytesToBitList(xs);
+                                        //  Check that the decoded bitlist can fit within limit.
                                         if |desBl| <= limit then
                                             var r : Serialisable := Bitlist(desBl,limit);
                                             Success(r)
