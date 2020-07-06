@@ -225,6 +225,83 @@ module SSZ {
                                 else Failure
     }
 
+     function method deserialise2(xs : seq<byte>, s : Tipe) : Try<Serialisable>
+        requires !(s.Container_? || s.List_? || s.Vector_?)
+    {
+        match s
+            case Bool_ => if |xs| == 1 && 0 <= xs[0] <= 1 then
+                                var r : Serialisable := Bool(byteToBool(xs));
+                                Success(r)
+                            else 
+                                Failure
+                            
+            case Uint8_ => if |xs| == 1 then
+                                var r : Serialisable := Uint8(uintDes(xs));
+                                Success(r)
+                             else 
+                                Failure
+
+            case Uint16_ => if |xs| == 2 then
+                                //  Verify wellTyped before casting to Serialisable
+                                assert(wellTyped(Uint16(uintDes(xs))));
+                                var r : Serialisable := Uint16(uintDes(xs));
+                                Success(r)                               
+                            else 
+                                Failure
+            
+            case Uint32_ => if |xs| == 4 then
+                                assert(wellTyped(Uint32(uintDes(xs))));
+                                var r : Serialisable := Uint32(uintDes(xs));
+                                Success(r)                               
+                            else 
+                                Failure
+
+            case Uint64_ => if |xs| == 8 then
+                                assert(wellTyped(Uint64(uintDes(xs))));
+                                var r : Serialisable := Uint64(uintDes(xs));
+                                Success(r)  
+                             else 
+                                Failure
+
+            case Uint128_ => if |xs| == 16 then
+                                constAsPowersOfTwo();
+                                assert(wellTyped(Uint128(uintDes(xs))));
+                                var r : Serialisable := Uint128(uintDes(xs));
+                                Success(r)  
+                             else 
+                                Failure
+
+            case Uint256_ => if |xs| == 32 then
+                                constAsPowersOfTwo();
+                                assert(wellTyped(Uint256(uintDes(xs))));
+                                var r : Serialisable := Uint256(uintDes(xs));
+                                Success(r)                              
+                            else 
+                                Failure
+                                
+            case Bitlist_(limit) => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
+                                        //  Check that the decoded bitlist can fit within limit.
+                                        var desBl := fromBytesToBitList(xs);
+                                        if |desBl| <= limit then
+                                            var r : Serialisable := Bitlist(desBl,limit);
+                                            Success(r)
+                                        else
+                                            Failure
+                                    else
+                                        Failure
+
+            case Bitvector_(len) => if |xs| > 0 && len <= |xs| * BITS_PER_BYTE < len + BITS_PER_BYTE then
+                                        var r : Serialisable := Bitvector(fromBytesToBitVector(xs,len));
+                                        Success(r)
+                                    else
+                                        Failure
+
+            case Bytes_(len) => if 0 < |xs| == len then
+                                  var r : Serialisable := Bytes(xs);
+                                  Success(r)
+                                else Failure
+    }
+
     //  Specifications and Proofs
     
     /** 
