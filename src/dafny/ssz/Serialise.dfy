@@ -185,7 +185,7 @@ module SSZ {
                                 Failure
 
             //  The following cases must check that the result is wellTyped.
-            //  If weelTyped and RawSerialisable, the result is a Serialisable.
+            //  If wellTyped and RawSerialisable, the result is a Serialisable.
             case Uint16_ => if |xs| == 2 then
                                 //  Verify wellTyped before casting to Serialisable
                                 assert(wellTyped(Uint16(uintDes(xs))));
