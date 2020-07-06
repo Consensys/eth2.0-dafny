@@ -120,7 +120,7 @@ module StateTransition {
      *
      *  @returns    true iff `b` can be successfully added to the state `s`.
      */
-    predicate isValid(s : BeaconState, b : BeaconBlockHeader) 
+    predicate isValid(s : BeaconState, b : BeaconBlock) 
     {
         //  block slot should be in the future.
         s.slot < b.slot 
@@ -140,26 +140,6 @@ module StateTransition {
             )
     }
 
-    predicate isValid2(s : BeaconState, b : BeaconBlock) 
-    {
-        //  block slot should be in the future.
-        s.slot < b.slot 
-        //  Fast forward s to b.slot and check `b` can be attached to the
-        //  resulting state's latest_block_header.
-        && b.parent_root == 
-            hash_tree_root(
-                forwardStateToSlot(resolveStateRoot(s), 
-                b.slot
-            ).latest_block_header) 
-        //  Check that the block provides the correct hash for the state.
-        &&  b.state_root == hash_tree_root(
-                addBlockToState2(
-                    forwardStateToSlot(resolveStateRoot(s), b.slot), 
-                    b
-                )
-            )
-    }
-
     /**
      *  Compute the state obtained after adding a block.
      *  
@@ -168,39 +148,9 @@ module StateTransition {
      *  @returns        The state obtained after adding `b` to the current state.
      *                  
      */
-    method stateTransition(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState)
+     method stateTransition(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
         requires isValid(s, b)
-
-        /** The next state latest_block_header is same as b except for state_root that is 0. */
-        ensures s'.latest_block_header == b.(state_root := EMPTY_BYTES32)
-        /** s' slot is now adjusted to the slot of b. */
-        ensures s'.slot == b.slot
-        /** s' parent_root is the hash of the state obtained by resolving/forwarding s to
-            the slot of b.  */
-        ensures s'.latest_block_header.parent_root  == 
-            hash_tree_root(
-                forwardStateToSlot(resolveStateRoot(s), b.slot)
-                .latest_block_header
-            )
-    {
-        //  finalise slots before b.slot.
-        var s1 := processSlots(s, b.slot);
-
-        //  Process block and compute the new state.
-        s' := processBlock(s1, b);  
-
-        // Verify state root (from eth2.0 specs)
-        // A proof that this function is correct establishes that this assert statement 
-        // is never violated (i.e. when isValid() is true.)
-        // In the Eth2.0 specs this check is conditional and enabled by default.
-        //  if validate_result:
-        assert (b.state_root == hash_tree_root(s'));
-    }  
-
-     method stateTransition2(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState)
-        //  make sure the last state was one right after addition of new block
-        requires isValid2(s, b)
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, EMPTY_BYTES32)
@@ -218,7 +168,7 @@ module StateTransition {
         var s1 := processSlots(s, b.slot);
 
         //  Process block and compute the new state.
-        s' := processBlock2(s1, b);  
+        s' := processBlock(s1, b);  
 
         // Verify state root (from eth2.0 specs)
         // A proof that this function is correct establishes that this assert statement 
@@ -345,7 +295,7 @@ module StateTransition {
      *
      *  @note   Matches eth2.0 specs, need to implement randao, eth1, operations. 
      */
-    method processBlock(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
+     method processBlock(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root(s.latest_block_header)
 
@@ -359,54 +309,23 @@ module StateTransition {
         //  process_operations(s, b.body)
     }
 
-     method processBlock2(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
-        requires b.slot == s.slot
-        requires b.parent_root == hash_tree_root(s.latest_block_header)
-
-        ensures s' == addBlockToState2(s, b)
-    {
-        //  Start by creating a block header from the ther actual block.
-        s' := processBlockHeader2(s, b); 
-        
-        //  process_randao(s, b.body)
-        //  process_eth1_data(s, b.body)
-        //  process_operations(s, b.body)
-    }
-
     /**
      *  Check whether a block is valid and prepare and initialise new state
      *  with a corresponding block header. 
      *
      *  @param  s   A beacon state.
-     *  @param  b   A block header.
-     *  @returns    The state obtained processing the block header.
+     *  @param  b   A block.
+     *  @returns    The state obtained processing the block.
      *
      *  @note   Matches eth2.0 specs except proposer slashing verification.
      */
-    method processBlockHeader(s: BeaconState, b: BeaconBlockHeader) returns (s' : BeaconState) 
+    method processBlockHeader(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
         //  Verify that the slots match
         requires b.slot == s.slot  
         // Verify that the parent matches
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
 
         ensures s' == addBlockToState(s, b)
-    {
-        s':= s.(
-            latest_block_header := BeaconBlockHeader(
-                b.slot,
-                b.parent_root,
-                EMPTY_BYTES32
-            )
-        );
-    }
-
-    method processBlockHeader2(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
-        //  Verify that the slots match
-        requires b.slot == s.slot  
-        // Verify that the parent matches
-        requires b.parent_root == hash_tree_root(s.latest_block_header) 
-
-        ensures s' == addBlockToState2(s, b)
     {
         s':= s.(
             latest_block_header := BeaconBlockHeader(
@@ -440,22 +359,7 @@ module StateTransition {
      *  @param  b   A block to add to the state `s`.
      *  @returns    The state `s` updated to point to `b` with state_root set to 0.
      */
-    function addBlockToState(s: BeaconState, b: BeaconBlockHeader) :  BeaconState 
-        //  Verify that the slots match
-        requires b.slot == s.slot  
-        // Verify that the parent matches
-        requires b.parent_root == hash_tree_root(s.latest_block_header) 
-    {
-        s.(
-            latest_block_header := BeaconBlockHeader(
-                b.slot,
-                b.parent_root,
-                EMPTY_BYTES32
-            )
-        )
-    }
-
-    function addBlockToState2(s: BeaconState, b: BeaconBlock) :  BeaconState 
+    function addBlockToState(s: BeaconState, b: BeaconBlock) :  BeaconState 
         //  Verify that the slots match
         requires b.slot == s.slot  
         // Verify that the parent matches

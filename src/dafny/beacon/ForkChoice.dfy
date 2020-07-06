@@ -53,6 +53,11 @@ module ForkChoice {
         hash_tree_root(GENESIS_STATE)
     )
 
+    /**
+     *  Genesis block.
+     *
+     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+     */
     const GENESIS_BLOCK := BeaconBlock(
         0 as Slot,  
         EMPTY_BYTES32 , 
@@ -71,11 +76,6 @@ module ForkChoice {
      *                          keys at any time. This is proved in invariant0.
      */
     datatype Store = Store (
-        blocks : map<Root, BeaconBlockHeader>,
-        block_states : map<Root, BeaconState>
-    )
-
-    datatype Store2 = Store2 (
         blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>
     )
@@ -97,29 +97,13 @@ module ForkChoice {
      *                          to the block 
      *                          header, rather than the full block. This does not affect 
      *                          functionality but will be cleaned up in subsequent releases.
+     *                          In this version, we have correctly initialised the anchor_root. 
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
      */
     function method get_forkchoice_store(anchor_state: BeaconState) : Store 
         requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
     {
-        var anchor_block_header := anchor_state.latest_block_header.(
-            state_root := hash_tree_root(anchor_state)
-        );
-        var anchor_root := hash_tree_root(anchor_block_header);
-        Store(
-            map[anchor_root := anchor_block_header],    // blocks
-            map[anchor_root := anchor_state]            //  block_states
-        )
-    }
-
-    function method get_forkchoice_store2(anchor_state: BeaconState) : Store2 
-        requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
-    {
-        // var anchor_block_header := anchor_state.latest_block_header.(
-        //     state_root := hash_tree_root(anchor_state)
-        // );
-        //  hash_tree_root(block) should be same as hash_tree_root(blockheader)
         //  The anchor block is computed using the values of genesis state latest
         //  block header.
         var anchor_block := BeaconBlock(
@@ -127,9 +111,8 @@ module ForkChoice {
              anchor_state.latest_block_header.parent_root,
             hash_tree_root(anchor_state)
         );
-        //  hash_tree_root(anchor_block) should be same as hash_tree_root(anchor_state.lastest_block_header);
         var anchor_root := hash_tree_root(anchor_block);
-        Store2(
+        Store(
             map[anchor_root := anchor_block],           // blocks
             map[anchor_root := anchor_state]            //  block_states
         )
@@ -142,21 +125,11 @@ module ForkChoice {
      */
     const GENESIS_STORE := get_forkchoice_store(GENESIS_STATE)
 
-    const GENESIS_STORE2 := get_forkchoice_store2(GENESIS_STATE)
-
     /**
      *  Property of the genesis store.
      */
-    lemma genesisStoreHasGenesisBlockAndState() 
+     lemma genesisStoreHasGenesisBlockAndState() 
         ensures GENESIS_STORE == Store(
-            map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_BLOCK_HEADER],
-            map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_STATE]
-        )
-    {   //  Thanks Dafny
-    }
-
-     lemma genesisStoreHasGenesisBlockAndState2() 
-        ensures GENESIS_STORE2 == Store2(
             map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK],
             map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
         )
@@ -164,7 +137,7 @@ module ForkChoice {
     }
 
     /**
-     *  A Beacon Chain environement (mutable) i.e. with Store etc.
+     *  A Beacon Chain environment (mutable) i.e. with Store etc.
      */
     class Env {
 
@@ -175,8 +148,6 @@ module ForkChoice {
          */
         var store : Store
 
-        var store2: Store2
-
         /**
          *  Track the set of blocks that have been added to the store.
          *  A block is added to accepted block whenever the pre-conditions
@@ -184,9 +155,7 @@ module ForkChoice {
          *  the block is `valid` i.e. `state_transition` can be computed (guarantee of
          *  no failed asserts.)
          */
-        ghost var acceptedBlocks : set<BeaconBlockHeader>
-
-        ghost var acceptedBlocks2 : set<BeaconBlock>
+        ghost var acceptedBlocks : set<BeaconBlock>
 
         /**
          *  Start with the genesis store and one accepted block, GENESIS_BLOCK_HEADER
@@ -196,23 +165,16 @@ module ForkChoice {
             /** Trying to verify  storeInvariant2 generates boogie name error. */
             // ensures storeInvariant2()
             /** Verify storeInvariant2() manually. */
-            // ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
-            ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
-            ensures hash_tree_root(GENESIS_BLOCK) in store2.block_states.Keys
-            // ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
-            ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
-
-            ensures store2.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
+            ensures acceptedBlocks == {GENESIS_BLOCK}
+            ensures hash_tree_root(GENESIS_BLOCK) in store.block_states.Keys
+            ensures store.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
 
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
             ensures storeIsValid(store)
         {  
             store := GENESIS_STORE;
-            acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
-
-            store2 := GENESIS_STORE2;
-            acceptedBlocks2 := { GENESIS_BLOCK }; 
+            acceptedBlocks := { GENESIS_BLOCK }; 
         }
 
         /** 
@@ -235,7 +197,7 @@ module ForkChoice {
             reads this
         {
             forall r :: r in store.blocks.Keys ==>
-                store.blocks[r].slot == 0 ==> store.blocks[r] == GENESIS_BLOCK_HEADER
+                store.blocks[r].slot == 0 ==> store.blocks[r] == GENESIS_BLOCK
         }
 
         /**
@@ -264,8 +226,7 @@ module ForkChoice {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
                 && store.block_states[hash_tree_root(b)].latest_block_header == 
-                        b.(state_root := EMPTY_BYTES32) 
-                // && store.block_states[hash_tree_root(b)].slot <= b.slot
+                        BeaconBlockHeader(b.slot, b.parent_root, EMPTY_BYTES32)
         }
 
         /**
@@ -293,7 +254,7 @@ module ForkChoice {
         predicate storeInvariant4(store: Store) 
             reads this
         {
-            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK ==>
                 b.parent_root in store.blocks.Keys
                 && store.blocks[b.parent_root].slot < b.slot 
         }
@@ -306,7 +267,7 @@ module ForkChoice {
         predicate storeInvariant5(store: Store) 
             reads this
         {
-            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK ==>
                 b.parent_root in store.blocks.Keys
                 && b.parent_root in store.block_states.Keys
                 && store.blocks[b.parent_root].slot == store.block_states[b.parent_root].slot
@@ -334,7 +295,7 @@ module ForkChoice {
         predicate storeInvariant7(store: Store) 
             reads this
         {
-            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK_HEADER ==>
+            forall b :: b in acceptedBlocks && b != GENESIS_BLOCK ==>
                 hash_tree_root(b) in store.blocks.Keys
                 && b.parent_root in store.blocks.Keys
                 && store.blocks[b.parent_root].slot < store.blocks[hash_tree_root(b)].slot
@@ -347,15 +308,15 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returbs        The transitive closure of the parent_root relation.
          */
-        function ancestors(r: Root, store: Store) : seq<BeaconBlockHeader>
+       function ancestors(r: Root, store: Store) : seq<BeaconBlock>
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
             ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
-            ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
+            ensures GENESIS_BLOCK in ancestors(r, store)
             ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
                 ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
-            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
+            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK
 
             reads this
 
@@ -364,7 +325,7 @@ module ForkChoice {
         {
             if ( store.blocks[r].slot == 0 ) then
                 //  By invariant 0a
-                [ GENESIS_BLOCK_HEADER ]
+                [ GENESIS_BLOCK ]
             else 
                 [ store.blocks[r] ] + ancestors(store.blocks[r].parent_root, store)
         }
@@ -377,19 +338,19 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returns        Proof that a valid store is always a chain.
          */
-        lemma aValidStoreIsAChain(r: Root, store: Store)    
+        lemma {:induction r, store} aValidStoreIsAChain(r: Root, store: Store)    
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
             //  Length (number) of ancestors is less than the slot of Root.
             ensures 1 <= |ancestors(r, store)| <= 1 + (store.blocks[r].slot  as int)
-            //  The GENESIS_BLOCK_HEADER is always in the ancestors.
-            ensures GENESIS_BLOCK_HEADER in ancestors(r, store)
+            //  The GENESIS_BLOCK  is always in the ancestors.
+            ensures GENESIS_BLOCK in ancestors(r, store)
             //  At each level in the ancestors' sequence, the slot number decreases.
             ensures forall i:: 1 <= i < |ancestors(r, store)| ==> 
                 ancestors(r, store)[i].slot < ancestors(r, store)[i - 1].slot
-            //  The last block in the chain is the GENESIS_BLOCK_HEADER
-            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK_HEADER
+            //  The last block in the chain is the GENESIS_BLOCK
+            ensures ancestors(r, store)[ |ancestors(r, store)| - 1] == GENESIS_BLOCK
         {
             //  Thanks Dafny!
             //  Follows directly from proof post-conditions of ancestors which is elegant!
@@ -424,7 +385,7 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method on_block(b: BeaconBlockHeader, pre_state : BeaconState) 
+        method on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 
