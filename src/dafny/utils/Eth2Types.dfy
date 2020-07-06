@@ -145,20 +145,6 @@ module Eth2Types {
      */
     type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
 
-    /**
-     * Helper function to cast a well typed `RawSerialisable` to a
-     * `Serialisable`. Its mainly usage is for the cases where `Serialisable` is
-     * used as type parameter.
-     * 
-     * @param s RawSerialisable value
-     * @returns `s` typed as `Serialisable`
-     */
-    function method castToSerialisable(s:RawSerialisable):Serialisable
-    requires wellTyped(s)
-    {
-        s
-    }
-
     // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
 
     /** The type `Bytes4` corresponds to a Serialisable built using the
