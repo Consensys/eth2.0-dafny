@@ -165,67 +165,7 @@ module SSZ {
      *  @note       It would probabaly be good to return the suffix of `xs`
      *              that has not been used in the deserialisation as well.
      */
-    function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
-        requires !(s.Container_? || s.List_? || s.Vector_?)
-    {
-        match s
-            case Bool_ => if |xs| == 1 && 0 <= xs[0] <= 1 then
-                                Success(castToSerialisable(Bool(byteToBool(xs))))
-                            else 
-                                Failure
-                            
-            case Uint8_ => if |xs| == 1 then
-                                Success(castToSerialisable(Uint8(uintDes(xs))))
-                             else 
-                                Failure
-
-            case Uint16_ => if |xs| == 2 then
-                                Success(castToSerialisable(Uint16(uintDes(xs))))
-                             else 
-                                Failure
-            
-            case Uint32_ => if |xs| == 4 then
-                                Success(castToSerialisable(Uint32(uintDes(xs))))
-                             else 
-                                Failure
-
-            case Uint64_ => if |xs| == 8 then
-                                Success(castToSerialisable(Uint64(uintDes(xs))))
-                             else 
-                                Failure
-
-            case Uint128_ => if |xs| == 16 then
-                                constAsPowersOfTwo();
-                                Success(castToSerialisable(Uint128(uintDes(xs))))
-                             else 
-                                Failure
-
-            case Uint256_ => if |xs| == 32 then
-                                constAsPowersOfTwo();
-                                Success(castToSerialisable(Uint256(uintDes(xs))))
-                             else 
-                                Failure
-                                
-            case Bitlist_(limit) => if (|xs| >= 1 && xs[|xs| - 1] >= 1) then
-                                        var desBl := fromBytesToBitList(xs);
-                                        if |desBl| <= limit then
-                                            Success(castToSerialisable(Bitlist(desBl,limit)))
-                                        else
-                                            Failure
-                                    else
-                                        Failure
-
-            case Bitvector_(len) => if |xs| > 0 && len <= |xs| * BITS_PER_BYTE < len + BITS_PER_BYTE then
-                                        Success(castToSerialisable(Bitvector(fromBytesToBitVector(xs,len))))
-                                    else
-                                        Failure
-
-            case Bytes_(len) => if 0 < |xs| == len then
-                                  Success(castToSerialisable(Bytes(xs)))
-                                else Failure
-    }
-
-     function method deserialise2(xs : seq<byte>, s : Tipe) : Try<Serialisable>
+     function method deserialise(xs : seq<byte>, s : Tipe) : Try<Serialisable>
         requires !(s.Container_? || s.List_? || s.Vector_?)
     {
         match s
