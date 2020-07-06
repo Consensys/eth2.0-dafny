@@ -276,11 +276,6 @@ module SSZ {
             case Bytes(bs) => 
     }
 
-
-    // lemma foo(xs : seq<byte>, s : Tipe) 
-    //     requires deserialise(xs, s) != Failure
-    //     ensures 
-
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
