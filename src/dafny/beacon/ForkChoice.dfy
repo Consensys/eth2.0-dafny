@@ -31,6 +31,8 @@ module ForkChoice {
      *  The default block header.
      */
     const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
+
+    const EMPTY_BLOCK := BeaconBlock(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
     
     /**
      *  Genesis (initial) beacon state.
@@ -51,6 +53,12 @@ module ForkChoice {
         hash_tree_root(GENESIS_STATE)
     )
 
+    const GENESIS_BLOCK := BeaconBlock(
+        0 as Slot,  
+        EMPTY_BYTES32 , 
+        hash_tree_root(GENESIS_STATE)
+    )
+
     /**
      *  The store (memory) recording the blocks and the states.
      *  
@@ -64,6 +72,11 @@ module ForkChoice {
      */
     datatype Store = Store (
         blocks : map<Root, BeaconBlockHeader>,
+        block_states : map<Root, BeaconState>
+    )
+
+    datatype Store2 = Store2 (
+        blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>
     )
 
@@ -100,12 +113,36 @@ module ForkChoice {
         )
     }
 
+    function method get_forkchoice_store2(anchor_state: BeaconState) : Store2 
+        requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
+    {
+        // var anchor_block_header := anchor_state.latest_block_header.(
+        //     state_root := hash_tree_root(anchor_state)
+        // );
+        //  hash_tree_root(block) should be same as hash_tree_root(blockheader)
+        //  The anchor block is computed using the values of genesis state latest
+        //  block header.
+        var anchor_block := BeaconBlock(
+             anchor_state.latest_block_header.slot,
+             anchor_state.latest_block_header.parent_root,
+            hash_tree_root(anchor_state)
+        );
+        //  hash_tree_root(anchor_block) should be same as hash_tree_root(anchor_state.lastest_block_header);
+        var anchor_root := hash_tree_root(anchor_block);
+        Store2(
+            map[anchor_root := anchor_block],           // blocks
+            map[anchor_root := anchor_state]            //  block_states
+        )
+    }
+
     /**
      *  The genesis store.
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
      */
     const GENESIS_STORE := get_forkchoice_store(GENESIS_STATE)
+
+    const GENESIS_STORE2 := get_forkchoice_store2(GENESIS_STATE)
 
     /**
      *  Property of the genesis store.
@@ -114,6 +151,14 @@ module ForkChoice {
         ensures GENESIS_STORE == Store(
             map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_BLOCK_HEADER],
             map[hash_tree_root(GENESIS_BLOCK_HEADER) := GENESIS_STATE]
+        )
+    {   //  Thanks Dafny
+    }
+
+     lemma genesisStoreHasGenesisBlockAndState2() 
+        ensures GENESIS_STORE2 == Store2(
+            map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK],
+            map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
         )
     {   //  Thanks Dafny
     }
@@ -130,6 +175,8 @@ module ForkChoice {
          */
         var store : Store
 
+        var store2: Store2
+
         /**
          *  Track the set of blocks that have been added to the store.
          *  A block is added to accepted block whenever the pre-conditions
@@ -138,6 +185,8 @@ module ForkChoice {
          *  no failed asserts.)
          */
         ghost var acceptedBlocks : set<BeaconBlockHeader>
+
+        ghost var acceptedBlocks2 : set<BeaconBlock>
 
         /**
          *  Start with the genesis store and one accepted block, GENESIS_BLOCK_HEADER
@@ -149,8 +198,11 @@ module ForkChoice {
             /** Verify storeInvariant2() manually. */
             // ensures acceptedBlocks == {GENESIS_BLOCK_HEADER}
             ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.block_states.Keys
+            ensures hash_tree_root(GENESIS_BLOCK) in store2.block_states.Keys
             // ensures hash_tree_root(GENESIS_BLOCK_HEADER) in store.blocks.Keys
             ensures store.block_states[hash_tree_root(GENESIS_BLOCK_HEADER)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
+
+            ensures store2.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
 
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
@@ -158,6 +210,9 @@ module ForkChoice {
         {  
             store := GENESIS_STORE;
             acceptedBlocks := { GENESIS_BLOCK_HEADER }; 
+
+            store2 := GENESIS_STORE2;
+            acceptedBlocks2 := { GENESIS_BLOCK }; 
         }
 
         /** 
