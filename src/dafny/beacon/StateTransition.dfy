@@ -16,6 +16,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChain.dfy"
+include "Validators.dfy"
 
 /**
  * State transition function for the Beacon Chain.
@@ -26,6 +27,7 @@ module StateTransition {
     import opened Eth2Types
     import opened Constants
     import opened BeaconChain
+    import opened Validators
     import opened Helpers
 
     /** The default zeroed Bytes32.  */
@@ -476,4 +478,6 @@ module StateTransition {
             state_roots := new_state_roots
         )
     }
+
+
 }
