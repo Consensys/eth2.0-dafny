@@ -12,6 +12,7 @@
  * under the License.
  */
 
+include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
@@ -24,6 +25,7 @@ include "Validators.dfy"
 module StateTransition {
     
     //  Import some constants, types and beacon chain helpers.
+    import opened NativeTypes
     import opened Eth2Types
     import opened Constants
     import opened BeaconChain
@@ -104,6 +106,10 @@ module StateTransition {
      * @param   state_roots                     Per-slot store of the recent state roots.The state root for a slot is 
      *                                          stored at the start of the next slot to avoid a circular dependency.
      *
+     * @param   eth1_deposit_index              Index of the next deposit to be processed. Deposits must be added to the 
+     *                                          next block and processed if state.eth1_data.deposit_count > 
+     *                                          state.eth1_deposit_index
+     *
      * @note                                    Some fields are not integrated yet but a complete def can be found in 
      *                                          the archive branch.
      */
@@ -111,7 +117,8 @@ module StateTransition {
         slot: Slot,
         latest_block_header: BeaconBlockHeader,
         block_roots: VectorOfHistRoots,
-        state_roots: VectorOfHistRoots
+        state_roots: VectorOfHistRoots,
+        eth1_deposit_index : uint64
     )
 
     /**
@@ -133,10 +140,15 @@ module StateTransition {
                 forwardStateToSlot(resolveStateRoot(s), 
                 b.slot
             ).latest_block_header) 
+        //  Check that number of deposits in b.body can be processed
+        && s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
         //  Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
-                addBlockToState(
-                    forwardStateToSlot(resolveStateRoot(s), b.slot), 
+                updateDeposits(
+                    addBlockToState(
+                        forwardStateToSlot(resolveStateRoot(s), b.slot), 
+                        b
+                    ),
                     b
                 )
             )
@@ -154,6 +166,8 @@ module StateTransition {
         //  make sure the last state was one right after addition of new block
         requires isValid(s, b)
 
+        requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
+
         /** The next state latest_block_header is same as b except for state_root that is 0. */
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, EMPTY_BYTES32)
         /** s' slot is now adjusted to the slot of b. */
@@ -165,6 +179,7 @@ module StateTransition {
                 forwardStateToSlot(resolveStateRoot(s), b.slot)
                 .latest_block_header
             )
+        ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
@@ -210,6 +225,7 @@ module StateTransition {
 
         ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root  
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
         
         //  Termination ranking function
         decreases slot - s.slot
@@ -229,7 +245,9 @@ module StateTransition {
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != EMPTY_BYTES32
             invariant s' == forwardStateToSlot(resolveStateRoot(s), s'.slot) // Inv1
+            invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
+
         {
             s':= processSlot(s');
             //  Process epoch on the start slot of the next epoch
@@ -268,6 +286,7 @@ module StateTransition {
         ensures  s.latest_block_header.state_root != EMPTY_BYTES32 ==>
             s' == nextSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+        ensures s'.eth1_deposit_index == s'.eth1_deposit_index
     {
         s' := s;
 
@@ -300,8 +319,9 @@ module StateTransition {
      method processBlock(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState) 
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root(s.latest_block_header)
+        requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
 
-        ensures s' == addBlockToState(s, b)
+        ensures s' == updateDeposits(addBlockToState(s, b), b)
     {
         //  Start by creating a block header from the ther actual block.
         s' := processBlockHeader(s, b); 
@@ -326,6 +346,9 @@ module StateTransition {
         requires b.slot == s.slot  
         // Verify that the parent matches
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
+
+        requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000 
+
 
         ensures s' == addBlockToState(s, b)
     {
@@ -360,14 +383,17 @@ module StateTransition {
      *  @returns    The state obtained after applying the operations of `bb` to `s`.
      */
     method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
-        ensures s' == s
+        requires s.eth1_deposit_index as int + |bb.deposits| < 0x10000000000000000 
+        ensures s' == s.(eth1_deposit_index := (s. eth1_deposit_index as int + |bb.deposits|) as uint64 )
     {
-        //  process deposits of the beacon block body.
+        //  process deposits in the beacon block body.
         s' := s;
 
-        var i := 0;
+        var i := 0; 
         while i < |bb.deposits| 
-            invariant s' == s
+            invariant s.eth1_deposit_index as int + i <  0x10000000000000000 
+            invariant i <= |bb.deposits|
+            invariant s' == s.(eth1_deposit_index := s.eth1_deposit_index as int + i) ;  
         {
             s':= process_deposit(s', bb.deposits[i]);
             i := i + 1;
@@ -382,9 +408,24 @@ module StateTransition {
      *  @returns    The state obtained depositing of `d` to `s`.
      */
     method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
-        ensures s' == s
+        requires s. eth1_deposit_index as int + 1 < 0x10000000000000000 
+        ensures s' == s.(eth1_deposit_index := s. eth1_deposit_index + 1)
     {
-        return s;
+        s' := s;
+        //  Verify the Merkle branch
+        // assert is_valid_merkle_branch(
+        //     leaf=hash_tree_root(deposit.data),
+        //     branch=deposit.proof,
+        //     depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
+        //     index=state.eth1_deposit_index,
+        //     root=state.eth1_data.deposit_root,
+        // );
+        //  Deposits must be processed in order
+        s' := s.(eth1_deposit_index := s. eth1_deposit_index + 1);
+
+        // pubkey = deposit.data.pubkey
+        // amount = deposit.data.amount
+        return s';
     }
 
     //  Specifications of finalisation of a state and forward to future slot.
@@ -426,6 +467,8 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
+        //  eth1_deposit_index is left unchanged
+        ensures s.eth1_deposit_index == resolveStateRoot(s).eth1_deposit_index
     {
         var new_latest_block_header := 
             if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
@@ -441,7 +484,8 @@ module StateTransition {
             //  add new block_header root to block_roots history.
             s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
             //  add previous state root to state_roots history
-            s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
+            s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)],
+            s.eth1_deposit_index
         )
     }
 
@@ -458,7 +502,7 @@ module StateTransition {
 
         ensures forwardStateToSlot(s, slot).slot == slot
         ensures forwardStateToSlot(s, slot).latest_block_header ==  s.latest_block_header
-
+        ensures forwardStateToSlot(s, slot).eth1_deposit_index == s.eth1_deposit_index
         //  termination ranking function
         decreases slot - s.slot
     {
@@ -491,6 +535,21 @@ module StateTransition {
             slot := s.slot + 1,
             block_roots := new_block_roots,
             state_roots := new_state_roots
+        )
+    }
+
+     /**
+     *  Take into account deposits in a block.
+     *
+     *  @param  s       A beacon state.
+     *  @param  body    A block body.
+     *  @returns        The state obtained after taking account the deposits in `body` from state `s` 
+     */
+    function updateDeposits(s: BeaconState, b: BeaconBlock) : BeaconState 
+        requires s.eth1_deposit_index as int +  |b.body.deposits| < 0x10000000000000000 
+    {
+        s.(
+            eth1_deposit_index := (s.eth1_deposit_index as int + |b.body.deposits|) as uint64
         )
     }
 

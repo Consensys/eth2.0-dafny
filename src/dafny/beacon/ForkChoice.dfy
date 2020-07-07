@@ -39,7 +39,7 @@ module ForkChoice {
      *  
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
      */
-    const GENESIS_STATE := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS)
+    const GENESIS_STATE := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS, 0)
 
     /**
      *  Genesis block (header).
