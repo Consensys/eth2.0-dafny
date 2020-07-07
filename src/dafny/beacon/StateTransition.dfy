@@ -350,6 +350,26 @@ module StateTransition {
         return s;
     }
 
+    method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+    {
+        //  process deposits of the beacon block body.
+        s' := s;
+
+        var i := 0;
+        while i < |bb.deposits| 
+        {
+            s':= process_deposit(s', bb.deposits[i]);
+            i := i + 1;
+        }
+    }
+
+    method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
+    {
+        return s;
+    }
+
+
+
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
