@@ -58,15 +58,20 @@ module BeaconChain {
      *  @param  voluntary_exits
      */
     datatype BeaconBlockBody = BeaconBlockBody(
-        randao_reveal: BLSSignature,
-        eth1_data: Eth1Data,
+        // randao_reveal: BLSSignature,
+        // eth1_data: Eth1Data,
         // graffiti: uint32,                          //  In K: Bytes32
         // proposer_slashings: seq<ProposerSlashing>,
         // attester_slashings: seq<AttesterSlashing>,
         // attestations: seq<Attestation>,
-        deposits: seq<Deposit>,
-        voluntary_exits: seq<VoluntaryExit>
+        deposits: seq<Deposit>
+        // voluntary_exits: seq<VoluntaryExit>
     )
+
+    /**
+     *  The enmpty block body.
+     */
+    const EMPTY_BLOCK_BODY := BeaconBlockBody([])
 
     /**
      *  Beacon block.
@@ -99,8 +104,8 @@ module BeaconChain {
         slot: Slot,
         // proposer_index: ValidatorIndex,
         parent_root: Root,
-        state_root: Root
-        // body: BeaconBlockBody
+        state_root: Root,
+        body: BeaconBlockBody
     )  
 
     /**

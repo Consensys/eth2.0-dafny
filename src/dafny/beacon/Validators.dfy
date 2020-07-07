@@ -68,10 +68,10 @@ module Validators {
      *                                  securely using BLS keys.
      */
     datatype DepositData = DepositData(
-        pubkey: BLSPubkey,
-        withdrawal_credentials: Hash,
-        amount: int,
-        signature: BLSSignature
+        // pubkey: BLSPubkey,
+        // withdrawal_credentials: Hash,
+        amount: Gwei
+        // signature: BLSSignature
     )
 
     /**
@@ -86,7 +86,7 @@ module Validators {
      *                  verified using the proof against the state.eth1_data.root.
      */
     datatype Deposit = Deposit(
-        proof: array<Hash>,  
+        // proof: array<Hash>,  
         data: DepositData
     )
 

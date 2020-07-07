@@ -32,7 +32,7 @@ module ForkChoice {
      */
     const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
 
-    const EMPTY_BLOCK := BeaconBlock(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
+    const EMPTY_BLOCK := BeaconBlock(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32, EMPTY_BLOCK_BODY)
     
     /**
      *  Genesis (initial) beacon state.
@@ -61,7 +61,8 @@ module ForkChoice {
     const GENESIS_BLOCK := BeaconBlock(
         0 as Slot,  
         EMPTY_BYTES32 , 
-        hash_tree_root(GENESIS_STATE)
+        hash_tree_root(GENESIS_STATE),
+        EMPTY_BLOCK_BODY
     )
 
     /**
@@ -109,7 +110,8 @@ module ForkChoice {
         var anchor_block := BeaconBlock(
              anchor_state.latest_block_header.slot,
              anchor_state.latest_block_header.parent_root,
-            hash_tree_root(anchor_state)
+            hash_tree_root(anchor_state),
+            EMPTY_BLOCK_BODY
         );
         var anchor_root := hash_tree_root(anchor_block);
         Store(
