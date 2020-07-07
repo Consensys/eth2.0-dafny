@@ -308,7 +308,7 @@ module StateTransition {
         
         //  process_randao(s, b.body)
         //  process_eth1_data(s, b.body)
-        //  process_operations(s, b.body)
+        s' := process_operations(s', b.body);
     }
 
     /**
@@ -352,25 +352,40 @@ module StateTransition {
         return s;
     }
 
+    /**
+     *  Process the operations defined by a block body.
+     *  
+     *  @param  s   A state.
+     *  @param  bb  A block body.
+     *  @returns    The state obtained after applying the operations of `bb` to `s`.
+     */
     method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        ensures s' == s
     {
         //  process deposits of the beacon block body.
         s' := s;
 
         var i := 0;
         while i < |bb.deposits| 
+            invariant s' == s
         {
             s':= process_deposit(s', bb.deposits[i]);
             i := i + 1;
         }
     }
 
+    /**
+     *  Process a deposit operation.
+     *
+     *  @param  s   A state.
+     *  @param  d   A deposit.  
+     *  @returns    The state obtained depositing of `d` to `s`.
+     */
     method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
+        ensures s' == s
     {
         return s;
     }
-
-
 
     //  Specifications of finalisation of a state and forward to future slot.
 
