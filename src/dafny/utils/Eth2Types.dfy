@@ -126,7 +126,6 @@ module Eth2Types {
                 //  Lists must have less than limit elements, cannot be of type bool (there
                 // is bitlist for that) and the type of the elements is welltyped and constant.
                 |l| <= limit
-                && t != Bool_
                 && (forall i | 0 <= i < |l| :: wellTyped(l[i]))                                   
                 && forall i | 0 <= i < |l| :: typeOf(l[i]) == t 
 
@@ -135,7 +134,6 @@ module Eth2Types {
                 |v| > 0
                 && (forall i | 0 <= i < |v| :: wellTyped(v[i])) 
                 && (forall i,j | 0 <= i < |v| && 0 <= j < |v| :: typeOf(v[i]) == typeOf(v[j]))
-                && (typeOf(v[0])) != Bool_
     }
 
     /**
