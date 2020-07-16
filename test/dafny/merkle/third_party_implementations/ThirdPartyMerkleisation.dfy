@@ -27,4 +27,6 @@ module {:extern "thirdpartymerkleisation"} ThirdPartyMerkleisation {
 
     function method {:extern} ListBytes32Root(l: seq<seq<byte>>, limit:nat): hash32
     requires forall i |  0 <= i < |l| :: |l[i]| == 32
+
+    function method {:extern} BeaconStateRoot(s:BeaconState): hash32
 }

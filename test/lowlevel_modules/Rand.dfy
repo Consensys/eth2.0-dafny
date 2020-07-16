@@ -12,12 +12,10 @@
  * under the License.
  */
  
-include "../../src/dafny/utils/Helpers.dfy"
-include "../../src/dafny/utils/Eth2Types.dfy"
+include "../../src/dafny/utils/NativeTypes.dfy"
 
 module {:extern "myrand"} Rand {
-    import opened Eth2Types
     import opened NativeTypes
 
-    function method {:extern} Rand():nat
+    function method {:extern} Rand():uint64
 }

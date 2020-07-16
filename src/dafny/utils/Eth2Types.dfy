@@ -221,8 +221,6 @@ module Eth2Types {
     type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
                                     witness Bytes(timeSeq(0 as byte, 96))
 
-    type Vector4 = s:Serialisable | s.Vector? && |s.v| == 4
-
     // EMPTY_BYTES32
 
     // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)

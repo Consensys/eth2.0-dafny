@@ -18,6 +18,7 @@ using System.Numerics;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace thirdpartymerkleisation
 {
@@ -243,6 +244,74 @@ namespace thirdpartymerkleisation
                 // Convert the C# byte array containing the data read from the
                 // process stdout to a Dafny sequence of byte
                 return Dafny.Sequence<byte>.FromElements(retBytes);
+        }
+
+        public static Dafny.Sequence<byte> BeaconStateRoot(_13_Eth2Types_Compile.RawSerialisable rawBeaconState)
+        {
+            // Convert RawSerialisable values to C# types
+            _13_Eth2Types_Compile.RawSerialisable_BeaconState beaconState = (_13_Eth2Types_Compile.RawSerialisable_BeaconState)rawBeaconState;
+            BigInteger firstSlot = ((_13_Eth2Types_Compile.RawSerialisable_Uint64)beaconState.slot).n;
+            _13_Eth2Types_Compile.RawSerialisable_BeaconBlockHeader beaconBlockHeader = (_13_Eth2Types_Compile.RawSerialisable_BeaconBlockHeader)beaconState.latest__block__header;
+            BigInteger secondSlot = ((_13_Eth2Types_Compile.RawSerialisable_Uint64)beaconBlockHeader.slot).n;
+            IEnumerable<byte>  parent_root = ((_13_Eth2Types_Compile.RawSerialisable_Bytes)beaconBlockHeader.parent__root).bs.Elements;
+            IEnumerable<byte>  state_root = ((_13_Eth2Types_Compile.RawSerialisable_Bytes)beaconBlockHeader.state__root).bs.Elements;
+            IEnumerable<IEnumerable<byte> > block_roots = 
+                from bs in ((Dafny.Sequence<_13_Eth2Types_Compile.RawSerialisable>)((_13_Eth2Types_Compile.RawSerialisable_Vector)beaconState.block__roots).v).Elements
+                select ((_13_Eth2Types_Compile.RawSerialisable_Bytes)bs).bs.Elements;
+
+            IEnumerable<IEnumerable<byte> > state_roots = 
+                from bs in ((Dafny.Sequence<_13_Eth2Types_Compile.RawSerialisable>)((_13_Eth2Types_Compile.RawSerialisable_Vector)beaconState.state__roots).v).Elements
+                select ((_13_Eth2Types_Compile.RawSerialisable_Bytes)bs).bs.Elements;                
+
+            // Concatenate the string representations of the values of all the fields
+            // into a space separated string
+            List<String> arguments = new List<String>();
+            arguments.Add(firstSlot.ToString());
+            arguments.Add(secondSlot.ToString());
+            parent_root.ToList().ForEach(b => arguments.Add(b.ToString()));
+            state_root.ToList().ForEach(b => arguments.Add(b.ToString()));
+            block_roots.ToList().ForEach(
+                s => s.ToList().ForEach(
+                    b => arguments.Add(b.ToString())
+                )
+            );
+            state_roots.ToList().ForEach(
+                s => s.ToList().ForEach(
+                    b => arguments.Add(b.ToString())
+                )
+            );
+            String argumentsWithSpaces = String.Join(" ",arguments.ToArray());
+
+            // Set command and command line
+            ProcessStartInfo start = new ProcessStartInfo();
+            start.FileName = "python3";
+            start.Arguments="PySszBeaconStateMerkleisation.py ";
+
+            // Set redirections for stdout and stdin
+            start.UseShellExecute = false;
+            start.RedirectStandardInput = true;
+            start.RedirectStandardOutput = true;
+
+            // Start the process
+            Process cmdProcess = new Process();
+            cmdProcess.StartInfo = start;
+            cmdProcess.Start();   
+
+            // Write to the process stdin in binary format and then closes
+            // the stream
+            var bw = new BinaryWriter(cmdProcess.StandardInput.BaseStream);
+            bw.Write(Encoding.UTF8.GetBytes(argumentsWithSpaces)); 
+            cmdProcess.StandardInput.Close();  
+
+            // Wait for the process to complete
+            cmdProcess.WaitForExit();          
+
+            var br = new BinaryReader(cmdProcess.StandardOutput.BaseStream);
+            byte[] retBytes = br.ReadBytes(32);
+
+            // Convert the C# byte array containing the data read from the
+            // process stdout to a Dafny sequence of byte
+            return Dafny.Sequence<byte>.FromElements(retBytes);  
         }
     }
 }

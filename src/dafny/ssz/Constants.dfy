@@ -11,10 +11,11 @@ module Constants {
 
   //  Powers of 2
   const TWO_UP_0 := 1;
-  const TWO_UP_2 := 2 * TWO_UP_0;
+  const TWO_UP_1 := 2;
+  const TWO_UP_2 := 2 * 2;
   const TWO_UP_3 := 2 * TWO_UP_2;
   const TWO_UP_4 := TWO_UP_2 * TWO_UP_2;
-  const TWO_UP_5 := 2 * TWO_UP_2 * TWO_UP_2;
+  const TWO_UP_5 := 2 * TWO_UP_4;
   const TWO_UP_6 := 2 * TWO_UP_5;
   const TWO_UP_7 := 2 * TWO_UP_6;
   const TWO_UP_8 := 2 * TWO_UP_7;

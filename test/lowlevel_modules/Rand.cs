@@ -21,9 +21,9 @@ namespace myrand
     
     public partial class __default {
         private static Random rnd = new Random();
-        public static BigInteger Rand()
+        public static UInt64 Rand()
         {
-            return (BigInteger) rnd.Next();
+            return (UInt64) (rnd.NextDouble() * UInt64.MaxValue);
         }
     }
 }
