@@ -49,8 +49,7 @@ module Constants {
   const TWO_UP_64 := TWO_UP_32 * TWO_UP_32;
   const TWO_UP_128 := TWO_UP_64 * TWO_UP_64;
   
-  const TWO_UP_256 := TWO_UP_128 * TWO_U
-  P_128;
+  const TWO_UP_256 := TWO_UP_128 * TWO_UP_128;
 
   //  Powers of 10
   const TEN_UP_2 := 10 * 10;
