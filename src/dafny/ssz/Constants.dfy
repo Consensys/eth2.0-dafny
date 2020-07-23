@@ -27,22 +27,23 @@ module Constants {
 
   //  Powers of 2
   const TWO_UP_0 := 1;
-  const TWO_UP_2 := 2 * TWO_UP_0;
-  const TWO_UP_3 := 2 * TWO_UP_2;
+  const TWO_UP_1 := 2;
+  const TWO_UP_2 := TWO_UP_1 * TWO_UP_1;
+  const TWO_UP_3 := TWO_UP_1 * TWO_UP_2;
   const TWO_UP_4 := TWO_UP_2 * TWO_UP_2;
-  const TWO_UP_5 := 2 * TWO_UP_2 * TWO_UP_2;
-  const TWO_UP_6 := 2 * TWO_UP_5;
-  const TWO_UP_7 := 2 * TWO_UP_6;
-  const TWO_UP_8 := 2 * TWO_UP_7;
-  const TWO_UP_9 := 2 * TWO_UP_8;
+  const TWO_UP_5 := TWO_UP_1 * TWO_UP_4;
+  const TWO_UP_6 := TWO_UP_1 * TWO_UP_5;
+  const TWO_UP_7 := TWO_UP_1 * TWO_UP_6;
+  const TWO_UP_8 := TWO_UP_1 * TWO_UP_7;
+  const TWO_UP_9 := TWO_UP_1 * TWO_UP_8;
   const TWO_UP_10 := TWO_UP_5 * TWO_UP_5;
   const TWO_UP_11 := TWO_UP_6 * TWO_UP_5;
-  const TWO_UP_12 := 2 * TWO_UP_13;
+  const TWO_UP_12 := TWO_UP_1 * TWO_UP_11;
   const TWO_UP_13 := TWO_UP_2 * TWO_UP_11;
-  const TWO_UP_14 := 2 * TWO_UP_13;
+  const TWO_UP_14 := TWO_UP_1 * TWO_UP_13;
   const TWO_UP_16 := TWO_UP_5 * TWO_UP_11;
   const TWO_UP_24 := TWO_UP_12 * TWO_UP_12;
-  const TWO_UP_25 := 2 * TWO_UP_24;
+  const TWO_UP_25 := TWO_UP_1 * TWO_UP_24;
   const TWO_UP_32 := TWO_UP_16 * TWO_UP_16;
   const TWO_UP_40 := TWO_UP_10 * TWO_UP_10 * TWO_UP_10 * TWO_UP_10;
   const TWO_UP_64 := TWO_UP_32 * TWO_UP_32;
