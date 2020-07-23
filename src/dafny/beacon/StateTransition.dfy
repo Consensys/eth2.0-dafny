@@ -110,6 +110,11 @@ module StateTransition {
      *                                          next block and processed if state.eth1_data.deposit_count > 
      *                                          state.eth1_deposit_index
      *
+     * @param   validators                      List of Validator records, tracking the current full registry. Each 
+     *                                          validator contains  relevant data such as pubkey, withdrawal credentials,
+     *                                          effective balance, a slashed  boolean, and status (pending, active, 
+     *                                          exited, etc)
+     *
      * @note                                    Some fields are not integrated yet but a complete def can be found in 
      *                                          the archive branch.
      */
@@ -118,7 +123,8 @@ module StateTransition {
         latest_block_header: BeaconBlockHeader,
         block_roots: VectorOfHistRoots,
         state_roots: VectorOfHistRoots,
-        eth1_deposit_index : uint64
+        eth1_deposit_index : uint64,
+        validators: seq<Validator>
     )
 
     /**
@@ -425,8 +431,49 @@ module StateTransition {
 
         // pubkey = deposit.data.pubkey
         // amount = deposit.data.amount
+        // validator_pubkeys = [v.pubkey for v in state.validators]
+        // if pubkey not in validator_pubkeys:
+        //     # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+        //     deposit_message = DepositMessage(
+        //         pubkey=deposit.data.pubkey,
+        //         withdrawal_credentials=deposit.data.withdrawal_credentials,
+        //         amount=deposit.data.amount,
+        //     )
+        //     domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
+        //     signing_root = compute_signing_root(deposit_message, domain)
+        //     if not bls.Verify(pubkey, signing_root, deposit.data.signature):
+        //         return
+
+        //     # Add validator and balance entries
+        //     state.validators.append(get_validator_from_deposit(state, deposit))
+        //     state.balances.append(amount)
+        // else:
+        //     # Increase balance by deposit amount
+        //     index = ValidatorIndex(validator_pubkeys.index(pubkey))
+            // increase_balance(state, index, amount)
+
+        //  Simplified version assuming the validator is already in state.validators (else section above)
+        //  Increase balance by deposit amount
+        // var index := ValidatorIndex(validator_pubkeys.index(pubkey))
+        // increase_balance(state, index, amount);
         return s';
     }
+
+
+    /**
+     *  Collect oubkey in a list of validators.
+     *
+     *  @param  xv  A list of validators,
+     *  @returns    The set of keys helpd byt the validators in `xv`.
+     */
+    function keysInValidators(xv : seq<Validator>) : set<BLSPubkey>
+    {
+        if |xv| == 0 then  
+            {}
+        else 
+            { xv[0].pubkey } + keysInValidators(xv[1..])
+    }
+
 
     //  Specifications of finalisation of a state and forward to future slot.
 
@@ -485,7 +532,8 @@ module StateTransition {
             s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
             //  add previous state root to state_roots history
             s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)],
-            s.eth1_deposit_index
+            s.eth1_deposit_index,
+            s.validators
         )
     }
 
