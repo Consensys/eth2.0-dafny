@@ -287,7 +287,8 @@ module Eth2Types {
     //  TODO: change the Bytes type
     // type SerialisedBytes = seq<byte> 
     
-    type BLSPubkey = String
+    type BLSPubkey = Bytes48
+    
     type BLSSignature = String      //a BLS12-381 signature.
 
     type Slot = uint64
