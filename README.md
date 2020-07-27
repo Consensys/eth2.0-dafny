@@ -17,32 +17,42 @@ The objective of this project is to write a **formal specification** of the Eth2
 
 More specifically, our goals in this project are many-fold:
 
-1. Write a **formal (non-ambiguous) specification** of the Eth2.0 specification.
-This specification is written using pre/post-conditions using the [Hoare logic](https://en.wikipedia.org/wiki/Hoare_logic) style proof.
+1. Write a **formal (non-ambiguous and functional) specification** of the Eth2.0 specification.
+This specification is written with pre/post-conditions using the [Hoare logic](https://en.wikipedia.org/wiki/Hoare_logic) style proof.
 2. Write an **implementation** for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
 3. **Formally prove** that our implementation satisfies the specification. The formal proof is provided in the form of mathematical proofs of lemmas written in Dafny.
 
 To achieve this, we use the capabilities of the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
 
-Here is a youtube video with a presentation 
+Here is a recent youtube video with a presentation 
+
 [![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
 
-## Expected Results
+## Methodology
 
 Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasoning engines (SMT-solvers).
 As a result, Dafny can assist in proving the lemmas that specify **correctness**.
 Moreover, as the lemmas are written as Dafny programs, they provide a **non-ambiguous mathematical proof** that the code is correct with respect to a specification.
 All the proofs can be **mechanically verified** using theorem provers.
 
-## Current State 
+## Results
 
-We are gradually adding the specifications, implementations and proofs.
-Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain.  
+We are gradually adding the Dafny specifications, implementations and proofs.
+Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain. 
 
-# Background & Context
+An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
-The Eth2.0 specifications are rather complex.
-As a consequence bugs, glitches or inconsistencies can creep into the specification and the implementation code.
+* [Introduction](./wiki/overview.md) to the Beacon Chain,
+* [Notes on SSZ](./wiki/ssz-notes.d) specifications, implementations and proofs,
+* [Notes on Merkleisation](./wiki/merkleise-notes.md)  specifications, implementations and proofs,
+* [Notes  on Beacon Chain](./wiki/beacon-notes.md) specifications, implementations and proofs.
+
+# Why We Should Formally Verify the Eth2.0 Specs
+
+## Background & Context
+
+The Eth2.0 specifications are subtle and sometimes complex.
+As a consequence, bugs, glitches or inconsistencies can creep into the specification and the implementation code.
 
 Testing and code peer reviews can help keeping the bugs count low.
 However, testing can find some bugs but in general _cannot guarantee the absence of bugs_ ([Edsger W. Dijkstra](https://en.wikiquote.org/wiki/Edsger_W._Dijkstra)).
@@ -52,7 +62,9 @@ Worse, they can be exploited as _security vulnerabilities_.
 An example of critical vulnerability is the OutOfBounds exception where a non-existent index in an array is accessed. This is one of the most common _zero day_ attacks, and can occur in heavily tested code bases
 [e.g. in the web browser Chromium](https://latesthackingnews.com/2020/02/26/google-patch-serious-chrome-bugs-including-a-zero-day-under-active-exploit/).
 
-# Related Work
+You can read more about the specific case of the Beacon Chain in our [Wiki section](./wiki/overview.md).
+
+## Related Work
 
 Runtime Verification Inc. have reported some work on:
 <!-- 

@@ -1,4 +1,4 @@
-## What can go wrong with the Beacon Chain? 
+# What can go wrong with the Beacon Chain? 
 
 In this simple context, one may think that it is easy enough to implement the state machine and the state transition function that computes the new state after accepting a valid transaction.
 
@@ -13,7 +13,7 @@ Some of the information stored in the state is encoded as a hash which is a comp
 Moreover, when a state transition occurs, the previous state (its hash) is recorded in the new block (`state_root`). 
 This enables efficient checks (including the validity of a block) and operations but at the same time makes the computation of the  state transition function error-prone.  
 
-## What are the desirable properties of the Beacon Chain? 
+# What are the desirable properties of the Beacon Chain? 
 As for Timsort, **underflows or overflows** can have dire consequences: the Beacon Chain specifies the type of many variables including the balances to be unsigned integers over 64 bits. 
 It is therefore important to make sure that no under/overflow can ever occur as this would result in inconsistent values (the result of the product `2^32 * 2^32` cannot be represented on 64 bits).
 
@@ -25,7 +25,7 @@ Finally there is some **consistency** to guarantee **between the state and the s
 Notice that these properties do not have anything to do with distributed/decentralised algorithms, but are **requirements about the state machine** that records the transactions. 
 The decentralised version of the Beacon Chain implements the Beacon Chain as a replication of this state machine [2]. As a result, bugs in the state machine will carry over to the replicated (decentralised) version of the state machine. 
 
-## Debugging the Beacon Chain
+# Debugging the Beacon Chain
 
 The Eth2.0 Specifications aim to provide a detailed description of the mechanisms and computations of the Beacon Chain. 
 However, they are written in an operational style (based off Python) much akin to an implementation. They provide detailed descriptions of how the results of each function are computed rather than what is expected to be computed. 
@@ -87,8 +87,9 @@ write the specification, the implementation and the proofs.
 
 The following notes provide some guidance to read our formal Dafny specs: 
 
-* [Notes on Beacon Chain](./beacon-notes.md),
 * [Notes on SSZ](./ssz-notes.md).
+* [Notes on Merkleisation](./merkleise-notes),
+* [Notes on Beacon Chain](./beacon-notes.md).
 
 
 
