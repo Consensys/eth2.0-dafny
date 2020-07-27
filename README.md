@@ -24,9 +24,6 @@ This specification is written with pre/post-conditions using the [Hoare logic](h
 
 To achieve this, we use the capabilities of the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
 
-Here is a recent youtube video with a presentation 
-
-[![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
 
 ## Methodology
 
@@ -46,6 +43,11 @@ An introduction (WIP) to the different components of Phase 0 is available in the
 * [Notes on SSZ](./wiki/ssz-notes.d) specifications, implementations and proofs,
 * [Notes on Merkleisation](./wiki/merkleise-notes.md)  specifications, implementations and proofs,
 * [Notes  on Beacon Chain](./wiki/beacon-notes.md) specifications, implementations and proofs.
+
+Here is a recent youtube video with a presentation 
+
+[![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
+
 
 # Why We Should Formally Verify the Eth2.0 Specs
 
