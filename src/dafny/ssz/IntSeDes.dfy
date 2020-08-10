@@ -39,43 +39,43 @@ module IntSeDes {
         ensures power2(128) == 0x100000000000000000000000000000000
         ensures power2(256) == 0x10000000000000000000000000000000000000000000000000000000000000000 
     {
-        calc {
+        calc == {
             power2(16);
             == { productRulePower2(8, 8); }
             power2(8) * power2(8);
-            == calc { power2(8) == 0x100 ; }
+            == calc == { power2(8) == 0x100 ; }
             0x100 * 0x100;
             == 
             0x10000;
         }
-        calc {
+        calc == {
             power2(32);
             == { productRulePower2(16, 16); }
             power2(16) * power2(16);
-            == calc { power2(16) == 0x100 ; }
+            == calc == { power2(16) == 0x100 ; }
             0x10000 * 0x10000;
             == 
             0x100000000;
         }
-        calc {
+        calc == {
             power2(64);
             == { productRulePower2(32, 32); }
             power2(32) * power2(32);
-            == calc { power2(32) == 0x100000000 ; }
+            == calc == { power2(32) == 0x100000000 ; }
             0x100000000 * 0x100000000;
             == 
             0x10000000000000000;
         }
-        calc {
+        calc == {
             power2(128);
             == { productRulePower2(64, 64); }
             power2(64) * power2(64);
-            == calc { power2(64) == 0x10000000000000000 ; }
+            == calc == { power2(64) == 0x10000000000000000 ; }
             0x10000000000000000 * 0x10000000000000000;
             == 
             0x100000000000000000000000000000000;
         }
-        calc {
+        calc == {
             power2(256);
             == { productRulePower2(128, 128); }
             power2(128) * power2(128);
