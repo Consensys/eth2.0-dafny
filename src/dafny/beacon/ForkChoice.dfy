@@ -322,7 +322,7 @@ module ForkChoice {
 
             reads this
 
-            //  Computation always terminate as slot number decreases.
+            //  Computation always terminates as slot number decreases.
             decreases store.blocks[r].slot
         {
             if ( store.blocks[r].slot == 0 ) then
