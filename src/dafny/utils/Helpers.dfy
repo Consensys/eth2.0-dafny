@@ -72,9 +72,10 @@ module Helpers {
      *         position `i` is `f(i)`.
      */
     function method initSeq<T>(f:nat --> T, nEl: nat): seq<T>
-    requires forall i | 0 <= i < nEl :: f.requires(i)
-    ensures |initSeq(f,nEl)| == nEl
-    ensures forall i | 0 <= i < nEl :: initSeq(f,nEl)[i] == f(i)
+        requires forall i | 0 <= i < nEl :: f.requires(i)
+        ensures |initSeq(f,nEl)| == nEl
+        ensures forall i | 0 <= i < nEl :: initSeq(f,nEl)[i] == f(i)
+        decreases nEl
     {
         if nEl==0 then
             []
@@ -93,9 +94,10 @@ module Helpers {
      *          `m(s[i])`.
      */
     function method seqMap<T1,T2>(s:seq<T1>, m: T1 --> T2): seq<T2>
-    requires forall i | 0 <= i < |s| :: m.requires(s[i])
-    ensures |seqMap(s,m)| == |s|
-    ensures forall i | 0 <= i < |s| :: seqMap(s,m)[i] == m(s[i])
+        requires forall i | 0 <= i < |s| :: m.requires(s[i])
+        ensures |seqMap(s,m)| == |s|
+        ensures forall i | 0 <= i < |s| :: seqMap(s,m)[i] == m(s[i])
+        decreases s
     {
         if |s| == 0 then 
             []
@@ -178,7 +180,7 @@ module Helpers {
         if (|s| == 0) {
             //  Thanks Dafny
         } else {
-            calc {
+            calc == {
                 flatten(s + [x]);
                 == { seqHeadTail(s) ; } 
                 flatten([s[0]] + s[1..] + [x]);
@@ -198,7 +200,7 @@ module Helpers {
     lemma {:induction s1, s2} lengthDistribFlatten<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures |flatten(s1 + s2)| == |flatten(s1)| + |flatten(s2)|
     {
-        calc {
+        calc == {
             |flatten(s1 + s2)|;
             == { flattenDistributes(s1, s2) ; }
             |flatten(s1) + flatten(s2)|;
@@ -215,13 +217,13 @@ module Helpers {
         decreases |s2|
     {   
         if (|s2| == 0) {
-            calc {
+            calc == {
                 flatten(s1 + s2);
                 == { seqElimEmpty(s1) ; }
                 flatten(s1) ;
             }
         } else {
-            calc {
+            calc == {
                 flatten(s1 + s2);
                 == { seqHeadTail(s2) ; }
                 flatten(s1 + ([s2[0]] + s2[1..]));
@@ -260,7 +262,7 @@ module Helpers {
     lemma {:induction s1, s2} flattenLengthDistributes<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures flattenLength(s1 + s2) == flattenLength(s1) + flattenLength(s2)
     {
-        calc {
+        calc == {
             flattenLength(s1 + s2);
             ==
             |flatten(s1 + s2)|;
@@ -278,7 +280,7 @@ module Helpers {
         requires 0 <= i < |s|
         ensures flattenLength(s[..i]) <= flattenLength(s)
     {
-        calc {
+        calc == {
             flattenLength(s);
             == { seqSplit(s, i) ; }
             flattenLength(s[..i] + s[i..]);
