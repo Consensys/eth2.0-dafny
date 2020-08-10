@@ -129,9 +129,10 @@ include "Constants.dfy"
     /**
      *  Bitvector encoding of a decoded `xb` returns `xb`.
      */
-    lemma  bitvectorEncodeDecodeIsIdentity(xb: seq<byte>, len:nat) 
+    lemma  {:induction xb} bitvectorEncodeDecodeIsIdentity(xb: seq<byte>, len:nat) 
         requires fromBytesToBitVector.requires(xb, len)
         ensures fromBitvectorToBytes(fromBytesToBitVector(xb,len)) == xb
+        decreases xb
     {
         //  The structure of the proof is split in 2 cases to follow
         //  the definition of fromBytesToBitVector and make it easier to prove

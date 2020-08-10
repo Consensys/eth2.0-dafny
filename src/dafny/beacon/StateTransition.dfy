@@ -397,6 +397,7 @@ module StateTransition {
 
         var i := 0; 
         while i < |bb.deposits| 
+            decreases |bb.deposits| - i
             invariant s.eth1_deposit_index as int + i <  0x10000000000000000 
             invariant i <= |bb.deposits|
             invariant s' == s.(eth1_deposit_index := s.eth1_deposit_index as int + i) ;  
@@ -467,6 +468,7 @@ module StateTransition {
      *  @returns    The set of keys helpd byt the validators in `xv`.
      */
     function keysInValidators(xv : seq<Validator>) : set<BLSPubkey>
+        decreases xv
     {
         if |xv| == 0 then  
             {}

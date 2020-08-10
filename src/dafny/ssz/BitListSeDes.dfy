@@ -279,7 +279,7 @@ include "Constants.dfy"
             byteTo8Bits(b) + fromBytesToBitList(m) 
     { 
         if ( |m| == 0 ) {
-            calc {
+            calc == {
                 fromBytesToBitList([b] + m) ;
                 == { seqElimEmpty([b]); }
                 fromBytesToBitList([b]);
@@ -287,15 +287,14 @@ include "Constants.dfy"
                 byteTo8Bits(b) ;
                 == { seqElimEmpty(byteTo8Bits(b)) ; }
                 byteTo8Bits(b) + [];
-                == calc {
+                == calc == {    //  following terms are equal
                     fromBytesToBitList([]);
-                    ==
                     [];
                 }
                 byteTo8Bits(b) + fromBytesToBitList([]);
             }
         } else {
-            calc {
+            calc == {
                 fromBytesToBitList([b] + m) ;
                 == //   Definition of fromBytesToBitList
                 byteTo8Bits(b) + fromBytesToBitList(m);

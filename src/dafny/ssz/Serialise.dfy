@@ -105,6 +105,7 @@ module SSZ {
         requires  typeOf(s) != Container_
         requires s.List? ==> match s case List(_,t,_) => isBasicTipe(t)
         requires s.Vector? ==> match s case Vector(v) => isBasicTipe(typeOf(v[0]))
+        decreases s
     {
         //  Equalities between upper bounds of uintk types and powers of two 
         constAsPowersOfTwo();
@@ -146,6 +147,7 @@ module SSZ {
         requires forall i,j | 0 <= i < |s| && 0 <= j < |s| :: typeOf(s[i]) == typeOf(s[j])
         ensures |s| == 0 ==> |serialiseSeqOfBasics(s)| == 0
         ensures |s| > 0  ==>|serialiseSeqOfBasics(s)| == |s| * |serialise(s[0])|
+        decreases s
     {
         if |s| == 0 then
             []
@@ -254,7 +256,7 @@ module SSZ {
     /** 
      * Well typed deserialisation does not fail. 
      */
-    lemma wellTypedDoesNotFail(s : Serialisable) 
+    lemma {:induction s} wellTypedDoesNotFail(s : Serialisable) 
         requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) != Failure 
     {
@@ -283,7 +285,7 @@ module SSZ {
     /** 
      * Deserialise(serialise(-)) = Identity for well typed objects.
      */
-    lemma seDesInvolutive(s : Serialisable) 
+    lemma {:induction s} seDesInvolutive(s : Serialisable) 
         requires !(s.Container? || s.List? || s.Vector?)
         ensures deserialise(serialise(s), typeOf(s)) == Success(s) 
     {   
@@ -327,7 +329,7 @@ module SSZ {
         if ( typeOf(s1) ==  typeOf(s2)) {
             if ( serialise(s1) == serialise(s2) ) {
                 //  Show that success(s1) == success(s2) which implies s1 == s2
-                calc {
+                calc == {
                     Success(s1) ;
                     == { seDesInvolutive(s1); }
                     deserialise(serialise(s1), typeOf(s1));

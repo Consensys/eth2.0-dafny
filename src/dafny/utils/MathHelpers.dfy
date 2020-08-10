@@ -56,7 +56,7 @@ module MathHelpers {
         } else {
             //  Induction on (n + 1)/2
             var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
-            calc {
+            calc == {
                 get_next_power_of_two(n);
                 ==  //  Definition of 
                 2 * get_next_power_of_two( (n + 1) / 2);
@@ -88,14 +88,14 @@ module MathHelpers {
      */
     lemma {:induction n} getPrevPow2isPower2(n: nat)
         requires n > 0
-        ensures exists k:nat  ::  get_prev_power_of_two(n) == power2(k) 
+        ensures exists k:nat  {:induction k} ::  get_prev_power_of_two(n) == power2(k) 
     {
         if n <= 1 {
             assert(get_prev_power_of_two(n) == power2(0)) ;
         } else {
             //  Induction on n / 2
             var k: nat :| get_prev_power_of_two( n / 2 ) == power2(k) ;
-            calc {
+            calc == {
                 get_prev_power_of_two(n);
                 == //   Defintion of.
                 2 * get_prev_power_of_two( n / 2 );
@@ -139,11 +139,11 @@ module MathHelpers {
         if k == 0 {
             //  Dafny can figure it out
         } else {
-            calc {:induction k} {
+            calc {:induction k} == {
                 power2( n + k );
                 == 
                 2 * power2( n + (k - 1) );
-                == calc {
+                == calc == {
                         power2( n + (k - 1) );
                         power2(n) * power2(k - 1);
                     }
@@ -157,9 +157,9 @@ module MathHelpers {
         requires n >= 1
         ensures power2( 2 * n ) >= 2 * power2(n)
     {
-            calc {
+            calc == {
                 power2( 2 * n );
-                == calc { 
+                == calc == { 
                     2 * n == n + n ;
                 } 
                 power2(n + n);
@@ -175,7 +175,7 @@ module MathHelpers {
      */
     predicate isPowerOf2(n: nat)
     {
-        exists k:nat:: power2(k)==n 
+        exists k:nat {:induction k}:: power2(k)==n 
         // alternative methods:
         //(n == get_next_power_of_two(n))
         //x > 0 && ( x == 1 || ((x % 2 == 0) && isPowerOf2(x/2)) )
@@ -184,7 +184,7 @@ module MathHelpers {
     /**     
      *  get_next_power_of_two is idempotent. 
      */
-    lemma getNextPow2isIdempotent(n: nat)
+    lemma {:induction n} getNextPow2isIdempotent(n: nat)
         ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
     {
         //Thanks Dafny
@@ -193,7 +193,7 @@ module MathHelpers {
     /**     
      *  Show get_next_power_of_two(n) is at least n. 
      */
-     lemma getNextPow2LowerBound(n: nat)
+     lemma {:induction n} getNextPow2LowerBound(n: nat)
         ensures n <= get_next_power_of_two(n)
     {
         // Thanks Dafny
@@ -202,7 +202,7 @@ module MathHelpers {
     /**     
      *  Show get_next_power_of_two(n) is gives a power of 2. 
      */
-     lemma nextPow2IsPow2(n: nat)
+     lemma {:induction n} nextPow2IsPow2(n: nat)
         ensures isPowerOf2(get_next_power_of_two(n))
         //ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
     {
@@ -211,7 +211,7 @@ module MathHelpers {
         } else {
             //  Induction on (n + 1)/2
             var k: nat :| get_next_power_of_two( (n + 1) / 2) == power2(k) ;
-            calc {
+            calc == {
                 get_next_power_of_two(n);
                 ==  //  Definition of 
                 2 * get_next_power_of_two( (n + 1) / 2);
@@ -234,11 +234,9 @@ module MathHelpers {
         var k:nat :| power2(k)==n ;
         assert(n>=2);
         assert(k>=1);
-        calc {
+        calc == {   //  following terms are equal
             isPowerOf2(n/2); 
-            ==
             isPowerOf2(power2(k)/2); 
-            ==
             isPowerOf2(power2(k-1)); 
         }
     }
