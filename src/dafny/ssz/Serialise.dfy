@@ -203,6 +203,7 @@ module SSZ {
                                 Failure
 
             case Uint64_ => if |xs| == 8 then
+                                constAsPowersOfTwo();
                                 assert(wellTyped(Uint64(uintDes(xs))));
                                 var r : Serialisable := Uint64(uintDes(xs));
                                 Success(r)  
