@@ -88,7 +88,7 @@ write the specification, the implementation and the proofs.
 The following notes provide some guidance to read our formal Dafny specs: 
 
 * [Notes on SSZ](./ssz-notes.md).
-* [Notes on Merkleisation](./merkleise-notes),
+* [Notes on Merkleisation](./merkleise-notes.md),
 * [Notes on Beacon Chain](./beacon-notes.md).
 
 
