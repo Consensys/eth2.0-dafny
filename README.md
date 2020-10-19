@@ -40,7 +40,7 @@ Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation a
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
 * [Introduction](./wiki/overview.md) to the Beacon Chain,
-* [Notes on SSZ](./wiki/ssz-notes.d) specifications, implementations and proofs,
+* [Notes on SSZ](./wiki/ssz-notes.md) specifications, implementations and proofs,
 * [Notes on Merkleisation](./wiki/merkleise-notes.md)  specifications, implementations and proofs,
 * [Notes  on Beacon Chain](./wiki/beacon-notes.md) specifications, implementations and proofs.
 
