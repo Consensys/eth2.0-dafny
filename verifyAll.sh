@@ -30,9 +30,11 @@ then
     exit 2 
 fi
 
-# try to procvess files in the directory $1
+# try to process files in the directory $1
 for entry in "$1"/*.dfy
 do
+  # check file exists (this can occur if directory does not have *.dfy files)
+  [ -f "$entry" ] || continue
   processedfiles=$((processedfiles + 1))
   echo -e "${BLUE}-------------------------------------------------------${NC}"
   echo -e "${BLUE}Processing $entry${NC}"

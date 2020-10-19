@@ -32,12 +32,13 @@ fi
 
 # The list of dirs 
 listofdirs=`ls -d $1/*/`
-for dir in $listofdirs "$1/"
+for dir in $listofdirs "$1"
 do
+    echo "Processing " $dir
     ./verifyAll.sh $dir
     if [ $? -eq 0 ] # check if errors
     then
-      echo -e "${GREEN}No errors in direcctory $dir${NC}"
+      echo -e "${GREEN}No errors in directory $dir${NC}"
     else
       echo -e "${RED}Some errors occured in directory $dir${NC}"
       error=$((error + 1))
