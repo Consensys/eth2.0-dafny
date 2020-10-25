@@ -79,44 +79,49 @@ module StateTransition {
      *      - which chain in the block tree this state belongs to, and 
      *      - a hash-reference to the Ethereum 1 chain.
      *
-     *  Beginning with the genesis state, the post state of a block is considered valid if it passes all of 
-     *  the guards within the state transition function. Thus, the precondition of a block is recursively defined as 
-     *  being a valid postcondition of running  the state transition function on the previous block and its state 
-     *  all the way back to the genesis state.
+     *  Beginning with the genesis state, the post state of a block is considered valid if 
+     *  it passes all of the guards within the state transition function. Thus, the precondition 
+     *  of a block is recursively defined as transition function on the previous block and its 
+     *  state all the way back to the genesis state.
      *
-     * @param   slot                            Time is divided into “slots” of fixed length at which actions occur 
-     *                                          and state transitions happen. This field tracks the slot of the containing
-     *                                          state, not necessarily the slot according to the local wall clock.
+     * @param   slot                Time is divided into “slots” of fixed length at which 
+     *                              actions occur and state transitions happen. This field 
+     *                              tracks the slot of the containing state, not necessarily 
+     *                              the slot according to the local wall clock.
      *
-     * @param   latest_block_header             The latest block header seen in the chain defining this state. This *                                          blockheader has During the slot transition of the block, the header is
-     *                                           stored without the real state root but instead with a stub of Root
-     *                                          () (empty 0x00 bytes). At the start of the next slot transition before
-     *                                          anything has been modified within state, the state root is calculated and
-     *                                          added to the latest_block_header. This is done to eliminate the circular 
-     *                                          dependency of the state root being embedded in the block header.
+     * @param   latest_block_header The latest block header seen in the chain defining this
+     *                              state. This blockheader has During the slot transition of the
+     *                              block, the header is stored without the real state root but 
+     *                              instead with a stub of Root () (empty 0x00 bytes). At the start
+     *                              of the next slot transition before anything has been modified
+     *                              within state, the state root is calculated and added to the
+     *                              latest_block_header. This is done to eliminate the circular 
+     *                              dependency of the state root being embedded in the block header.
      *
-     * @param   block_roots                     Per-slot store of the recent block roots.The block root for a slot is 
-     *                                          added at the start of the next slot to avoid the circular dependency due 
-     *                                          to the state root being embedded in the block. For slots that are skipped 
-     *                                          (no block in the chain for the given slot), the most recent block root in 
-     *                                          the chain prior to the current slot is stored for the skipped slot. When 
-     *                                          validators attest to a given slot, they use this store of block roots as 
-     *                                          an information source to cast their vote.
+     * @param   block_roots         Per-slot store of the recent block roots.The block root for a 
+     *                              slot is added at the start of the next slot to avoid the 
+     *                              circular dependency due to the state root being embedded in the
+     *                              block. For slots that are skipped (no block in the chain for the
+     *                              given slot), the most recent block root in the chain prior to 
+     *                              the current slot is stored for the skipped slot. When 
+     *                              validators attest to a given slot, they use this store of block
+     *                              roots as an information source to cast their vote.
      *
-     * @param   state_roots                     Per-slot store of the recent state roots.The state root for a slot is 
-     *                                          stored at the start of the next slot to avoid a circular dependency.
+     * @param   state_roots         Per-slot store of the recent state roots.The state root for a 
+     *                              slot is stored at the start of the next slot to avoid a 
+     *                              circular dependency.
      *
-     * @param   eth1_deposit_index              Index of the next deposit to be processed. Deposits must be added to the 
-     *                                          next block and processed if state.eth1_data.deposit_count > 
-     *                                          state.eth1_deposit_index
+     * @param   eth1_deposit_index  Index of the next deposit to be processed. Deposits must be 
+     *                              added to the next block and processed if 
+     *                              state.eth1_data.deposit_count > state.eth1_deposit_index
      *
-     * @param   validators                      List of Validator records, tracking the current full registry. Each 
-     *                                          validator contains  relevant data such as pubkey, withdrawal credentials,
-     *                                          effective balance, a slashed  boolean, and status (pending, active, 
-     *                                          exited, etc)
+     * @param   validators          List of Validator records, tracking the current full registry. 
+     *                              Each validator contains  relevant data such as pubkey, 
+     *                              withdrawal credentials, effective balance, a slashed  boolean,
+     *                              and status (pending, active, exited, etc)
      *
-     * @note                                    Some fields are not integrated yet but a complete def can be found in 
-     *                                          the archive branch.
+     * @note                        Some fields are not integrated yet but a complete def can be
+     *                              found in the archive branch.
      */
     datatype BeaconState = BeaconState(
         slot: Slot,
@@ -219,11 +224,12 @@ module StateTransition {
      *                  proposed block.
      *  @returns        The state obtained after advancing the histories to slot.
      *      
-     *  @note           The specs have the the first processSlot integrated in the while loop. However, 
-     *                  because s.slot < slot, the while bdoy must be executed at least one time.
-     *                  To simplify the proof, we have taken this first iteration outside of the loop. It does 
-     *                  not change the semantics but enables us to use the state obtained after the first
-     *                  iteration the loop and prove it is the same as resolveStateRoot(s).
+     *  @note           The specs have the the first processSlot integrated in the while loop. 
+     *                  However, because s.slot < slot, the while bdoy must be executed at least 
+     *                  one time. To simplify the proof, we have taken this first iteration 
+     *                  outside of the loop. It does not change the semantics but enables us to 
+     *                  use the state obtained after the first iteration the loop and prove it 
+     *                  is the same as resolveStateRoot(s).
      *
      */
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
