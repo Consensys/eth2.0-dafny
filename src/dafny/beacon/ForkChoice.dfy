@@ -444,5 +444,44 @@ module ForkChoice {
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
         }
+
+        method filter_block_tree(store: Store, block_root: Root, blocks: map<Root, BeaconBlock>) returns (r : bool) 
+        {
+            //  Collect children of block block_root
+            // var block := store.blocks[block_root];
+            // children = [
+            //     root for root in store.blocks.keys()
+            //     if store.blocks[root].parent_root == block_root
+            // ]
+
+            // # If any children branches contain expected finalized/justified checkpoints,
+            // # add to filtered block-tree and signal viability to parent.
+            // if any(children):
+            //     filter_block_tree_result = [filter_block_tree(store, child, blocks) for child in children]
+            //     if any(filter_block_tree_result):
+            //         blocks[block_root] = block
+            //         return True
+            //     return False
+
+            // # If leaf block, check finalized/justified checkpoints as matching latest.
+            // head_state = store.block_states[block_root]
+
+            // correct_justified = (
+            //     store.justified_checkpoint.epoch == GENESIS_EPOCH
+            //     or head_state.current_justified_checkpoint == store.justified_checkpoint
+            // )
+            // correct_finalized = (
+            //     store.finalized_checkpoint.epoch == GENESIS_EPOCH
+            //     or head_state.finalized_checkpoint == store.finalized_checkpoint
+            // )
+            // # If expected finalized/justified, add to viable block-tree and signal viability to parent.
+            // if correct_justified and correct_finalized:
+            //     blocks[block_root] = block
+            //     return True
+
+            // # Otherwise, branch not viable
+            return false;
+
+        }
     }
 }
