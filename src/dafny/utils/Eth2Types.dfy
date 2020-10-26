@@ -253,7 +253,7 @@ module Eth2Types {
                 case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
-
+    
     /**
      * Bitwise exclusive-or of two `byte` value
      *
@@ -268,17 +268,11 @@ module Eth2Types {
 
     //  Old section
 
-    /** Simple Serialisable types. */
-    trait SSZ {
-        /** An SSZ must offer an encoding into array of bytes. */
-        function hash_tree_root () : HashTreeRoot 
-    }
+    // Custom types
 
     /* A String type. */
     type String = seq<char>
 
-    type HashTreeRoot = Option<array<byte>>
-    // Basic Python (SSZ) types.
     /* Hash. (Should probably be a fix-sized bytes. */
     type Hash = Bytes32
 
@@ -292,49 +286,44 @@ module Eth2Types {
     type Slot = uint64
     type Gwei = uint64
 
+    /** An epoch is unsigned int over 64 bits. */
     type Epoch = uint64
 
-    // Custom types
-
     /* Validator registry index. */
-    type ValidatorIndex = Option<int>
-
-    // List types
-    // Readily available in Dafny as seq<T>
+    type ValidatorIndex = uint64
 
     // Containers
 
-    /**
-     *  A fork.
-     *
-     *  @param  version         The version. (it was forked at?)
-     *  @param  currentVersion  The current version.
-     *  @param  epoch           The epoch of the latest fork.
-     */
-    class Fork extends SSZ {
-        var version: int
-        var currentVersion : int
-        var epoch: int
-
-        /** Generate a hash tree root.  */
-        function hash_tree_root() : HashTreeRoot {
-            None
-        }
-    }
-
     /** 
      *  A Checkpoint. 
+     *  
+     *  Checkpoints have s slot number that is a multiple of
+     *  SLOTS_PER_EPOCH and so only `epoch` is needed.
+     *  
+     *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#checkpoint}
      *
-     *  @param  epoch   The epoch.
-     *  @param  hash    The hash.
+     *  @param  epoch   The first slot of `epoch`.
+     *  @param  root    The hash of the block that corresponds the checkpoint. 
      */
-    class CheckPoint {
-        var epoch: int
-        var hash: Hash
+    datatype CheckPoint = CheckPoint(
+        epoch: Epoch,
+        root: Root        
+    )    
 
-        /** Generate a hash tree root.  */
-        function hash_tree_root() : HashTreeRoot {
-            None
-        }
-    }
+     /** 
+     *  A vote ie. an AttestationData.  
+     *  
+     *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
+     *
+     *  @param  slot        The assigned slot for the validator to produce its attestation.
+     *  @param  source      The source (why shoukd it be justified?) checkpoint.
+     *  @param  target      The target (why shoukd it be justified) checkpoint. 
+     */
+    datatype AttestationData = AttestationData(
+        slot: Slot,
+        // index, CommitteeIndex, not used, should be the committee the valudator belongs to.
+        // beacon_block_root: Root, the (best?) block for `slot` ads determined by running LMD-GHOST. 
+        source: CheckPoint,
+        target: CheckPoint        
+    )    
 }

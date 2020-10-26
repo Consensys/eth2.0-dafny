@@ -26,7 +26,7 @@ module BeaconHelpers {
     /**
      *  The epoch of a slot.
      */
-    function compute_epoch_at_slot(slot: Slot) : Epoch
+    function method compute_epoch_at_slot(slot: Slot) : Epoch
     {
         (slot / SLOTS_PER_EPOCH) as Epoch
     }

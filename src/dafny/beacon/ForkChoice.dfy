@@ -77,8 +77,15 @@ module ForkChoice {
      *                          keys at any time. This is proved in invariant0.
      */
     datatype Store = Store (
+        // time: uint64,
+        // genesis_time: uint64,
+        justified_checkpoint : CheckPoint,
+        finalised_checkpoint: CheckPoint,
+        // best_justified_checkpoint: CheckPoint,
         blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>
+        // checkpoint_states: map<CheckPoint, BeaconState>
+        // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )
 
     /**
@@ -105,7 +112,7 @@ module ForkChoice {
     function method get_forkchoice_store(anchor_state: BeaconState) : Store 
         requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
     {
-        //  The anchor block is computed using the values of genesis state latest
+        //  The anchor block is computed using the values of genesis state's latest
         //  block header.
         var anchor_block := BeaconBlock(
              anchor_state.latest_block_header.slot,
@@ -114,7 +121,10 @@ module ForkChoice {
             EMPTY_BLOCK_BODY
         );
         var anchor_root := hash_tree_root(anchor_block);
+        var anchor_epoch: Epoch := compute_epoch_at_slot(anchor_state.slot);
         Store(
+            CheckPoint(anchor_epoch, anchor_root),
+            CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
             map[anchor_root := anchor_state]            //  block_states
         )
@@ -131,10 +141,11 @@ module ForkChoice {
      *  Property of the genesis store.
      */
      lemma genesisStoreHasGenesisBlockAndState() 
-        ensures GENESIS_STORE == Store(
-            map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK],
-            map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
-        )
+        ensures match GENESIS_STORE 
+            case Store(_, _, b, s) => 
+                b == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
+                && s == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
+        // )
     {   //  Thanks Dafny
     }
 
@@ -359,9 +370,10 @@ module ForkChoice {
         }
 
         /**
-         *  Store is valid if all the invariants are satisfied.
-         *
+         *  A Store is valid if all the invariants are satisfied.
+         *  
          *  @param  store   A store.
+         *  @returns        `true` iff the store satisfies all the invariants.
          */
         predicate storeIsValid(store: Store) 
             reads this
