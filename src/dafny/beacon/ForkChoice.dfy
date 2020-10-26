@@ -145,7 +145,6 @@ module ForkChoice {
             case Store(_, _, b, s) => 
                 b == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
                 && s == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
-        // )
     {   //  Thanks Dafny
     }
 
