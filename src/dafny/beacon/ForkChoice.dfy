@@ -68,8 +68,10 @@ module ForkChoice {
     /**
      *  The store (memory) recording the blocks and the states.
      *  
-     *  @param  blocks          maps hash_tree_root(b) to b
-     *  @param  block_states    maps a Root (hash_tree_root of a block) to a state.
+     *  @param  justified_checkpoint    Latest epoch boundary block that is justified.
+     *  @param  finalised_checkpoint    Latest epoch boundary block that is finalised.
+     *  @param  blocks                  Map from hash to blocks.
+     *  @param  block_states            Map fron hash to states.
      *
      *  @note                   From the spec 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
@@ -139,6 +141,8 @@ module ForkChoice {
 
     /**
      *  Property of the genesis store.
+     *
+     *  @todo   We may check the new fields (initial values of Checkpoint).
      */
      lemma genesisStoreHasGenesisBlockAndState() 
         ensures match GENESIS_STORE 
