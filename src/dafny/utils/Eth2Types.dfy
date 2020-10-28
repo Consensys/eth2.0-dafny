@@ -297,13 +297,15 @@ module Eth2Types {
     /** 
      *  A Checkpoint. 
      *  
-     *  Checkpoints have s slot number that is a multiple of
-     *  SLOTS_PER_EPOCH and so only `epoch` is needed.
+     *  Checkpoints have a slot number that is a multiple of
+     *  SLOTS_PER_EPOCH and so only the multiplier `epoch` is needed.
+     *  The block that is associated with this epoch should have a slot
+     *  number that is epoch * SLOTS_PER_EPOCH.
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#checkpoint}
      *
-     *  @param  epoch   The first slot of `epoch`.
-     *  @param  root    The hash of the block that corresponds the checkpoint. 
+     *  @param  epoch   An `Epoch` index i.e. slot number multiple of SLOTS_PER_EPOCH.
+     *  @param  root    A (hash of a) block. 
      */
     datatype CheckPoint = CheckPoint(
         epoch: Epoch,
@@ -315,14 +317,19 @@ module Eth2Types {
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
      *
-     *  @param  slot        The assigned slot for the validator to produce its attestation.
-     *  @param  source      The source (why shoukd it be justified?) checkpoint.
-     *  @param  target      The target (why shoukd it be justified) checkpoint. 
+     *  @param  slot                A slot number.
+     *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
+     *                              LMD-GHOST at that slot. 
+     *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
+     *  @param  target              The target (why should it be justified) checkpoint (FFG link).
+     *
+     *  @note   As (source, target) forms a pair, they should probably be grouped together
+     *          say as a Link rather than provided separately. 
      */
     datatype AttestationData = AttestationData(
         slot: Slot,
-        // index, CommitteeIndex, not used, should be the committee the valudator belongs to.
-        // beacon_block_root: Root, the (best?) block for `slot` ads determined by running LMD-GHOST. 
+        // index, CommitteeIndex, not used, should be the committee the validator belongs to.
+        // beacon_block_root: Root, 
         source: CheckPoint,
         target: CheckPoint        
     )    
