@@ -264,7 +264,7 @@ module StateTransition {
             s':= processSlot(s');
             //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-                s' := processEpoch(s');
+                s' := process_epoch(s');
             }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
@@ -381,8 +381,22 @@ module StateTransition {
      *  @returns    
      *  @todo       To be specified and implemented. currently returns s.
      */
-    method processEpoch(s: BeaconState) returns (s' : BeaconState) 
-        ensures s' == s
+    method process_epoch(s: BeaconState) returns (s' : BeaconState) 
+        ensures s'.slot == s.slot 
+        ensures s'.latest_block_header == s.latest_block_header
+    {
+        s' := process_justification_and_finalization(s);
+        // process_rewards_and_penalties(state)
+        // process_registry_updates(state)
+        // process_slashings(state)
+        // process_final_updates(state) 
+
+        return s';
+    }
+
+    method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
+        ensures s'.slot == s.slot 
+        ensures s'.latest_block_header == s.latest_block_header
     {
         return s;
     }
