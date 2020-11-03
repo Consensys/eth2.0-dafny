@@ -14,6 +14,7 @@
 
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
+include "ForkChoiceTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChain.dfy"
@@ -27,25 +28,11 @@ module StateTransition {
     //  Import some constants, types and beacon chain helpers.
     import opened NativeTypes
     import opened Eth2Types
+    import opened ForkChoiceTypes
     import opened Constants
     import opened BeaconChain
     import opened Validators
     import opened Helpers
-
-    /** The default zeroed Bytes32.  */
-    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
-    
-    /**
-     *  The default (empty) Bytes32
-     */
-    const EMPTY_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
-
-    /** The historical roots type.  */
-    type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
-        witness EMPTY_HIST_ROOTS
-
-    /** Empty vector of historical roots. */
-    const EMPTY_HIST_ROOTS := timeSeq<Bytes32>(EMPTY_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
     /**
      *  Compute Root/Hash/Bytes32 for different types.
@@ -56,16 +43,7 @@ module StateTransition {
      *          to integrate the actual hash_tree_root from Merkle module.
      */
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
-        ensures hash_tree_root(t) != EMPTY_BYTES32
-
-    /** Collision free hash function. 
-     *  
-     *  @note   This does not seem to affect the proofs so far, so
-     *          this lemma is commented out, but left in the code
-     *          for future reference.
-     **/
-    // lemma {:axiom} foo<T(==)>(t1: T, t2: T) 
-        // ensures t1 == t2 <==> hash_tree_root(t1) == hash_tree_root(t2)
+        ensures hash_tree_root(t) != DEFAULT_BYTES32
 
     /** 
      *  The Beacon state type.
@@ -130,7 +108,19 @@ module StateTransition {
         state_roots: VectorOfHistRoots,
         eth1_deposit_index : uint64,
         validators: seq<Validator>
+        //  previous_epoch_attestations: seq<>,
     )
+
+
+// # Attestations
+//     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
+//     current_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
+//     # Finality
+//     justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]  # Bit set for every recent justified epoch
+//     previous_justified_checkpoint: Checkpoint  # Previous epoch snapshot
+//     current_justified_checkpoint: Checkpoint
+//     finalized_checkpoint: Checkpoint
+
 
     /**
      *  Whether a block is valid in a given state.
@@ -180,7 +170,7 @@ module StateTransition {
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
-        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, EMPTY_BYTES32)
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
         /** s' slot is now adjusted to the slot of b. */
         ensures s'.slot == b.slot
         /** s' parent_root is the hash of the state obtained by resolving/forwarding s to
@@ -249,13 +239,13 @@ module StateTransition {
         //  The following asserts are not needed for the proof but provided for readability. 
         assert(s' == resolveStateRoot(s));  
         //  s'.block header state_root should now be resolved
-        assert(s'.latest_block_header.state_root != EMPTY_BYTES32);
+        assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
 
         //  Now fast forward to slot
         //  Next iterations of process_slot (Eth2)
         while (s'.slot < slot)  
             invariant s'.slot <= slot
-            invariant s'.latest_block_header.state_root != EMPTY_BYTES32
+            invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
             invariant s' == forwardStateToSlot(resolveStateRoot(s), s'.slot) // Inv1
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
@@ -293,9 +283,9 @@ module StateTransition {
     method processSlot(s: BeaconState) returns (s' : BeaconState)
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
-        ensures  s.latest_block_header.state_root == EMPTY_BYTES32 ==>
+        ensures  s.latest_block_header.state_root == DEFAULT_BYTES32 ==>
             s' == resolveStateRoot(s).(slot := s.slot)
-        ensures  s.latest_block_header.state_root != EMPTY_BYTES32 ==>
+        ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == nextSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
         ensures s'.eth1_deposit_index == s'.eth1_deposit_index
@@ -308,7 +298,7 @@ module StateTransition {
         s' := s'.(state_roots := s'.state_roots[(s'.slot % SLOTS_PER_HISTORICAL_ROOT) as int := previous_state_root]);
 
         //  Cache latest block header state root
-        if (s'.latest_block_header.state_root == EMPTY_BYTES32) {
+        if (s'.latest_block_header.state_root == DEFAULT_BYTES32) {
             s' := s'.(latest_block_header := s'.latest_block_header.(state_root := previous_state_root));
         }
 
@@ -368,7 +358,7 @@ module StateTransition {
             latest_block_header := BeaconBlockHeader(
                 b.slot,
                 b.parent_root,
-                EMPTY_BYTES32
+                DEFAULT_BYTES32
             )
         );
     }
@@ -382,21 +372,40 @@ module StateTransition {
      *  @todo       To be specified and implemented. currently returns s.
      */
     method process_epoch(s: BeaconState) returns (s' : BeaconState) 
-        ensures s'.slot == s.slot 
-        ensures s'.latest_block_header == s.latest_block_header
+        //  Make sure s.slot does not  overflow
+        // requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        // requires s' == forwardStateToSlot(resolveStateRoot(s), s'.slot)
+
+        // ensures s'.slot == s.slot 
+        // ensures s'.latest_block_header == s.latest_block_header
+        // ensures s'.block_roots == s.block_roots
+        // ensures s'.state_roots == s.state_roots
+        // ensures s'.validators == s.validators
+        ensures s' == forwardStateToSlot(s, s.slot)
+        // ensures s' == s
+
     {
         s' := process_justification_and_finalization(s);
         // process_rewards_and_penalties(state)
         // process_registry_updates(state)
         // process_slashings(state)
         // process_final_updates(state) 
-
+        // assume(s' == forwardStateToSlot(s, s.slot));
+        // assume(s' == resolveStateRoot(s));
         return s';
     }
 
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
-        ensures s'.slot == s.slot 
-        ensures s'.latest_block_header == s.latest_block_header
+        // ensures s'.slot == s.slot 
+        // ensures s'.latest_block_header == s.latest_block_header
+        // ensures s'.slot == s.slot 
+        // ensures s'.latest_block_header == s.latest_block_header
+        // ensures s'.block_roots == s.block_roots
+        // ensures s'.state_roots == s.state_roots
+        // ensures s'.validators == s.validators
+        // ensures s' == s
+        ensures s' == forwardStateToSlot(s, s.slot)
+
     {
         return s;
     }
@@ -516,7 +525,7 @@ module StateTransition {
             latest_block_header := BeaconBlockHeader(
                 b.slot,
                 b.parent_root,
-                EMPTY_BYTES32
+                DEFAULT_BYTES32
             )
         )
     }
@@ -540,7 +549,7 @@ module StateTransition {
         ensures s.eth1_deposit_index == resolveStateRoot(s).eth1_deposit_index
     {
         var new_latest_block_header := 
-            if (s.latest_block_header.state_root == EMPTY_BYTES32 ) then 
+            if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
                 s.latest_block_header.(state_root := hash_tree_root(s))
             else 
                 s.latest_block_header
@@ -564,7 +573,7 @@ module StateTransition {
      *  
      *  @param  s       A state
      *  @param  slot    A slot. 
-     *  @returns        A new state obtained by  archiving roots and incrementing slot.
+     *  @returns        A new state obtained by archiving roots and incrementing slot.
      *                  slot.
      */
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 

@@ -80,8 +80,13 @@ module Constants {
   const EFFECTIVE_BALANCE_INCREMENT := TWO_UP_0 * TEN_UP_9; //2 ^ 0 * 10 ^ 9
 
   // Configuration -- Initial values
-  const GENESIS_SLOT := 0              ;
-  const GENESIS_EPOCH := 0             ;
+  
+  /**
+   *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#constants}
+   */
+  const GENESIS_SLOT := 0 as Slot              
+  const GENESIS_EPOCH := 0 as Epoch    
+
   // This should be of type Bytes in types.k
   // TODO: check that the type is OK (as int and uints are bounded ints, should be OK.)
   const BLS_WITHDRAWAL_PREFIX := 0x00;

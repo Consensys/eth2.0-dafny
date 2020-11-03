@@ -15,18 +15,49 @@
 include "../ssz/Constants.dfy"
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
-// include "Attestations.dfy"
+include "../utils/Helpers.dfy"
 include "Validators.dfy"
 
+/**
+ *  Provide types used in the Beacon Chain.
+ */
 module BeaconChain { 
+    
     
     //  Import some constants and types
     import opened Constants
     import opened NativeTypes
     import opened Eth2Types
-    // import opened Attestations
+    import opened Helpers
     import opened Validators
     
+    /** The default zeroed Bytes32.  */
+    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
+    
+    /**
+     *  The default (empty) Bytes32
+     */
+    const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
+
+    // /**
+    //  *  Compute Root/Hash/Bytes32 for different types.
+    //  *  
+    //  *  @todo   Use the hash_tree_root from Merkle?.
+    //  *  @note   The property of hash_tree_root below is enough for 
+    //  *          proving some invariants. So we may use a module refinement
+    //  *          to integrate the actual hash_tree_root from Merkle module.
+    //  */
+    // function method hash_tree_root<T(==)>(t : T) : Bytes32 
+    //     ensures hash_tree_root(t) != DEFAULT_BYTES32
+
+
+    /** The historical roots type.  */
+    type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
+        witness DEFAULT_HIST_ROOTS
+
+    /** Empty vector of historical roots. */
+    const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
+
      /**
      *  Beacon chain block header.
      *
@@ -42,6 +73,15 @@ module BeaconChain {
         parent_root: Root,
         state_root: Root
         // body_root: Root
+    )
+
+    /**
+     *  Zeroed (default)  block header.
+     */
+    const DEFAULT_BLOCK_HEADER := BeaconBlockHeader(
+        0 as Slot,
+        DEFAULT_BYTES32,
+        DEFAULT_BYTES32
     )
 
     /**
@@ -69,9 +109,9 @@ module BeaconChain {
     )
 
     /**
-     *  The enmpty block body.
+     *  The zeroed (default) block body.
      */
-    const EMPTY_BLOCK_BODY := BeaconBlockBody([])
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody([])
 
     /**
      *  Beacon block.
@@ -107,6 +147,13 @@ module BeaconChain {
         state_root: Root,
         body: BeaconBlockBody
     )  
+
+    /**
+     *  The zeroed (default) block.
+     */
+    const DEFAULT_BLOCK := BeaconBlock(
+            0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
+        )
 
     /**
      *  A ProposerSlashing is used to police potentially 
