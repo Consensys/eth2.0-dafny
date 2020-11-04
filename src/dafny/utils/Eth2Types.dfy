@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys AG.
+ * Copyright 2020 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -291,6 +291,14 @@ module Eth2Types {
 
     /* Validator registry index. */
     type ValidatorIndex = uint64
+
+    /** The default zeroed Bytes32.  */
+    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
+    
+    /**
+     *  The default (empty) Bytes32
+     */
+    const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
 
     
 }

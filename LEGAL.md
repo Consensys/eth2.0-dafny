@@ -32,7 +32,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #### Applies to any modification applied after commit cf4370f8de35b7786bbd9a92762aa91d632f0e95
 
-Copyright 2020 ConsenSys AG.
+Copyright 2020 ConsenSys Software Inc.
  
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 this file except in compliance with the License. You may obtain a copy of the

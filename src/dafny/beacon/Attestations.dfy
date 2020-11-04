@@ -17,7 +17,7 @@ include "../utils/Eth2Types.dfy"
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
  */
-module ForkChoiceTypes {
+module Attestations {
 
     import opened Eth2Types
 
@@ -36,10 +36,13 @@ module ForkChoiceTypes {
      *  @param  epoch   An `Epoch` index i.e. slot number multiple of SLOTS_PER_EPOCH.
      *  @param  root    A (hash of a) block. 
      */
-    // datatype CheckPoint = CheckPoint(
-    //     epoch: Epoch,
-    //     root: Root        
-    // )    
+    datatype CheckPoint = CheckPoint(
+        epoch: Epoch,
+        root: Root        
+    )    
+
+    /** Default value for CheckPoint. */
+    const DEFAULT_CHECKPOINT := CheckPoint(0 as Epoch, DEFAULT_BYTES32)
 
      /** 
      *  A vote ie. an AttestationData.  
@@ -55,12 +58,12 @@ module ForkChoiceTypes {
      *  @note   As (source, target) forms a pair, they should probably be grouped together
      *          say as a Link rather than provided separately. 
      */
-    // datatype AttestationData = AttestationData(
-    //     slot: Slot,
-    //     // index, CommitteeIndex, not used, should be the committee the validator belongs to.
-    //     // beacon_block_root: Root, 
-    //     source: CheckPoint,
-    //     target: CheckPoint        
-    // )    
+    datatype AttestationData = AttestationData(
+        slot: Slot,
+        // index, CommitteeIndex, not used, should be the committee the validator belongs to.
+        // beacon_block_root: Root, 
+        source: CheckPoint,
+        target: CheckPoint        
+    )    
 
 }

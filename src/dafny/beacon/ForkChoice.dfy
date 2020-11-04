@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys AG.
+ * Copyright 2020 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -13,11 +13,11 @@
  */
 
 include "../utils/Eth2Types.dfy"
-include "ForkChoiceTypes.dfy"
+include "Attestations.dfy"
 include "BeaconChainTypes.dfy"
 include "StateTransition.dfy"
 include "Helpers.dfy"
-
+  
 /**
  * Fork choice rule for the Beacon Chain.
  */
@@ -27,21 +27,23 @@ module ForkChoice {
     import opened BeaconChainTypes
     import opened StateTransition
     import opened BeaconHelpers
-    import opened ForkChoiceTypes
+    import opened Attestations
 
     /**
      *  Genesis (initial) beacon state.
      *  
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
      */
-    const GENESIS_STATE := BeaconState(
-            0, 
-            DEFAULT_BLOCK_HEADER, 
-            DEFAULT_HIST_ROOTS, 
-            DEFAULT_HIST_ROOTS, 
-            0, 
-            []
-    )
+    const GENESIS_STATE := DEFAULT_BEACON_STATE;
+    // BeaconState(
+    //         0, 
+    //         DEFAULT_BLOCK_HEADER, 
+    //         DEFAULT_HIST_ROOTS, 
+    //         DEFAULT_HIST_ROOTS, 
+    //         0, 
+    //         [],
+
+    // )
 
     /**
      *  Genesis block (header).
@@ -59,7 +61,7 @@ module ForkChoice {
      *  Temporary declaration of const to avoid Boogie problem reported in issue 904
      *  Dafny repo.
      */
-    const HTR :=  hash_tree_root(GENESIS_STATE) 
+    const HASH_TREE_ROOT_GENSIS_STATE :=  hash_tree_root(GENESIS_STATE) 
 
     /**
      *  Genesis block.
@@ -67,7 +69,7 @@ module ForkChoice {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
      *  All fields initialised to default values except the state_root.
      */
-    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HTR)
+    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENSIS_STATE)
    
     /**
      *  The store (memory) recording the blocks and the states.
@@ -182,15 +184,12 @@ module ForkChoice {
          */
         constructor ()  
 
-            /** Trying to verify  storeInvariant2 generates boogie name error. */
-            // ensures storeInvariant2()
-            /** Verify storeInvariant2() manually. */
             ensures acceptedBlocks == {GENESIS_BLOCK}
             ensures hash_tree_root(GENESIS_BLOCK) in store.block_states.Keys
-            ensures store.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := DEFAULT_BYTES32) 
+            ensures 
+                store.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header 
+                == GENESIS_BLOCK_HEADER.(state_root := DEFAULT_BYTES32) 
 
-            //  for some reason removing the previous ensures creates a name resolution error in
-            //  Dafny.
             ensures storeIsValid(store)
         {  
             store := GENESIS_STORE;
@@ -462,6 +461,14 @@ module ForkChoice {
            
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+
+            //  Update justified checkpoint
+            // if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
+            //     if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
+            //         store.best_justified_checkpoint = state.current_justified_checkpoint 
+            // if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
+            //     store.justified_checkpoint = state.current_justified_checkpoint
+
         }
 
         method filter_block_tree(store: Store, block_root: Root, blocks: map<Root, BeaconBlock>) returns (r : bool) 
