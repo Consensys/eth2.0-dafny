@@ -58,7 +58,7 @@ module BeaconChainTypes {
     /** Empty vector of historical roots. */
     const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
-     /**
+    /**
      *  Beacon chain block header.
      *
      *  @param  slot
