@@ -13,6 +13,7 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "ForkChoiceTypes.dfy"
 include "BeaconChain.dfy"
 include "StateTransition.dfy"
 include "Helpers.dfy"
@@ -26,20 +27,28 @@ module ForkChoice {
     import opened BeaconChain
     import opened StateTransition
     import opened BeaconHelpers
+    import opened ForkChoiceTypes
 
-    /**
-     *  The default block header.
-     */
-    const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32)
+    // /**
+    //  *  The default block header.
+    //  */
+    // // const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32)
 
-    const EMPTY_BLOCK := BeaconBlock(0 as Slot, EMPTY_BYTES32, EMPTY_BYTES32, EMPTY_BLOCK_BODY)
+    // const EMPTY_BLOCK2 := BeaconBlock(0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY)
     
     /**
      *  Genesis (initial) beacon state.
      *  
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
      */
-    const GENESIS_STATE := BeaconState(0, EMPTY_BLOCK_HEADER, EMPTY_HIST_ROOTS, EMPTY_HIST_ROOTS, 0, [])
+    const GENESIS_STATE := BeaconState(
+            0, 
+            DEFAULT_BLOCK_HEADER, 
+            DEFAULT_HIST_ROOTS, 
+            DEFAULT_HIST_ROOTS, 
+            0, 
+            []
+    )
 
     /**
      *  Genesis block (header).
@@ -49,22 +58,24 @@ module ForkChoice {
      */
     const GENESIS_BLOCK_HEADER := BeaconBlockHeader(
         0 as Slot,  
-        EMPTY_BYTES32 , 
+        DEFAULT_BYTES32, 
         hash_tree_root(GENESIS_STATE)
     )
+
+    /**
+     *  Temporary declaration of const to avoid Boogie problem reported in issue 904
+     *  Dafny repo.
+     */
+    const HTR :=  hash_tree_root(GENESIS_STATE) 
 
     /**
      *  Genesis block.
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+     *  All fields initialised to default values except the state_root.
      */
-    const GENESIS_BLOCK := BeaconBlock(
-        0 as Slot,  
-        EMPTY_BYTES32 , 
-        hash_tree_root(GENESIS_STATE),
-        EMPTY_BLOCK_BODY
-    )
-
+    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HTR)
+   
     /**
      *  The store (memory) recording the blocks and the states.
      *  
@@ -112,7 +123,7 @@ module ForkChoice {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
      */
     function method get_forkchoice_store(anchor_state: BeaconState) : Store 
-        requires anchor_state.latest_block_header.state_root == EMPTY_BYTES32
+        requires anchor_state.latest_block_header.state_root == DEFAULT_BYTES32
     {
         //  The anchor block is computed using the values of genesis state's latest
         //  block header.
@@ -120,7 +131,7 @@ module ForkChoice {
              anchor_state.latest_block_header.slot,
              anchor_state.latest_block_header.parent_root,
             hash_tree_root(anchor_state),
-            EMPTY_BLOCK_BODY
+            DEFAULT_BLOCK_BODY
         );
         var anchor_root := hash_tree_root(anchor_block);
         var anchor_epoch: Epoch := compute_epoch_at_slot(anchor_state.slot);
@@ -183,7 +194,7 @@ module ForkChoice {
             /** Verify storeInvariant2() manually. */
             ensures acceptedBlocks == {GENESIS_BLOCK}
             ensures hash_tree_root(GENESIS_BLOCK) in store.block_states.Keys
-            ensures store.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := EMPTY_BYTES32) 
+            ensures store.block_states[hash_tree_root(GENESIS_BLOCK)].latest_block_header == GENESIS_BLOCK_HEADER.(state_root := DEFAULT_BYTES32) 
 
             //  for some reason removing the previous ensures creates a name resolution error in
             //  Dafny.
@@ -242,7 +253,7 @@ module ForkChoice {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
                 && store.block_states[hash_tree_root(b)].latest_block_header == 
-                        BeaconBlockHeader(b.slot, b.parent_root, EMPTY_BYTES32)
+                        BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
         }
 
         /**

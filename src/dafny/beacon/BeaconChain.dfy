@@ -39,16 +39,16 @@ module BeaconChain {
      */
     const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
 
-    // /**
-    //  *  Compute Root/Hash/Bytes32 for different types.
-    //  *  
-    //  *  @todo   Use the hash_tree_root from Merkle?.
-    //  *  @note   The property of hash_tree_root below is enough for 
-    //  *          proving some invariants. So we may use a module refinement
-    //  *          to integrate the actual hash_tree_root from Merkle module.
-    //  */
-    // function method hash_tree_root<T(==)>(t : T) : Bytes32 
-    //     ensures hash_tree_root(t) != DEFAULT_BYTES32
+   /**
+     *  Compute Root/Hash/Bytes32 for different types.
+     *  
+     *  @todo   Use the hash_tree_root from Merkle?.
+     *  @note   The property of hash_tree_root below is enough for 
+     *          proving some invariants. So we may use a module refinement
+     *          to integrate the actual hash_tree_root from Merkle module.
+     */
+    function method hash_tree_root<T(==)>(t : T) : Bytes32 
+        ensures hash_tree_root(t) != DEFAULT_BYTES32
 
 
     /** The historical roots type.  */
