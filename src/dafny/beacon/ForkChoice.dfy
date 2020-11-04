@@ -61,7 +61,7 @@ module ForkChoice {
      *  Temporary declaration of const to avoid Boogie problem reported in issue 904
      *  Dafny repo.
      */
-    const HASH_TREE_ROOT_GENSIS_STATE :=  hash_tree_root(GENESIS_STATE) 
+    const HASH_TREE_ROOT_GENESIS_STATE :=  hash_tree_root(GENESIS_STATE) 
 
     /**
      *  Genesis block.
@@ -69,7 +69,7 @@ module ForkChoice {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
      *  All fields initialised to default values except the state_root.
      */
-    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENSIS_STATE)
+    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENESIS_STATE)
    
     /**
      *  The store (memory) recording the blocks and the states.
