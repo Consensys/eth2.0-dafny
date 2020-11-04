@@ -21,7 +21,7 @@ include "Validators.dfy"
 /**
  *  Provide types used in the Beacon Chain.
  */
-module BeaconChain { 
+module BeaconChainTypes { 
     
     
     //  Import some constants and types

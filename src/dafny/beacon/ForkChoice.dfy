@@ -14,7 +14,7 @@
 
 include "../utils/Eth2Types.dfy"
 include "ForkChoiceTypes.dfy"
-include "BeaconChain.dfy"
+include "BeaconChainTypes.dfy"
 include "StateTransition.dfy"
 include "Helpers.dfy"
 
@@ -24,18 +24,11 @@ include "Helpers.dfy"
 module ForkChoice {
     
     import opened Eth2Types
-    import opened BeaconChain
+    import opened BeaconChainTypes
     import opened StateTransition
     import opened BeaconHelpers
     import opened ForkChoiceTypes
 
-    // /**
-    //  *  The default block header.
-    //  */
-    // // const EMPTY_BLOCK_HEADER := BeaconBlockHeader(0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32)
-
-    // const EMPTY_BLOCK2 := BeaconBlock(0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY)
-    
     /**
      *  Genesis (initial) beacon state.
      *  

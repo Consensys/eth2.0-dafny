@@ -17,7 +17,7 @@ include "../utils/Eth2Types.dfy"
 include "ForkChoiceTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
-include "BeaconChain.dfy"
+include "BeaconChainTypes.dfy"
 include "Validators.dfy"
 
 /**
@@ -30,7 +30,7 @@ module StateTransition {
     import opened Eth2Types
     import opened ForkChoiceTypes
     import opened Constants
-    import opened BeaconChain
+    import opened BeaconChainTypes
     import opened Validators
     import opened Helpers
 
