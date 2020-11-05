@@ -33,14 +33,6 @@ module BeaconChainTypes {
     import opened Validators
     import opened Attestations
     
-    // /** The default zeroed Bytes32.  */
-    // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
-    
-    // /**
-    //  *  The default (empty) Bytes32
-    //  */
-    // const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
-
    /**
      *  Compute Root/Hash/Bytes32 for different types.
      *  
@@ -174,6 +166,11 @@ module BeaconChainTypes {
      *  of a block is recursively defined as transition function on the previous block and its 
      *  state all the way back to the genesis state.
      *
+     * @param   genesis_time        Tracks the Unix timestamp during which the genesis slot
+     *                              occurred. 
+     *                              This allows a client to calculate what the current slot 
+     *                              should be according to wall-clock.
+     *
      * @param   slot                Time is divided into “slots” of fixed length at which 
      *                              actions occur and state transitions happen. This field 
      *                              tracks the slot of the containing state, not necessarily 
@@ -224,6 +221,7 @@ module BeaconChainTypes {
      *                              found in the archive branch.
      */
     datatype BeaconState = BeaconState(
+        genesis_time: uint64,
         slot: Slot,
         latest_block_header: BeaconBlockHeader,
         block_roots: VectorOfHistRoots,
@@ -238,6 +236,7 @@ module BeaconChainTypes {
     /** Default value for BeaconState. */
     const DEFAULT_BEACON_STATE := 
         BeaconState(
+            0,
             0 as Slot,
             DEFAULT_BLOCK_HEADER, 
             DEFAULT_HIST_ROOTS, 
