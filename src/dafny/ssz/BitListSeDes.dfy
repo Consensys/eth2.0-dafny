@@ -194,8 +194,12 @@ include "Constants.dfy"
                 fromBitlistToBytes(fromBytesToBitList(xb)) ;
                 fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
                 [ list8BitsToByte( byteTo8Bits(xb[0])[.. 7] + [true]) ];
+                calc == {
+                    byteTo8Bits(xb[0])[.. 7] + [true];
+                    byteTo8Bits(xb[0]);
+                }
                 [ list8BitsToByte( byteTo8Bits(xb[0]))];
-                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                {encodeOfDecodeByteIsIdentity(xb[0]);}
                 xb;
             }
         }
@@ -208,12 +212,15 @@ include "Constants.dfy"
 
                 var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
                 var blPadded:= bl + [true] + FALSE_BYTE[.. (BITS_PER_BYTE - (|bl| + 1) % BITS_PER_BYTE )];
-
                 calc == {
                     fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
                     [ list8BitsToByte(blPadded)];
+                    calc == {
+                        blPadded;
+                        byteTo8Bits(xb[0]);
+                    }
                     [ list8BitsToByte( byteTo8Bits(xb[0]))];
-                        {encodeOfDecodeByteIsIdentity(xb[0]);}
+                    {encodeOfDecodeByteIsIdentity(xb[0]);}
                     xb;
                 }
         } else // |xb| > 1
@@ -230,7 +237,7 @@ include "Constants.dfy"
                 [xb[0]] + fromBitlistToBytes(fromBytesToBitList(xb[1..])); 
                 ==  //  Induction on xb[1..]
                     //  This last step can be ommitted as Dafny figures it out.
-                 [xb[0]] + xb[1..];
+                [xb[0]] + xb[1..];
             }
         }
     }
