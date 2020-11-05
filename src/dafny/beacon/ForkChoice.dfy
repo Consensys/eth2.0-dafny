@@ -107,7 +107,6 @@ module ForkChoice {
         )
     }
 
-    
     /**
      *  This check mitigates the so-called bouncing attack.
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#custom-types}
@@ -117,20 +116,6 @@ module ForkChoice {
     {
         true
     }
-
-    /**
-     *  Property of the genesis store.
-     *
-     *  @todo   We may check the new fields (initial values of Checkpoint).
-     */
-    // lemma genesisStoreHasGenesisBlockAndState(s: Store, g : BeaconState) 
-    //     ensures match GENESIS_STORE 
-    //         case Store(_, _, b, s) => 
-    //             b == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
-    //             && s == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
-    // {   //  Thanks Dafny
-    // }
-
 
     /**
      *  A Beacon Chain environment (mutable) i.e. with Store etc.
@@ -213,7 +198,6 @@ module ForkChoice {
 
         predicate genesisInvariant(store : Store) 
         {
-            // Store(_, _, b, s) => 
             GENESIS_STORE.genesis_time == GENESIS_TIME
             && GENESIS_STORE.blocks == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
             && GENESIS_STORE.block_states == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
