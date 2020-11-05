@@ -12,7 +12,9 @@
  * under the License.
  */
 
+include "../ssz/Constants.dfy"
 include "../utils/Eth2Types.dfy"
+include "../utils/NativeTypes.dfy"
 include "Attestations.dfy"
 include "BeaconChainTypes.dfy"
 include "StateTransition.dfy"
@@ -23,57 +25,19 @@ include "Helpers.dfy"
  */
 module ForkChoice {
     
+    import opened Constants
     import opened Eth2Types
+    import opened NativeTypes
     import opened BeaconChainTypes
     import opened StateTransition
     import opened BeaconHelpers
     import opened Attestations
 
     /**
-     *  Genesis (initial) beacon state.
-     *  
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
-     */
-    const GENESIS_STATE := DEFAULT_BEACON_STATE;
-    // BeaconState(
-    //         0, 
-    //         DEFAULT_BLOCK_HEADER, 
-    //         DEFAULT_HIST_ROOTS, 
-    //         DEFAULT_HIST_ROOTS, 
-    //         0, 
-    //         [],
-
-    // )
-
-    /**
-     *  Genesis block (header).
-     *
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
-     *  @note   In this simplified version blocks are same as headers.
-     */
-    const GENESIS_BLOCK_HEADER := BeaconBlockHeader(
-        0 as Slot,  
-        DEFAULT_BYTES32, 
-        hash_tree_root(GENESIS_STATE)
-    )
-
-    /**
-     *  Temporary declaration of const to avoid Boogie problem reported in issue 904
-     *  Dafny repo.
-     */
-    const HASH_TREE_ROOT_GENESIS_STATE :=  hash_tree_root(GENESIS_STATE) 
-
-    /**
-     *  Genesis block.
-     *
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
-     *  All fields initialised to default values except the state_root.
-     */
-    const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENESIS_STATE)
-   
-    /**
      *  The store (memory) recording the blocks and the states.
      *  
+     *  @param  time                    Current time?
+     *  @param  genesis_time            Genesis time of the genesis_state. 
      *  @param  justified_checkpoint    Latest epoch boundary block that is justified.
      *  @param  finalised_checkpoint    Latest epoch boundary block that is finalised.
      *  @param  blocks                  Map from hash to blocks.
@@ -85,8 +49,8 @@ module ForkChoice {
      *                          keys at any time. This is proved in invariant0.
      */
     datatype Store = Store (
-        // time: uint64,
-        // genesis_time: uint64,
+        time: uint64,
+        genesis_time: uint64,
         justified_checkpoint : CheckPoint,
         finalised_checkpoint: CheckPoint,
         // best_justified_checkpoint: CheckPoint,
@@ -119,18 +83,23 @@ module ForkChoice {
      */
     function method get_forkchoice_store(anchor_state: BeaconState) : Store 
         requires anchor_state.latest_block_header.state_root == DEFAULT_BYTES32
+        //  the next pre-condition is a simplification to avoid uint64 overflows
+        requires anchor_state.slot == 0
     {
         //  The anchor block is computed using the values of genesis state's latest
         //  block header.
         var anchor_block := BeaconBlock(
-             anchor_state.latest_block_header.slot,
-             anchor_state.latest_block_header.parent_root,
-            hash_tree_root(anchor_state),
+            anchor_state.latest_block_header.slot,
+            anchor_state.latest_block_header.parent_root,
+            //  as per specificaition of get_forkchoice_store
+            hash_tree_root(anchor_state),   //  state_root
             DEFAULT_BLOCK_BODY
         );
         var anchor_root := hash_tree_root(anchor_block);
         var anchor_epoch: Epoch := compute_epoch_at_slot(anchor_state.slot);
         Store(
+            anchor_state.genesis_time + SECONDS_PER_SLOT * anchor_state.slot,
+            anchor_state.genesis_time,
             CheckPoint(anchor_epoch, anchor_root),
             CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
@@ -138,30 +107,76 @@ module ForkChoice {
         )
     }
 
+    
     /**
-     *  The genesis store.
-     *
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
+     *  This check mitigates the so-called bouncing attack.
+     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#custom-types}
+     *  We ignore the bouncing attack for now and always return true.
      */
-    const GENESIS_STORE := get_forkchoice_store(GENESIS_STATE)
+    function method should_update_justified_checkpoint(store : Store, cp : CheckPoint) : bool 
+    {
+        true
+    }
 
     /**
      *  Property of the genesis store.
      *
      *  @todo   We may check the new fields (initial values of Checkpoint).
      */
-     lemma genesisStoreHasGenesisBlockAndState() 
-        ensures match GENESIS_STORE 
-            case Store(_, _, b, s) => 
-                b == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
-                && s == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
-    {   //  Thanks Dafny
-    }
+    // lemma genesisStoreHasGenesisBlockAndState(s: Store, g : BeaconState) 
+    //     ensures match GENESIS_STORE 
+    //         case Store(_, _, b, s) => 
+    //             b == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
+    //             && s == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
+    // {   //  Thanks Dafny
+    // }
+
 
     /**
      *  A Beacon Chain environment (mutable) i.e. with Store etc.
      */
     class Env {
+
+        const GENESIS_TIME : uint64 ;
+
+        /**
+         *  Genesis (initial) beacon state.
+         *  
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-state}
+         */
+        const GENESIS_STATE := DEFAULT_BEACON_STATE.(genesis_time := GENESIS_TIME);
+
+        /**
+         *  Genesis block (header).
+         *
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+         *  @note   In this simplified version blocks are same as headers.
+         */
+        const GENESIS_BLOCK_HEADER := BeaconBlockHeader(
+            0 as Slot,  
+            DEFAULT_BYTES32, 
+            hash_tree_root(GENESIS_STATE)
+        )
+        /**
+         *  Temporary declaration of const to avoid Boogie problem reported in issue 904
+         *  Dafny repo.
+         */
+        const HASH_TREE_ROOT_GENESIS_STATE :=  hash_tree_root(GENESIS_STATE) 
+
+        /**
+         *  Genesis block.
+         *
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+         *  All fields initialised to default values except the state_root.
+         */
+        const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENESIS_STATE)
+
+        /**
+         *  The genesis store.
+         *
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
+         */
+        const GENESIS_STORE := get_forkchoice_store(GENESIS_STATE)
 
         /**
          *  The record of blocks that have been added to the chain.
@@ -196,13 +211,23 @@ module ForkChoice {
             acceptedBlocks := { GENESIS_BLOCK }; 
         }
 
+        predicate genesisInvariant(store : Store) 
+        {
+            // Store(_, _, b, s) => 
+            GENESIS_STORE.genesis_time == GENESIS_TIME
+            && GENESIS_STORE.blocks == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
+            && GENESIS_STORE.block_states == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
+            //  We may move the next one out
+            && store.genesis_time == GENESIS_TIME
+        }
+
         /** 
          *  The set of keys in the store.blocks is the same as store.block_states.Keys. 
          *
          *  @param  store   A store.
          */
         predicate storeInvariant0(store: Store) 
-            reads this
+            // reads this
         {
             store.blocks.Keys == store.block_states.Keys 
         }
@@ -385,6 +410,7 @@ module ForkChoice {
             reads this
         {
             true 
+            &&  genesisInvariant(store)
             && storeInvariant0(store)
             && storeInvariant0a(store)
             && storeInvariant1(store)
@@ -463,12 +489,14 @@ module ForkChoice {
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
 
             //  Update justified checkpoint
-            // if state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch:
-            //     if state.current_justified_checkpoint.epoch > store.best_justified_checkpoint.epoch:
-            //         store.best_justified_checkpoint = state.current_justified_checkpoint 
-            // if should_update_justified_checkpoint(store, state.current_justified_checkpoint):
-            //     store.justified_checkpoint = state.current_justified_checkpoint
-
+            //  We assume that store.best_justified is the same as store.current_justified for now.
+            if new_state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch {
+                // store.best_justified_checkpoint = state.current_justified_checkpoint 
+                //  This test is always true in the current over-approximation.
+                if should_update_justified_checkpoint(store, new_state.current_justified_checkpoint) {
+                    store := store.(justified_checkpoint := new_state.current_justified_checkpoint);
+                }
+            }
         }
 
         method filter_block_tree(store: Store, block_root: Root, blocks: map<Root, BeaconBlock>) returns (r : bool) 
