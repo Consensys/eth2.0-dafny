@@ -137,7 +137,7 @@ module StateTransitionSpec {
             s
         else
             // advanceSlot(forwardStateToSlot(s, slot - 1))
-            nextSlot2(forwardStateToSlot(s, slot - 1))
+            nextSlot(forwardStateToSlot(s, slot - 1))
     }
 
     /**
@@ -169,32 +169,33 @@ module StateTransitionSpec {
     /**
      *  Defines the value of state at next slot.
      */
+    // function nextSlot(s: BeaconState) : BeaconState 
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    //     ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
+    // {
+    //     if s.latest_block_header.state_root == DEFAULT_BYTES32 then 
+    //         // resolve state and possibly updateJustification
+    //         if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
+    //             updateJustification(resolveStateRoot(s))
+    //         else 
+    //             resolveStateRoot(s)
+    //     else 
+    //         //  advance and possibly update justificaition
+    //         if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
+    //             updateJustification(advanceSlot(s))
+    //         else 
+    //             advanceSlot(s)
+    // }
+
     function nextSlot(s: BeaconState) : BeaconState 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
-    {
-        if s.latest_block_header.state_root == DEFAULT_BYTES32 then 
-            // resolve state and possibly updateJustification
-            if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
-                updateJustification(resolveStateRoot(s))
-            else 
-                resolveStateRoot(s)
-        else 
-            //  advance and possibly update justificaition
-            if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
-                updateJustification(advanceSlot(s))
-            else 
-                advanceSlot(s)
-    }
-
-    function nextSlot2(s: BeaconState) : BeaconState 
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
-        ensures nextSlot2(s).latest_block_header.state_root != DEFAULT_BYTES32
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
                 updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
             else 
+                //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
        
     }

@@ -63,7 +63,7 @@ module StateTransition {
         //  resulting state's latest_block_header.
         && b.parent_root == 
             hash_tree_root(
-                forwardStateToSlot(nextSlot2(s), 
+                forwardStateToSlot(nextSlot(s), 
                 b.slot
             ).latest_block_header) 
         //  Check that number of deposits in b.body can be processed
@@ -72,7 +72,7 @@ module StateTransition {
         &&  b.state_root == hash_tree_root(
                 updateDeposits(
                     addBlockToState(
-                        forwardStateToSlot(nextSlot2(s), b.slot), 
+                        forwardStateToSlot(nextSlot(s), b.slot), 
                         b
                     ),
                     b
@@ -102,7 +102,7 @@ module StateTransition {
             the slot of b.  */
         ensures s'.latest_block_header.parent_root  == 
             hash_tree_root(
-                forwardStateToSlot(nextSlot2(s), b.slot)
+                forwardStateToSlot(nextSlot(s), b.slot)
                 .latest_block_header
             )
         // ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
@@ -150,7 +150,7 @@ module StateTransition {
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
 
-        ensures s' == forwardStateToSlot( nextSlot2(s), slot)   //  I1
+        ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
         // The next one is a direct consequence of I1
         ensures s'.slot == slot
         //  Termination ranking function
@@ -163,7 +163,7 @@ module StateTransition {
             s' := process_epoch(s');
         } 
         s':= s'.(slot := s'.slot + 1) ;
-        assert(s' == nextSlot2(s));
+        assert(s' == nextSlot(s));
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
 
@@ -171,7 +171,7 @@ module StateTransition {
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot(nextSlot2(s), s'.slot)
+            invariant s' == forwardStateToSlot(nextSlot(s), s'.slot)
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
         {
@@ -184,17 +184,6 @@ module StateTransition {
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
         }
-    }
-
-    predicate equalExceptCheckpoints(s : BeaconState, s' : BeaconState) 
-    {
-        s.slot == s'.slot 
-        && s.genesis_time == s'.genesis_time
-        && s.latest_block_header == s'.latest_block_header
-        && s.block_roots == s'.block_roots
-        && s.state_roots == s'.state_roots
-        && s.eth1_deposit_index == s'.eth1_deposit_index
-        && s.validators == s'.validators
     }
 
     /** 
