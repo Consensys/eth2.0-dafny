@@ -14,6 +14,7 @@
 
 include "../utils/Eth2Types.dfy"
 include "../ssz/Constants.dfy"
+include "./BeaconChainTypes.dfy"
 
 /**
  * Misc helpers.
@@ -22,6 +23,7 @@ module BeaconHelpers {
 
     import opened Eth2Types
     import opened Constants
+    import opened BeaconChainTypes
 
     /**
      *  The epoch of a slot.
@@ -30,5 +32,18 @@ module BeaconHelpers {
     {
         (slot / SLOTS_PER_EPOCH) as Epoch
     }
+
+    function method get_current_epoch(state: BeaconState) : Epoch 
+    {
+        compute_epoch_at_slot(state.slot)
+    }
+
+    function method get_previous_epoch(state: BeaconState) : Epoch 
+    {
+        var e := get_current_epoch(state);
+        //  max(0, e - 1)
+        if e > 0 then e - 1 else e 
+    }
+    
 
 }

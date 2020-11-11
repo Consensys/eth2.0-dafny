@@ -46,7 +46,7 @@ module BeaconChainTypes {
 
 
     /** The historical roots type.  */
-    type VectorOfHistRoots = x : seq<Bytes32> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
+    type VectorOfHistRoots = x : seq<Root> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness DEFAULT_HIST_ROOTS
 
     /** Empty vector of historical roots. */
@@ -236,7 +236,7 @@ module BeaconChainTypes {
     /** Default value for BeaconState. */
     const DEFAULT_BEACON_STATE := 
         BeaconState(
-            0,
+            0,                  
             0 as Slot,
             DEFAULT_BLOCK_HEADER, 
             DEFAULT_HIST_ROOTS, 

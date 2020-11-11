@@ -91,7 +91,7 @@ module ForkChoice {
         var anchor_block := BeaconBlock(
             anchor_state.latest_block_header.slot,
             anchor_state.latest_block_header.parent_root,
-            //  as per specificaition of get_forkchoice_store
+            //  as per specification of get_forkchoice_store
             hash_tree_root(anchor_state),   //  state_root
             DEFAULT_BLOCK_BODY
         );
@@ -196,13 +196,18 @@ module ForkChoice {
             acceptedBlocks := { GENESIS_BLOCK }; 
         }
 
-        predicate genesisInvariant(store : Store) 
+        /**
+         *  Sanity check about the genesis store.
+         */
+        lemma genesisStoreHasGenesisBlockAndState() 
+            ensures GENESIS_STORE.genesis_time == GENESIS_TIME
+            ensures GENESIS_STORE.blocks == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
+            ensures GENESIS_STORE.block_states == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
+        {}
+
+        predicate genesisTimeInvariant(store : Store) 
         {
-            GENESIS_STORE.genesis_time == GENESIS_TIME
-            && GENESIS_STORE.blocks == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_BLOCK]
-            && GENESIS_STORE.block_states == map[hash_tree_root(GENESIS_BLOCK) := GENESIS_STATE]
-            //  We may move the next one out
-            && store.genesis_time == GENESIS_TIME
+            store.genesis_time == GENESIS_TIME
         }
 
         /** 
@@ -394,7 +399,7 @@ module ForkChoice {
             reads this
         {
             true 
-            &&  genesisInvariant(store)
+            && genesisTimeInvariant(store)
             && storeInvariant0(store)
             && storeInvariant0a(store)
             && storeInvariant1(store)
