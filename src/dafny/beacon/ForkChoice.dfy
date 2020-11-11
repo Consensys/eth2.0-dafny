@@ -341,7 +341,7 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returbs        The transitive closure of the parent_root relation.
          */
-       function ancestors(r: Root, store: Store) : seq<BeaconBlock>
+        function ancestors(r: Root, store: Store) : seq<BeaconBlock>
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
