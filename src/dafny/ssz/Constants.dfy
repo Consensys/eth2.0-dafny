@@ -60,7 +60,7 @@ module Constants {
   const BASE_REWARDS_PER_EPOCH := 4 ;
   const DEPOSIT_CONTRACT_TREE_DEPTH := 2 * 2 * 2 * 2 * 2 ; // 2^5
   const SECONDS_PER_DAY := 86400  ;
-  const JUSTIFICATION_BITS_LENGTH := 2.0 ;
+  const JUSTIFICATION_BITS_LENGTH : uint64 := 4 ;
   const ENDIANNESS := "little" ;
 
   // Configuration -- Misc
