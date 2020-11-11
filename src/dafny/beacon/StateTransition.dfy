@@ -63,7 +63,7 @@ module StateTransition {
         //  resulting state's latest_block_header.
         && b.parent_root == 
             hash_tree_root(
-                forwardStateToSlot(resolveStateRoot(s), 
+                forwardStateToSlot(nextSlot2(s), 
                 b.slot
             ).latest_block_header) 
         //  Check that number of deposits in b.body can be processed
@@ -72,7 +72,7 @@ module StateTransition {
         &&  b.state_root == hash_tree_root(
                 updateDeposits(
                     addBlockToState(
-                        forwardStateToSlot(resolveStateRoot(s), b.slot), 
+                        forwardStateToSlot(nextSlot2(s), b.slot), 
                         b
                     ),
                     b
@@ -95,30 +95,30 @@ module StateTransition {
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
-        // ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
         /** s' slot is now adjusted to the slot of b. */
-        // ensures s'.slot == b.slot
+        ensures s'.slot == b.slot
         /** s' parent_root is the hash of the state obtained by resolving/forwarding s to
             the slot of b.  */
-        // ensures s'.latest_block_header.parent_root  == 
-        //     hash_tree_root(
-        //         forwardStateToSlot(resolveStateRoot(s), b.slot)
-        //         .latest_block_header
-        //     )
+        ensures s'.latest_block_header.parent_root  == 
+            hash_tree_root(
+                forwardStateToSlot(nextSlot2(s), b.slot)
+                .latest_block_header
+            )
         // ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
 
         //  Process block and compute the new state.
-        // s' := processBlock(s1, b);  
+        s' := processBlock(s1, b);  
 
         // Verify state root (from eth2.0 specs)
         // A proof that this function is correct establishes that this assert statement 
         // is never violated (i.e. when isValid() is true.)
-        // In the Eth2.0 specs this check is conditional and enabled by default.
+        // In the Eth2.0 specs this check is conditional but enabled by default.
         //  if validate_result:
-        // assert (b.state_root == hash_tree_root(s'));
+        assert (b.state_root == hash_tree_root(s'));
     }  
 
     /**
@@ -150,103 +150,39 @@ module StateTransition {
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
 
-        // ensures s' == forwardStateToSlot( resolveStateRoot(s), slot)
-        ensures s' == forwardStateToSlot( nextSlot2(s), slot)
-        // ensures s' == forwardStateToSlot(updateJustification(resolveStateRoot(s)), slot)
-        // ensures equalExceptCheckpoints(s', forwardStateToSlot( resolveStateRoot(s), slot))
-        // ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root  
-        // ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s' == forwardStateToSlot( nextSlot2(s), slot)   //  I1
+        // The next one is a direct consequence of I1
         ensures s'.slot == slot
         //  Termination ranking function
         decreases slot - s.slot
     {
         //  Start from the current state and update it with processSlot.
-        //  First iteration of the loop in process_slots (Eth2)
+        //  This is the first iteration of the loop in process_slots (Eth2-specs)
         s' := processSlot(s);
-        // assert(s' == nextSlot(s));
-        // assert(s'.(slot := s.slot + 1) == resolveStateRoot(s));  
-        // var k := s';
-        //  Joanne's fix: need this for the first processSlot too as it can be at the
-        //  boundary of an epoch.
-        //  Process epoch on the start slot of the next epoch
-        // assert(s'.slot == s.slot);
-        // assert(get_current_epoch(s) == get_current_epoch(s'));
         if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-            // var k1 := s';
             s' := process_epoch(s');
-            // assert(s' == updateJustification(k1));
-            // assert(s'.previous_justified_checkpoint == k1.current_justified_checkpoint);
-
-            // assert(s'.(slot := s.slot + 1) == updateJustification(resolveStateRoot(s));
         } 
-        else {
-            // assert(s' == k);
-            // assert(s'.(slot := s.slot + 1) == resolveStateRoot(s));  
-        }
-        /*
-            s' == if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 then 
-                process_epoch(processSlot(s))
-            else 
-                processSlot(s) == resolveStateRoot(s)
-
-            // process_epoch() == updateJustification()
-        */
-        // assert(s'.slot + 1 == nextSlot2(s).slot);
-        // assert(s'.latest_block_header == nextSlot2(s).latest_block_header);
-        // assert(s'.block_roots == nextSlot2(s).block_roots);
-        // assert(s'.state_roots == nextSlot2(s).state_roots);
-        // assert(s'.genesis_time == nextSlot2(s).genesis_time);
-        // assert(s'.current_justified_checkpoint == nextSlot2(s).current_justified_checkpoint);
-        // assert(s'.previous_justified_checkpoint == nextSlot2(s).previous_justified_checkpoint);
-        // assert(s'.(slot := s.slot + 1) == nextSlot(s));
-        // assert(s'.(slot := s.slot + 1) == nextSlot(s));
-        //  Check properties of fields of new state
-        // assert(s' == nextSlot2(s));
-        // assert(s'.(slot := s.slot + 1) == resolveStateRoot(s));  
-
-        // assert(s' == updateJustification(resolveStateRoot(s)));  
         s':= s'.(slot := s'.slot + 1) ;
-        // assert(s' == updateJustification(resolveStateRoot(s)));  
         assert(s' == nextSlot2(s));
-        //  The following asserts are not needed for the proof but provided for readability. 
-        // assert(equalExceptCheckpoints(s', resolveStateRoot(s)));
-        // assert(s'.slot == resolveStateRoot(s).slot);  
-        // assert(s'.slot == nextSlot(s).slot);  
-        // assert(s' == resolveStateRoot(s));
-        // assert(s' == updateJustification(resolveStateRoot(s)));
-        // assert(s' == resolveStateRoot(updateJustification(s)));
-        // assert(s' == forwardStateToSlot( resolveStateRoot(s), s'.slot));
-
-        // assert(s'.genesis_time == resolveStateRoot(s).genesis_time);  
-        // assert(s'.latest_block_header == resolveStateRoot(s).latest_block_header);  
-        // assert(s'.latest_block_header == resolveStateRoot(s).latest_block_header);  
-        // assert(s'.latest_block_header == resolveStateRoot(s).latest_block_header);  
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
 
-        //  Now fast forward to slot
-        //  Next iterations of process_slot (Eth2)
+        //  Now fast forward state to `slot`
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot( nextSlot2(s), s'.slot)
-
-            // invariant s' == forwardStateToSlot(resolveStateRoot(s), s'.slot) // Inv1
-            // invariant equalExceptCheckpoints(s', forwardStateToSlot(resolveStateRoot(s), s'.slot))
+            invariant s' == forwardStateToSlot(nextSlot2(s), s'.slot)
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
         {
-            // var k := s';
             s':= processSlot(s');
             //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
                 s' := process_epoch(s');
             }
-            
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
-            // assert(s' == nextSlot2(k));
         }
     }
 
@@ -287,10 +223,7 @@ module StateTransition {
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == advanceSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
-        // ensures s'.eth1_deposit_index == s'.eth1_deposit_index
-        // ensures s'.previous_justified_checkpoint == s.previous_justified_checkpoint
-        // ensures s'.current_justified_checkpoint == s.current_justified_checkpoint
-        // ensures s' == resolveStateRoot(s) || s' == advanceSlot(s)
+
     {
         s' := s;
 
@@ -377,20 +310,7 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        // requires s' == forwardStateToSlot(resolveStateRoot(s), s'.slot)
-
-        // ensures s'.slot == s.slot 
-        // ensures s'.latest_block_header == s.latest_block_header
-        // ensures s'.block_roots == s.block_roots
-        // ensures s'.state_roots == s.state_roots
-        // ensures s'.validators == s.validators
-        // ensures s' == forwardStateToSlot(s, s.slot)
-        // ensures s' == updateJustification(s)
-        // ensures equalExceptCheckpoints(s', s) 
-        // ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
         ensures s'== updateJustification(s)
-
-        // ensures s' == s
 
     {
         s' := process_justification_and_finalization(s);
@@ -413,17 +333,6 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        // ensures s'.slot == s.slot 
-        // ensures s'.latest_block_header == s.latest_block_header
-        // ensures s'.slot == s.slot 
-        // ensures s'.latest_block_header == s.latest_block_header
-        // ensures s'.block_roots == s.block_roots
-        // ensures s'.state_roots == s.state_roots
-        // ensures s'.validators == s.validators
-        // ensures s' == s
-        //  FIXME: add functional spec of what justifications/finalisations are supposed
-        //  to do
-        // ensures equalExceptCheckpoints(s', s) 
         ensures s' == updateJustification(s)
 
     {
@@ -511,6 +420,7 @@ module StateTransition {
      *  @param  s   A state.
      *  @param  d   A deposit.  
      *  @returns    The state obtained depositing of `d` to `s`.
+     *  @todo       Finish implementation of this function.
      */
     method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
         requires s. eth1_deposit_index as int + 1 < 0x10000000000000000 
