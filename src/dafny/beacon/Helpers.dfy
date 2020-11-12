@@ -15,7 +15,7 @@
 include "../utils/Eth2Types.dfy"
 include "../ssz/Constants.dfy"
 include "./BeaconChainTypes.dfy"
-
+include "./Attestations.dfy"
 /**
  * Misc helpers.
  */
@@ -24,6 +24,17 @@ module BeaconHelpers {
     import opened Eth2Types
     import opened Constants
     import opened BeaconChainTypes
+    import opened Attestations
+
+
+    /**
+     *  A simple lemma to bound integer division when divisor >= 1.
+     */
+    lemma divLess(x : nat , k : nat) 
+        requires k >= 1
+        ensures 0 <= x / k <= x 
+    {   //  Thanks Dafny
+    }
 
     /**
      *  The epoch of a slot.
@@ -33,6 +44,8 @@ module BeaconHelpers {
      */
     function method compute_epoch_at_slot(slot: Slot) : Epoch
     {
+        divLess(slot as nat, SLOTS_PER_EPOCH as nat);
+        assert( 0 <= (slot as int)/ (SLOTS_PER_EPOCH as int) <= slot as int);
         (slot / SLOTS_PER_EPOCH) as Epoch
     }
 
@@ -63,6 +76,7 @@ module BeaconHelpers {
      *  @returns        Epoch before state's epoch and 0 is state's epoch is 0.
      */
     function method get_previous_epoch(state: BeaconState) : Epoch 
+        ensures get_previous_epoch(state) <= get_current_epoch(state)
     {
         var e := get_current_epoch(state);
         //  max(0, e - 1)
@@ -77,13 +91,18 @@ module BeaconHelpers {
      *  @returns        The block root at the beginning of epoch. 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#get_block_root}
      *  
+     *  Given an epoch, start slot is epoch * SLOTS_PER_EPOCH.
+     *  Only the last SLOTS_PER_HISTORICAL_ROOT block roots are stored in the state.
+     *  To be able to retrieve the block root, the slot of epoch must be recent
+     *  i.e state.slot - epoch * SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT.
      */
-    function method get_block_root(state: BeaconState, epoch: Epoch) : Root    
-        requires state.slot as int + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000 //    report overflow
-        requires epoch as int * SLOTS_PER_EPOCH as int < 0x10000000000000000    // report
-        requires compute_start_slot_at_epoch(epoch) < state.slot <= compute_start_slot_at_epoch(epoch) + SLOTS_PER_HISTORICAL_ROOT  //  report 
+    function method get_block_root(state: BeaconState, epoch: Epoch) : Root  
+        requires (epoch as int *  SLOTS_PER_EPOCH as int)  < state.slot as int 
+        requires state.slot - (epoch as int *  SLOTS_PER_EPOCH as int) as Slot  
+                        <=  SLOTS_PER_HISTORICAL_ROOT
     { 
         var e := compute_start_slot_at_epoch(epoch);
+        assert(e < state.slot);
         get_block_root_at_slot(state, e)
     }
     
@@ -97,12 +116,64 @@ module BeaconHelpers {
      *  
      */
     function method get_block_root_at_slot(state: BeaconState, slot: Slot) : Root
-        requires slot as int + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000 //    report overflow
-        requires slot < state.slot <= slot + SLOTS_PER_HISTORICAL_ROOT
+        requires slot < state.slot 
+        requires state.slot - slot <=  SLOTS_PER_HISTORICAL_ROOT
     {
         state.block_roots[slot % SLOTS_PER_HISTORICAL_ROOT]
     }
     
-    
+    /**
+     *  @param  state   A beacon state.
+     *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
+     *  @returns        The current (resp. previous) list of attestations if epoch is 
+     *                  state's epoch (resp. epoch before state's epoch). 
+     */
+    function method  get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+        //  report -> meaning of i in (a, b)? seems to be closed interval ...
+        requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+    {
+        // assert epoch in (get_previous_epoch(state), get_current_epoch(state))
+        // return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
+        if epoch == get_current_epoch(state) then
+            state.current_epoch_attestations
+        else 
+            state.previous_epoch_attestations
+    }  
+
+    /**
+     *  @param  state   A beacon state.
+     *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
+     *  @return         Filtered list of source attestations. Keep only attestations `a`
+     *                  (votes) such that target(a) is the block root of slot `epoch`. 
+     */
+    function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+        requires (epoch as int * SLOTS_PER_EPOCH as int)  < state.slot as int 
+        requires state.slot as int - (epoch as int *  SLOTS_PER_EPOCH as int) 
+                        <=  SLOTS_PER_HISTORICAL_ROOT as int 
+        requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
+                    a.data.target.root == get_block_root(state, epoch)
+    {
+        var ax := get_matching_source_attestations(state, epoch);
+        filterAttestations(ax, get_block_root(state, epoch))
+    }
+
+    /**
+     *  Collect attestations with a specific target root.
+     *
+     *  @param  x   A list of attestations.
+     *  @param  r   A root value (hash of a block). 
+     */
+    function method filterAttestations(x : seq<PendingAttestation>, r : Root) : seq<PendingAttestation>
+        ensures forall a :: a in x && a.data.target.root == r <==> a in filterAttestations(x, r) 
+        decreases x
+    {
+        if |x| == 0 then 
+            []
+        else if x[0].data.target.root == r then 
+                [x[0]] + filterAttestations(x[1..], r)
+             else 
+                filterAttestations(x[1..], r)
+    }
 
 }
