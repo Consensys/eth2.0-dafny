@@ -98,7 +98,7 @@ module Constants {
   const  MIN_SEED_LOOKAHEAD:= TWO_UP_0 ; // 2 ^ 0                        
   const  MAX_SEED_LOOKAHEAD:= TWO_UP_2 ; // 2 ^ 2                        
   const  SLOTS_PER_ETH1_VOTING_PERIOD:= TWO_UP_10; // 2 ^ 10             
-  const  SLOTS_PER_HISTORICAL_ROOT : uint64 := TWO_UP_13 as uint64 ; // 2 ^ 13                
+  const  SLOTS_PER_HISTORICAL_ROOT : uint64 := TWO_UP_13 as uint64 ; // 2 ^ 13  (= 8,192)            
   const  MIN_VALIDATOR_WITHDRAWABILITY_DELAY:= TWO_UP_8; // 2 ^ 8       
   const  PERSISTENT_COMMITTEE_PERIOD:= TWO_UP_11; // 2 ^ 11              
   const  MAX_EPOCHS_PER_CROSSLINK:= TWO_UP_6; // 2 ^ 6                  
