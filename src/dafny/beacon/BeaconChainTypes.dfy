@@ -149,13 +149,20 @@ module BeaconChainTypes {
             0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
     )
 
-     // type JustificationBitVector = x | 
     type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int witness DEFAULT_JUSTIFICATION_BITVECTOR
 
     /**
      *  Default bitvector of size 4 initialised with false.
      */
     const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
+
+    type ListOfAttestations = x : seq<PendingAttestation> | |x| == MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
+
+
+    /**
+     *  Default bitvector of size 4 initialised with false.
+     */
+    const DEFAULT_LIST_ATTESTATIONS := timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
     /** 
      *  The Beacon state type.
@@ -232,17 +239,26 @@ module BeaconChainTypes {
      *                              found in the archive branch.
      */
     datatype BeaconState = BeaconState(
+        //  Versioning
         genesis_time: uint64,
         slot: Slot,
+        //  History
         latest_block_header: BeaconBlockHeader,
         block_roots: VectorOfHistRoots,
         state_roots: VectorOfHistRoots,
+        //  Eth1
         eth1_deposit_index : uint64,
+        //  Registry
         validators: seq<Validator>,
         //  previous_epoch_attestations: seq<>,
+        //  Attestations
+        previous_epoch_attestations: ListOfAttestations,
+        current_epoch_attestations: ListOfAttestations,
+        //  Finality
+        justification_bits: JustificationBitVector,
         previous_justified_checkpoint: CheckPoint,
-        current_justified_checkpoint: CheckPoint,
-        justification_bits: JustificationBitVector
+        current_justified_checkpoint: CheckPoint
+      
     )
 
     /** Default value for BeaconState. */
@@ -255,9 +271,11 @@ module BeaconChainTypes {
             DEFAULT_HIST_ROOTS, 
             0,
             [],
+            DEFAULT_LIST_ATTESTATIONS,
+            DEFAULT_LIST_ATTESTATIONS,
+            DEFAULT_JUSTIFICATION_BITVECTOR,
             DEFAULT_CHECKPOINT,
-            DEFAULT_CHECKPOINT,
-            DEFAULT_JUSTIFICATION_BITVECTOR
+            DEFAULT_CHECKPOINT
     )
 
     /**
