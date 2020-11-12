@@ -216,7 +216,6 @@ module StateTransitionSpec {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
-            // s
             s.(
                 previous_justified_checkpoint := s.current_justified_checkpoint,
                 justification_bits := [false] + (s.justification_bits)[..|s.justification_bits| - 1]

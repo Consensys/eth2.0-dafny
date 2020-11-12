@@ -296,9 +296,7 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        // requires get_previous_epoch(s) as int *  SLOTS_PER_EPOCH as int  + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000
         ensures s'== updateJustification(s)
-
     {
         s' := process_justification_and_finalization(s);
         // process_rewards_and_penalties(state)
@@ -316,15 +314,7 @@ module StateTransition {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
-        //  Make sure s.slot does not overflow
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
-        //  And we should only execute this method when:
-        // requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-
-        // requires get_previous_epoch(s) as int *  SLOTS_PER_EPOCH as int  + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000
-
         ensures s' == updateJustification(s)
-
     {
         //  epoch in state s is given by s.slot
 
