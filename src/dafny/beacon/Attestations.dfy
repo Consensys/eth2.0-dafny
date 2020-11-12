@@ -66,4 +66,29 @@ module Attestations {
         target: CheckPoint        
     )    
 
+    /**
+     *  Default value for AttestationData.
+     */
+    const DEFAULT_ATTESTATION_DATA := 
+        AttestationData(0 as Slot,  DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
+
+    /**
+     *  A Pending attestation (including a delay slot).
+     *  
+     *  @param  data    The actual data i.e. vote of the attestation.
+     *  @todo:  enable other fileds.
+     */
+    datatype PendingAttestation = PendingAttestation(
+        // aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
+        data: AttestationData
+        // inclusion_delay: Slot
+        // proposer_index: ValidatorIndex
+    )
+
+    /**
+     *  Default value for PendingAttestation.
+     */
+    const DEFAULT_PENDING_ATTESTATION := 
+        PendingAttestation(DEFAULT_ATTESTATION_DATA)
+
 }
