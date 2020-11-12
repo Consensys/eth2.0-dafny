@@ -333,16 +333,39 @@ module StateTransition {
             //  that might result in modifying this stub.
             return s;   
         } else {
-            //  Process jutstifications and finalisations
+            //  Process justifications and finalisations
             var previous_epoch := get_previous_epoch(s);
             var current_epoch := get_current_epoch(s);
             // old_previous_justified_checkpoint = state.previous_justified_checkpoint
             // old_current_justified_checkpoint = state.current_justified_checkpoint
+
+            //  Process justifications
+            // state.previous_justified_checkpoint = state.current_justified_checkpoint
             s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
+
+            // state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
+            // state.justification_bits[0] = 0b0
+            //  Right-Shift of justification bits and initialise first to false
+            s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
+            //  Determine whether 
+            // matching_target_attestations = get_matching_target_attestations(state, previous_epoch)  # Previous epoch
+            // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+            //     state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
+            //                                                     root=get_block_root(state, previous_epoch))
+            //     state.justification_bits[1] = 0b1
+            // matching_target_attestations = get_matching_target_attestations(state, current_epoch)  # Current epoch
+            // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+            //     state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+            //                                                     root=get_block_root(state, current_epoch))
+            //     state.justification_bits[0] = 0b1
+
             return s';
         }
 
-   
+    //  previous_epoch = get_previous_epoch(state)
+    // current_epoch = get_current_epoch(state)
+    // old_previous_justified_checkpoint = state.previous_justified_checkpoint
+    // old_current_justified_checkpoint = state.current_justified_checkpoint
     //  Process justifications
     // state.previous_justified_checkpoint = state.current_justified_checkpoint
     // state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]

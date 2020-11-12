@@ -99,20 +99,12 @@ module StateTransitionSpec {
             else 
                 s.latest_block_header
             ;
-        
-        BeaconState(
-            s.genesis_time,
-            // slot unchanged
-            s.slot + 1,
-            new_latest_block_header,
-            //  add new block_header root to block_roots history.
-            s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
-            //  add previous state root to state_roots history
-            s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)],
-            s.eth1_deposit_index,
-            s.validators,
-            s.previous_justified_checkpoint,
-            s.current_justified_checkpoint
+        //  new state
+        s.(
+            slot := s.slot + 1,
+            latest_block_header := new_latest_block_header,
+            block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
+            state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
         )
     }
 
@@ -219,12 +211,16 @@ module StateTransitionSpec {
      *  Simplified first-cut specification of process_justification_and_finalization
      */
     function updateJustification(s: BeaconState) : BeaconState 
+        ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> updateJustification(s).justification_bits[1..] == (s.justification_bits)[..|s.justification_bits| - 1]
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
             // s
-            s.(previous_justified_checkpoint := s.current_justified_checkpoint)
+            s.(
+                previous_justified_checkpoint := s.current_justified_checkpoint,
+                justification_bits := [false] + (s.justification_bits)[..|s.justification_bits| - 1]
+            )
     }
 
 
