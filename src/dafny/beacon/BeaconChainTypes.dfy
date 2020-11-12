@@ -149,6 +149,14 @@ module BeaconChainTypes {
             0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
     )
 
+     // type JustificationBitVector = x | 
+    type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int witness DEFAULT_JUSTIFICATION_BITVECTOR
+
+    /**
+     *  Default bitvector of size 4 initialised with false.
+     */
+    const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
+
     /** 
      *  The Beacon state type.
      *
@@ -217,6 +225,9 @@ module BeaconChainTypes {
      *                              the current epoch. epoch. Used to validate current epoch
      *                               attestations and fork choice purposes
      *
+     * @param   justification_bits  4 bits used to track justification in last 4 epochs. 
+     *                              Most recent epoch first bit.
+     *  
      * @note                        Some fields are not integrated yet but a complete def can be
      *                              found in the archive branch.
      */
@@ -230,7 +241,8 @@ module BeaconChainTypes {
         validators: seq<Validator>,
         //  previous_epoch_attestations: seq<>,
         previous_justified_checkpoint: CheckPoint,
-        current_justified_checkpoint: CheckPoint
+        current_justified_checkpoint: CheckPoint,
+        justification_bits: JustificationBitVector
     )
 
     /** Default value for BeaconState. */
@@ -244,7 +256,8 @@ module BeaconChainTypes {
             0,
             [],
             DEFAULT_CHECKPOINT,
-            DEFAULT_CHECKPOINT
+            DEFAULT_CHECKPOINT,
+            DEFAULT_JUSTIFICATION_BITVECTOR
     )
 
     /**
