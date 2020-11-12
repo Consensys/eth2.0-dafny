@@ -149,7 +149,6 @@ module StateTransition {
      */
     method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
-
         ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
         // The next one is a direct consequence of I1
         ensures s'.slot == slot
@@ -202,7 +201,6 @@ module StateTransition {
      *              as methods are not inlined. 
      *  @note       Matches eth2.0 specs, need to uncomment update of state/block_roots.
      *
-     *  @todo       Make this a method to have a def closer to Eth2 implementation.  
      */
     method processSlot(s: BeaconState) returns (s' : BeaconState)
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
@@ -212,7 +210,6 @@ module StateTransition {
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == advanceSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
-
     {
         s' := s;
 
@@ -299,6 +296,7 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+        // requires get_previous_epoch(s) as int *  SLOTS_PER_EPOCH as int  + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000
         ensures s'== updateJustification(s)
 
     {
@@ -321,7 +319,10 @@ module StateTransition {
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
-        requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+        // requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+
+        // requires get_previous_epoch(s) as int *  SLOTS_PER_EPOCH as int  + SLOTS_PER_HISTORICAL_ROOT as int < 0x10000000000000000
+
         ensures s' == updateJustification(s)
 
     {
@@ -347,8 +348,13 @@ module StateTransition {
             // state.justification_bits[0] = 0b0
             //  Right-Shift of justification bits and initialise first to false
             s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
-            //  Determine whether 
-            // matching_target_attestations = get_matching_target_attestations(state, previous_epoch)  # Previous epoch
+            //  Determine whether ??
+            assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
+            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s'.slot as int);
+            assert(s'.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
+                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
+            var matching_target_attestations := get_matching_target_attestations(s', previous_epoch) ;  
+             /// Previous epoch
             // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
             //     state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
             //                                                     root=get_block_root(state, previous_epoch))
