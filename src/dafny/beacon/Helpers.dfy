@@ -13,19 +13,23 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "../utils/NativeTypes.dfy"
 include "../ssz/Constants.dfy"
 include "./BeaconChainTypes.dfy"
 include "./Attestations.dfy"
+include "./Validators.dfy"
+
 /**
  * Misc helpers.
  */
 module BeaconHelpers {
 
     import opened Eth2Types
+    import opened NativeTypes
     import opened Constants
     import opened BeaconChainTypes
     import opened Attestations
-
+    import opened Validators
 
     /**
      *  A simple lemma to bound integer division when divisor >= 1.
@@ -34,8 +38,15 @@ module BeaconHelpers {
         requires k >= 1
         ensures 0 <= x / k <= x 
     {   //  Thanks Dafny
+        // assume ( 0 <= x / k <= x );
     }
 
+    lemma div2(x : nat, k : nat) 
+        requires k >= 1 
+        ensures ( x / k ) * k <= x
+    {
+        // assume(( x / k ) * k <= x); 
+    }
     /**
      *  The epoch of a slot.
      *
@@ -43,9 +54,12 @@ module BeaconHelpers {
      *  @returns        The epoch of the slot.
      */
     function method compute_epoch_at_slot(slot: Slot) : Epoch
+        ensures compute_epoch_at_slot(slot) as int * SLOTS_PER_EPOCH as int < 0x10000000000000000
+        ensures compute_epoch_at_slot(slot) * SLOTS_PER_EPOCH <= slot 
     {
         divLess(slot as nat, SLOTS_PER_EPOCH as nat);
-        assert( 0 <= (slot as int)/ (SLOTS_PER_EPOCH as int) <= slot as int);
+        div2(slot as nat, SLOTS_PER_EPOCH as nat);
+        assert(slot / SLOTS_PER_EPOCH <= slot);
         (slot / SLOTS_PER_EPOCH) as Epoch
     }
 
@@ -67,6 +81,14 @@ module BeaconHelpers {
      *  @returns        The epoch of the state's slot.
      */
     function method get_current_epoch(state: BeaconState) : Epoch 
+        ensures get_current_epoch(state) as int * SLOTS_PER_EPOCH as int < 0x10000000000000000
+        ensures get_current_epoch(state) * SLOTS_PER_EPOCH <= state.slot
+        ensures state.slot % SLOTS_PER_EPOCH != 0 ==> 
+            get_current_epoch(state) * SLOTS_PER_EPOCH < state.slot
+        /** A useful proof that states that the slot that corresponds
+            to the current epoch is within the range of the history 
+            a block roots stored in the state.block_roots. */
+        ensures state.slot - get_current_epoch(state) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT
     {
         compute_epoch_at_slot(state.slot)
     }
@@ -77,6 +99,15 @@ module BeaconHelpers {
      */
     function method get_previous_epoch(state: BeaconState) : Epoch 
         ensures get_previous_epoch(state) <= get_current_epoch(state)
+        ensures get_previous_epoch(state) as int * SLOTS_PER_EPOCH as int < 0x10000000000000000
+        ensures get_previous_epoch(state) * SLOTS_PER_EPOCH <= state.slot
+        ensures get_current_epoch(state) == 0 ==>  get_current_epoch(state) == get_previous_epoch(state)
+        ensures get_current_epoch(state) > 0 ==> get_current_epoch(state) - 1 == get_previous_epoch(state) 
+        /** A useful proof that states that the slot that corresponds
+            to the previous epoch is within the range of the history 
+            a block roots stored in the state.block_roots. */
+        ensures state.slot - get_previous_epoch(state) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT
+
     {
         var e := get_current_epoch(state);
         //  max(0, e - 1)
@@ -97,13 +128,14 @@ module BeaconHelpers {
      *  i.e state.slot - epoch * SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT.
      */
     function method get_block_root(state: BeaconState, epoch: Epoch) : Root  
-        requires (epoch as int *  SLOTS_PER_EPOCH as int)  < state.slot as int 
-        requires state.slot - (epoch as int *  SLOTS_PER_EPOCH as int) as Slot  
-                        <=  SLOTS_PER_HISTORICAL_ROOT
+        requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
+        requires epoch *  SLOTS_PER_EPOCH   < state.slot  
+        requires state.slot  - epoch  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
     { 
-        var e := compute_start_slot_at_epoch(epoch);
-        assert(e < state.slot);
-        get_block_root_at_slot(state, e)
+        var slot_of_epoch := compute_start_slot_at_epoch(epoch);  
+        assert(slot_of_epoch == epoch * SLOTS_PER_EPOCH);
+        assert(slot_of_epoch < state.slot);
+        get_block_root_at_slot(state, slot_of_epoch)
     }
     
     /**
@@ -127,10 +159,19 @@ module BeaconHelpers {
      *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
      *  @returns        The current (resp. previous) list of attestations if epoch is 
      *                  state's epoch (resp. epoch before state's epoch). 
+     *  @note           The function name is misleading as it seems to be a counter-part
+     *                  or symmetric of `get_matching_target_attestations` but it is not.
+     *                  Moreover it does not perform any matching as the name indicates,
+     *                  and the matching/filtering is done in `get_matching_target_attestations`.
+     *                  A better name may be `get_attestations_at_epoch`.
+     *  @note           An even better solution would be to remove this function 
+     *                  and directly `use state.current_epoch_attestations` or 
+     *                  `state.previous_epoch_attestations` in the callers.
      */
     function method  get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         //  report -> meaning of i in (a, b)? seems to be closed interval ...
         requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000
     {
         // assert epoch in (get_previous_epoch(state), get_current_epoch(state))
         // return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
@@ -143,37 +184,105 @@ module BeaconHelpers {
     /**
      *  @param  state   A beacon state.
      *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
-     *  @return         Filtered list of source attestations. Keep only attestations `a`
-     *                  (votes) such that target(a) is the block root of slot `epoch`. 
+     *  @returns        Attestations at epoch with a target that is the block root
+     *                  recorded for that epoch.         
+     *
      */
     function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
-        requires (epoch as int * SLOTS_PER_EPOCH as int)  < state.slot as int 
-        requires state.slot as int - (epoch as int *  SLOTS_PER_EPOCH as int) 
-                        <=  SLOTS_PER_HISTORICAL_ROOT as int 
-        requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
+        // 0x10000000000000000 
+        // requires epoch * SLOTS_PER_EPOCH  < state.slot 
+        requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
+        requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        
+        ensures |get_matching_target_attestations(state, epoch)| < 0x10000000000000000
         ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
                     a.data.target.root == get_block_root(state, epoch)
+        // ensures (epoch == get_previous_epoch(state)) ==> 
+        //     epoch == state.slot /  SLOTS_PER_EPOCH - 1
+        //     && (get_block_root(state, epoch) == state.block_roots[(epoch * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT])
+        // ensures (epoch == get_current_epoch(state)) ==> 
+        //     epoch == state.slot /  SLOTS_PER_EPOCH 
+        //     && (get_block_root(state, epoch) == state.block_roots[(epoch * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT])
+        ensures var e := get_previous_epoch(state);
+            epoch == e ==> 
+                get_matching_target_attestations(state, e) == 
+                filterAttestations(state.previous_epoch_attestations, get_block_root(state, e))
+        ensures var e := get_current_epoch(state);
+            epoch == e ==> 
+                get_matching_target_attestations(state, e) == 
+                filterAttestations(state.current_epoch_attestations, get_block_root(state, e))
+        decreases epoch //  seems needed to prove last tw post-conds
     {
+        //  Get attestattions at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
+        //  Collect attestations for (i.e. with target equal to) block root at epoch
         filterAttestations(ax, get_block_root(state, epoch))
     }
 
+    function method get_attesting_balance(state: BeaconState, attestations: seq<PendingAttestation>) : Gwei 
+        requires |attestations| < 0x10000000000000000
+    // """
+    // Return the combined effective balance of the set of unslashed validators participating in ``attestations``.
+    // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // """
+    {
+        // get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
+        |attestations| as Gwei 
+    }
+
+    // function method get_unslashed_attesting_indices(state: BeaconState,
+                                    // attestations: seq<PendingAttestation>): set<ValidatorIndex>
+    // output = set()  # type: Set[ValidatorIndex]
+    // for a in attestations:
+    //     output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+    // return set(filter(lambda index: not state.validators[index].slashed, output))
+    // {
+    //     attestations 
+    // }
+
+    // function method  get_total_balance(state: BeaconState, indices: set<ValidatorIndex>) : Gwei
+    // """
+    // Return the combined effective balance of the ``indices``.
+    // ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // Math safe up to ~10B ETH, afterwhich this overflows uint64.
+    // """
+    // {
+        // return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])));
+        //  for now we return the size of indices
+        // |indices| as Gwei 
+    // }
+    
+
+    function method get_total_active_balance(state: BeaconState) : Gwei
+        // requires |state.validators| < 0x10000000000000000
+    // """
+    // Return the combined effective balance of the active validators.
+    // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // """
+    {
+        // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
+        assert(|state.validators| < 0x10000000000000000);
+        |state.validators| as uint64
+    }
+
     /**
-     *  Collect attestations with a specific target root.
+     *  Collect attestations with a specific target.
      *
      *  @param  x   A list of attestations.
-     *  @param  r   A root value (hash of a block). 
+     *  @param  br  A root value (hash of a block or block root). 
+     *  @returns    The subset of `xl` that corresponds to attestation with target `r`.
      */
-    function method filterAttestations(x : seq<PendingAttestation>, r : Root) : seq<PendingAttestation>
-        ensures forall a :: a in x && a.data.target.root == r <==> a in filterAttestations(x, r) 
-        decreases x
+    function method filterAttestations(xl : seq<PendingAttestation>, br : Root) : seq<PendingAttestation>
+        ensures |filterAttestations(xl, br)| <= |xl|
+        ensures forall a :: a in xl && a.data.target.root == br <==> a in filterAttestations(xl, br) 
+        decreases xl
     {
-        if |x| == 0 then 
+        if |xl| == 0 then 
             []
-        else if x[0].data.target.root == r then 
-                [x[0]] + filterAttestations(x[1..], r)
-             else 
-                filterAttestations(x[1..], r)
+        else 
+            (if xl[0].data.target.root == br then [xl[0]] else [])
+                + filterAttestations(xl[1..], br)
     }
 
 }
