@@ -254,7 +254,6 @@ module BeaconChainTypes {
         //  Eth1
         eth1_deposit_index : uint64,
         //  Registry
-        // validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         validators: ListOfValidators,
         //  previous_epoch_attestations: seq<>,
         //  Attestations
