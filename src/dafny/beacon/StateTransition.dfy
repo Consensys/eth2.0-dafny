@@ -112,7 +112,6 @@ module StateTransition {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
 
-        // assume(s1 == forwardStateToSlot(nextSlot(s), b.slot));
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
 
@@ -183,14 +182,10 @@ module StateTransition {
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
                 var k := s'; 
                 s' := process_epoch(s');
-                // assert(s'.justification_bits == updateJustification(k).justification_bits);
             }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
-            // assert(s'.slot == forwardStateToSlot(nextSlot(s), s'.slot).slot);
-            // assert(s'.justification_bits == forwardStateToSlot(nextSlot(s), s'.slot).justification_bits);
-            // assume(s' == forwardStateToSlot(nextSlot(s), s'.slot) );
         }
     }
 
