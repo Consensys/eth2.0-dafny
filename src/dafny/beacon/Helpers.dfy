@@ -38,15 +38,14 @@ module BeaconHelpers {
         requires k >= 1
         ensures 0 <= x / k <= x 
     {   //  Thanks Dafny
-        // assume ( 0 <= x / k <= x );
     }
 
     lemma div2(x : nat, k : nat) 
         requires k >= 1 
         ensures ( x / k ) * k <= x
     {
-        // assume(( x / k ) * k <= x); 
     }
+
     /**
      *  The epoch of a slot.
      *
@@ -190,20 +189,13 @@ module BeaconHelpers {
      */
     function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
-        // 0x10000000000000000 
-        // requires epoch * SLOTS_PER_EPOCH  < state.slot 
         requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
         
         ensures |get_matching_target_attestations(state, epoch)| < 0x10000000000000000
         ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
                     a.data.target.root == get_block_root(state, epoch)
-        // ensures (epoch == get_previous_epoch(state)) ==> 
-        //     epoch == state.slot /  SLOTS_PER_EPOCH - 1
-        //     && (get_block_root(state, epoch) == state.block_roots[(epoch * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT])
-        // ensures (epoch == get_current_epoch(state)) ==> 
-        //     epoch == state.slot /  SLOTS_PER_EPOCH 
-        //     && (get_block_root(state, epoch) == state.block_roots[(epoch * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT])
+
         ensures var e := get_previous_epoch(state);
             epoch == e ==> 
                 get_matching_target_attestations(state, e) == 
