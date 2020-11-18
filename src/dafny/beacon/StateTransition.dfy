@@ -19,6 +19,7 @@ include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"
 include "Validators.dfy"
+include "Attestations.dfy"
 include "Helpers.dfy"
 include "StateTransition.s.dfy"
 
@@ -34,6 +35,7 @@ module StateTransition {
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
+    import opened Attestations
     import opened Helpers
     import opened BeaconHelpers
     import opened StateTransitionSpec
@@ -110,6 +112,7 @@ module StateTransition {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
 
+        // assume(s1 == forwardStateToSlot(nextSlot(s), b.slot));
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
 
@@ -170,18 +173,24 @@ module StateTransition {
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot(nextSlot(s), s'.slot)
+            invariant s' == forwardStateToSlot(nextSlot(s), s'.slot) 
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
-        {
+        {     
+            assume(s' == forwardStateToSlot(nextSlot(s), s'.slot) );
             s':= processSlot(s');
             //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
+                var k := s'; 
                 s' := process_epoch(s');
+                // assert(s'.justification_bits == updateJustification(k).justification_bits);
             }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
+            // assert(s'.slot == forwardStateToSlot(nextSlot(s), s'.slot).slot);
+            // assert(s'.justification_bits == forwardStateToSlot(nextSlot(s), s'.slot).justification_bits);
+            // assume(s' == forwardStateToSlot(nextSlot(s), s'.slot) );
         }
     }
 
@@ -298,6 +307,7 @@ module StateTransition {
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
         ensures s'== updateJustification(s)
     {
+        assert(s.slot % SLOTS_PER_EPOCH != 0);
         s' := process_justification_and_finalization(s);
         // process_rewards_and_penalties(state)
         // process_registry_updates(state)
@@ -314,6 +324,7 @@ module StateTransition {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
+        requires s.slot % SLOTS_PER_EPOCH != 0
         ensures s' == updateJustification(s)
     {
         //  epoch in state s is given by s.slot
@@ -324,9 +335,14 @@ module StateTransition {
             //  that might result in modifying this stub.
             return s;   
         } else {
+            assert(get_current_epoch(s) >= 2);
             //  Process justifications and finalisations
             var previous_epoch := get_previous_epoch(s);
             var current_epoch := get_current_epoch(s);
+            assert(previous_epoch == current_epoch - 1);
+            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s.slot as int);
+            assert(s.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
+                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
             // old_previous_justified_checkpoint = state.previous_justified_checkpoint
             // old_current_justified_checkpoint = state.current_justified_checkpoint
 
@@ -340,21 +356,36 @@ module StateTransition {
             s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
             //  Determine whether ??
             assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
+            assert(s'.slot == s.slot);
             assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s'.slot as int);
+            //  slot of previous epoch is not too far in the past
             assert(s'.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
                         <=  SLOTS_PER_HISTORICAL_ROOT as int );
-            var matching_target_attestations := get_matching_target_attestations(s', previous_epoch) ;  
-             /// Previous epoch
-            // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
-            //     state.current_justified_checkpoint = Checkpoint(epoch=previous_epoch,
-            //                                                     root=get_block_root(state, previous_epoch))
-            //     state.justification_bits[1] = 0b1
-            // matching_target_attestations = get_matching_target_attestations(state, current_epoch)  # Current epoch
-            // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+            var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
+            // Previous epoch
+            if get_attesting_balance(s', matching_target_attestations_prev) as nat * 3 >=       
+                                get_total_active_balance(s') as nat * 2 {
+                //  shift the justified checkpoint
+                s' := s'.(current_justified_checkpoint := 
+                            CheckPoint( previous_epoch,
+                                        get_block_root(s', previous_epoch)));
+                s' := s'.(justification_bits := s.justification_bits[1 := true]);
+            }
+                
+            //  Current epoch
+            // var matching_target_attestations_cur = get_matching_target_attestations(state, current_epoch) ;
+            // if get_attesting_balance(s', matching_target_attestations_cur) * 3 >= get_total_active_balance(s') * 2 {
+            //     //  shift the justified checkpoint
+            //     s' := s'.(current_justified_checkpoint := 
+            //                 CheckPoint( previous_epoch,
+            //                             get_block_root(s', previous_epoch)));
+            //     s' := s'.(justification_bits := s.justification_bits[1 := true]);
             //     state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
             //                                                     root=get_block_root(state, current_epoch))
             //     state.justification_bits[0] = 0b1
-
+            // }
+                
+            assume(s' == updateJustification(s));
             return s';
         }
 
