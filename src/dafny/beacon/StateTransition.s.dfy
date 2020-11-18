@@ -122,7 +122,6 @@ module StateTransitionSpec {
         requires s.slot <= slot
 
         ensures forwardStateToSlot(s, slot).slot == slot
-        // ensures forwardStateToSlot(s, slot).latest_block_header ==  s.latest_block_header
         ensures forwardStateToSlot(s, slot).eth1_deposit_index == s.eth1_deposit_index
         //  termination ranking function
         decreases slot - s.slot
@@ -130,9 +129,7 @@ module StateTransitionSpec {
         if (s.slot == slot) then 
             s
         else
-            // advanceSlot(forwardStateToSlot(s, slot - 1))
             nextSlot(forwardStateToSlot(s, slot - 1))
-            // resolveStateRoot(forwardStateToSlot(s, slot - 1))
     }
 
     /**
@@ -164,24 +161,6 @@ module StateTransitionSpec {
     /**
      *  Defines the value of state at next slot.
      */
-    // function nextSlot(s: BeaconState) : BeaconState 
-    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
-    //     ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
-    // {
-    //     if s.latest_block_header.state_root == DEFAULT_BYTES32 then 
-    //         // resolve state and possibly updateJustification
-    //         if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
-    //             updateJustification(resolveStateRoot(s))
-    //         else 
-    //             resolveStateRoot(s)
-    //     else 
-    //         //  advance and possibly update justificaition
-    //         if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then
-    //             updateJustification(advanceSlot(s))
-    //         else 
-    //             advanceSlot(s)
-    // }
-
     function nextSlot(s: BeaconState) : BeaconState 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
@@ -252,7 +231,6 @@ module StateTransitionSpec {
                 current_justified_checkpoint := if b1 then c else s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
                 justification_bits := if b1 then newJustBits[1 := true] else newJustBits
-                // justification_bits := [false] + (s.justification_bits)[..|s.justification_bits| - 1]
             )
     }
 
