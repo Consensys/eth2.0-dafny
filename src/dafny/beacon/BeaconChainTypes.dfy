@@ -24,7 +24,6 @@ include "Attestations.dfy"
  */
 module BeaconChainTypes { 
     
-    
     //  Import some constants and types
     import opened Constants
     import opened NativeTypes
@@ -158,11 +157,17 @@ module BeaconChainTypes {
 
     type ListOfAttestations = x : seq<PendingAttestation> | |x| == MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
-
     /**
      *  Default bitvector of size 4 initialised with false.
      */
     const DEFAULT_LIST_ATTESTATIONS := timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
+
+    type ListOfValidators = x : seq<Validator> | |x| == VALIDATOR_REGISTRY_LIMIT as int witness 
+            DEFAULT_LIST_VALIDATORS
+    /**
+     *  Default bitvector of size 4 initialised with false.
+     */
+    const DEFAULT_LIST_VALIDATORS := timeSeq(DEFAULT_VALIDATOR,  VALIDATOR_REGISTRY_LIMIT as int)
 
     /** 
      *  The Beacon state type.
@@ -249,7 +254,8 @@ module BeaconChainTypes {
         //  Eth1
         eth1_deposit_index : uint64,
         //  Registry
-        validators: seq<Validator>,
+        // validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
+        validators: ListOfValidators,
         //  previous_epoch_attestations: seq<>,
         //  Attestations
         previous_epoch_attestations: ListOfAttestations,
@@ -270,7 +276,7 @@ module BeaconChainTypes {
             DEFAULT_HIST_ROOTS, 
             DEFAULT_HIST_ROOTS, 
             0,
-            [],
+            DEFAULT_LIST_VALIDATORS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_JUSTIFICATION_BITVECTOR,
@@ -321,5 +327,4 @@ module BeaconChainTypes {
         state_roots: array<Hash>
     )
 
-      
  }
