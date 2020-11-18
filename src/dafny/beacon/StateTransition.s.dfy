@@ -18,6 +18,7 @@ include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"
 include "Validators.dfy"
+include "Attestations.dfy"
 include "Helpers.dfy"
 
 /**
@@ -31,6 +32,7 @@ module StateTransitionSpec {
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
+    import opened Attestations
     import opened BeaconHelpers
 
     /**
@@ -130,6 +132,7 @@ module StateTransitionSpec {
         else
             // advanceSlot(forwardStateToSlot(s, slot - 1))
             nextSlot(forwardStateToSlot(s, slot - 1))
+            // resolveStateRoot(forwardStateToSlot(s, slot - 1))
     }
 
     /**
@@ -182,14 +185,22 @@ module StateTransitionSpec {
     function nextSlot(s: BeaconState) : BeaconState 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
+        /** If s.slot is not at the boundary of an epoch, the 
+            attestation/finality fields are unchanged. */
+        ensures  (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat != 0  ==>
+            nextSlot(s).justification_bits  == s.justification_bits
+            && nextSlot(s).previous_epoch_attestations  == s.previous_epoch_attestations
+            && nextSlot(s).current_epoch_attestations  == s.current_epoch_attestations
+            && nextSlot(s).previous_justified_checkpoint  == s.previous_justified_checkpoint
+            && nextSlot(s).current_justified_checkpoint  == s.current_justified_checkpoint
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
+                assert(s.slot % SLOTS_PER_EPOCH != 0);
                 updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
-       
     }
 
     /**
@@ -208,17 +219,40 @@ module StateTransitionSpec {
     }
 
     /**
-     *  Simplified first-cut specification of process_justification_and_finalization
+     *  Simplified first-cut specification of process_justification_and_finalization.
+     *
+     *  @param  s   A beacon state the slot of which is not an Epoch boundary. 
+     *  @returns    The new state with justification checkpoints updated.
+     *  
      */
     function updateJustification(s: BeaconState) : BeaconState 
-        ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> updateJustification(s).justification_bits[1..] == (s.justification_bits)[..|s.justification_bits| - 1]
+        /** State's slot is not an Epoch boundary. */
+        requires s.slot % SLOTS_PER_EPOCH != 0
+        /** Justification bit are right-shifted and last two are not modified.
+            Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
+         */
+        ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
+            updateJustification(s).justification_bits[2..] == 
+                (s.justification_bits)[1..|s.justification_bits| - 1]
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
+            //  Right shift  justification_bits and prepend false
+            var newJustBits:= [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1];
+            //  Previous epoch checkpoint
+            //  Get attestations 
+            var matching_target_attestations := 
+                get_matching_target_attestations(s, get_previous_epoch(s));
+            var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        >= get_total_active_balance(s) as nat * 2;
+            var c := CheckPoint(get_previous_epoch(s),
+                                        get_block_root(s, get_previous_epoch(s)));
             s.(
+                current_justified_checkpoint := if b1 then c else s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
-                justification_bits := [false] + (s.justification_bits)[..|s.justification_bits| - 1]
+                justification_bits := if b1 then newJustBits[1 := true] else newJustBits
+                // justification_bits := [false] + (s.justification_bits)[..|s.justification_bits| - 1]
             )
     }
 
