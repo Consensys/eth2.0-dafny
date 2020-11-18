@@ -88,7 +88,7 @@ module Attestations {
     /**
      *  Default value for PendingAttestation.
      */
-    const DEFAULT_PENDING_ATTESTATION := 
-        PendingAttestation(DEFAULT_ATTESTATION_DATA)
+    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_ATTESTATION_DATA)
 
+   
 }
