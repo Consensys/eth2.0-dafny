@@ -109,7 +109,7 @@ module Constants {
   const  EPOCHS_PER_HISTORICAL_VECTOR := TWO_UP_16; // 2 ^ 16              
   const  EPOCHS_PER_SLASHINGS_VECTOR := TWO_UP_13; // 2 ^ 13               
   const  HISTORICAL_ROOTS_LIMIT := TWO_UP_24; // 2 ^ 24                    
-  const  VALIDATOR_REGISTRY_LIMIT := TWO_UP_40; // 2 ^ 40                  
+  const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40                  
 
   // Configuration -- Rewards and penalties
   const BASE_REWARD_FACTOR := TWO_UP_6; // 2 ^ 6                         
