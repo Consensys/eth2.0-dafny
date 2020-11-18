@@ -294,11 +294,16 @@ module Eth2Types {
 
     /** The default zeroed Bytes32.  */
     const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
+
+    /** The default zeroed Bytes48.  */
+    const SEQ_EMPTY_48_BYTES := timeSeq<byte>(0,48)
     
     /**
      *  The default (empty) Bytes32
      */
     const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
+
+    const DEFAULT_BYTES48 : Bytes48 := Bytes(SEQ_EMPTY_48_BYTES)
 
     
 }

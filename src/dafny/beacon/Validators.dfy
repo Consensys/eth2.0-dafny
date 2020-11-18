@@ -49,6 +49,8 @@ module Validators {
         // withdrawableEpoch: int
     )
     
+    const DEFAULT_VALIDATOR := Validator(DEFAULT_BYTES48, 0)
+    
      /**
      *  Deposit data.
      *
