@@ -62,28 +62,7 @@ module Helpers {
         if k == 0 then []
         else [t] + timeSeq(t, k - 1)
     }
-
-    /**
-     * Create a Sequence using an initialisation function
-     * @param f Function mapping a position in the sequence to a value
-     * @param nEl Number of elements in the sequence
-     *
-     * @return A Sequence of length `nEl` where the value of the element in
-     *         position `i` is `f(i)`.
-     */
-    function method initSeq<T>(f:nat --> T, nEl: nat): seq<T>
-        requires forall i | 0 <= i < nEl :: f.requires(i)
-        ensures |initSeq(f,nEl)| == nEl
-        ensures forall i | 0 <= i < nEl :: initSeq(f,nEl)[i] == f(i)
-        decreases nEl
-    {
-        if nEl==0 then
-            []
-        else
-            [f(0)] +
-            initSeq((i:nat) requires 0 <= i < (nEl -1) => f(i+1), nEl-1)
-    }
-
+    
     /**
      * Generic mapping for sequences
      *
