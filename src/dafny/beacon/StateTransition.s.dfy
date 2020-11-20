@@ -176,7 +176,8 @@ module StateTransitionSpec {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
                 assert(s.slot % SLOTS_PER_EPOCH != 0);
-                updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
+                // updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
+                updateJustificationAndFinalisation(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
@@ -204,14 +205,14 @@ module StateTransitionSpec {
      *  @returns    The new state with justification checkpoints updated.
      *  
      */
-    function updateJustification(s: BeaconState) : BeaconState 
+    function updateJustificationPrevEpoch(s: BeaconState) : BeaconState 
         /** State's slot is not an Epoch boundary. */
         requires s.slot % SLOTS_PER_EPOCH != 0
         /** Justification bit are right-shifted and last two are not modified.
             Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustification(s).justification_bits[2..] == 
+            updateJustificationPrevEpoch(s).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -234,5 +235,88 @@ module StateTransitionSpec {
             )
     }
 
+    function updateJustification(s: BeaconState) : BeaconState
+        requires s.slot % SLOTS_PER_EPOCH != 0
+        // ensures updateJustification(s) == 
+        //     updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
+        ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
+            updateJustificationCurrentEpoch(s).justification_bits[1..] == 
+                (s.justification_bits)[1..|s.justification_bits|]
+    {
+        updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
+    }
 
+    function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
+        requires s.slot % SLOTS_PER_EPOCH != 0
+    {
+        updateFinalisedCheckpoint(updateJustification(s))
+    }
+
+    /**
+     *  Update related to the processing of current epoch.
+     */
+    function updateJustificationCurrentEpoch(s: BeaconState) : BeaconState 
+        /** State's slot is not an Epoch boundary. */
+        requires s.slot % SLOTS_PER_EPOCH != 0
+        /** Justification bit are right-shifted and last two are not modified.
+            Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
+         */
+        ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
+            updateJustificationCurrentEpoch(s).justification_bits[1..] == 
+                (s.justification_bits)[1..|s.justification_bits|]
+    {
+        if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
+            s 
+        else 
+            //  Get attestations for current epoch
+            var matching_target_attestations := 
+                get_matching_target_attestations(s, get_current_epoch(s));
+            var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        >= get_total_active_balance(s) as nat * 2;
+            var c := CheckPoint(get_current_epoch(s),
+                                        get_block_root(s, get_current_epoch(s)));
+            s.(
+                current_justified_checkpoint := if b1 then c else s.current_justified_checkpoint,
+                // previous_justified_checkpoint := s.current_justified_checkpoint,
+                justification_bits := if b1 then s.justification_bits[0 := true] else s.justification_bits
+            )
+    }
+
+    /**
+     *  Update a state finalised checkpoint.
+     *  @param  s   A state.
+     *  @returns    The new state after updating the status of finalised_checkpoint.
+     *  Epochs layout
+     *
+     *  | ............ | ........... | .......... | 
+     *  | ............ | ........... | .......... | 
+     *  e1             e2            e3           e4
+     *  bit[0]        bit[1]        bit[2]        bit[3]
+     *  current       previous
+     *
+     *  Python slice a[k:l] means: a[k] ... a[l -1]
+     */
+    function updateFinalisedCheckpoint(s: BeaconState) : BeaconState
+        ensures s.slot == updateFinalisedCheckpoint(s).slot
+    {
+        if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
+            s 
+        else 
+            var bits : seq<bool> := s.justification_bits;
+            var current_epoch := get_current_epoch(s);
+            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) then 
+                //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+                s.(finalised_checkpoint := s.previous_justified_checkpoint) 
+            else if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) then 
+                // The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+                s.(finalised_checkpoint := s.previous_justified_checkpoint) 
+            else if (all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) then 
+                // The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+                s.(finalised_checkpoint := s.current_justified_checkpoint) 
+            else if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
+                // The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+                s.(finalised_checkpoint := s.current_justified_checkpoint) 
+            else
+                s 
+    } 
 }
