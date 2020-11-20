@@ -300,7 +300,7 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        ensures s'== updateJustification(s)
+        ensures s' == updateFinalisedCheckpoint(updateJustification(s))
     {
         assert(s.slot % SLOTS_PER_EPOCH != 0);
         s' := process_justification_and_finalization(s);
@@ -320,7 +320,7 @@ module StateTransition {
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
         requires s.slot % SLOTS_PER_EPOCH != 0
-        ensures s' == updateJustification(s)
+        ensures s' == updateFinalisedCheckpoint(updateJustification(s))
     {
         //  epoch in state s is given by s.slot
 
@@ -341,12 +341,13 @@ module StateTransition {
             // old_previous_justified_checkpoint = state.previous_justified_checkpoint
             // old_current_justified_checkpoint = state.current_justified_checkpoint
 
-            //  Process justifications
+            //  Process justifications and update justification bits
             // state.previous_justified_checkpoint = state.current_justified_checkpoint
             s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
 
             // state.justification_bits[1:] = state.justification_bits[:JUSTIFICATION_BITS_LENGTH - 1]
             // state.justification_bits[0] = 0b0
+
             //  Right-Shift of justification bits and initialise first to false
             s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
             //  Determine whether ??
@@ -356,31 +357,87 @@ module StateTransition {
             //  slot of previous epoch is not too far in the past
             assert(s'.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
                         <=  SLOTS_PER_HISTORICAL_ROOT as int );
+            assert(s'.block_roots == s.block_roots);
+            assert(get_block_root(s', previous_epoch) == get_block_root(s, previous_epoch));
+            assert(|s'.validators| == |s.validators|);
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as nat * 3 >=       
                                 get_total_active_balance(s') as nat * 2 {
                 //  shift the justified checkpoint
+                //  @todo   Why is current_justified_checkpoint field updated and not 
+                //          previous?
                 s' := s'.(current_justified_checkpoint := 
-                            CheckPoint( previous_epoch,
+                            CheckPoint(previous_epoch,
                                         get_block_root(s', previous_epoch)));
                 s' := s'.(justification_bits := s.justification_bits[1 := true]);
             }
-                
+            // assert(s'.justification_bits == updateJustificationPrevEpoch(s).justification_bits);
+            assert(s'.slot == updateJustificationPrevEpoch(s).slot);
+            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s).current_justified_checkpoint);
+            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s).previous_justified_checkpoint);
+            assert(s' == updateJustificationPrevEpoch(s)); 
+
+            ghost var s2 := s';
             //  Current epoch
-            // var matching_target_attestations_cur = get_matching_target_attestations(state, current_epoch) ;
-            // if get_attesting_balance(s', matching_target_attestations_cur) * 3 >= get_total_active_balance(s') * 2 {
-            //     //  shift the justified checkpoint
-            //     s' := s'.(current_justified_checkpoint := 
-            //                 CheckPoint( previous_epoch,
-            //                             get_block_root(s', previous_epoch)));
-            //     s' := s'.(justification_bits := s.justification_bits[1 := true]);
-            //     state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
-            //                                                     root=get_block_root(state, current_epoch))
-            //     state.justification_bits[0] = 0b1
-            // }
-                
-            assume(s' == updateJustification(s));
+            var matching_target_attestations_cur := get_matching_target_attestations(s', current_epoch) ;
+            if get_attesting_balance(s', matching_target_attestations_cur) as nat * 3 >=       
+                                    get_total_active_balance(s') as nat * 2 {
+                //  shift the justified checkpoint
+                // s' := s'.(current_justified_checkpoint := 
+                //             CheckPoint( current_epoch,
+                //                         get_block_root(s', previous_epoch)));
+                s' := s'.(
+                        justification_bits := s.justification_bits[0 := true],
+                        current_justified_checkpoint := 
+                            CheckPoint(current_epoch,
+                                        get_block_root(s', current_epoch)));
+            }
+            assert(s' == updateJustificationCurrentEpoch(s2));
+            // if get_attesting_balance(state, matching_target_attestations) * 3 >= get_total_active_balance(state) * 2:
+    //     state.current_justified_checkpoint = Checkpoint(epoch=current_epoch,
+    //                                                     root=get_block_root(state, current_epoch))
+    //     state.justification_bits[0] = 0b1
+
+            // assume(s' == updateJustification(s1));
+            //  Process finalizations
+            /*
+             *  Epochs layout
+             *
+             *  | ............ | ........... | .......... | 
+             *  | ............ | ........... | .......... | 
+             *  e1             e2            e3           e4
+             *  bit[0]        bit[1]        bit[2]        bit[3]
+             *  current       previous
+             *
+             *  Python slice a[k:l] means: a[k] ... a[l -1]
+             */
+            ghost var s3 := s';
+
+            var bits : seq<bool> := s'.justification_bits;
+            //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+            // assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
+            //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
+            //  following condition is false. As a result we do not need to compute 
+            //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
+            //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
+            //  
+            if (all(bits[1..4]) && current_epoch >= 3 && s'.previous_justified_checkpoint.epoch  == current_epoch - 3) {
+                s' := s'.(finalised_checkpoint := s'.previous_justified_checkpoint) ;
+            }
+            //  The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+            if (all(bits[1..3]) && s'.previous_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s'.previous_justified_checkpoint) ;
+            }
+            //  The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+            if (all(bits[0..3]) && s'.current_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
+            }
+            //  The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+            if (all(bits[0..2]) && s'.current_justified_checkpoint.epoch == current_epoch - 1) {
+                s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
+            }
+            assert(s' == updateFinalisedCheckpoint(s3));
             return s';
         }
 
