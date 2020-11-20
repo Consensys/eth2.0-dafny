@@ -412,6 +412,16 @@ module ForkChoice {
         }
 
         /**
+         *  Canonical chain property.
+         */
+        // lemma atMostOneCanonicalChain(store: Store) 
+        //     ensures forall r :: r in store.blocks.Keys && 
+
+        // {
+        //     assume(forall r :: r in store.blocks.Keys ==> true);
+        // }
+
+        /**
          *  Add a block to the store.
          *  
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
