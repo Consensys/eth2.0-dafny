@@ -262,8 +262,8 @@ module BeaconChainTypes {
         //  Finality
         justification_bits: JustificationBitVector,
         previous_justified_checkpoint: CheckPoint,
-        current_justified_checkpoint: CheckPoint
-      
+        current_justified_checkpoint: CheckPoint,
+        finalised_checkpoint: CheckPoint
     )
 
     /** Default value for BeaconState. */
@@ -279,6 +279,7 @@ module BeaconChainTypes {
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_JUSTIFICATION_BITVECTOR,
+            DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT
     )
