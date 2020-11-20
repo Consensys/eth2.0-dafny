@@ -47,6 +47,29 @@ module BeaconHelpers {
     }
 
     /**
+     *  A supermajority set.
+     *  @param  a   A list of attestations.
+     *  @param  b   A list of attestations.
+     *  @returns    Whether |a| is more than two thirds of |b|.
+     *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
+     *              but this is what is defined in the specs. 
+     */
+    predicate superMajority(a: seq<PendingAttestation>, b: seq<PendingAttestation>) 
+    {
+        |a| * 3 >= |b| * 2 
+    }
+
+    /**
+     *  Check that a bitlist has all bits set to 1.
+     *  @param      xs  
+     *  @returns    
+     */
+    function method all(xs: seq<bool>) : bool
+    {
+        forall i :: 0 < i < |xs| ==> xs[i]
+    }
+    
+    /**
      *  The epoch of a slot.
      *
      *  @param  slot    A slot.
@@ -204,7 +227,7 @@ module BeaconHelpers {
             epoch == e ==> 
                 get_matching_target_attestations(state, e) == 
                 filterAttestations(state.current_epoch_attestations, get_block_root(state, e))
-        decreases epoch //  seems needed to prove last tw post-conds
+        decreases epoch //  seems needed to prove last two post-conds
     {
         //  Get attestattions at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
