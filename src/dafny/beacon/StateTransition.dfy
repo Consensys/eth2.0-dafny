@@ -13,6 +13,7 @@
  */
 
 include "../utils/NativeTypes.dfy"
+include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "ForkChoiceTypes.dfy"
 include "../utils/Helpers.dfy"
@@ -30,6 +31,7 @@ module StateTransition {
     
     //  Import some constants, types and beacon chain helpers.
     import opened NativeTypes
+    import opened NonNativeTypes
     import opened Eth2Types
     import opened ForkChoiceTypes
     import opened Constants
@@ -362,8 +364,8 @@ module StateTransition {
             assert(|s'.validators| == |s.validators|);
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
             // Previous epoch
-            if get_attesting_balance(s', matching_target_attestations_prev) as nat * 3 >=       
-                                get_total_active_balance(s') as nat * 2 {
+            if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
+                                get_total_active_balance(s') as uint128 * 2 {
                 //  shift the justified checkpoint
                 //  @todo   Why is current_justified_checkpoint field updated and not 
                 //          previous?
