@@ -28,13 +28,17 @@ module Attestations {
      *  
      *  Checkpoints have a slot number that is a multiple of
      *  SLOTS_PER_EPOCH and so only the multiplier `epoch` is needed.
-     *  The block that is associated with this epoch should have a slot
-     *  number that is epoch * SLOTS_PER_EPOCH.
+     *  As per the Gasper paper, checkpoints are **pairs** consisting of
+     *  an epoch and a block (called Epoch Boundary Pairs in the Gasper Paper.)
+     *  
+     *  @note   The block that is associated with this epoch should probably have a slot
+     *          number that is smaller or equal to  epoch * SLOTS_PER_EPOCH (but may
+     *          be strictly smaller).
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#checkpoint}
      *
      *  @param  epoch   An `Epoch` index i.e. slot number multiple of SLOTS_PER_EPOCH.
-     *  @param  root    A (hash of a) block. 
+     *  @param  root    A (hash of a) block that corresponds to the checkpoint.
      */
     datatype CheckPoint = CheckPoint(
         epoch: Epoch,
@@ -51,7 +55,8 @@ module Attestations {
      *
      *  @param  slot                A slot number.
      *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
-     *                              LMD-GHOST at that slot. 
+     *                              LMD-GHOST at that slot. This determines the chain (ancestors)
+     *                              to be used to update justifications and finalisations.
      *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
      *  @param  target              The target (why should it be justified) checkpoint (FFG link).
      *
@@ -61,7 +66,7 @@ module Attestations {
     datatype AttestationData = AttestationData(
         slot: Slot,
         // index, CommitteeIndex, not used, should be the committee the validator belongs to.
-        // beacon_block_root: Root, 
+        beacon_block_root: Root, 
         source: CheckPoint,
         target: CheckPoint        
     )    
@@ -70,7 +75,7 @@ module Attestations {
      *  Default value for AttestationData.
      */
     const DEFAULT_ATTESTATION_DATA := 
-        AttestationData(0 as Slot,  DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
+        AttestationData(0 as Slot,  DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
 
     /**
      *  A Pending attestation (including a delay slot).
