@@ -104,5 +104,45 @@ module Attestations {
      */
     const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_ATTESTATION_DATA)
 
-   
+    /**
+     *  A supermajority set.
+     *  @param  a   A list of attestations.
+     *  @param  b   A list of attestations.
+     *  @returns    Whether |a| is more than two thirds of |b|.
+     *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
+     *              but this is what is defined in the specs. 
+     */
+    predicate superMajority(a: seq<PendingAttestation>, b: nat) 
+    {
+        |a| * 3 >= b * 2 
+    }
+
+    /**
+     *  Supermajority link.
+     * 
+     *  @param  src     A checkpoint.
+     *  @param  tgt     A checkpoint preceeding src.
+     *  @param  xa      The known list of attestations (votes).
+     */
+    predicate superMajorityLink(src : CheckPoint, tgt: CheckPoint, xa: seq<PendingAttestation>, threshold: nat)
+        requires src.epoch < tgt.epoch
+    {
+        3 * countAttestationsForLink(xa, src.root, tgt.root) >= 2 * threshold
+    }
+
+    function method countAttestationsForLink(xl : seq<PendingAttestation>, linksrc : Root, linktgt: Root) : nat
+        ensures countAttestationsForLink(xl, linksrc, linktgt) <= |xl|
+        decreases xl
+    {
+        if |xl| == 0 then 
+            0
+        else 
+            (if xl[0].data.source.root == linksrc && xl[0].data.target.root == linktgt then 
+                1
+            else 
+                0
+            ) + countAttestationsForLink(xl[1..], linksrc, linktgt)
+    }
+
+
 }

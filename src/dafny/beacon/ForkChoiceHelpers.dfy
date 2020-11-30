@@ -36,20 +36,7 @@ module ForkChoiceHelpers {
     import opened Attestations
     import opened ForkChoiceTypes
 
-    /**
-     *  A supermajority set.
-     *  @param  a   A list of attestations.
-     *  @param  b   A list of attestations.
-     *  @returns    Whether |a| is more than two thirds of |b|.
-     *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
-     *              but this is what is defined in the specs. 
-     */
-    predicate superMajority(a: seq<PendingAttestation>, b: nat) 
-    {
-        |a| * 3 >= b * 2 
-    }
-
-
+   
     /**
      *  The chain defined by a block.
      *  
