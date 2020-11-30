@@ -12,13 +12,14 @@
  * under the License.
  */
 
-// include "../ssz/Constants.dfy"
+include "../ssz/Constants.dfy"
 include "../utils/Eth2Types.dfy"
 // include "../utils/NativeTypes.dfy"
 include "Attestations.dfy"
 include "BeaconChainTypes.dfy"
 // include "StateTransition.dfy"
 // include "Helpers.dfy"
+// include "../utils/SeqHelpers.dfy"
 
 include "ForkChoiceTypes.dfy"
 
@@ -27,7 +28,7 @@ include "ForkChoiceTypes.dfy"
  */
 module ForkChoiceHelpers {
     
-    // import opened Constants
+    import opened Constants
     import opened Eth2Types
     // import opened NativeTypes
     import opened BeaconChainTypes
@@ -35,14 +36,14 @@ module ForkChoiceHelpers {
     // import opened BeaconHelpers
     import opened Attestations
     import opened ForkChoiceTypes
-
+    // import opened SeqHelpers
    
     /**
      *  The chain defined by a block.
      *  
      *  @param  br      A hash root of a block.
      *  @param  store   A store (similar to the view of the validator).
-     *  @returns        Collect the ancestors of the block `br` in  `store`.
+     *  @returns        The ancestors of the block `br` in  `store`.
      */
     function chain(br: Root, store: Store) : seq<BeaconBlock>
         requires br in store.blocks.Keys
@@ -75,6 +76,66 @@ module ForkChoiceHelpers {
     {
         chain(store.blocks[br].parent_root, store)
     }
+
+
+    /**
+     *  The epoch boundary block (EBB) at epoch j for chain(B). 
+     *  @param  br      A block root.
+     *  @param  store   The store.
+     *  @param  j       A epoch number.
+     */
+    // function epochBoundaryBlocks(br: Root, store: Store, j : nat) : Root 
+    //     // requires j <= compute_epoch_at_slot() 
+    // {
+    //     //  get the chain for br in the store
+    //     var c := chain(br, store);
+    //     br
+    // }
+
+
+    function computeEBBs(xb : seq<BeaconBlock>, e :  nat) : seq<BeaconBlock>
+        requires |xb| >= 1
+        /** Last block has slot 0. */
+        requires xb[|xb| - 1].slot == 0 
+        // requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
+        // requires forall i :: 0 <= i < |xb| && xb[i].slot == 0 ==> i == |xb| - 1
+        // ensures forall i :: 0 <= i < |xb| 
+        ensures |computeEBBs(xb, e)| == e + 1
+       
+        ensures computeEBBs(xb, e)[e] == xb[|xb| - 1]
+        ensures forall i ::  0 <= i < e + 1 ==> 
+            computeEBBs(xb, e)[e].slot as nat <= i *  SLOTS_PER_EPOCH as nat
+
+        decreases e, xb
+    {
+        if e == 0 then 
+            [xb[|xb| - 1]]
+        else 
+            //  not epoch zero
+            assert(e >= 1);
+            if xb[0].slot as nat <= e * SLOTS_PER_EPOCH as nat then 
+                //  found EBB for epoch e
+                [xb[0]] + computeEBBs(xb, e - 1)
+            else 
+                //  current head block slot is too large and e >= 1
+                //  this implies that |xb| >= 2
+                assert(|xb| >= 2);
+                computeEBBs(xb[1..], e)
+    }
+
+    /**
+     *  The result of computeEBBs for slot j is the block with the largest
+     *  slot <= j * SLOTS_PER_EPOCH
+     */
+    // lemma foo101(xb : seq<BeaconBlock>, e :  nat)
+    //     requires |xb| >= 1
+    //     /** Last block has slot 0. */
+    //     requires xb[|xb| - 1].slot == 0 
+    //     ensures 
+    // {
+
+    // }
+
 
     /**
      *  Justification definition.
