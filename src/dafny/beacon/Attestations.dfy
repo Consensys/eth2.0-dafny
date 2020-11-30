@@ -38,7 +38,12 @@ module Attestations {
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#checkpoint}
      *
      *  @param  epoch   An `Epoch` index i.e. slot number multiple of SLOTS_PER_EPOCH.
-     *  @param  root    A (hash of a) block that corresponds to the checkpoint.
+     *                  This seems to be what is called `attestation epoch` in the Gasper paper.
+     *  @param  root    A (hash of a) block that corresponds to this checkpoint.
+     *
+     *  @note           The epochs slot is not necessarily the same as the (block) root slot.
+     *                  It seems reasonable to assume that root.slot <= epoch * SLOTS_PER_EPOCH, 
+     *                  although it does not seem to appear anywhere in the specs.
      */
     datatype CheckPoint = CheckPoint(
         epoch: Epoch,
@@ -53,15 +58,19 @@ module Attestations {
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
      *
-     *  @param  slot                A slot number.
+     *  @param  slot                A slot number. The slot in which the validator makes
+     *                              the attestation.
      *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
      *                              LMD-GHOST at that slot. This determines the chain (ancestors)
      *                              to be used to update justifications and finalisations.
+     *                              The slot of this root should be less than or equal to slot.
      *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
      *  @param  target              The target (why should it be justified) checkpoint (FFG link).
      *
+     *
      *  @note   As (source, target) forms a pair, they should probably be grouped together
      *          say as a Link rather than provided separately. 
+     *          The pair stands for a `vote` for a link between source and target.
      */
     datatype AttestationData = AttestationData(
         slot: Slot,
