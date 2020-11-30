@@ -54,7 +54,7 @@ module Helpers {
      *  @param  k   A non-negative integer.
      *  @returns    A seq [t,t, ..., t] of size k.
      */
-    function method timeSeq<T>(t : T, k : nat) : seq<T> 
+    function method {:tailrecursion true} timeSeq<T>(t : T, k : nat) : seq<T> 
         ensures |timeSeq(t,k)| == k
         ensures forall i :: 0 <= i < k ==> timeSeq(t,k)[i] == t
         decreases k
