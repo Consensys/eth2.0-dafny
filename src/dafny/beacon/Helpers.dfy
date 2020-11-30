@@ -46,18 +46,6 @@ module BeaconHelpers {
     {
     }
 
-    /**
-     *  A supermajority set.
-     *  @param  a   A list of attestations.
-     *  @param  b   A list of attestations.
-     *  @returns    Whether |a| is more than two thirds of |b|.
-     *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
-     *              but this is what is defined in the specs. 
-     */
-    predicate superMajority(a: seq<PendingAttestation>, b: seq<PendingAttestation>) 
-    {
-        |a| * 3 >= |b| * 2 
-    }
    
     /**
      *  Check that a bitlist has all bits set to 1.
@@ -205,7 +193,7 @@ module BeaconHelpers {
 
     /**
      *  @param  state   A beacon state.
-     *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
+     *  @param  epoch   An epoch which is either the state's epoch or the previous one.
      *  @returns        Attestations at epoch with a target that is the block root
      *                  recorded for that epoch.         
      *

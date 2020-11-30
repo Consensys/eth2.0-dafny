@@ -59,7 +59,7 @@ module StateTransition {
      *
      *  @returns    true iff `b` can be successfully added to the state `s`.
      */
-    predicate isValid(s : BeaconState, b : BeaconBlock) 
+    predicate isValidBlock(s : BeaconState, b : BeaconBlock) 
     {
         //  block slot should be in the future.
         s.slot < b.slot 
@@ -94,7 +94,7 @@ module StateTransition {
      */
      method stateTransition(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
-        requires isValid(s, b)
+        requires isValidBlock(s, b)
 
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
 
@@ -109,6 +109,7 @@ module StateTransition {
                 forwardStateToSlot(nextSlot(s), b.slot)
                 .latest_block_header
             )
+
         // ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
     {
         //  finalise slots before b.slot.
@@ -119,9 +120,8 @@ module StateTransition {
 
         // Verify state root (from eth2.0 specs)
         // A proof that this function is correct establishes that this assert statement 
-        // is never violated (i.e. when isValid() is true.)
+        // is never violated (i.e. when isValidBlock() is true.)
         // In the Eth2.0 specs this check is conditional but enabled by default.
-        //  if validate_result:
         assert (b.state_root == hash_tree_root(s'));
     }  
 
@@ -151,7 +151,7 @@ module StateTransition {
      *                  is the same as resolveStateRoot(s).
      *
      */
-    method processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
+    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
         ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
         // The next one is a direct consequence of I1
@@ -178,7 +178,6 @@ module StateTransition {
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             decreases slot - s'.slot 
         {     
-            assume(s' == forwardStateToSlot(nextSlot(s), s'.slot) );
             s':= processSlot(s');
             //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {

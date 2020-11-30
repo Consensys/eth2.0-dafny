@@ -13,6 +13,9 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "../utils/NativeTypes.dfy"
+include "BeaconChainTypes.dfy"
+include "Attestations.dfy"
 
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
@@ -20,47 +23,38 @@ include "../utils/Eth2Types.dfy"
 module ForkChoiceTypes {
 
     import opened Eth2Types
+    import opened NativeTypes
+    import opened BeaconChainTypes
+    import opened Attestations
 
-    // Containers
 
-    /** 
-     *  A Checkpoint. 
+     /**
+     *  The store (memory) recording the blocks and the states.
      *  
-     *  Checkpoints have a slot number that is a multiple of
-     *  SLOTS_PER_EPOCH and so only the multiplier `epoch` is needed.
-     *  The block that is associated with this epoch should have a slot
-     *  number that is epoch * SLOTS_PER_EPOCH.
-     *  
-     *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#checkpoint}
+     *  @param  time                    Current time?
+     *  @param  genesis_time            Genesis time of the genesis_state. 
+     *  @param  justified_checkpoint    Latest epoch boundary block that is justified.
+     *  @param  finalised_checkpoint    Latest epoch boundary block that is finalised.
+     *  @param  blocks                  The map (dictionary) from hash to blocks.
+     *  @param  block_states            The map (dictionary) from hash to block states.
      *
-     *  @param  epoch   An `Epoch` index i.e. slot number multiple of SLOTS_PER_EPOCH.
-     *  @param  root    A (hash of a) block. 
+     *  @note                   From the spec 
+     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
+     *  @todo                   It seems that blocks and block_states should have the same
+     *                          keys at any time. This is proved in invariant0.
      */
-    // datatype CheckPoint = CheckPoint(
-    //     epoch: Epoch,
-    //     root: Root        
-    // )    
+    datatype Store = Store (
+        time: uint64,
+        genesis_time: uint64,
+        justified_checkpoint : CheckPoint,
+        finalised_checkpoint: CheckPoint,
+        // best_justified_checkpoint: CheckPoint,
+        blocks : map<Root, BeaconBlock>,
+        block_states : map<Root, BeaconState>
+        // checkpoint_states: map<CheckPoint, BeaconState>
+        // latest_messages: Dict[ValidatorIndex, LatestMessage]
+    )
 
-     /** 
-     *  A vote ie. an AttestationData.  
-     *  
-     *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
-     *
-     *  @param  slot                A slot number.
-     *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
-     *                              LMD-GHOST at that slot. 
-     *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
-     *  @param  target              The target (why should it be justified) checkpoint (FFG link).
-     *
-     *  @note   As (source, target) forms a pair, they should probably be grouped together
-     *          say as a Link rather than provided separately. 
-     */
-    // datatype AttestationData = AttestationData(
-    //     slot: Slot,
-    //     // index, CommitteeIndex, not used, should be the committee the validator belongs to.
-    //     // beacon_block_root: Root, 
-    //     source: CheckPoint,
-    //     target: CheckPoint        
-    // )    
+
 
 }

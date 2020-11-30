@@ -17,6 +17,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/NativeTypes.dfy"
 include "Attestations.dfy"
 include "BeaconChainTypes.dfy"
+include "ForkChoiceTypes.dfy"
 include "StateTransition.dfy"
 include "Helpers.dfy"
   
@@ -29,36 +30,10 @@ module ForkChoice {
     import opened Eth2Types
     import opened NativeTypes
     import opened BeaconChainTypes
+    import opened ForkChoiceTypes
     import opened StateTransition
     import opened BeaconHelpers
     import opened Attestations
-
-    /**
-     *  The store (memory) recording the blocks and the states.
-     *  
-     *  @param  time                    Current time?
-     *  @param  genesis_time            Genesis time of the genesis_state. 
-     *  @param  justified_checkpoint    Latest epoch boundary block that is justified.
-     *  @param  finalised_checkpoint    Latest epoch boundary block that is finalised.
-     *  @param  blocks                  Map from hash to blocks.
-     *  @param  block_states            Map fron hash to states.
-     *
-     *  @note                   From the spec 
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
-     *  @todo                   It seems that blocks and block_states should have the same
-     *                          keys at any time. This is proved in invariant0.
-     */
-    datatype Store = Store (
-        time: uint64,
-        genesis_time: uint64,
-        justified_checkpoint : CheckPoint,
-        finalised_checkpoint: CheckPoint,
-        // best_justified_checkpoint: CheckPoint,
-        blocks : map<Root, BeaconBlock>,
-        block_states : map<Root, BeaconState>
-        // checkpoint_states: map<CheckPoint, BeaconState>
-        // latest_messages: Dict[ValidatorIndex, LatestMessage]
-    )
 
     /**
      *  This function provides the genesis store.
@@ -66,6 +41,7 @@ module ForkChoice {
      *  @param  anchor_state    A state to be regarded as a trusted state, to not 
      *                          roll back beyond. This should be the genesis state for a full client.
      *  
+     *  @returns                The initial store that 
      *  @note                   The original code in python starts with:
      *                          var anchor_block_header := anchor_state.latest_block_header;
      *                          if (anchor_block_header.state_root == Bytes32()) {
@@ -198,6 +174,9 @@ module ForkChoice {
 
         /**
          *  Sanity check about the genesis store.
+         *
+         *  The genesis (initial) store maps the genesis block hash root to 
+         *  genesis block (resp. genesis state) in `blocks` (resp. in `block_states`).
          */
         lemma genesisStoreHasGenesisBlockAndState() 
             ensures GENESIS_STORE.genesis_time == GENESIS_TIME
@@ -444,7 +423,7 @@ module ForkChoice {
 
             //  isValid : requires that `b` can be added to pre_state i.e. state_transition's
             //  pre-conditions are satisfied.
-            requires isValid(pre_state, b)
+            requires isValidBlock(pre_state, b)
 
             //  Record block in the observer (ghost var) block list.
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
