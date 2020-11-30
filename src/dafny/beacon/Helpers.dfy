@@ -58,7 +58,7 @@ module BeaconHelpers {
     {
         |a| * 3 >= |b| * 2 
     }
-
+   
     /**
      *  Check that a bitlist has all bits set to 1.
      *  @param      xs  
