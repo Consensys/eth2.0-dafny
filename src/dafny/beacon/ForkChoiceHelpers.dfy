@@ -99,13 +99,13 @@ module ForkChoiceHelpers {
      *  @param  e   An epoch.
      *  @return     The index i of the first block in xb (left to right) with 
      *              slot number less the epoch `e` slot. 
+     *  @note       We don't need the assumption that the list of blocks in `xb`
+     *              are ordered by slot number.
      */
     function computeFirstEBBIndex(xb : seq<BeaconBlock>, e :  nat) : nat
         requires |xb| >= 1
         /** Last block has slot 0. */
         requires xb[|xb| - 1].slot == 0 
-        /** Slots of blocks are monotonically decreasing. */
-        requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
 
         /** The result is in the range of xb. */
         ensures computeFirstEBBIndex(xb, e) < |xb|
@@ -128,14 +128,14 @@ module ForkChoiceHelpers {
      *  Compute the subsequence of indices of epoch boundary blocks.
      *  @param  xb  A sequence of blocks.
      *  @param  e   An epoch.
-     *  @param  k   An index in `xb`.
+     *  @returns    The sequence of EBBs indices in xb.
+     *  @note       We don't need the assumption that the list of blocks in `xb`
+     *              are ordered by slot number.
      */
     function computeEBBs(xb : seq<BeaconBlock>, e :  nat) : seq<nat>
         requires |xb| >= 1
         /** Last block has slot 0. */
         requires xb[|xb| - 1].slot == 0 
-        /** Slots of blocks are monotonically decreasing. */
-        requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
 
         /** Each epoch has a block associated to. */
         ensures |computeEBBs(xb, e)| == e + 1
