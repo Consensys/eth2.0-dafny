@@ -119,10 +119,13 @@ module ForkChoiceHelpers {
         decreases xb 
     {
         if |xb| == 1 then 
+            //  only one choice, must be the block with slot == 0
             0
         else if xb[0].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
+            //  first block isd a good one
             0
         else 
+            //  first block has too large a slot, search suffix of xb.
             1 + computeFirstEBBIndex(xb[1..], e)
     }
 
@@ -157,8 +160,10 @@ module ForkChoiceHelpers {
 
         decreases e 
     {
+        //  Get the first boundary block
         [computeFirstEBBIndex(xb, e)] +
         (
+            //  if e > 0 recursive call, otherwise, terminate.
             if e == 0 then 
                 []
             else 
