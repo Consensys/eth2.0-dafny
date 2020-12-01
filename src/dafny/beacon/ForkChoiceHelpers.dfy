@@ -92,50 +92,77 @@ module ForkChoiceHelpers {
     //     br
     // }
 
-
-    function computeEBBs(xb : seq<BeaconBlock>, e :  nat) : seq<BeaconBlock>
+    /**
+     *  Compute the first epoch boundary block.
+     *
+     *  @param  xb  A sequence of blocks.
+     *  @param  e   An epoch.
+     *  @return     The index i of the first block in xb (left to right) with 
+     *              slot number less the epoch `e` slot. 
+     */
+    function computeFirstEBBIndex(xb : seq<BeaconBlock>, e :  nat) : nat
         requires |xb| >= 1
         /** Last block has slot 0. */
         requires xb[|xb| - 1].slot == 0 
-        // requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
-        // requires forall i :: 0 <= i < |xb| && xb[i].slot == 0 ==> i == |xb| - 1
-        // ensures forall i :: 0 <= i < |xb| 
-        ensures |computeEBBs(xb, e)| == e + 1
-       
-        ensures computeEBBs(xb, e)[e] == xb[|xb| - 1]
-        ensures forall i ::  0 <= i < e + 1 ==> 
-            computeEBBs(xb, e)[e].slot as nat <= i *  SLOTS_PER_EPOCH as nat
+        /** Slots of blocks are monotonically decreasing. */
+        requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
 
-        decreases e, xb
+        /** The result is in the range of xb. */
+        ensures computeFirstEBBIndex(xb, e) < |xb|
+        /** The slot of the result is bounded. */
+        ensures xb[computeFirstEBBIndex(xb, e)].slot as nat <= e * SLOTS_PER_EPOCH as nat 
+        /** The prefix of xb[..result] has slots >  e * SLOTS_PER_EPOCH. */
+        ensures forall j :: 0 <= j < computeFirstEBBIndex(xb, e) ==>
+            xb[j].slot as nat > e * SLOTS_PER_EPOCH as nat
+        decreases xb 
     {
-        if e == 0 then 
-            [xb[|xb| - 1]]
+        if |xb| == 1 then 
+            0
+        else if xb[0].slot as nat <= e * SLOTS_PER_EPOCH as nat then 
+            0
         else 
-            //  not epoch zero
-            assert(e >= 1);
-            if xb[0].slot as nat <= e * SLOTS_PER_EPOCH as nat then 
-                //  found EBB for epoch e
-                [xb[0]] + computeEBBs(xb, e - 1)
-            else 
-                //  current head block slot is too large and e >= 1
-                //  this implies that |xb| >= 2
-                assert(|xb| >= 2);
-                computeEBBs(xb[1..], e)
+            1 + computeFirstEBBIndex(xb[1..], e)
     }
 
     /**
-     *  The result of computeEBBs for slot j is the block with the largest
-     *  slot <= j * SLOTS_PER_EPOCH
+     *  Compute the subsequence of indices of epoch boundary blocks.
+     *  @param  xb  A sequence of blocks.
+     *  @param  e   An epoch.
+     *  @param  k   An index in `xb`.
      */
-    // lemma foo101(xb : seq<BeaconBlock>, e :  nat)
-    //     requires |xb| >= 1
-    //     /** Last block has slot 0. */
-    //     requires xb[|xb| - 1].slot == 0 
-    //     ensures 
-    // {
+    function computeEBBs(xb : seq<BeaconBlock>, e :  nat) : seq<nat>
+        requires |xb| >= 1
+        /** Last block has slot 0. */
+        requires xb[|xb| - 1].slot == 0 
+        /** Slots of blocks are monotonically decreasing. */
+        requires forall i ::  1 <= i < |xb| ==> xb[i - 1].slot > xb[i].slot 
 
-    // }
+        /** Each epoch has a block associated to. */
+        ensures |computeEBBs(xb, e)| == e + 1
+        /** The index for each epoch is in the range of xb. */
+        ensures forall i :: 0 <= i < e + 1 ==> computeEBBs(xb, e)[i] < |xb|
+        /** The sequence returned is in decreasing order. */
+        ensures forall i :: 1 <= i < e + 1 ==> 
+            xb[computeEBBs(xb, e)[i - 1]].slot >= xb[computeEBBs(xb, e)[i]].slot
+        /** The epoch e - i boundary block has a slot less than (e - i) * SLOTS_PER_EPOCH. */
+        ensures forall i :: 0 <= i < e + 1 
+            ==> xb[computeEBBs(xb, e)[i]].slot as nat <= (e - i) * SLOTS_PER_EPOCH as nat 
+        /** The  blocks at index j less than the epoch e - i boundary block have a slot 
+            larger than  (e - i) * SLOTS_PER_EPOCH. */
+        ensures forall i :: 0 <= i < e + 1 ==> 
+            forall j :: 0 <= j < computeEBBs(xb, e)[i] ==>
+            xb[j].slot as nat > (e - i) * SLOTS_PER_EPOCH as nat
 
+        decreases e 
+    {
+        [computeFirstEBBIndex(xb, e)] +
+        (
+            if e == 0 then 
+                []
+            else 
+                computeEBBs(xb, e - 1)
+        )
+    }
 
     /**
      *  Justification definition.
