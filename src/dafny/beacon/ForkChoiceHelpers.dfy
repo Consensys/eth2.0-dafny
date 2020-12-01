@@ -136,6 +136,9 @@ module ForkChoiceHelpers {
      *  @returns    The sequence of EBBs indices in xb.
      *  @note       We don't need the assumption that the list of blocks in `xb`
      *              are ordered by slot number.
+     *  @note       In the Gasper paper, there is a definition of a epoch boundary pair (A, j).
+     *              If xb is a chain (e.g. view(B)), (A, j) is the j-th epoch boundary block
+     *              iff xb[computeEBBs(xb, j)] == A.
      */
     function computeEBBs(xb : seq<BeaconBlock>, e :  Epoch) : seq<nat>
         requires |xb| >= 1
@@ -209,4 +212,7 @@ module ForkChoiceHelpers {
     //         exists b1 :: b1 in strictChain(c.root, store) && isJustified(b1, store, genesisBlockRoot)
     //         // && superMajority()
     // }
+
+    
+
 }
