@@ -18,7 +18,7 @@ include "../utils/Eth2Types.dfy"
 include "Attestations.dfy"
 include "BeaconChainTypes.dfy"
 // include "StateTransition.dfy"
-// include "Helpers.dfy"
+include "Helpers.dfy"
 // include "../utils/SeqHelpers.dfy"
 
 include "ForkChoiceTypes.dfy"
@@ -33,7 +33,7 @@ module ForkChoiceHelpers {
     // import opened NativeTypes
     import opened BeaconChainTypes
     // import opened StateTransition
-    // import opened BeaconHelpers
+    import opened BeaconHelpers
     import opened Attestations
     import opened ForkChoiceTypes
     // import opened SeqHelpers
@@ -51,6 +51,8 @@ module ForkChoiceHelpers {
             store.blocks[k].parent_root in store.blocks.Keys
             && store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot 
 
+        ensures |chain(br, store)| >= 1
+        ensures chain(br, store)[|chain(br, store)| - 1].slot == 0 
         //  Computation always terminates as slot number decreases (well-foundedness).
         decreases store.blocks[br].slot
     {
@@ -102,7 +104,7 @@ module ForkChoiceHelpers {
      *  @note       We don't need the assumption that the list of blocks in `xb`
      *              are ordered by slot number.
      */
-    function computeFirstEBBIndex(xb : seq<BeaconBlock>, e :  nat) : nat
+    function computeFirstEBBIndex(xb : seq<BeaconBlock>, e :  Epoch) : nat
         requires |xb| >= 1
         /** Last block has slot 0. */
         requires xb[|xb| - 1].slot == 0 
@@ -110,15 +112,15 @@ module ForkChoiceHelpers {
         /** The result is in the range of xb. */
         ensures computeFirstEBBIndex(xb, e) < |xb|
         /** The slot of the result is bounded. */
-        ensures xb[computeFirstEBBIndex(xb, e)].slot as nat <= e * SLOTS_PER_EPOCH as nat 
+        ensures xb[computeFirstEBBIndex(xb, e)].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat 
         /** The prefix of xb[..result] has slots >  e * SLOTS_PER_EPOCH. */
         ensures forall j :: 0 <= j < computeFirstEBBIndex(xb, e) ==>
-            xb[j].slot as nat > e * SLOTS_PER_EPOCH as nat
+            xb[j].slot as nat > e as nat * SLOTS_PER_EPOCH as nat
         decreases xb 
     {
         if |xb| == 1 then 
             0
-        else if xb[0].slot as nat <= e * SLOTS_PER_EPOCH as nat then 
+        else if xb[0].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
             0
         else 
             1 + computeFirstEBBIndex(xb[1..], e)
@@ -132,26 +134,26 @@ module ForkChoiceHelpers {
      *  @note       We don't need the assumption that the list of blocks in `xb`
      *              are ordered by slot number.
      */
-    function computeEBBs(xb : seq<BeaconBlock>, e :  nat) : seq<nat>
+    function computeEBBs(xb : seq<BeaconBlock>, e :  Epoch) : seq<nat>
         requires |xb| >= 1
         /** Last block has slot 0. */
         requires xb[|xb| - 1].slot == 0 
 
         /** Each epoch has a block associated to. */
-        ensures |computeEBBs(xb, e)| == e + 1
+        ensures |computeEBBs(xb, e)| == e as nat + 1
         /** The index for each epoch is in the range of xb. */
-        ensures forall i :: 0 <= i < e + 1 ==> computeEBBs(xb, e)[i] < |xb|
+        ensures forall i :: 0 <= i < e as nat + 1 ==> computeEBBs(xb, e)[i] < |xb|
         /** The sequence returned is in decreasing order. */
-        ensures forall i :: 1 <= i < e + 1 ==> 
+        ensures forall i :: 1 <= i < e as nat + 1 ==> 
             xb[computeEBBs(xb, e)[i - 1]].slot >= xb[computeEBBs(xb, e)[i]].slot
         /** The epoch e - i boundary block has a slot less than (e - i) * SLOTS_PER_EPOCH. */
-        ensures forall i :: 0 <= i < e + 1 
-            ==> xb[computeEBBs(xb, e)[i]].slot as nat <= (e - i) * SLOTS_PER_EPOCH as nat 
+        ensures forall i :: 0 <= i < e as nat + 1 
+            ==> xb[computeEBBs(xb, e)[i]].slot as nat <= (e as nat - i) * SLOTS_PER_EPOCH as nat 
         /** The  blocks at index j less than the epoch e - i boundary block have a slot 
             larger than  (e - i) * SLOTS_PER_EPOCH. */
-        ensures forall i :: 0 <= i < e + 1 ==> 
+        ensures forall i :: 0 <= i < e as nat + 1 ==> 
             forall j :: 0 <= j < computeEBBs(xb, e)[i] ==>
-            xb[j].slot as nat > (e - i) * SLOTS_PER_EPOCH as nat
+            xb[j].slot as nat > (e as nat - i) * SLOTS_PER_EPOCH as nat
 
         decreases e 
     {
@@ -163,6 +165,29 @@ module ForkChoiceHelpers {
                 computeEBBs(xb, e - 1)
         )
     }
+
+    /**
+     *  LEBB definition.
+     *
+     *  @param  br      A block root. Ideally the block root of an attestation.
+     *  @param  store   The current view.
+     *  @returns        The latest epoch boudasry block for `br`.
+     */
+    function latestEBBs(br: Root, store: Store) :  BeaconBlock
+        requires br in store.blocks.Keys
+        requires forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
+            store.blocks[k].parent_root in store.blocks.Keys
+            && store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot
+        
+    {
+        //  seq if beacon blocks (ancestors of br)
+        var ch := chain(br, store);
+        var bl := store.blocks[br];
+        var slot := bl.slot;
+        var lebbIndex := computeFirstEBBIndex(ch, compute_epoch_at_slot(slot));
+        ch[lebbIndex]
+    }
+
 
     /**
      *  Justification definition.
