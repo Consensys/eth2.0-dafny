@@ -351,7 +351,7 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returns        Proof that a valid store is always a chain.
          */
-        lemma {:induction r, store} aValidStoreIsAChain(r: Root, store: Store)    
+        lemma {:timeMultiplier 3} {:induction r, store} aValidStoreIsAChain(r: Root, store: Store)    
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
