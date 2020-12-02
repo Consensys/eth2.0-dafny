@@ -371,7 +371,7 @@ module StateTransition {
                 s' := s'.(current_justified_checkpoint := 
                             CheckPoint(previous_epoch,
                                         get_block_root(s', previous_epoch)));
-                s' := s'.(justification_bits := s.justification_bits[1 := true]);
+                s' := s'.(justification_bits := s'.justification_bits[1 := true]);
             }
             // assert(s'.justification_bits == updateJustificationPrevEpoch(s).justification_bits);
             assert(s'.slot == updateJustificationPrevEpoch(s).slot);
@@ -389,7 +389,7 @@ module StateTransition {
                 //             CheckPoint( current_epoch,
                 //                         get_block_root(s', previous_epoch)));
                 s' := s'.(
-                        justification_bits := s.justification_bits[0 := true],
+                        justification_bits := s'.justification_bits[0 := true],
                         current_justified_checkpoint := 
                             CheckPoint(current_epoch,
                                         get_block_root(s', current_epoch)));
