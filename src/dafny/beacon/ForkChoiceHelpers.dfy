@@ -286,6 +286,8 @@ module ForkChoiceHelpers {
      *  @note               The difficulty (if any) here is that `xv` has blocks but
      *                      links has attestations wich src and target that are roots.
      *                      So we need the store and the map root --> block to make the link.  
+     *  @note               We may alternatively return the sequence of indices that 
+     *                      builds the sequence of justified checkpoints (and [] if not justified).
      */
     predicate isJustified(i: nat, xv : seq<CheckPoint>, links : seq<PendingAttestation>, refSet: nat) 
         requires |xv| >= 1
