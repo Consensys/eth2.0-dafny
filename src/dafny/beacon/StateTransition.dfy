@@ -435,7 +435,7 @@ module StateTransition {
                 s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
             }
             //  The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-            if (all(bits[0..2]) && s'.current_justified_checkpoint.epoch == current_epoch - 1) {
+            if (false && all(bits[0..2]) && s'.current_justified_checkpoint.epoch == current_epoch - 1) {
                 s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
             }
             assert(s' == updateFinalisedCheckpoint(s3));
