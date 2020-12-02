@@ -123,7 +123,15 @@ module ForkChoiceHelpers {
     }
 
     /**
-     *  Same as above but using block roots and stores instead of blocks.
+     *  Compute the first epoch boundary block root.
+     *
+     *  @param  xb      A sequence of block roots.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @return         The index i of the first block root in xb (left to right) with 
+     *                  slot number less the epoch `e` slot. 
+     *  @note           We don't need the assumption that the list of blocks in `xb`
+     *                  are ordered by slot number.
      */
     function computeFirstEBBIndexFromRoots(xb : seq<Root>, e :  Epoch, store: Store) : nat
         requires |xb| >= 1
@@ -196,6 +204,18 @@ module ForkChoiceHelpers {
         )
     }
 
+    /**
+     *  Compute the subsequence of indices of epoch boundary block roots..
+     *  @param  xb      A sequence of block roots.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @returns        The sequence of EBBs indices in xb from epoch e to epoch 0.
+     *  @note           We don't need the assumption that the list of blocks in `xb`
+     *                  are ordered by slot number.
+     *  @note           In the Gasper paper, there is a definition of a epoch boundary pair (A, j).
+     *                  If xb is a chain (e.g. view(B)), (A, j) is the j-th epoch boundary block
+     *                  iff xb[computeEBBs(xb, j)] == A.
+     */
     function computeEBBsFromRoots(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
         requires |xb| >= 1
         requires forall r :: r in xb ==> r in store.blocks.Keys 
@@ -231,7 +251,6 @@ module ForkChoiceHelpers {
         )
     }
 
-
     /**
      *  LEBB definition.
      *
@@ -255,51 +274,24 @@ module ForkChoiceHelpers {
     }
 
     /**
-     *  Justified pairs in a view.
-     *  @param  xb  A view.
-     *  @param  xe  A sequence of indices such (xb[xe[j]], j) is a EBB at epoch j in `xb`.
-     *  @param  
-     *  @returns    The subset of indices in `xe` that are justified.
-     *  @note       xe[|xe| - 1] must be the last block in `xb` and this last block'slot is zero.
-     *              
-     */
-    // function justifiedPairs(xb : seq<BeaconBlock>, xe: seq<nat>, links : set<PendingAttestation>) : seq<nat>
-    //     requires |xb| >= 1
-    //     requires |xe| >= 1
-    //     /** Last block has slot 0. */
-    //     requires xb[|xb| - 1].slot == 0 
-    //     /** Indices in xe points to blocks in xe. */
-    //     requires forall i :: 0 <= i < |xe| ==> xe[i] < |xb|
-    //     /** Values in xe are decreasing. */
-    //     requires forall i :: 1 <= i < |xe| ==> xe[i - 1] <= xe[i]
-    //     /** Te last value is last block in `xb`. */
-    //     requires xe[|xe| - 1] == |xb| - 1
-    // {
-    //     //  last index is justified as it is the genesis block
-    //     if |xe| == 1 then 
-    //         [0]
-    //     else 
-    //         //
-    //         []
-    // }
-
-    /**
      *  Justification definition.
      *  
      *  @param  i           An index in `xv`.
      *  @param  xv          A sequence of EBB ordered by epochs from largest (first) to 0 (last).
-     *                      Each (xv.0, xv.1) is an EBB for epoch xv.1.
+     *                      Each xv[i] is an EBB for epoch i.
      *  @param  links       The attestations with src and tgt checkpoints.
      *  @param  refSet      A non-negative int typically the number of validators.
-     *  @returns            Whether the pair (b, i) in `xv` is justified.
+     *  @returns            Whether the checkpoint `xv[i]` is justified.
      *
      *  @note               The difficulty (if any) here is that `xv` has blocks but
      *                      links has attestations wich src and target that are roots.
-     *                      So we need the store and the map root --> block to make the link.   
+     *                      So we need the store and the map root --> block to make the link.  
      */
     predicate isJustified(i: nat, xv : seq<CheckPoint>, links : seq<PendingAttestation>, refSet: nat) 
         requires |xv| >= 1
         requires i < |xv|
+        /** The checkpoints must be in decreasing order epoch-wise.  */
+        requires forall i :: 0 <= i < |xv| ==> xv[i].epoch as nat == |xv| - i 
         /** SuperMajority link requires src.epoch < tgt.epoch. */
         // requires forall i, j :: 0 <= i < j < |xv| ==> xv[i].epoch > xv[j].epoch
         decreases |xv| - i 
@@ -312,36 +304,5 @@ module ForkChoiceHelpers {
             exists j {:induction j} :: i < j < |xv| - 1 && isJustified(j, xv, links, refSet) 
                 && superMajorityLink(xv[j], xv[i], links, refSet)
     }
-
-    /**
-     *  Whether links has an attestation from c1 to c2.
-     */
-    // predicate link(c1: (BeaconBlock, nat), c2: (BeaconBlock, nat), links : set<PendingAttestation>, store: Store)
-    //     /** Attestations must be for blocks in the store. */
-    //     requires forall a :: a in links ==>
-    //         a.data.source.root in store.blocks && a.data.target.root in store.blocks 
-    // {
-    //     exists a :: a in links 
-    //         && c1 == (store.blocks[a.data.source.root], a.data.source.epoch as nat)  
-    // }
-
-    /**
-     *  
-     */
-    // function method countAttestationsForLinkBlocks(xa : seq<PendingAttestation>, linksrc : (BeaconBlock, nat), linktgt: (BeaconBlock, nat)) : nat
-    //     ensures countAttestationsForLinkBlocks(xa, linksrc, linktgt) <= |xa|
-    //     decreases xa
-    // {
-    //     // countAttestationsForLink()
-    //     0
-    //     // if |xl| == 0 then 
-    //     //     0
-    //     // else 
-    //     //     (if xl[0].data.source.root == linksrc && xl[0].data.target.root == linktgt then 
-    //     //         1
-    //     //     else 
-    //     //         0
-    //     //     ) + countAttestationsForLink(xl[1..], linksrc, linktgt)
-    // }
 
 }
