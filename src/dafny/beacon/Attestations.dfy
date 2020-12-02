@@ -67,6 +67,13 @@ module Attestations {
      *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
      *  @param  target              The target (why should it be justified) checkpoint (FFG link).
      *
+     *  @note                       The `source` and `target` are not independent from the 
+     *                              `beacon_block_root`. As specified in the Gasper paper, they 
+     *                              must be LJ(-) and LE(-) respectively. 
+     *                              LJ(-) is the last (most recent) justified checkpoint in 
+     *                              view(beacon_block_root), and LE(-) is the last epoch boundary
+     *                              pair in view(beacon_block_root).
+     *
      *
      *  @note   As (source, target) forms a pair, they should probably be grouped together
      *          say as a Link rather than provided separately. 
@@ -111,6 +118,8 @@ module Attestations {
      *  @returns    Whether |a| is more than two thirds of |b|.
      *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
      *              but this is what is defined in the specs. 
+     *
+     *  @note       Not used yet.
      */
     predicate superMajority(a: seq<PendingAttestation>, b: nat) 
     {
@@ -118,7 +127,7 @@ module Attestations {
     }
 
     /**
-     *  Supermajority link.
+     *  Whether `xa` contains enough votes for (src, tgt) to make it a supermajority link.
      * 
      *  @param  src         A checkpoint.
      *  @param  tgt         A checkpoint.
@@ -134,6 +143,7 @@ module Attestations {
     }
 
     /**
+     *  The number of attestations for a pair of checkpoints.
      *  
      *  @param  xa  The known list of attestations (votes).
      *  @param  src A checkpoint.
