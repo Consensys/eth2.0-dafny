@@ -162,13 +162,18 @@ module BeaconChainTypes {
      */
     const DEFAULT_LIST_ATTESTATIONS := timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
-    type ListOfValidators = x : seq<Validator> | |x| == VALIDATOR_REGISTRY_LIMIT as int witness 
+    /**
+     *  A list of validators.  
+     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
+     * */
+    type ListOfValidators = x : seq<Validator> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
             DEFAULT_LIST_VALIDATORS
+            
     /**
      *  Default bitvector of size 4 initialised with false.
      */
-    const DEFAULT_LIST_VALIDATORS := timeSeq(DEFAULT_VALIDATOR,  VALIDATOR_REGISTRY_LIMIT as int)
-
+    const DEFAULT_LIST_VALIDATORS : seq<Validator> := []
+    
     /** 
      *  The Beacon state type.
      *
