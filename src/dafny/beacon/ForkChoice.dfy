@@ -79,7 +79,8 @@ module ForkChoice {
             CheckPoint(anchor_epoch, anchor_root),
             CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
-            map[anchor_root := anchor_state]            //  block_states
+            map[anchor_root := anchor_state],            //  block_states
+            |anchor_state.validators|
         )
     }
 

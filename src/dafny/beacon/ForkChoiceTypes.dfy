@@ -38,6 +38,9 @@ module ForkChoiceTypes {
      *  @param  blocks                  The map (dictionary) from hash to blocks.
      *  @param  block_states            The map (dictionary) from hash to block states.
      *
+     *  @param  threshold               Not in the store as per eth2.0 specs but
+     *                                  used here as the constant numebr of validators.
+     *
      *  @note                   From the spec 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
      *  @todo                   It seems that blocks and block_states should have the same
@@ -50,7 +53,8 @@ module ForkChoiceTypes {
         finalised_checkpoint: CheckPoint,
         // best_justified_checkpoint: CheckPoint,
         blocks : map<Root, BeaconBlock>,
-        block_states : map<Root, BeaconState>
+        block_states : map<Root, BeaconState>,
+        threshold: nat
         // checkpoint_states: map<CheckPoint, BeaconState>
         // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )
