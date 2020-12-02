@@ -120,29 +120,38 @@ module Attestations {
     /**
      *  Supermajority link.
      * 
-     *  @param  src     A checkpoint.
-     *  @param  tgt     A checkpoint preceeding src.
-     *  @param  xa      The known list of attestations (votes).
+     *  @param  src         A checkpoint.
+     *  @param  tgt         A checkpoint.
+     *  @param  xa          The known list of attestations (votes).
+     *  @param  threshold   The normalised threshold value.
+     *  @returns            Whether `xa` has more than (2 * threshold) / 3
+     *                      elements attesting for src --> tgt.
      */
     predicate superMajorityLink(src : CheckPoint, tgt: CheckPoint, xa: seq<PendingAttestation>, threshold: nat)
-        requires src.epoch < tgt.epoch
+        // requires src.epoch < tgt.epoch
     {
-        3 * countAttestationsForLink(xa, src.root, tgt.root) >= 2 * threshold
+        3 * countAttestationsForLink(xa, src, tgt) >= 2 * threshold
     }
 
-    function method countAttestationsForLink(xl : seq<PendingAttestation>, linksrc : Root, linktgt: Root) : nat
-        ensures countAttestationsForLink(xl, linksrc, linktgt) <= |xl|
-        decreases xl
+    /**
+     *  
+     *  @param  xa  The known list of attestations (votes).
+     *  @param  src A checkpoint.
+     *  @param  tgt A checkpoint.
+     *  @returns    The number of votes for src --> tgt in `xa`.
+     */
+    function method countAttestationsForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : nat
+        ensures countAttestationsForLink(xa, src, tgt) <= |xa|
+        decreases xa
     {
-        if |xl| == 0 then 
+        if |xa| == 0 then 
             0
         else 
-            (if xl[0].data.source.root == linksrc && xl[0].data.target.root == linktgt then 
+            (if xa[0].data.source == src && xa[0].data.target == tgt then 
                 1
             else 
                 0
-            ) + countAttestationsForLink(xl[1..], linksrc, linktgt)
+            ) + countAttestationsForLink(xa[1..], src, tgt)
     }
-
 
 }
