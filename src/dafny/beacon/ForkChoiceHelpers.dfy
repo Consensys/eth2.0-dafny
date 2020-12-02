@@ -87,62 +87,6 @@ module ForkChoiceHelpers {
             [ br ] + chainRoots(store.blocks[br].parent_root, store)
     }
 
-     /**
-     *  The view defined by a block.
-     *  
-     *  @param  br      A hash root of a block.
-     *  @param  store   A store (similar to the view of the validator).
-     *  @returns        The ancestors of the block `br` in  `store`.
-     */
-    // function rootView(br: Root, store: Store) : seq<Root>
-    //     requires br in store.blocks.Keys
-    //     requires forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
-    //         store.blocks[k].parent_root in store.blocks.Keys
-    //         && store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot 
-
-    //     ensures |view(br, store)| >= 1
-    //     ensures view(br, store)[|view(br, store)| - 1].slot == 0 
-    //     //  Computation always terminates as slot number decreases (well-foundedness).
-    //     decreases store.blocks[br].slot
-    // {
-    //     if ( store.blocks[br].slot == 0 ) then
-    //         //  Should be the genesis block.
-    //         [ br ]
-    //     else 
-    //         [ br ] + rootView(store.blocks[br].parent_root, store)
-    // }
-
-    /**
-     *  The strict prefix of a chain.
-     */
-    // function strictChain(br: Root, store: Store) : seq<BeaconBlock>
-    //     requires br in store.blocks.Keys
-    //     requires  store.blocks[br].slot > 0
-    //     requires forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
-    //         store.blocks[k].parent_root in store.blocks.Keys
-    //         && store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot 
-
-    //     //  Computation always terminates as slot number decreases (well-foundedness).
-    //     decreases store.blocks[br].slot
-    // {
-    //     view(store.blocks[br].parent_root, store)
-    // }
-
-
-    /**
-     *  The epoch boundary block (EBB) at epoch j for chain(B). 
-     *  @param  br      A block root.
-     *  @param  store   The store.
-     *  @param  j       A epoch number.
-     */
-    // function epochBoundaryBlocks(br: Root, store: Store, j : nat) : Root 
-    //     // requires j <= compute_epoch_at_slot() 
-    // {
-    //     //  get the chain for br in the store
-    //     var c := chain(br, store);
-    //     br
-    // }
-
     /**
      *  Compute the first epoch boundary block.
      *
