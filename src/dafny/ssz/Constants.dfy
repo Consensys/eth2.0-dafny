@@ -94,6 +94,12 @@ module Constants {
   // Configuration -- Time parameters
   const  SECONDS_PER_SLOT : uint64 := 12 ;                            
   const  MIN_ATTESTATION_INCLUSION_DELAY:= TWO_UP_0 ; // 2 ^ 0           
+
+  /**
+   *  
+   *  The number of slots in one EPOCH.
+   *  @note Current slot time seems to approx 6 seconds.
+   */
   const  SLOTS_PER_EPOCH : uint64 := TWO_UP_5 as uint64; // 2 ^Int 5                           
   const  MIN_SEED_LOOKAHEAD:= TWO_UP_0 ; // 2 ^ 0                        
   const  MAX_SEED_LOOKAHEAD:= TWO_UP_2 ; // 2 ^ 2                        
@@ -108,8 +114,12 @@ module Constants {
   // Configuration -- State list lengths
   const  EPOCHS_PER_HISTORICAL_VECTOR := TWO_UP_16; // 2 ^ 16              
   const  EPOCHS_PER_SLASHINGS_VECTOR := TWO_UP_13; // 2 ^ 13               
-  const  HISTORICAL_ROOTS_LIMIT := TWO_UP_24; // 2 ^ 24                    
-  const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40                  
+  const  HISTORICAL_ROOTS_LIMIT := TWO_UP_24; // 2 ^ 24       
+
+  /**
+   *  Maximum size of the state.validstors list.
+   */             
+  // const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40                  
 
   // Configuration -- Rewards and penalties
   const BASE_REWARD_FACTOR := TWO_UP_6; // 2 ^ 6                         
@@ -121,6 +131,9 @@ module Constants {
   // Configuration -- Max operations per block
   const MAX_PROPOSER_SLASHINGS := TWO_UP_4; // 2 ^ 4                     
   const MAX_ATTESTER_SLASHINGS := TWO_UP_0; // 2 ^ 0                     
+  /**
+   *  MAximum number of (aggregated) attestations in a block.
+   */
   const MAX_ATTESTATIONS := TWO_UP_7; // 2 ^ 7                           
   const MAX_DEPOSITS := TWO_UP_4; // 2 ^ 4                               
   const MAX_VOLUNTARY_EXITS := TWO_UP_4; // 2 ^ 4                        
