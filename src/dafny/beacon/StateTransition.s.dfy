@@ -313,7 +313,7 @@ module StateTransitionSpec {
             else if (all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) then 
                 // The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
                 s.(finalised_checkpoint := s.current_justified_checkpoint) 
-            else if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
+            else if (false && all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
                 // The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
                 s.(finalised_checkpoint := s.current_justified_checkpoint) 
             else
