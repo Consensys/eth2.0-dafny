@@ -155,12 +155,13 @@ module BeaconChainTypes {
      */
     const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
 
-    type ListOfAttestations = x : seq<PendingAttestation> | |x| == MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
+    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
     /**
      *  Default bitvector of size 4 initialised with false.
      */
-    const DEFAULT_LIST_ATTESTATIONS := timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
+    const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
+    // timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
     /**
      *  A list of validators.  
