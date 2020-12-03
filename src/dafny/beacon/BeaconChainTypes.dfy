@@ -168,7 +168,7 @@ module BeaconChainTypes {
      * */
     type ListOfValidators = x : seq<Validator> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
             DEFAULT_LIST_VALIDATORS
-            
+
     /**
      *  Default bitvector of size 4 initialised with false.
      */
@@ -231,6 +231,11 @@ module BeaconChainTypes {
      *                              Each validator contains  relevant data such as pubkey, 
      *                              withdrawal credentials, effective balance, a slashed  boolean,
      *                              and status (pending, active, exited, etc)
+     *
+     * @param   previous_epoch_attestations
+     *                              Attestations targeting the previous epoch of the slot.
+     * @param   current_epoch_attestations
+     *                              Attestations targeting the epoch of the slot.
      *
      * @param   previous_justified_checkpoint
      *                              The most recent justified Checkpoint as it was
