@@ -155,12 +155,13 @@ module BeaconChainTypes {
      */
     const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
 
-    type ListOfAttestations = x : seq<PendingAttestation> | |x| == MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
+    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
     /**
      *  Default bitvector of size 4 initialised with false.
      */
-    const DEFAULT_LIST_ATTESTATIONS := timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
+    const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
+    // timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
     /**
      *  A list of validators.  
@@ -239,6 +240,11 @@ module BeaconChainTypes {
      *                              Each validator contains  relevant data such as pubkey, 
      *                              withdrawal credentials, effective balance, a slashed  boolean,
      *                              and status (pending, active, exited, etc)
+     *
+     * @param   previous_epoch_attestations
+     *                              Attestations targeting the previous epoch of the slot.
+     * @param   current_epoch_attestations
+     *                              Attestations targeting the epoch of the slot.
      *
      * @param   previous_justified_checkpoint
      *                              The most recent justified Checkpoint as it was
