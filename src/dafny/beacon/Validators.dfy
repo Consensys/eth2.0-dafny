@@ -70,7 +70,7 @@ module Validators {
      *                                  securely using BLS keys.
      */
     datatype DepositData = DepositData(
-        // pubkey: BLSPubkey,
+        pubkey: BLSPubkey,
         // withdrawal_credentials: Hash,
         amount: Gwei
         // signature: BLSSignature

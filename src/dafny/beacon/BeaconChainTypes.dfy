@@ -168,11 +168,19 @@ module BeaconChainTypes {
      * */
     type ListOfValidators = x : seq<Validator> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
             DEFAULT_LIST_VALIDATORS
+
+    /**
+     *  A list of balances.  
+     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
+     * */
+    type ListOfBalances = x : seq<Gwei> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
+            DEFAULT_LIST_BALANCES
             
     /**
      *  Default bitvector of size 4 initialised with false.
      */
     const DEFAULT_LIST_VALIDATORS : seq<Validator> := []
+    const DEFAULT_LIST_BALANCES : seq<Gwei> := []
     
     /** 
      *  The Beacon state type.
@@ -260,6 +268,7 @@ module BeaconChainTypes {
         eth1_deposit_index : uint64,
         //  Registry
         validators: ListOfValidators,
+        balances: ListOfBalances,
         //  previous_epoch_attestations: seq<>,
         //  Attestations
         previous_epoch_attestations: ListOfAttestations,
@@ -281,6 +290,7 @@ module BeaconChainTypes {
             DEFAULT_HIST_ROOTS, 
             0,
             DEFAULT_LIST_VALIDATORS,
+            DEFAULT_LIST_BALANCES,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_JUSTIFICATION_BITVECTOR,
