@@ -45,5 +45,31 @@ module SetHelpers {
             natSetCardBound(x - { k - 1}, k - 1);
         }
     }
+
+   /**
+    *  If a finite set x is included in a finite set y, then
+    *  card(x) <= card(y).
+    *
+    *  @param  T   A type.
+    *  @param  x   A finite set.
+    *  @param  y   A finite set.
+    *  @returns    A proof that x <= y implies card(x) <= card(y)
+    *              in other terms, card(_) is monotonic.
+    */
+    lemma cardIsMonotonic<T>(x : set<T>, y : set<T>) 
+        requires x <= y 
+        ensures |x| <= |y|
+        decreases y 
+    {
+        if |y| == 0 {
+            //  Thanks Dafny
+        } else {
+            //  |y| >= 1, get an element in y
+            var e :| e in y;
+            var y' := y - { e };
+            //  Split recursion according to whether e in x or not
+            cardIsMonotonic(if e in x then x - {e} else x, y');
+        }
+    }
    
 }
