@@ -13,13 +13,19 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "../ssz/Constants.dfy"
+include "../utils/Helpers.dfy"
+include "../utils/SetHelpers.dfy"
 
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
  */
 module Attestations {
 
+    import opened Helpers
     import opened Eth2Types
+    import opened Constants
+    import opened SetHelpers
 
     // Containers
 
@@ -53,7 +59,7 @@ module Attestations {
     /** Default value for CheckPoint. */
     const DEFAULT_CHECKPOINT := CheckPoint(0 as Epoch, DEFAULT_BYTES32)
 
-     /** 
+    /** 
      *  A vote ie. an AttestationData.  
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
@@ -74,6 +80,8 @@ module Attestations {
      *                              view(beacon_block_root), and LE(-) is the last epoch boundary
      *                              pair in view(beacon_block_root).
      *
+     *  @note                       We must have target.epoch == epoch(slot).
+     *
      *
      *  @note   As (source, target) forms a pair, they should probably be grouped together
      *          say as a Link rather than provided separately. 
@@ -84,7 +92,7 @@ module Attestations {
         // index, CommitteeIndex, not used, should be the committee the validator belongs to.
         beacon_block_root: Root, 
         source: CheckPoint,
-        target: CheckPoint        
+        target: CheckPoint        //    target.epoch == epoch(slot)
     )    
 
     /**
@@ -93,6 +101,11 @@ module Attestations {
     const DEFAULT_ATTESTATION_DATA := 
         AttestationData(0 as Slot,  DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
 
+    // datatype AggregationBits 
+    type AggregationBits = x : seq<bool> | |x| == MAX_VALIDATORS_PER_COMMITTEE witness DEFAULT_AGGREGATION_BITS
+
+    const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE)
+
     /**
      *  A Pending attestation (including a delay slot).
      *  
@@ -100,7 +113,7 @@ module Attestations {
      *  @todo:  enable other fileds.
      */
     datatype PendingAttestation = PendingAttestation(
-        // aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
+        aggregation_bits: AggregationBits,
         data: AttestationData
         // inclusion_delay: Slot
         // proposer_index: ValidatorIndex
@@ -109,38 +122,7 @@ module Attestations {
     /**
      *  Default value for PendingAttestation.
      */
-    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_ATTESTATION_DATA)
-
-    /**
-     *  A supermajority set.
-     *  @param  a   A list of attestations.
-     *  @param  b   A list of attestations.
-     *  @returns    Whether |a| is more than two thirds of |b|.
-     *  @note       This predicate is actually stronger than |a| >= (2 |b|) / 3
-     *              but this is what is defined in the specs. 
-     *
-     *  @note       Not used yet.
-     */
-    predicate superMajority(a: seq<PendingAttestation>, b: nat) 
-    {
-        |a| * 3 >= b * 2 
-    }
-
-    /**
-     *  Whether `xa` contains enough votes for (src, tgt) to make it a supermajority link.
-     * 
-     *  @param  src         A checkpoint.
-     *  @param  tgt         A checkpoint.
-     *  @param  xa          The known list of attestations (votes).
-     *  @param  threshold   The normalised threshold value.
-     *  @returns            Whether `xa` has more than (2 * threshold) / 3
-     *                      elements attesting for src --> tgt.
-     */
-    predicate superMajorityLink(src : CheckPoint, tgt: CheckPoint, xa: seq<PendingAttestation>, threshold: nat)
-        // requires src.epoch < tgt.epoch
-    {
-        3 * countAttestationsForLink(xa, src, tgt) >= 2 * threshold
-    }
+    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
 
     /**
      *  The number of attestations for a pair of checkpoints.
@@ -159,9 +141,75 @@ module Attestations {
         else 
             (if xa[0].data.source == src && xa[0].data.target == tgt then 
                 1
+
             else 
                 0
             ) + countAttestationsForLink(xa[1..], src, tgt)
     }
 
+    /**
+     *  Collect set of indices of validators attesting a link.
+     *
+     *  @param  xa      A seq of attestations.
+     *  @param  src     The source checkpoint of the link.
+     *  @param  tgt     The target checkpoint of the link.
+     *  @returns        The set of validators's indices that vote for (src. tgt) in `xa`. 
+     */
+     function collectAttestationsForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
+        ensures forall e :: e in collectAttestationsForLink(xa, src, tgt) ==>
+            e < MAX_VALIDATORS_PER_COMMITTEE
+        ensures |collectAttestationsForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        decreases xa
+    {
+        if |xa| == 0 then 
+            { }
+        else 
+            unionCardBound(collectAttestersIndices(xa[0].aggregation_bits),
+                collectAttestationsForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE);
+            (if xa[0].data.source == src && xa[0].data.target == tgt then 
+                collectAttestersIndices(xa[0].aggregation_bits)
+            else 
+                {}
+            ) + collectAttestationsForLink(xa[1..], src, tgt)
+    }
+
+    /**
+     *  Collect set of indices of validators attesting a link to a given target.
+     *
+     *  @param  xa      A seq of attestations.
+     *  @param  tgt     The target checkpoint of the link.
+     *  @returns        The set of validators's indices that vote for (_. tgt) in `xa`. 
+     */
+    function collectAttestationsForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
+        ensures forall e :: e in collectAttestationsForTarget(xa, tgt) ==>
+            e < MAX_VALIDATORS_PER_COMMITTEE
+        ensures |collectAttestationsForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        decreases xa
+    {
+        if |xa| == 0 then 
+            { }
+        else 
+            unionCardBound(collectAttestersIndices(xa[0].aggregation_bits),
+                collectAttestationsForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
+            (if xa[0].data.target == tgt then 
+                collectAttestersIndices(xa[0].aggregation_bits)
+            else 
+                {}
+            ) + collectAttestationsForTarget(xa[1..], tgt)
+    }
+
+    /**
+     *  Collect the set of indices for which xb[i] is true.
+     */
+    function collectAttestersIndices(xb : seq<bool>) : set<nat> 
+        ensures |collectAttestersIndices(xb)| <= |xb|
+        ensures forall i :: i in collectAttestersIndices(xb) <==> 0 <= i < |xb| && xb[i]
+        // decreases xb
+    // {
+    //     // if |xb| == 0 then []
+    //     // else 
+    //     //     (if xb[0] then [offset] else []) + collectAttestersIndices(xb[1..], offset + 1)
+    // }
+
+   
 }
