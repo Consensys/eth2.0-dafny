@@ -19,6 +19,38 @@
  */
 module SeqHelpers {
 
+    /**
+     *  Intersection of two sequences.
+     *  
+     *  @param  x   A sequence.
+     *  @param  y   A sequence.
+     *  @returns    The elements in `x` that are in also `y` as a sequence.
+     */
+    function method seqInter<T(==)>(x : seq<T>, y : seq<T>) : seq<T>
+        decreases x 
+    {
+        if |x| == 0 then []
+        else (if x[0] in y then [x[0]] else []) + seqInter(x[1..], y)
+    }
+
+    /**
+     *  Convert a seq to a set.
+     */
+    function method seqToSet<T(!new)>(x : seq<T>) : set<T>
+        ensures forall e :: e in x <==> e in seqToSet(x)
+        decreases x
+    {
+        if |x| == 0 then {}
+        else { x[0] }  + seqToSet(x[1..])
+    }
+
+    lemma seqOfDistinctElementsAndSets<T(==)>(x : seq<T>) 
+        requires forall i, j :: 0 <= i < j < |x| ==> x[i] != x[j]
+        ensures |x| == |seqToSet(x)|
+        decreases x 
+    {   //  Thanks Dafny
+    }
+
     /** 
      *  Split head and tail.
      */
