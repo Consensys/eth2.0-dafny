@@ -164,10 +164,10 @@ module Attestations {
         if |xa| == 0 then 
             { }
         else 
-            unionCardBound(collectAttestersIndices(xa[0].aggregation_bits),
+            unionCardBound(trueBitsCount(xa[0].aggregation_bits),
                 collectAttestationsForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE);
             (if xa[0].data.source == src && xa[0].data.target == tgt then 
-                collectAttestersIndices(xa[0].aggregation_bits)
+                trueBitsCount(xa[0].aggregation_bits)
             else 
                 {}
             ) + collectAttestationsForLink(xa[1..], src, tgt)
@@ -189,10 +189,10 @@ module Attestations {
         if |xa| == 0 then 
             { }
         else 
-            unionCardBound(collectAttestersIndices(xa[0].aggregation_bits),
+            unionCardBound(trueBitsCount(xa[0].aggregation_bits),
                 collectAttestationsForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
             (if xa[0].data.target == tgt then 
-                collectAttestersIndices(xa[0].aggregation_bits)
+                trueBitsCount(xa[0].aggregation_bits)
             else 
                 {}
             ) + collectAttestationsForTarget(xa[1..], tgt)
@@ -200,16 +200,35 @@ module Attestations {
 
     /**
      *  Collect the set of indices for which xb[i] is true.
+     *  
+     *  @param  xb  A sequence of bools.
+     *  @returns    The number of elements that are true in `xb`.
      */
-    function collectAttestersIndices(xb : seq<bool>) : set<nat> 
-        ensures |collectAttestersIndices(xb)| <= |xb|
-        ensures forall i :: i in collectAttestersIndices(xb) <==> 0 <= i < |xb| && xb[i]
-        // decreases xb
-    // {
-    //     // if |xb| == 0 then []
-    //     // else 
-    //     //     (if xb[0] then [offset] else []) + collectAttestersIndices(xb[1..], offset + 1)
-    // }
+    function trueBitsCount(xb : seq<bool>) : set<nat> 
+        ensures |trueBitsCount(xb)| <= |xb|
+        ensures forall i :: i in trueBitsCount(xb) <==> 0 <= i < |xb| && xb[i]
+        decreases xb
+    {
+        if |xb| == 0 then 
+            {}
+        else 
+            (if xb[|xb| - 1] then { |xb| - 1 } else {}) + trueBitsCount(xb[..|xb| - 1])
+    }
 
+    /**
+     *  The set of validators attesting to a target is larger than the set 
+     *  of validators attesting to a link with that target. 
+     *
+     *  @param  xa      A seq of attestations.
+     *  @param  src     The source checkpoint of the link.
+     *  @param  tgt     The target checkpoint of the link.
+     */
+    lemma {:induction xa} attForTgtLargerThanLinks(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint)
+        ensures collectAttestationsForLink(xa, src, tgt) <= collectAttestationsForTarget(xa, tgt) 
+        ensures |collectAttestationsForLink(xa, src, tgt)| <= |collectAttestationsForTarget(xa, tgt)| 
+    {
+        assert(collectAttestationsForLink(xa, src, tgt) <= collectAttestationsForTarget(xa, tgt) );
+        cardIsMonotonic(collectAttestationsForLink(xa, src, tgt), collectAttestationsForTarget(xa, tgt));
+    }
    
 }
