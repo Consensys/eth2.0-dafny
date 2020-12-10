@@ -294,7 +294,7 @@ module StateTransitionSpec {
      *  bit[0]        bit[1]        bit[2]        bit[3]
      *  current       previous
      *
-     *  Python slice a[k:l] means: a[k] ... a[l -1]
+    //  *  Python slice a[k:l] means: a[k] ... a[l -1]
      */
     function updateFinalisedCheckpoint(s: BeaconState) : BeaconState
         ensures s.slot == updateFinalisedCheckpoint(s).slot
@@ -319,4 +319,17 @@ module StateTransitionSpec {
             else
                 s 
     } 
+
+    /**
+     *  Final section of process_final_updates where attestations are rotated.
+     *  @param  s   A beacon state.
+     *  @returns    `s` with the attestations rotated.
+     */
+    function finalUpdates(s: BeaconState) : BeaconState
+    {
+        s.(
+            previous_epoch_attestations := s.current_epoch_attestations,
+            current_epoch_attestations := []
+        )
+    }
 }
