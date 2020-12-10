@@ -285,7 +285,7 @@ module StateTransition {
         ensures s' == updateDeposits(addBlockToState(s, b), b.body.deposits)
         ensures s'.slot == b.slot
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
-        //ensures |s'.validators| == |s'.balances|
+        ensures |s'.validators| == |s'.balances|
     {
         //  Start by creating a block header from the ther actual block.
         s' := processBlockHeader(s, b); 
@@ -321,7 +321,9 @@ module StateTransition {
         ensures s' == addBlockToState(s, b)
         ensures s'.slot == b.slot
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.validators == s.validators
         ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
         //ensures |s'.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
     {
         s':= s.(
@@ -346,7 +348,14 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+        requires |s.validators| == |s.balances|
+
         ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
     {
         assert(s.slot % SLOTS_PER_EPOCH != 0);
         s' := process_justification_and_finalization(s);
@@ -366,7 +375,14 @@ module StateTransition {
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
         requires s.slot % SLOTS_PER_EPOCH != 0
+        requires |s.validators| == |s.balances|
+
         ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
     {
         //  epoch in state s is given by s.slot
 
