@@ -99,7 +99,7 @@ module ForkChoice {
      */
     class Env {
 
-        const GENESIS_TIME : uint64 ;
+        const GENESIS_TIME : uint64 
 
         /**
          *  Genesis (initial) beacon state.
@@ -410,7 +410,7 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method on_block(b: BeaconBlock, pre_state : BeaconState) 
+        method {:timeMultiplier 6} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 
