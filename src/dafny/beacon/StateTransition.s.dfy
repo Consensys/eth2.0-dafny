@@ -177,7 +177,11 @@ module StateTransitionSpec {
                 //  Apply update on partially resolved state, and then update slot
                 assert(s.slot % SLOTS_PER_EPOCH != 0);
                 // updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
-                updateJustificationAndFinalisation(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
+                var s1 := resolveStateRoot(s).(slot := s.slot);
+                var s2 := updateJustificationAndFinalisation(s1);
+                var s3 := finalUpdates(s2);
+                var s4 := s3.(slot := s.slot + 1);
+                s4
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
