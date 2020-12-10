@@ -65,13 +65,18 @@ module StateTransition {
         s.slot < b.slot 
         //  Fast forward s to b.slot and check `b` can be attached to the
         //  resulting state's latest_block_header.
+        //  Check that number of deposits in b.body can be processed
+        && s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
+        && |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+        // note that |b.body.deposits| is larger than required, only existing + new validators need to obey this bound
+        && total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
+        // note that the |b.body.deposits| and total_deposits should refer to valid deposits
+        && |s.validators| == |s.balances|
         && b.parent_root == 
             hash_tree_root(
                 forwardStateToSlot(nextSlot(s), 
                 b.slot
             ).latest_block_header) 
-        //  Check that number of deposits in b.body can be processed
-        && s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
         //  Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
                 updateDeposits(
@@ -79,9 +84,10 @@ module StateTransition {
                         forwardStateToSlot(nextSlot(s), b.slot), 
                         b
                     ),
-                    b
+                    b.body.deposits
                 )
             )
+        
     }
 
     /**
@@ -96,7 +102,8 @@ module StateTransition {
         //  make sure the last state was one right after addition of new block
         requires isValidBlock(s, b)
 
-        requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
+        requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000 
+        requires |s.validators| == |s.balances| 
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
@@ -109,14 +116,21 @@ module StateTransition {
                 forwardStateToSlot(nextSlot(s), b.slot)
                 .latest_block_header
             )
-
-        // ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
+        ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
+        ensures s'.validators == updateDeposits(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b),b.body.deposits).validators
+        ensures s'.balances == updateDeposits(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b),b.body.deposits).balances
+        ensures |s'.validators| == |s'.balances|
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot);
 
+        assert (s1.slot == forwardStateToSlot(nextSlot(s), b.slot).slot );
+        assert (s1.slot == b.slot);
+        assert (s1.balances == s.balances);
+
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
+        assert (s'.slot == b.slot);  
 
         // Verify state root (from eth2.0 specs)
         // A proof that this function is correct establishes that this assert statement 
@@ -153,9 +167,16 @@ module StateTransition {
      */
     method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
+        requires |s.validators| == |s.balances|
+        
         ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
         // The next one is a direct consequence of I1
         ensures s'.slot == slot
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
+
         //  Termination ranking function
         decreases slot - s.slot
     {
@@ -176,6 +197,9 @@ module StateTransition {
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
             invariant s' == forwardStateToSlot(nextSlot(s), s'.slot) 
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
+            invariant s'.validators == s.validators
+            invariant s'.balances == s.balances
+            invariant |s'.validators| == |s'.balances|
             decreases slot - s'.slot 
         {     
             s':= processSlot(s');
@@ -209,12 +233,17 @@ module StateTransition {
      */
     method processSlot(s: BeaconState) returns (s' : BeaconState)
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        requires |s.validators| == |s.balances|
 
         ensures  s.latest_block_header.state_root == DEFAULT_BYTES32 ==>
             s' == resolveStateRoot(s).(slot := s.slot)
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == advanceSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
     {
         s' := s;
 
@@ -248,11 +277,19 @@ module StateTransition {
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root(s.latest_block_header)
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
+        requires |s.validators| == |s.balances|
+        requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+        requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
 
-        ensures s' == updateDeposits(addBlockToState(s, b), b)
+
+        ensures s' == updateDeposits(addBlockToState(s, b), b.body.deposits)
+        ensures s'.slot == b.slot
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures |s'.validators| == |s'.balances|
     {
         //  Start by creating a block header from the ther actual block.
         s' := processBlockHeader(s, b); 
+        assert (s'.balances == s.balances);
         
         //  process_randao(s, b.body)
         //  process_eth1_data(s, b.body)
@@ -275,9 +312,19 @@ module StateTransition {
         //  Verify that the parent matches
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
 
+        requires |s.validators| == |s.balances|
+        requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+        
+
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000 
 
         ensures s' == addBlockToState(s, b)
+        ensures s'.slot == b.slot
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
+        //ensures |s'.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
     {
         s':= s.(
             latest_block_header := BeaconBlockHeader(
@@ -303,6 +350,14 @@ module StateTransition {
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
         // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
         ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s)))
+        requires |s.validators| == |s.balances|
+
+        // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
     {
         assert(s.slot % SLOTS_PER_EPOCH != 0);
         s' := process_justification_and_finalization(s);
@@ -340,7 +395,14 @@ module StateTransition {
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
         requires s.slot % SLOTS_PER_EPOCH != 0
+        requires |s.validators| == |s.balances|
+
         ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
     {
         //  epoch in state s is given by s.slot
 
@@ -509,23 +571,70 @@ module StateTransition {
      *  @param  bb  A block body.
      *  @returns    The state obtained after applying the operations of `bb` to `s`.
      */
-    method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
-        requires s.eth1_deposit_index as int + |bb.deposits| < 0x10000000000000000 
-        ensures s' == s.(eth1_deposit_index := (s. eth1_deposit_index as int + |bb.deposits|) as uint64 )
+        method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState) 
+        requires s.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000 
+        requires |s.validators| + |bb.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+        requires |s.validators| == |s.balances|
+        requires total_balances(s.balances) + total_deposits(bb.deposits) < 0x10000000000000000 
+        
+        //ensures |s'.validators| == |s'.balances|
+        ensures s' == updateDeposits(s, bb.deposits)
+        ensures s'.slot == s.slot
+        ensures s'.latest_block_header == s.latest_block_header
+        //ensures s'.validators == s.validators + get_new_validators(s, [], bb.deposits)
+        //ensures false
     {
         //  process deposits in the beacon block body.
-        s' := s;
+        s':= s;
 
-        var i := 0; 
+        var i := 0;
+        assert s' == updateDeposits(s, bb.deposits[..i]);
+        assert total_balances(s'.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 ;
+        
         while i < |bb.deposits| 
             decreases |bb.deposits| - i
-            invariant s.eth1_deposit_index as int + i <  0x10000000000000000 
-            invariant i <= |bb.deposits|
-            invariant s' == s.(eth1_deposit_index := (s.eth1_deposit_index as int + i) as uint64) ;  
+
+            invariant 0 <= i <= |bb.deposits|
+            invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
+            
+            invariant total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 
+            //invariant s'.validators == updateDeposits(s, bb.deposits[..i]).validators
+            //invariant s'.balances == updateDeposits(s, bb.deposits[..i]).balances
+            
+            //invariant total_balances(updateDeposits(s,bb.deposits[..i]).balances) == total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000
+            
+            //invariant s'.slot == s.slot 
+            //invariant s'.latest_block_header == s.latest_block_header
+            //invariant s'.block_roots == s.block_roots
+            //invariant s'.state_roots == s.state_roots
+
+            //invariant |s'.validators| == |s'.balances| 
+            //invariant |s'.validators| <= |s.validators| + i
+            //invariant |s.validators| + i <= VALIDATOR_REGISTRY_LIMIT as int
+            invariant s' == updateDeposits(s, bb.deposits[..i])
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+            //invariant |bb.deposits[..i]| == i
+
+            //invariant |s'.validators| <= |updateDeposits(s,bb.deposits[..i]).validators| <= |s'.validators| + i 
         {
-            s':= process_deposit(s', bb.deposits[i]);
-            i := i + 1;
+            assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
+            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
+            //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
+            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i+1]);
+            //assert i + 1  <= |bb.deposits|;
+            subsetDepositSumProp(bb.deposits, i+1);
+            //assert total_deposits(bb.deposits[..i+1]) <= total_deposits(bb.deposits);
+            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int < 0x10000000000000000;
+
+            //assert updateDeposit(updateDeposits(s, bb.deposits[..i]),bb.deposits[i]) == updateDeposits(s, bb.deposits[..i+1]);
+            
+            s':= process_deposit(s', bb.deposits[i]); 
+            i := i+1;
+
         }
+        assert bb.deposits[..i] == bb.deposits;
+
     }
 
     /**
@@ -537,49 +646,39 @@ module StateTransition {
      *  @todo       Finish implementation of this function.
      */
     method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
-        requires s. eth1_deposit_index as int + 1 < 0x10000000000000000 
-        ensures s' == s.(eth1_deposit_index := s. eth1_deposit_index + 1)
+        requires |s.validators| + 1 <= VALIDATOR_REGISTRY_LIMIT as int
+        requires s.eth1_deposit_index as int + 1 < 0x10000000000000000 
+        requires |s.validators| == |s.balances|
+        requires total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
+
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index + 1
+        //ensures d.data.pubkey !in seqKeysInValidators(s.validators) ==> s'.validators == s.validators + [get_validator_from_deposit(d)]
+        //ensures d.data.pubkey in seqKeysInValidators(s.validators) ==> s'.validators == s.validators 
+        ensures s' == updateDeposit(s,d)
+
+        //ensures |s'.validators| == |s'.balances|        // maybe include in property lemmas
+        //ensures |s.validators| <= |s'.validators| <= |s.validators| + 1 // maybe include in property lemmas
+        //ensures |s.balances| <= |s'.balances| <= |s.balances| + 1 // maybe include in property lemmas
+        //ensures |s'.validators| <= VALIDATOR_REGISTRY_LIMIT
+        
     {
-        s' := s;
-        //  Verify the Merkle branch
-        // assert is_valid_merkle_branch(
-        //     leaf=hash_tree_root(deposit.data),
-        //     branch=deposit.proof,
-        //     depth=DEPOSIT_CONTRACT_TREE_DEPTH + 1,  # Add 1 for the List length mix-in
-        //     index=state.eth1_deposit_index,
-        //     root=state.eth1_data.deposit_root,
-        // );
-        //  Deposits must be processed in order
-        s' := s.(eth1_deposit_index := s. eth1_deposit_index + 1);
-
-        // pubkey = deposit.data.pubkey
-        // amount = deposit.data.amount
-        // validator_pubkeys = [v.pubkey for v in state.validators]
-        // if pubkey not in validator_pubkeys:
-        //     # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
-        //     deposit_message = DepositMessage(
-        //         pubkey=deposit.data.pubkey,
-        //         withdrawal_credentials=deposit.data.withdrawal_credentials,
-        //         amount=deposit.data.amount,
-        //     )
-        //     domain = compute_domain(DOMAIN_DEPOSIT)  # Fork-agnostic domain since deposits are valid across forks
-        //     signing_root = compute_signing_root(deposit_message, domain)
-        //     if not bls.Verify(pubkey, signing_root, deposit.data.signature):
-        //         return
-
-        //     # Add validator and balance entries
-        //     state.validators.append(get_validator_from_deposit(state, deposit))
-        //     state.balances.append(amount)
-        // else:
-        //     # Increase balance by deposit amount
-        //     index = ValidatorIndex(validator_pubkeys.index(pubkey))
-            // increase_balance(state, index, amount)
-
-        //  Simplified version assuming the validator is already in state.validators (else section above)
-        //  Increase balance by deposit amount
-        // var index := ValidatorIndex(validator_pubkeys.index(pubkey))
-        // increase_balance(state, index, amount);
-        return s';
+        // note that it is assumed that all new validator deposits are verified
+        // ie the step # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
+        // is not performed
+        var pk := seqKeysInValidators(s.validators);
+        s' := s.(
+                eth1_deposit_index := (s.eth1_deposit_index as int + 1) as uint64,
+                validators := if d.data.pubkey in pk then 
+                                    s.validators // unchanged validator members
+                                else 
+                                    (s.validators + [get_validator_from_deposit(d)]),
+                balances := if d.data.pubkey in pk then 
+                                    individualBalanceBoundMaintained(s.balances,d);
+                                    increase_balance(s,get_validator_index(pk, d.data.pubkey),d.data.amount).balances
+                                else 
+                                    s.balances + [d.data.amount]
+        );
     }
 
+    
 }
