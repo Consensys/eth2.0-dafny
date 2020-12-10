@@ -301,17 +301,36 @@ module StateTransition {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s)))
     {
         assert(s.slot % SLOTS_PER_EPOCH != 0);
         s' := process_justification_and_finalization(s);
         // process_rewards_and_penalties(state)
         // process_registry_updates(state)
         // process_slashings(state)
-        // process_final_updates(state) 
+        s' := process_final_updates(s');
+        // assert(s' == finalUpdates(s2));
         // assume(s' == forwardStateToSlot(s, s.slot));
         // assume(s' == resolveStateRoot(s));
         return s';
+    }
+
+    /**
+     *  Rotate the attestations.
+     *  @param  s   A state.
+     *  @returns    `s` with attestations rotated.
+     *
+     *  @todo       This is a partial implementation capturing only
+     *              the attestations updates.
+     */
+    method process_final_updates(s: BeaconState)  returns (s' : BeaconState)
+        ensures s' == finalUpdates(s)
+    {
+        s' := s.(
+            previous_epoch_attestations := s.current_epoch_attestations,
+            current_epoch_attestations := []
+        );
     }
 
     /**
@@ -479,6 +498,9 @@ module StateTransition {
 
         return s;
     }
+
+
+    
 
     /**
      *  Process the operations defined by a block body.
