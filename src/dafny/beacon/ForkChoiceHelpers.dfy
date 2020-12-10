@@ -85,7 +85,7 @@ module ForkChoiceHelpers {
      *  @param  xr      A non-empty seq of block roots.
      *  @param  store   A store.
      */
-    predicate isSlotDecreasingChain(xr: seq<Root>, store: Store)  
+    predicate isChain(xr: seq<Root>, store: Store)  
     {
         |xr| >= 1
         &&
@@ -111,7 +111,7 @@ module ForkChoiceHelpers {
         requires isClosedUnderParent(store)
 
         /** Result is a slot-decreasing chain of roots.  */
-        ensures isSlotDecreasingChain(chainRoots(br, store), store)
+        ensures isChain(chainRoots(br, store), store)
 
         //  Computation always terminates as slot number decreases (well-foundedness).
         decreases store.blocks[br].slot
@@ -160,7 +160,7 @@ module ForkChoiceHelpers {
     function computeEBB(xb : seq<Root>, e :  Epoch, store: Store) : nat
 
         /** A slot decreasing chain of roots. */
-        requires isSlotDecreasingChain(xb, store)
+        requires isChain(xb, store)
 
         /** The result is in the range of xb. */
         ensures computeEBB(xb, e, store) < |xb|
@@ -192,10 +192,10 @@ module ForkChoiceHelpers {
      */
     lemma {:induction xb} ebbForEpochZeroIsLast(xb : seq<Root>, e :  Epoch, store: Store)
         /** A slot decreasing chain of roots. */
-        requires isSlotDecreasingChain(xb, store)
+        requires isChain(xb, store)
 
         ensures computeEBB(xb, 0, store) == |xb| - 1
-    {   //  Because some constraints are defined within isSlotDecreasingChain
+    {   //  Because some constraints are defined within isChain
         //  Dafny needs some minimal help for this proof.  
         if |xb| == 1 {
             //  Thanks Dafny
@@ -235,7 +235,7 @@ module ForkChoiceHelpers {
      */
     function computeAllEBBs(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
         /** A slot decreasing chain of roots. */
-        requires isSlotDecreasingChain(xb, store)
+        requires isChain(xb, store)
 
         /** Each epoch has a block associated to. */
         ensures |computeAllEBBs(xb, e, store)| == e as nat + 1
