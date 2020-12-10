@@ -61,7 +61,7 @@ module StateTransition {
      */
     predicate isValidBlock(s : BeaconState, b : BeaconBlock) 
     {
-        //  block slot should be in the future.
+        //  The block slot should be in the future.
         s.slot < b.slot 
         //  Fast forward s to b.slot and check `b` can be attached to the
         //  resulting state's latest_block_header.
@@ -87,7 +87,6 @@ module StateTransition {
                     b.body.deposits
                 )
             )
-        
     }
 
     /**
