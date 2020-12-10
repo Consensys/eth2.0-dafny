@@ -17,6 +17,12 @@
  */
 module MathHelpers {
 
+    /** min(a,b) returns a if a < b, else b */
+    function method min(a: nat, b: nat): nat
+    {
+        if a < b then a else b
+    }
+
     /** Define 2^n. */
     function power2(n : nat): nat 
         ensures power2(n) >= 1

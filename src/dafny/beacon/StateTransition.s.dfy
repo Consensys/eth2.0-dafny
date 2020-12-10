@@ -15,6 +15,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
+include "../utils/MathHelpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"
 include "Validators.dfy"
@@ -34,6 +35,7 @@ module StateTransitionSpec {
     import opened Validators
     import opened Attestations
     import opened BeaconHelpers
+    import opened MathHelpers
 
     /**
      *  Collect pubkey in a list of validators.
@@ -476,11 +478,12 @@ module StateTransitionSpec {
      *                  to set this field is included as a comment for future reference.
      */
     function method get_validator_from_deposit(d: Deposit): Validator
+        ensures get_validator_from_deposit(d).effectiveBalance <= MAX_EFFECTIVE_BALANCE as Gwei
     {
-        var amount : Gwei := 0; // placeholder amount
-        //var effective_balance := min((amount as int- amount as int % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat);
+        var amount := d.data.amount; 
+        var effective_balance := min((amount as int- amount as int % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat);
 
-        Validator(d.data.pubkey, amount)
+        Validator(d.data.pubkey, effective_balance as Gwei)
     }
 
     /**
