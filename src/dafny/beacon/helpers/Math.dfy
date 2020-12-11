@@ -152,10 +152,7 @@ module  Math
     requires bytes_to_int.requires(s)
     ensures int_to_bytes(bytes_to_int(s),|s| as uint64) == s 
     { 
-        calc == {
-            bytes_to_int(int_to_bytes(bytes_to_int(s),|s| as uint64));
-            bytes_to_int(s);
-        }
+       //   Thanks Dafny
     }    
 }
 
