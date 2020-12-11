@@ -15,7 +15,7 @@
 include "../ssz/Constants.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/NativeTypes.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
 include "BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
 include "StateTransition.dfy"
@@ -33,7 +33,7 @@ module ForkChoice {
     import opened ForkChoiceTypes
     import opened StateTransition
     import opened BeaconHelpers
-    import opened Attestations
+    import opened AttestationsTypes
 
     /**
      *  This function provides the genesis store.

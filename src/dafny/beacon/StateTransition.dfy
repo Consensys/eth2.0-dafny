@@ -20,7 +20,7 @@ include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"
 include "Validators.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
 include "Helpers.dfy"
 include "StateTransition.s.dfy"
 
@@ -37,7 +37,7 @@ module StateTransition {
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
-    import opened Attestations
+    import opened AttestationsTypes
     import opened Helpers
     import opened BeaconHelpers
     import opened StateTransitionSpec

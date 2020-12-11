@@ -16,7 +16,7 @@ include "../utils/Eth2Types.dfy"
 include "../utils/NativeTypes.dfy"
 include "../ssz/Constants.dfy"
 include "./BeaconChainTypes.dfy"
-include "./Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
 include "./Validators.dfy"
 
 /**
@@ -28,7 +28,7 @@ module BeaconHelpers {
     import opened NativeTypes
     import opened Constants
     import opened BeaconChainTypes
-    import opened Attestations
+    import opened AttestationsTypes
     import opened Validators
 
     /**

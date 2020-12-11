@@ -17,7 +17,7 @@ include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "Validators.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
 
 /**
  *  Provide types used in the Beacon Chain.
@@ -30,7 +30,7 @@ module BeaconChainTypes {
     import opened Eth2Types
     import opened Helpers
     import opened Validators
-    import opened Attestations
+    import opened AttestationsTypes
     
    /**
      *  Compute Root/Hash/Bytes32 for different types.

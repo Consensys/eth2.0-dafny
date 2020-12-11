@@ -14,7 +14,8 @@
 
 include "../ssz/Constants.dfy"
 include "../utils/Eth2Types.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
+include "attestations/AttestationsHelpers.dfy"
 include "BeaconChainTypes.dfy"
 include "Helpers.dfy"
 include "ForkChoiceTypes.dfy"
@@ -28,7 +29,8 @@ module ForkChoiceHelpers {
     import opened Eth2Types
     import opened BeaconChainTypes
     import opened BeaconHelpers
-    import opened Attestations
+    import opened AttestationsTypes
+    import opened AttestationsHelpers
     import opened ForkChoiceTypes
    
     /**

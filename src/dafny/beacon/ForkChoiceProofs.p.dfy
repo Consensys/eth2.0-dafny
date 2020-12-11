@@ -20,7 +20,8 @@ include "../ssz/Constants.dfy"
 include "ForkChoiceTypes.dfy"
 include "ForkChoiceHelpers.dfy"
 // include "Validators.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
+include "attestations/AttestationsHelpers.dfy"
 include "Helpers.dfy"
 
 /**
@@ -36,7 +37,8 @@ module ForckChoiceProofs {
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
     // import opened Validators
-    import opened Attestations
+    import opened AttestationsTypes
+    import opened AttestationsHelpers
     import opened BeaconHelpers
 
     /**

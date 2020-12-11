@@ -15,7 +15,7 @@
 include "../utils/Eth2Types.dfy"
 include "../utils/NativeTypes.dfy"
 include "BeaconChainTypes.dfy"
-include "Attestations.dfy"
+include "attestations/AttestationsTypes.dfy"
 
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
@@ -25,7 +25,7 @@ module ForkChoiceTypes {
     import opened Eth2Types
     import opened NativeTypes
     import opened BeaconChainTypes
-    import opened Attestations
+    import opened AttestationsTypes
 
 
      /**
