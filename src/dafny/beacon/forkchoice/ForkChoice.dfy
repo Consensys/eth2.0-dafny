@@ -18,7 +18,7 @@ include "../../utils/NativeTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
-include "../StateTransition.dfy"
+include "../statetransition/StateTransition.dfy"
 include "../Helpers.dfy"
   
 /**

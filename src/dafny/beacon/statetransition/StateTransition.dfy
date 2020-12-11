@@ -12,16 +12,16 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
-include "../utils/NonNativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
-include "forkchoice/ForkChoiceTypes.dfy"
-include "../utils/Helpers.dfy"
-include "../ssz/Constants.dfy"
-include "BeaconChainTypes.dfy"
-include "validators/Validators.dfy"
-include "attestations/AttestationsTypes.dfy"
-include "Helpers.dfy"
+include "../../utils/NativeTypes.dfy"
+include "../../utils/NonNativeTypes.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../forkchoice/ForkChoiceTypes.dfy"
+include "../../utils/Helpers.dfy"
+include "../../ssz/Constants.dfy"
+include "../BeaconChainTypes.dfy"
+include "../validators/Validators.dfy"
+include "../attestations/AttestationsTypes.dfy"
+include "../Helpers.dfy"
 include "StateTransition.s.dfy"
 
 /**
