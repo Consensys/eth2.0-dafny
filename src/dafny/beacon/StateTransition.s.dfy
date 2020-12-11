@@ -18,7 +18,7 @@ include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"
-include "Validators.dfy"
+include "validators/Validators.dfy"
 include "attestations/AttestationsTypes.dfy"
 include "Helpers.dfy"
 

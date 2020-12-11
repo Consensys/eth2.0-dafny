@@ -12,9 +12,9 @@
  * under the License.
  */
  
-include "../ssz/Constants.dfy"
-include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
+include "../../ssz/Constants.dfy"
+include "../../utils/NativeTypes.dfy"
+include "../../utils/Eth2Types.dfy"
 // include "Types.dfy"
 // include "Attestations.dfy"
 

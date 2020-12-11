@@ -17,7 +17,7 @@ include "../utils/NativeTypes.dfy"
 include "../ssz/Constants.dfy"
 include "./BeaconChainTypes.dfy"
 include "attestations/AttestationsTypes.dfy"
-include "./Validators.dfy"
+include "validators/Validators.dfy"
 
 /**
  * Misc helpers.
