@@ -210,17 +210,17 @@ module BeaconHelpers {
         ensures var e := get_previous_epoch(state);
             epoch == e ==> 
                 get_matching_target_attestations(state, e) == 
-                filterAttestations(state.previous_epoch_attestations, get_block_root(state, e))
+                filterAttestationsxx(state.previous_epoch_attestations, get_block_root(state, e))
         ensures var e := get_current_epoch(state);
             epoch == e ==> 
                 get_matching_target_attestations(state, e) == 
-                filterAttestations(state.current_epoch_attestations, get_block_root(state, e))
+                filterAttestationsxx(state.current_epoch_attestations, get_block_root(state, e))
         decreases epoch //  seems needed to prove last two post-conds
     {
         //  Get attestattions at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
         //  Collect attestations for (i.e. with target equal to) block root at epoch
-        filterAttestations(ax, get_block_root(state, epoch))
+        filterAttestationsxx(ax, get_block_root(state, epoch))
     }
 
     function method get_attesting_balance(state: BeaconState, attestations: seq<PendingAttestation>) : Gwei 
@@ -267,25 +267,6 @@ module BeaconHelpers {
         // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
         assert(|state.validators| < 0x10000000000000000);
         |state.validators| as uint64
-    }
-
-    /**
-     *  Collect attestations with a specific target.
-     *
-     *  @param  x   A list of attestations.
-     *  @param  br  A root value (hash of a block or block root). 
-     *  @returns    The subset of `xl` that corresponds to attestation with target `r`.
-     */
-    function method filterAttestations(xl : seq<PendingAttestation>, br : Root) : seq<PendingAttestation>
-        ensures |filterAttestations(xl, br)| <= |xl|
-        ensures forall a :: a in xl && a.data.target.root == br <==> a in filterAttestations(xl, br) 
-        decreases xl
-    {
-        if |xl| == 0 then 
-            []
-        else 
-            (if xl[0].data.target.root == br then [xl[0]] else [])
-                + filterAttestations(xl[1..], br)
     }
 
 }
