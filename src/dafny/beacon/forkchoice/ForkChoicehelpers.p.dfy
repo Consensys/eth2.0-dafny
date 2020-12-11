@@ -12,12 +12,12 @@
  * under the License.
  */
 
-include "../ssz/Constants.dfy"
-include "../utils/Eth2Types.dfy"
-include "attestations/AttestationsTypes.dfy"
-include "attestations/AttestationsHelpers.dfy"
-include "BeaconChainTypes.dfy"
-include "Helpers.dfy"
+include "../../ssz/Constants.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../attestations/AttestationsTypes.dfy"
+include "../attestations/AttestationsHelpers.dfy"
+include "../BeaconChainTypes.dfy"
+include "../Helpers.dfy"
 include "ForkChoiceTypes.dfy"
 include "ForkChoiceHelpers.dfy"
 

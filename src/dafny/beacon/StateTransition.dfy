@@ -15,7 +15,7 @@
 include "../utils/NativeTypes.dfy"
 include "../utils/NonNativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
-include "ForkChoiceTypes.dfy"
+include "forkchoice/ForkChoiceTypes.dfy"
 include "../utils/Helpers.dfy"
 include "../ssz/Constants.dfy"
 include "BeaconChainTypes.dfy"

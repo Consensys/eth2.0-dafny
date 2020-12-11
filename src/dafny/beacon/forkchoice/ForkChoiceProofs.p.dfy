@@ -13,16 +13,16 @@
  */
 
 // include "../utils/NativeTypes.dfy"
-include "../utils/Eth2Types.dfy"
-include "../utils/SetHelpers.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../../utils/SetHelpers.dfy"
 // include "../utils/Helpers.dfy"
-include "../ssz/Constants.dfy"
+include "../../ssz/Constants.dfy"
 include "ForkChoiceTypes.dfy"
 include "ForkChoiceHelpers.dfy"
 // include "Validators.dfy"
-include "attestations/AttestationsTypes.dfy"
-include "attestations/AttestationsHelpers.dfy"
-include "Helpers.dfy"
+include "../attestations/AttestationsTypes.dfy"
+include "../attestations/AttestationsHelpers.dfy"
+include "../Helpers.dfy"
 
 /**
  *  Proofs for the ForkChoice properties.  

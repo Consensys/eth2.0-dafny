@@ -12,14 +12,14 @@
  * under the License.
  */
 
-include "../ssz/Constants.dfy"
-include "../utils/Eth2Types.dfy"
-include "../utils/NativeTypes.dfy"
-include "attestations/AttestationsTypes.dfy"
-include "BeaconChainTypes.dfy"
+include "../../ssz/Constants.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../../utils/NativeTypes.dfy"
+include "../attestations/AttestationsTypes.dfy"
+include "../BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
-include "StateTransition.dfy"
-include "Helpers.dfy"
+include "../StateTransition.dfy"
+include "../Helpers.dfy"
   
 /**
  * Fork choice rule for the Beacon Chain.

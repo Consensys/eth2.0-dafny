@@ -12,10 +12,10 @@
  * under the License.
  */
 
-include "../utils/Eth2Types.dfy"
-include "../utils/NativeTypes.dfy"
-include "BeaconChainTypes.dfy"
-include "attestations/AttestationsTypes.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../../utils/NativeTypes.dfy"
+include "../BeaconChainTypes.dfy"
+include "../attestations/AttestationsTypes.dfy"
 
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
