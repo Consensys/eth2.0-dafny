@@ -14,7 +14,12 @@
 
 include "../../ssz/Constants.dfy"
 include "../../utils/SetHelpers.dfy"
+include "../../utils/NativeTypes.dfy"
 include "AttestationsTypes.dfy"
+include "../../utils/Eth2Types.dfy"
+include "../BeaconChainTypes.dfy"
+include "../Helpers.dfy"
+
 
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
@@ -22,8 +27,12 @@ include "AttestationsTypes.dfy"
 module AttestationsHelpers {
 
     import opened Constants
+    import opened Eth2Types
+    import opened NativeTypes
     import opened SetHelpers
     import opened AttestationsTypes
+    import opened BeaconChainTypes
+    import opened BeaconHelpers
     
     /**
      *  The number of attestations for a pair of checkpoints.
@@ -130,6 +139,130 @@ module AttestationsHelpers {
     {
         assert(collectAttestationsForLink(xa, src, tgt) <= collectAttestationsForTarget(xa, tgt) );
         cardIsMonotonic(collectAttestationsForLink(xa, src, tgt), collectAttestationsForTarget(xa, tgt));
+    }
+
+    /**
+     *  @param  state   A beacon state.
+     *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
+     *  @returns        The current (resp. previous) list of attestations if epoch is 
+     *                  state's epoch (resp. epoch before state's epoch). 
+     *  @note           The function name is misleading as it seems to be a counter-part
+     *                  or symmetric of `get_matching_target_attestations` but it is not.
+     *                  Moreover it does not perform any matching as the name indicates,
+     *                  and the matching/filtering is done in `get_matching_target_attestations`.
+     *                  A better name may be `get_attestations_at_epoch`.
+     *  @note           An even better solution would be to remove this function 
+     *                  and directly `use state.current_epoch_attestations` or 
+     *                  `state.previous_epoch_attestations` in the callers.
+     */
+    function method  get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+        //  report -> meaning of i in (a, b)? seems to be closed interval ...
+        requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000
+    {
+        // assert epoch in (get_previous_epoch(state), get_current_epoch(state))
+        // return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
+        if epoch == get_current_epoch(state) then
+            state.current_epoch_attestations
+        else 
+            state.previous_epoch_attestations
+    }  
+
+    /**
+     *  @param  state   A beacon state.
+     *  @param  epoch   An epoch which is either the state's epoch or the previous one.
+     *  @returns        Attestations at epoch with a target that is the block root
+     *                  recorded for that epoch.         
+     *
+     */
+    function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+        requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
+        requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
+        requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        
+        ensures |get_matching_target_attestations(state, epoch)| < 0x10000000000000000
+        ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
+                    a.data.target.root == get_block_root(state, epoch)
+
+        ensures var e := get_previous_epoch(state);
+            epoch == e ==> 
+                get_matching_target_attestations(state, e) == 
+                filterAttestationsxx(state.previous_epoch_attestations, get_block_root(state, e))
+        ensures var e := get_current_epoch(state);
+            epoch == e ==> 
+                get_matching_target_attestations(state, e) == 
+                filterAttestationsxx(state.current_epoch_attestations, get_block_root(state, e))
+        decreases epoch //  seems needed to prove last two post-conds
+    {
+        //  Get attestattions at epoch as recorded in state (previous epoch or current epoch).
+        var ax := get_matching_source_attestations(state, epoch);
+        //  Collect attestations for (i.e. with target equal to) block root at epoch
+        filterAttestationsxx(ax, get_block_root(state, epoch))
+    }
+
+    function method get_attesting_balance(state: BeaconState, attestations: seq<PendingAttestation>) : Gwei 
+        requires |attestations| < 0x10000000000000000
+    // """
+    // Return the combined effective balance of the set of unslashed validators participating in ``attestations``.
+    // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // """
+    {
+        // get_total_balance(state, get_unslashed_attesting_indices(state, attestations))
+        |attestations| as Gwei 
+    }
+
+    // function method get_unslashed_attesting_indices(state: BeaconState,
+                                    // attestations: seq<PendingAttestation>): set<ValidatorIndex>
+    // output = set()  # type: Set[ValidatorIndex]
+    // for a in attestations:
+    //     output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+    // return set(filter(lambda index: not state.validators[index].slashed, output))
+    // {
+    //     attestations 
+    // }
+
+    // function method  get_total_balance(state: BeaconState, indices: set<ValidatorIndex>) : Gwei
+    // """
+    // Return the combined effective balance of the ``indices``.
+    // ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // Math safe up to ~10B ETH, afterwhich this overflows uint64.
+    // """
+    // {
+        // return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])));
+        //  for now we return the size of indices
+        // |indices| as Gwei 
+    // }
+    
+
+    function method get_total_active_balance(state: BeaconState) : Gwei
+        // requires |state.validators| < 0x10000000000000000
+    // """
+    // Return the combined effective balance of the active validators.
+    // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // """
+    {
+        // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
+        assert(|state.validators| < 0x10000000000000000);
+        |state.validators| as uint64
+    }
+
+    /**
+     *  Collect attestations with a specific target.
+     *
+     *  @param  x   A list of attestations.
+     *  @param  br  A root value (hash of a block or block root). 
+     *  @returns    The subset of `xl` that corresponds to attestation with target `r`.
+     */
+    function method filterAttestationsxx(xl : seq<PendingAttestation>, br : Root) : seq<PendingAttestation>
+        ensures |filterAttestationsxx(xl, br)| <= |xl|
+        ensures forall a :: a in xl && a.data.target.root == br <==> a in filterAttestationsxx(xl, br) 
+        decreases xl
+    {
+        if |xl| == 0 then 
+            []
+        else 
+            (if xl[0].data.target.root == br then [xl[0]] else [])
+                + filterAttestationsxx(xl[1..], br)
     }
    
 }

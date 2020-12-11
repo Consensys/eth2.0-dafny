@@ -20,6 +20,7 @@ include "../BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
 include "../statetransition/StateTransition.dfy"
 include "../Helpers.dfy"
+include "../attestations/AttestationsHelpers.dfy"
   
 /**
  * Fork choice rule for the Beacon Chain.
@@ -34,6 +35,7 @@ module ForkChoice {
     import opened StateTransition
     import opened BeaconHelpers
     import opened AttestationsTypes
+    import opened AttestationsHelpers
 
     /**
      *  This function provides the genesis store.

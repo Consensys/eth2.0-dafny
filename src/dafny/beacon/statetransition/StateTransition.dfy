@@ -23,7 +23,7 @@ include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "StateTransition.s.dfy"
-
+include "../attestations/AttestationsHelpers.dfy"
 /**
  * State transition function for the Beacon Chain.
  */
@@ -41,6 +41,7 @@ module StateTransition {
     import opened Helpers
     import opened BeaconHelpers
     import opened StateTransitionSpec
+    import opened AttestationsHelpers
 
 // # Attestations
 //     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
