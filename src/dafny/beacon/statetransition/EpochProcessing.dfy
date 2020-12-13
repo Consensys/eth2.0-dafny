@@ -24,6 +24,7 @@ include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "StateTransition.s.dfy"
 include "../attestations/AttestationsHelpers.dfy"
+include "EpochProcessing.s.dfy"
 /**
  * State transition function for the Beacon Chain.
  */
@@ -42,6 +43,7 @@ module EpochProcessing {
     import opened BeaconHelpers
     import opened StateTransitionSpec
     import opened AttestationsHelpers
+    import opened EpochProcessingSpec
 
 // # Attestations
 //     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]

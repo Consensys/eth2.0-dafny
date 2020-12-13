@@ -25,6 +25,7 @@ include "../Helpers.dfy"
 include "StateTransition.s.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "EpochProcessing.dfy"
+include "ProcessOperations.s.dfy"
 
 /**
  * State transition function for the Beacon Chain.
@@ -45,6 +46,7 @@ module StateTransition {
     import opened StateTransitionSpec
     import opened AttestationsHelpers
     import opened EpochProcessing
+    import opened ProcessOperationsSpec
 
 // # Attestations
 //     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
@@ -350,7 +352,7 @@ module StateTransition {
      *  @param  bb  A block body.
      *  @returns    The state obtained after applying the operations of `bb` to `s`.
      */
-        method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState) 
+    method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState) 
         requires s.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000 
         requires |s.validators| + |bb.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         requires |s.validators| == |s.balances|

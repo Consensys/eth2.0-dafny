@@ -21,7 +21,12 @@ include "../BeaconChainTypes.dfy"
 include "../Helpers.dfy"
 
 /**
- *  Provide datatype for fork choice rule (and LMD-GHOST)
+ *  Provide datatype for fork choice rule (and LMD-GHOST).
+ *
+ *  Some properties of validators/attestations
+ *  P1: attestations must be well-formed (see ForkChoiceHelpers, isValidAttestarions)
+ *  P2: each validator is assigned to one committee per epoch
+ *  P3: each HONEST validator attests at most oncd per epoch.
  */
 module AttestationsHelpers {
 
@@ -32,7 +37,8 @@ module AttestationsHelpers {
     import opened AttestationsTypes
     import opened BeaconChainTypes
     import opened BeaconHelpers
-    
+
+
     /**
      *  The number of attestations for a pair of checkpoints.
      *  
