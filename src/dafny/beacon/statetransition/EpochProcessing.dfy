@@ -12,17 +12,10 @@
  * under the License.
  */
 
-include "../../utils/NativeTypes.dfy"
 include "../../utils/NonNativeTypes.dfy"
-include "../../utils/Eth2Types.dfy"
-include "../forkchoice/ForkChoiceTypes.dfy"
-include "../../utils/Helpers.dfy"
 include "../../ssz/Constants.dfy"
-include "../BeaconChainTypes.dfy"
-include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
-include "StateTransition.s.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "EpochProcessing.s.dfy"
 /**
@@ -31,17 +24,11 @@ include "EpochProcessing.s.dfy"
 module EpochProcessing {
     
     //  Import some constants, types and beacon chain helpers.
-    import opened NativeTypes
     import opened NonNativeTypes
-    import opened Eth2Types
-    import opened ForkChoiceTypes
     import opened Constants
     import opened BeaconChainTypes
-    import opened Validators
     import opened AttestationsTypes
-    import opened Helpers
     import opened BeaconHelpers
-    import opened StateTransitionSpec
     import opened AttestationsHelpers
     import opened EpochProcessingSpec
 
@@ -54,11 +41,6 @@ module EpochProcessing {
 //     current_justified_checkpoint: Checkpoint
 //     finalized_checkpoint: Checkpoint
 
-    
-
-
-   
-    
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,
      *  resgistry, slashing, and final updates.

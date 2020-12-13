@@ -12,13 +12,8 @@
  * under the License.
  */
 
-include "../../utils/NativeTypes.dfy"
-include "../../utils/Eth2Types.dfy"
-include "../../utils/Helpers.dfy"
-include "../../utils/MathHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
-include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
@@ -29,19 +24,14 @@ include "../Helpers.dfy"
 module EpochProcessingSpec {
     
     //  Import some constants, types and beacon chain helpers.
-    import opened NativeTypes
-    import opened Eth2Types
     import opened Constants
     import opened BeaconChainTypes
-    import opened Validators
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
-    import opened MathHelpers
 
     //  Specifications of finalisation of a state and forward to future slot.
 
-   
     /**
      *  Simplified first-cut specification of process_justification_and_finalization.
      *
