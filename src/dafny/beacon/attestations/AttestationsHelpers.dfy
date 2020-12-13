@@ -20,7 +20,6 @@ include "../../utils/Eth2Types.dfy"
 include "../BeaconChainTypes.dfy"
 include "../Helpers.dfy"
 
-
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
  */
@@ -174,12 +173,30 @@ module AttestationsHelpers {
      *  @returns        Attestations at epoch with a target that is the block root
      *                  recorded for that epoch.         
      *
+     *  @note           This function does not check the epoch of the source attestation.
+     *                  As a result if the seq of attestations in   
+     *                  `state.previous/current_epoch_attestations` contains the same 
+     *                  block root at different epochs, all the attestations will be collect.
+     *                  However the following note seems to suggest that this cannot happen.
+     *
+     *  @note           From the eth2.0 specs: When processing attestations, we already only *                  accept attestations that have the correct Casper FFG source checkpoint 
+     *                  (specifically, the most recent justified checkpoint that the chain 
+     *                  knows about). The goal of this function is to get all attestations 
+     *                  that have a correct Casper FFG source. Hence, it can safely just 
+     *                  return all the PendingAttestations for the desired epoch 
+     *                  (current or previous).
+     *  @note           The claim "it can safely justreturn all the PendingAttestations for 
+     *                  the desired epoch (current or previous)." is valid only all the 
+     *                  attestations in `state.previous/current_epoch_attestations`
+     *                  are well-formed. 
+     *                  We add this constraint to the pre-conditions of this function.
      */
     function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
         requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
-        
+        // requires 
+
         ensures |get_matching_target_attestations(state, epoch)| < 0x10000000000000000
         ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
                     a.data.target.root == get_block_root(state, epoch)
