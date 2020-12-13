@@ -96,7 +96,7 @@ module BeaconChainTypes {
         // graffiti: uint32,                          //  In K: Bytes32
         // proposer_slashings: seq<ProposerSlashing>,
         // attester_slashings: seq<AttesterSlashing>,
-        // attestations: seq<Attestation>,
+        attestations: ListOfAttestations,
         deposits: seq<Deposit>
         // voluntary_exits: seq<VoluntaryExit>
     )
@@ -104,7 +104,7 @@ module BeaconChainTypes {
     /**
      *  The zeroed (default) block body.
      */
-    const DEFAULT_BLOCK_BODY := BeaconBlockBody([])
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody([], [])
 
     /**
      *  Beacon block.
@@ -154,14 +154,6 @@ module BeaconChainTypes {
      *  Default bitvector of size 4 initialised with false.
      */
     const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
-
-    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
-
-    /**
-     *  Default bitvector of size 4 initialised with false.
-     */
-    const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
-    // timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
     /**
      *  A list of validators.  
@@ -241,10 +233,19 @@ module BeaconChainTypes {
      *                              withdrawal credentials, effective balance, a slashed  boolean,
      *                              and status (pending, active, exited, etc)
      *
+     *                              Attestations from blocks are converted to PendingAttestations *                              and stored in state for bulk accounting at epoch boundaries. 
+     *                              They are stored in two separate lists:
+     *  
      * @param   previous_epoch_attestations
      *                              Attestations targeting the previous epoch of the slot.
+     *                              List of PendingAttestations for slots from the previous epoch. *                              Note: these are attestations attesting to slots in the previous *                              epoch, not necessarily those included in blocks during the 
+     *                              previous epoch.
+
      * @param   current_epoch_attestations
      *                              Attestations targeting the epoch of the slot.
+     *                              List of PendingAttestations for slots from the current epoch. 
+     *                              Copied over to previous_epoch_attestations and then emptied at 
+     *                              the end of the current epoch processing
      *
      * @param   previous_justified_checkpoint
      *                              The most recent justified Checkpoint as it was

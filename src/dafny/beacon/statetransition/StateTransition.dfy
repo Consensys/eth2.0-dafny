@@ -340,10 +340,6 @@ module StateTransition {
         );
     }
     
-   
-
-
-    
 
     /**
      *  Process the operations defined by a block body.
@@ -400,6 +396,9 @@ module StateTransition {
             //invariant |s'.validators| <= |updateDeposits(s,bb.deposits[..i]).validators| <= |s'.validators| + i 
         {
             assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
+
+            s':= process_attestation(s', bb.attestations);
+
             //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
             //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
             //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i+1]);
@@ -461,5 +460,10 @@ module StateTransition {
         );
     }
 
+     method process_attestation(s: BeaconState, xa: ListOfAttestations)  returns (s' : BeaconState)
+        ensures s' == s  
+     {
+         return s;
+     }
     
 }
