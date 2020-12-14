@@ -93,7 +93,10 @@ module Constants {
 
   // Configuration -- Time parameters
   const  SECONDS_PER_SLOT : uint64 := 12 ;                            
-  const  MIN_ATTESTATION_INCLUSION_DELAY : uint64 := TWO_UP_0 as uint64 ; // 2 ^ 0           
+  const  MIN_ATTESTATION_INCLUSION_DELAY : uint64 := TWO_UP_0 as uint64 ; // 2 ^ 0       
+
+  const  EPOCHS_PER_ETH1_VOTING_PERIOD : uint64 := TWO_UP_6 as uint64; // (= 64)	epochs	~6.8 hours       
+    
 
   /**
    *  

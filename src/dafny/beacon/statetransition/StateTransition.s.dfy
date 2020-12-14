@@ -61,6 +61,29 @@ module StateTransitionSpec {
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
+     *  Result of processing eth1Data.
+     *  
+     *  @param  s   A state.
+     *  @param  b   A block body to process.
+     *  @returns    The state `s` updated to include b.eth1_data in the list of votes
+     *              and state `s` eth1_data field set to b.eth1_data if b.eth1_data has
+     *              received more than 1/2 * (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH) votes.
+     */
+    function updateEth1Data(s: BeaconState, b: BeaconBlockBody) :  BeaconState 
+        requires |s.validators| == |s.balances| 
+        ensures |updateEth1Data(s,b).validators| == |updateEth1Data(s,b).balances|
+        ensures updateEth1Data(s,b).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateEth1Data(s,b).validators == s.validators
+        ensures updateEth1Data(s,b).balances == s.balances
+    {
+        s.( eth1_data_votes := s.eth1_data_votes + [b.eth1_data],
+            eth1_data := if (count_eth1_data_votes(s.eth1_data_votes + [b.eth1_data], b.eth1_data) * 2) > (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH) as int 
+                then b.eth1_data 
+                else s.eth1_data
+            )
+    }
+
+    /**
      *  Result of processing a block.
      *  
      *  @param  s   A state.

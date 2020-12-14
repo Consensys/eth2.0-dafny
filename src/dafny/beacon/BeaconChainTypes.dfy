@@ -92,7 +92,7 @@ module BeaconChainTypes {
      */
     datatype BeaconBlockBody = BeaconBlockBody(
         // randao_reveal: BLSSignature,
-        // eth1_data: Eth1Data,
+        eth1_data: Eth1Data,
         // graffiti: uint32,                          //  In K: Bytes32
         // proposer_slashings: seq<ProposerSlashing>,
         // attester_slashings: seq<AttesterSlashing>,
@@ -104,7 +104,7 @@ module BeaconChainTypes {
     /**
      *  The zeroed (default) block body.
      */
-    const DEFAULT_BLOCK_BODY := BeaconBlockBody([], [])
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_ETH1DATA, [], [])
 
     /**
      *  Beacon block.
@@ -174,6 +174,19 @@ module BeaconChainTypes {
      */
     const DEFAULT_LIST_VALIDATORS : seq<Validator> := []
     const DEFAULT_LIST_BALANCES : seq<Gwei> := []
+
+    /**
+     *  A list of Eth1Data.  
+     *  The maximum size of this list is EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH.
+     */
+    type ListOfEth1Data = x : seq<Eth1Data> | |x| <= EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int witness 
+            DEFAULT_LIST_ETH1DATA
+            
+    /**
+     *  Default list of Eth1Data
+     */
+     const DEFAULT_LIST_ETH1DATA : seq<Eth1Data> := []
+
     
     /** 
      *  The Beacon state type.
@@ -280,6 +293,8 @@ module BeaconChainTypes {
         block_roots: VectorOfHistRoots,
         state_roots: VectorOfHistRoots,
         //  Eth1
+        eth1_data: Eth1Data,
+        eth1_data_votes:  ListOfEth1Data, //List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
         eth1_deposit_index : uint64,
         //  Registry
         validators: ListOfValidators,
@@ -303,6 +318,8 @@ module BeaconChainTypes {
             DEFAULT_BLOCK_HEADER, 
             DEFAULT_HIST_ROOTS, 
             DEFAULT_HIST_ROOTS, 
+            DEFAULT_ETH1DATA,
+            DEFAULT_LIST_ETH1DATA,
             0,
             DEFAULT_LIST_VALIDATORS,
             DEFAULT_LIST_BALANCES,
@@ -345,6 +362,12 @@ module BeaconChainTypes {
         deposit_count: uint64,
         block_hash: Hash
     )
+
+    /**
+     *  The zeroed (default) Eth1 data.
+     */
+    const DEFAULT_ETH1DATA := Eth1Data(DEFAULT_BYTES32, 0, DEFAULT_BYTES32)
+
 
     /**
      * Historical Batch.

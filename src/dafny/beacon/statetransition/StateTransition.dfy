@@ -86,10 +86,12 @@ module StateTransition {
         //  Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
                 updateDeposits(
-                    addBlockToState(
-                        forwardStateToSlot(nextSlot(s), b.slot), 
-                        b
-                    ),
+                    updateEth1Data(
+                        addBlockToState(
+                            forwardStateToSlot(nextSlot(s), b.slot), 
+                            b
+                        ),
+                        b.body),
                     b.body.deposits
                 )
             )
@@ -122,8 +124,8 @@ module StateTransition {
                 .latest_block_header
             )
         ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
-        ensures s'.validators == updateDeposits(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b),b.body.deposits).validators
-        ensures s'.balances == updateDeposits(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b),b.body.deposits).balances
+        ensures s'.validators == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b), b.body),b.body.deposits).validators
+        ensures s'.balances == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b), b.body),b.body.deposits).balances
         ensures |s'.validators| == |s'.balances|
     {
         //  finalise slots before b.slot.
@@ -287,7 +289,7 @@ module StateTransition {
         requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
 
 
-        ensures s' == updateDeposits(addBlockToState(s, b), b.body.deposits)
+        ensures s' == updateDeposits(updateEth1Data(addBlockToState(s, b), b.body), b.body.deposits)
         ensures s'.slot == b.slot
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
         ensures |s'.validators| == |s'.balances|
@@ -297,7 +299,7 @@ module StateTransition {
         assert (s'.balances == s.balances);
         
         //  process_randao(s, b.body)
-        //  process_eth1_data(s, b.body)
+        s' := process_eth1_data(s', b.body);
         s' := process_operations(s', b.body);
     }
 
@@ -338,6 +340,40 @@ module StateTransition {
                 DEFAULT_BYTES32
             )
         );
+    }
+
+    /**
+     *  Check whether a block is valid and prepare and initialise new state
+     *  with a corresponding block header. 
+     *
+     *  @param  s   A beacon state.
+     *  @param  b   A block.
+     *  @returns    The state obtained processing the block.
+     *
+     *  @note   Matches eth2.0 specs except proposer slashing verification.
+     */
+    method process_eth1_data(s: BeaconState, b: BeaconBlockBody) returns (s' : BeaconState) 
+        requires |s.validators| == |s.balances|
+        requires |s.validators| + |b.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+
+        requires s.eth1_deposit_index as int + |b.deposits| < 0x10000000000000000 
+
+        ensures s' == updateEth1Data(s,b)
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
+        //ensures |s'.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+    {
+        //state.eth1_data_votes.append(body.eth1_data)
+        s' := s.(eth1_data_votes := s.eth1_data_votes + [b.eth1_data]);
+
+        //if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
+        if count_eth1_data_votes(s'.eth1_data_votes, b.eth1_data) * 2 > (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH) as int{
+            //state.eth1_data = body.eth1_data
+            s' := s'.(eth1_data := b.eth1_data);
+        }
+            
+
     }
     
 
