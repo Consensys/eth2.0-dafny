@@ -238,11 +238,18 @@ module BeaconChainTypes {
      *  
      * @param   previous_epoch_attestations
      *                              Attestations targeting the previous epoch of the slot.
+     *                              This is an archive of current_epoch_attestations that happend
+     *                              at the end of an epoch.
+     *                              Last epoch's current_epoch_attestations plus any new ones 
+     *                              received that target the previous epoch.
+     *
      *                              List of PendingAttestations for slots from the previous epoch. *                              Note: these are attestations attesting to slots in the previous *                              epoch, not necessarily those included in blocks during the 
      *                              previous epoch.
 
      * @param   current_epoch_attestations
-     *                              Attestations targeting the epoch of the slot.
+     *                              Attestations targeting the epoch of the slot 
+     *                              (i.e. epoch we are in).
+     *
      *                              List of PendingAttestations for slots from the current epoch. 
      *                              Copied over to previous_epoch_attestations and then emptied at 
      *                              the end of the current epoch processing
@@ -255,7 +262,7 @@ module BeaconChainTypes {
      * @param   current_justified_checkpoint
      *                              The most recent justified Checkpoint previous during 
      *                              the current epoch. epoch. Used to validate current epoch
-     *                               attestations and fork choice purposes
+     *                              attestations and fork choice purposes
      *
      * @param   justification_bits  4 bits used to track justification in last 4 epochs. 
      *                              Most recent epoch first bit.

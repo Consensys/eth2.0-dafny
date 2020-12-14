@@ -65,7 +65,9 @@ module AttestationsTypes {
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
      *
      *  @param  slot                A slot number. The slot in which the validator makes
-     *                              the attestation.
+     *                              the attestation. Each active validator should be making 
+     *                              exactly one attestation per epoch. Validators have an 
+     *                              assigned slot for their attestation, and it is recorded here.
      *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
      *                              LMD-GHOST at that slot. This determines the chain (ancestors)
      *                              to be used to update justifications and finalisations.
