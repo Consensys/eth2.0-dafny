@@ -397,7 +397,7 @@ module StateTransition {
         {
             assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
 
-            s':= process_attestation(s', bb.attestations);
+            s':= process_attestations(s', bb.attestations);
 
             //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
             //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
@@ -460,10 +460,74 @@ module StateTransition {
         );
     }
 
-     method process_attestation(s: BeaconState, xa: ListOfAttestations)  returns (s' : BeaconState)
+    /**
+     *  
+     *  @note       This method uses PendingAttestations instead of attestations in the 
+     *              input parameter `xa`.The difference is in the signature field which 
+     *              we omit in this foirst-cut.
+     */
+     method process_attestations(s: BeaconState, xa: ListOfAttestations)  returns (s' : BeaconState)
+        // requires 
         ensures s' == s  
      {
          return s;
      }
+
+    predicate isValidAttestationInState(s: BeaconState, a: PendingAttestation)
+    {
+        && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)
+        && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
+        //  attestation is not too recent
+        && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat  
+        //  attestation is not old
+        && a.data.slot as nat + SLOTS_PER_EPOCH as nat >= s.slot as nat 
+        //  if attestation target is current epoch, then the source must
+        //  be the current justified checkpoint
+        && (a.data.target.epoch == get_current_epoch(s) ==> 
+            a.data.source == s.current_justified_checkpoint)
+        //  if attestation target is previous epoch, then the source must
+        //  be the the previous justified checkpoint
+        && (a.data.target.epoch == get_previous_epoch(s) ==> 
+            a.data.source == s.previous_justified_checkpoint)
+        
+    }
+
+    function method process_attestation(s: BeaconState, a: PendingAttestation): BeaconState
+        requires isValidAttestationInState(s, a)
+    {
+         // data = attestation.data
+        // assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
+        // assert data.target.epoch == compute_epoch_at_slot(data.slot)
+        // assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+        // assert data.index < get_committee_count_per_slot(state, data.target.epoch)
+
+        // committee = get_beacon_committee(state, data.slot, data.index)
+        // assert len(attestation.aggregation_bits) == len(committee)
+
+        // pending_attestation = PendingAttestation(
+        //     data=data,
+        //     aggregation_bits=attestation.aggregation_bits,
+        //     inclusion_delay=state.slot - data.slot,
+        //     proposer_index=get_beacon_proposer_index(state),
+        // )
+
+        if a.data.target.epoch == get_current_epoch(s) then 
+            //  Add a to current attestations
+            assert a.data.source == s.current_justified_checkpoint;
+            s.(
+                current_epoch_attestations := s.current_epoch_attestations + [a]
+            )
+            // s.current_epoch_attestations.append(pending_attestation)
+        else 
+            assert a.data.source == s.previous_justified_checkpoint;
+            s.(
+                previous_epoch_attestations := s.previous_epoch_attestations + [a]
+            )
+            // s.previous_epoch_attestations.append(pending_attestation)
+            
+        // # Verify signature
+        // assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
+        // s'
+    }
     
 }
