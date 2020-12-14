@@ -55,7 +55,7 @@ module EpochProcessing {
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
         // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
-        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s)))
+        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s), s))
         requires |s.validators| == |s.balances|
 
         // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
@@ -103,7 +103,7 @@ module EpochProcessing {
         requires s.slot % SLOTS_PER_EPOCH != 0
         requires |s.validators| == |s.balances|
 
-        ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
         
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
         ensures s'.validators == s.validators
@@ -211,22 +211,22 @@ module EpochProcessing {
             //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
             //  
             //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-            if (all(bits[1..4]) && current_epoch >= 3 && s'.previous_justified_checkpoint.epoch  == current_epoch - 3) {
-                s' := s'.(finalised_checkpoint := s'.previous_justified_checkpoint) ;
+            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) {
+                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
             }
             //  The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-            if (all(bits[1..3]) && s'.previous_justified_checkpoint.epoch == current_epoch - 2) {
-                s' := s'.(finalised_checkpoint := s'.previous_justified_checkpoint) ;
+            if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
             }
             //  The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-            if (all(bits[0..3]) && s'.current_justified_checkpoint.epoch == current_epoch - 2) {
-                s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
+            if (false && all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
             }
             //  The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-            if (false && all(bits[0..2]) && s'.current_justified_checkpoint.epoch == current_epoch - 1) {
-                s' := s'.(finalised_checkpoint := s'.current_justified_checkpoint) ;
+            if (false && all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) {
+                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
             }
-            assert(s' == updateFinalisedCheckpoint(s3));
+            assert(s' == updateFinalisedCheckpoint(s3, s));
             return s';
         }
 
