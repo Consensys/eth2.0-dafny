@@ -204,13 +204,13 @@ module EpochProcessing {
             ghost var s3 := s';
 
             var bits : seq<bool> := s'.justification_bits;
-            //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
             // assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
             //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
             //  following condition is false. As a result we do not need to compute 
             //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
             //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
             //  
+            //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
             if (all(bits[1..4]) && current_epoch >= 3 && s'.previous_justified_checkpoint.epoch  == current_epoch - 3) {
                 s' := s'.(finalised_checkpoint := s'.previous_justified_checkpoint) ;
             }
