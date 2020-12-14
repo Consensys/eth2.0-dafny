@@ -119,6 +119,15 @@ module AttestationsTypes {
         // proposer_index: ValidatorIndex
     )
 
+    /*
+    If we omit the signature we can use AttestationData in place of Attestation.
+    class Attestation(Container):
+    aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
+    data: AttestationData
+    signature: BLSSignature
+    */
+
+
     /**
      *  Default value for PendingAttestation.
      */
