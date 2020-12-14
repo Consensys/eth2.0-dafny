@@ -148,13 +148,14 @@ module EpochProcessing {
             assert(s'.block_roots == s.block_roots);
             assert(get_block_root(s', previous_epoch) == get_block_root(s, previous_epoch));
             assert(|s'.validators| == |s.validators|);
+            //  Compute the attestations in s.previous_epoch_attestations that 
+            //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
+            //  of the previous epoch. (retrieve in the historical roots).
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
                                 get_total_active_balance(s') as uint128 * 2 {
                 //  shift the justified checkpoint
-                //  @todo   Why is current_justified_checkpoint field updated and not 
-                //          previous?
                 s' := s'.(current_justified_checkpoint := 
                             CheckPoint(previous_epoch,
                                         get_block_root(s', previous_epoch)));

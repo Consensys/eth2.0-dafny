@@ -58,7 +58,7 @@ module ForkChoiceHelpers {
         var indexOfLJ := lastJustified(xc, ebbs, links) as Epoch;
         assert(0 <= indexOfLJ <= ep); 
 
-        //  The target must root must the last epoch boundary pair in chain(a.beacon_block_root)
+        //  The target root must be the last epoch boundary pair in chain(a.beacon_block_root)
         //  xc[indexOfLEBB] is the block root for epoch ep in chain(a.beacon_block_root)
         a.target == CheckPoint(ep, xc[indexOfLEBB])
         &&

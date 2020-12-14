@@ -161,7 +161,7 @@ module AttestationsHelpers {
      *                  `state.previous_epoch_attestations` in the callers.
      */
     function method  get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
-        //  report -> meaning of i in (a, b)? seems to be closed interval ...
+        //  report? -> meaning of i in (a, b)? seems to be closed interval ...
         requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
         ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000
     {
@@ -191,11 +191,11 @@ module AttestationsHelpers {
      *                  that have a correct Casper FFG source. Hence, it can safely just 
      *                  return all the PendingAttestations for the desired epoch 
      *                  (current or previous).
-     *  @note           The claim "it can safely justreturn all the PendingAttestations for 
-     *                  the desired epoch (current or previous)." is valid only all the 
+     *  @note           The claim "it can safely just return all the PendingAttestations for 
+     *                  the desired epoch (current or previous)." is valid only if all the 
      *                  attestations in `state.previous/current_epoch_attestations`
      *                  are well-formed. 
-     *                  We add this constraint to the pre-conditions of this function.
+     *  @todo           We should add this constraint to the pre-conditions of this function.
      */
     function method get_matching_target_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat

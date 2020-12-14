@@ -260,11 +260,12 @@ module BeaconChainTypes {
      *                              Used to validate attestations from the previous epoch
      *
      * @param   current_justified_checkpoint
-     *                              The most recent justified Checkpoint previous during 
+     *                              The most recent justified Checkpoint during 
      *                              the current epoch. epoch. Used to validate current epoch
      *                              attestations and fork choice purposes
      *
-     * @param   justification_bits  4 bits used to track justification in last 4 epochs. 
+     * @param   justification_bits  4 bits used to track justification in last 4 epochs before
+     *                              current epoch. 
      *                              Most recent epoch first bit.
      *  
      * @note                        Some fields are not integrated yet but a complete def can be
