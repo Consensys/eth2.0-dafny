@@ -12,7 +12,6 @@
  * under the License.
  */
 
-
 /**
  *  Provide some folk theorems on sets.
  */
@@ -110,6 +109,5 @@ module SetHelpers {
         //  proof of alternative conclusion
         // assert(3 * |x * y| > |z| <==> |x * y| >= |z| / 3 + 1 );
     } 
-
 
 }
