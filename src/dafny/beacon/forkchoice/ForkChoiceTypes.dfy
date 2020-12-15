@@ -54,7 +54,8 @@ module ForkChoiceTypes {
         // best_justified_checkpoint: CheckPoint,
         blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>,
-        threshold: nat
+        threshold: nat,
+        ghost attestations : ListOfAttestations //  attestations received so far
         // checkpoint_states: map<CheckPoint, BeaconState>
         // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )

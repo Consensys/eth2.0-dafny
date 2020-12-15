@@ -33,7 +33,7 @@ module ForkChoiceHelpers {
     import opened AttestationsHelpers
     import opened ForkChoiceTypes
    
-    /**
+   /**
      *  Whether an attestation is well-formed.
      *
      *  @param  a       An attestattion.
@@ -53,7 +53,7 @@ module ForkChoiceHelpers {
         //  LEBB(a), LE(a) in the attestation
         var indexOfLEBB := computeEBB(xc, ep, store);
         //  EBBS
-        var ebbs := computeAllEBBs(xc, ep, store);
+        var ebbs := computeAllEBBsIndices(xc, ep, store);
         //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
         var indexOfLJ := lastJustified(xc, ebbs, links) as Epoch;
         assert(0 <= indexOfLJ <= ep); 
@@ -197,11 +197,7 @@ module ForkChoiceHelpers {
         requires isChain(xb, store)
 
         ensures computeEBB(xb, 0, store) == |xb| - 1
-    {   //  Because some constraints are defined within isChain
-        //  Dafny needs some minimal help for this proof.  
-        if |xb| == 1 {
-            //  Thanks Dafny
-        }
+    {   //  Thanks Dsfny
     }
    
     /**
@@ -211,7 +207,7 @@ module ForkChoiceHelpers {
      *  @param  e       An epoch.
      *  @param  store   A store.
      *  @returns        The sequence of e + 1 EBBs for each epoch 0 <= e' <= e.
-     *                  Element at index 0 <= k < |computeAllEBBs()| is 
+     *                  Element at index 0 <= k < |computeAllEBBsIndices()| is 
      *                  EBB(xb, e - k).
      *
      *  epoch   0            1            2            3            4            5  ...
@@ -235,26 +231,26 @@ module ForkChoiceHelpers {
      *  If 1 <= e <= 2, EBB(xb, 2) == (64,e).
      *  LEBB(xb) == (64, 1).
      */
-    function computeAllEBBs(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
+    function computeAllEBBsIndices(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
 
         /** Each epoch has a block associated to. */
-        ensures |computeAllEBBs(xb, e, store)| == e as nat + 1
+        ensures |computeAllEBBsIndices(xb, e, store)| == e as nat + 1
         /** The index for each epoch is in the range of xb. */
-        ensures forall i :: 0 <= i < e as nat + 1 ==> computeAllEBBs(xb, e, store)[i] < |xb|
+        ensures forall i :: 0 <= i < e as nat + 1 ==> computeAllEBBsIndices(xb, e, store)[i] < |xb|
         /** The sequence returned is in decreasing order slot-wise. */
         ensures forall i :: 1 <= i < e as nat + 1 ==> 
-            store.blocks[xb[computeAllEBBs(xb, e, store)[i - 1]]].slot >= store.blocks[xb[computeAllEBBs(xb, e, store)[i]]].slot
+            store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i - 1]]].slot >= store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i]]].slot
         /** The epoch e - i boundary block has a slot less than (e - i) * SLOTS_PER_EPOCH. */
         ensures forall i :: 0 <= i < e as nat + 1 
-            ==> store.blocks[xb[computeAllEBBs(xb, e, store)[i]]].slot as nat <= (e as nat - i) * SLOTS_PER_EPOCH as nat 
+            ==> store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i]]].slot as nat <= (e as nat - i) * SLOTS_PER_EPOCH as nat 
         /** The  blocks at index j less than the epoch e - i boundary block have a slot 
             larger than  (e - i) * SLOTS_PER_EPOCH. */
         ensures forall i :: 0 <= i < e as nat + 1 ==> 
-            forall j :: 0 <= j < computeAllEBBs(xb, e, store)[i] ==>
+            forall j :: 0 <= j < computeAllEBBsIndices(xb, e, store)[i] ==>
             store.blocks[xb[j]].slot as nat > (e as nat - i) * SLOTS_PER_EPOCH as nat
-        ensures computeAllEBBs(xb, e, store)[|computeAllEBBs(xb, e, store)| - 1] == |xb| - 1
+        ensures computeAllEBBsIndices(xb, e, store)[|computeAllEBBsIndices(xb, e, store)| - 1] == |xb| - 1
 
         decreases e 
     {
@@ -266,7 +262,7 @@ module ForkChoiceHelpers {
             if e == 0 then 
                 []
             else 
-                computeAllEBBs(xb, e - 1, store)
+                computeAllEBBsIndices(xb, e - 1, store)
         )
     }
 
@@ -306,7 +302,16 @@ module ForkChoiceHelpers {
     }
 
     /**
-     *  The index of the first (left to right) justified ebb.
+     *  The index of the first (left to right) i.e. most recent justified ebb.
+     *  
+     *  @param  i       An index in the sequence of ebbs.
+     *  @param  xb      A sequence of block roots.
+     *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
+     *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
+     *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
+     *  @param  links   All the attestations received so far.
+     *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
+     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
     function lastJustified(xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>): nat
         /** `xb` has at least one block. */
@@ -340,7 +345,7 @@ module ForkChoiceHelpers {
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
      *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
      *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
-     *  @param  links   The attestations (votes).
+     *  @param  links   All the attestations received so far.
      *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
@@ -371,4 +376,13 @@ module ForkChoiceHelpers {
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 
                         >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
+
+    /**
+     *  In a state, attestations must originate from the current
+     *  justified checkpoint.
+     */
+     lemma attestationsAreFromCurrentCheckpoint(s : BeaconState)
+     {}
+
+     
 }

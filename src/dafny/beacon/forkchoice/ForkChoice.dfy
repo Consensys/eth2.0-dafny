@@ -82,7 +82,8 @@ module ForkChoice {
             CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
             map[anchor_root := anchor_state],            //  block_states
-            |anchor_state.validators|
+            |anchor_state.validators|,
+            []
         )
     }
 
@@ -412,7 +413,7 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method {:timeMultiplier 6} on_block(b: BeaconBlock, pre_state : BeaconState) 
+        method {:timeMultiplier 8} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 

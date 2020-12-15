@@ -152,6 +152,7 @@ module EpochProcessing {
             //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
             //  of the previous epoch. (retrieve in the historical roots).
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
+            //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ;  
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
                                 get_total_active_balance(s') as uint128 * 2 {

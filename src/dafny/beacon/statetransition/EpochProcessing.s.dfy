@@ -76,6 +76,7 @@ module EpochProcessingSpec {
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             updateJustificationCurrentEpoch(s).justification_bits[1..] == 
                 (s.justification_bits)[1..|s.justification_bits|]
+        // ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==>  updateJustification(s).previous_justified_checkpoint == s.current_justified_checkpoint
     {
         updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
     }
