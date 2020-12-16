@@ -48,15 +48,6 @@ module StateTransition {
     import opened EpochProcessing
     import opened ProcessOperationsSpec
 
-// # Attestations
-//     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
-//     current_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
-//     # Finality
-//     justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]  # Bit set for every recent justified epoch
-//     previous_justified_checkpoint: Checkpoint  # Previous epoch snapshot
-//     current_justified_checkpoint: Checkpoint
-//     finalized_checkpoint: Checkpoint
-
     /**
      *  Whether a block is valid in a given state.
      *
