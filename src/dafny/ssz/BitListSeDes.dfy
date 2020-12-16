@@ -208,6 +208,7 @@ include "Constants.dfy"
                 calc == {
                     fromBitlistToBytes(fromBytesToBitList(xb)) ;
                     fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
+                    
                 }
 
                 var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
