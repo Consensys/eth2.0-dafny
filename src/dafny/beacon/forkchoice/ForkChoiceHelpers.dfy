@@ -137,7 +137,7 @@ module ForkChoiceHelpers {
      *  store.blocks[chainRoots(br, store)[5]].slot ==  store.blocks[b5].slot == 0
      *  store.blocks[b5].slot == 0
      *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
-     *          |............|............|............|............|............|  ...
+     *          |............|............|............|............|............|...
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0 == br     
      *  slot    0             64           129    191      213       264
      */
@@ -149,16 +149,9 @@ module ForkChoiceHelpers {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        ensures |chainRoots(br, store)| >= 1
+        ensures |chainRoots(br, store)| >= 1  
         /** Result is a slot-decreasing chain of linked roots the last one is slot 0..  */
         ensures isChain(chainRoots(br, store), store)
-        // ensures forall i :: 0 <= i < |chainRoots(br, store)| ==>
-        //     chainRoots(br, store)[i] in store.blocks.Keys 
-        // ensures forall i :: 0 <= i < |chainRoots(br, store)| - 1 ==>
-        //     store.blocks[chainRoots(br, store)[i]].parent_root == chainRoots(br, store)[i + 1]
-        // ensures forall i :: 0 <= i < |chainRoots(br, store)| - 1 ==>
-        //     store.blocks[chainRoots(br, store)[i]].slot > store.blocks[chainRoots(br, store)[i + 1]].slot
-        // ensures  store.blocks[chainRoots(br, store)[|chainRoots(br, store)| - 1 ]].slot == 0 
 
         //  Computation always terminates as slot number decreases (well-foundedness).
         decreases store.blocks[br].slot
@@ -211,8 +204,7 @@ module ForkChoiceHelpers {
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
 
-        ensures forall i :: 0 <= i < |xb| ==>
-            xb[i] in store.blocks.Keys 
+        ensures forall i :: 0 <= i < |xb| ==> xb[i] in store.blocks.Keys 
         /** The result is in the range of xb. */
         ensures computeEBB(xb, e, store) < |xb|
         ensures xb[computeEBB(xb, e, store)] in store.blocks.Keys
@@ -227,10 +219,6 @@ module ForkChoiceHelpers {
          */
         decreases xb 
     {
-        // if |xb| == 1 then 
-        //     //  only one choice, must be the block with slot == 0
-        //     0
-        // else 
         if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
             //  first block is a good one
             0
@@ -351,7 +339,7 @@ module ForkChoiceHelpers {
         ensures isJustified(lastJustified(xb, ebbs, links), xb, ebbs, links)
         ensures forall i :: 0 <= i < lastJustified(xb, ebbs, links) ==> 
             !isJustified(i, xb, ebbs, links)
-    //  R1: we can compute it, but this requires a lemma to shit a result on
+    //  R1: we can compute it, but this requires a lemma to shift a result on
     //  isJustified(i, ebbs[1..], ...) to isJustified(1 + i, ebbs)
     // {
     //     if isJustified(0, xb, ebbs, links) then 
@@ -396,7 +384,7 @@ module ForkChoiceHelpers {
             //  There should be a justified block at a higher index `j` that is justified
             //  and a supermajority link from `j` to `i`.
             exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-                && |collectAttestationsForLink(
+                && |collectValidatorsAttestatingForLink(
                     links, 
                     CheckPoint(j as Epoch, xb[ebbs[j]]), 
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 

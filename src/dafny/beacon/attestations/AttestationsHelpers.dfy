@@ -70,22 +70,22 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (src. tgt) in `xa`. 
      */
-     function collectAttestationsForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
-        ensures forall e :: e in collectAttestationsForLink(xa, src, tgt) ==>
+     function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
+        ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
-        ensures |collectAttestationsForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
         decreases xa
     {
         if |xa| == 0 then 
             { }
         else 
             unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectAttestationsForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE);
+                collectValidatorsAttestatingForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE);
             (if xa[0].data.source == src && xa[0].data.target == tgt then 
                 trueBitsCount(xa[0].aggregation_bits)
             else 
                 {}
-            ) + collectAttestationsForLink(xa[1..], src, tgt)
+            ) + collectValidatorsAttestatingForLink(xa[1..], src, tgt)
     }
 
     /**
@@ -95,22 +95,22 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (_. tgt) in `xa`. 
      */
-    function collectAttestationsForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
-        ensures forall e :: e in collectAttestationsForTarget(xa, tgt) ==>
+    function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
+        ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
-        ensures |collectAttestationsForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
         decreases xa
     {
         if |xa| == 0 then 
             { }
         else 
             unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectAttestationsForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
+                collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
             (if xa[0].data.target == tgt then 
                 trueBitsCount(xa[0].aggregation_bits)
             else 
                 {}
-            ) + collectAttestationsForTarget(xa[1..], tgt)
+            ) + collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt)
     }
 
     /**
@@ -139,11 +139,11 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      */
     lemma {:induction xa} attForTgtLargerThanLinks(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint)
-        ensures collectAttestationsForLink(xa, src, tgt) <= collectAttestationsForTarget(xa, tgt) 
-        ensures |collectAttestationsForLink(xa, src, tgt)| <= |collectAttestationsForTarget(xa, tgt)| 
+        ensures collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) 
+        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| 
     {
-        assert(collectAttestationsForLink(xa, src, tgt) <= collectAttestationsForTarget(xa, tgt) );
-        cardIsMonotonic(collectAttestationsForLink(xa, src, tgt), collectAttestationsForTarget(xa, tgt));
+        assert(collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) );
+        cardIsMonotonic(collectValidatorsAttestatingForLink(xa, src, tgt), collectValidatorsIndicesAttestatingForTarget(xa, tgt));
     }
 
     /**

@@ -59,15 +59,15 @@ module ForkChoiceHelpersProofs {
         /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
         requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
         ensures isJustified(i, xb, ebbs, links) ==>
-            |collectAttestationsForTarget(links, CheckPoint(i as Epoch, xb[ebbs[i]]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+            |collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(i as Epoch, xb[ebbs[i]]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     {
         if isJustified(i, xb, ebbs, links) {
             assert(i < |ebbs| - 1);
             //  i is not last element of `xv` and cannot be epoch 0.
             assert( exists j :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-                && |collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            var j :|  i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) && |collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
-            assert(|collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+                && |collectValidatorsAttestatingForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            var j :|  i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) && |collectValidatorsAttestatingForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            assert(|collectValidatorsAttestatingForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
             attForTgtLargerThanLinks(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]));
         }
     }
@@ -132,7 +132,7 @@ module ForkChoiceHelpersProofs {
     //         //  There should be a justified block at a higher index `j` that is justified
     //         //  and a supermajority link from `j` to `i`.
     //         exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-    //             && |collectAttestationsForLink(
+    //             && |collectValidatorsAttestatingForLink(
     //                 links, 
     //                 CheckPoint(j as Epoch, xb[ebbs[j]]), 
     //                 CheckPoint(i as Epoch, xb[ebbs[i]]))| 
