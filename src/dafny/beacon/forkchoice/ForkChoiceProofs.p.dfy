@@ -12,19 +12,16 @@
  * under the License.
  */
 
-// include "../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/SetHelpers.dfy"
-// include "../utils/Helpers.dfy"
 include "../../ssz/Constants.dfy"
 include "ForkChoiceTypes.dfy"
 include "ForkChoiceHelpers.dfy"
-// include "Validators.dfy"
+include "ForkChoiceHelpers.p.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../BeaconChainTypes.dfy"
-include "../statetransition/EpochProcessing.s.dfy"
 
 /**
  *  Proofs for the ForkChoice properties.  
@@ -32,18 +29,17 @@ include "../statetransition/EpochProcessing.s.dfy"
 module ForckChoiceProofs {
     
     //  Import some constants, types and beacon chain helpers.
-    // import opened NativeTypes
     import opened Eth2Types
     import opened SetHelpers
     import opened Constants
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
-    // import opened Validators
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened BeaconChainTypes
-    import opened EpochProcessingSpec
+    import opened ForkChoiceHelpersProofs
+    // import opened EpochProcessingProofs
 
     /**
      *  RuleI for slashing. 
@@ -96,16 +92,14 @@ module ForckChoiceProofs {
          /** The block roots must be from accepted blocks, i.e. in the store. */
         requires br1 in store.blocks.Keys
         requires br2 in store.blocks.Keys
-
         /** Epoch is not zero. */
         requires j > 0 
-
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
-        // requires br1 == br2 
-
+        /** both checkpoints at epoch j are justified. */
         requires 
             var chbr1 := chainRoots(br1, store);
             var chbr2 := chainRoots(br2 , store);
@@ -151,15 +145,13 @@ module ForckChoiceProofs {
             //  reached.
             if (br1 == br2) {
                 assert((attForTgt1 <= attForTgt2) && (attForTgt2 <= attForTgt1));
-                assert(attForTgt1 * attForTgt2 == attForTgt1);
+                interSmallest(attForTgt1, attForTgt2);
+                assert(attForTgt1 * attForTgt2 == attForTgt1 == attForTgt2);
                 assert(|attForTgt1 * attForTgt2| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            } else {
+                assert(|attForTgt1 * attForTgt2| >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
             }
-            assert(|attForTgt1 * attForTgt2| >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
         }
-        
-
-        //  what we want
-        // assert(cp1 != cp2);
     }
 
     /**

@@ -48,8 +48,12 @@ module EpochProcessingHelpers {
     //     forall a1, a2 :: a1 in xa && a2 in xa ==>
 
     // }
+
     /**
      *  The last justified checkpoint in view(s).
+     *  @param  s       A state
+     *  @param  store   A store.
+     *  @returns        The most recent justified checkpoint in view(s).
      */
 
     function lastJustifiedCheckPoint(s: BeaconState, store: Store) : CheckPoint 
@@ -58,6 +62,8 @@ module EpochProcessingHelpers {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
     {
         var r := get_block_root(s, get_current_epoch(s));
         var roots := chainRoots(r, store); 
@@ -68,6 +74,35 @@ module EpochProcessingHelpers {
     }
 
     /**
+     */
+    function computeCheckPoints(s: BeaconState, store: Store) : seq<CheckPoint> 
+        requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
+        requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
+        ensures |computeCheckPoints(s, store)| == get_current_epoch(s) as nat + 1
+        ensures var r := get_block_root(s, get_current_epoch(s));
+                var roots := chainRoots(r, store); 
+                var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
+                forall i :: 0 <= i <  |computeCheckPoints(s, store)| ==> 
+                    computeCheckPoints(s, store)[i] == 
+                        CheckPoint(get_current_epoch(s) - i as Epoch, roots[ebbsIndices[i]])              
+
+        // ensures |computeCheckPoints(s, store| == get_current_epoch(s) as nat + 1
+    // {
+        // var r := get_block_root(s, get_current_epoch(s));
+        // var roots := chainRoots(r, store); 
+        // var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
+        // // assert(|ebbsIndices| ==  get_current_epoch(s) + 1);
+        // // var r : seq<CheckPoint> := 
+        // var r : seq<nat> :| forall i :: 0 <= i < 10 ==> r[i] == i;
+        // r 
+    // }
+
+    /**
      *  Whether a checkpoint is justified in the view that corresponds to a state.
      */
     predicate isJustifiedCheckPoint(cp : CheckPoint, s: BeaconState, store: Store) 
@@ -76,7 +111,7 @@ module EpochProcessingHelpers {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
-
+        requires isSlotDecreasing(store)
     {
         var r := get_block_root(s, get_current_epoch(s));
         var roots := chainRoots(r, store); 
@@ -95,6 +130,7 @@ module EpochProcessingHelpers {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
         requires isJustifiedCheckPoint(cp1, s, store)
         //  cp2 is a checkpoint in view(s)
@@ -119,6 +155,7 @@ module EpochProcessingHelpers {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
     {
         var r := get_block_root(s, get_current_epoch(s));

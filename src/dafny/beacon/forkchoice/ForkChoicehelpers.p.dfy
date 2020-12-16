@@ -35,6 +35,7 @@ module ForkChoiceHelpersProofs {
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
 
+
    
     /**
      *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
@@ -110,31 +111,31 @@ module ForkChoiceHelpersProofs {
      *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
-    predicate isJustified(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-        /** i is an index in ebbs, and each index represent an epoch so must be unint64. */
-        requires i < |ebbs| <= 0x10000000000000000
-        /** `xb` has at least one block. */
-        requires |xb| >= 1
-        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-        requires ebbs[|ebbs| - 1] == |xb| - 1
+    // predicate isJustified(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
+    //     /** i is an index in ebbs, and each index represent an epoch so must be unint64. */
+    //     requires i < |ebbs| <= 0x10000000000000000
+    //     /** `xb` has at least one block. */
+    //     requires |xb| >= 1
+    //     /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
+    //     requires ebbs[|ebbs| - 1] == |xb| - 1
         
-        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+    //     /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
+    //     requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
 
-        decreases |ebbs| - i 
-    {
-        // true
-        if i == |ebbs| - 1 then 
-            // Last block in the list is assumed to be justified.
-            true
-        else 
-            //  There should be a justified block at a higher index `j` that is justified
-            //  and a supermajority link from `j` to `i`.
-            exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-                && |collectAttestationsForLink(
-                    links, 
-                    CheckPoint(j as Epoch, xb[ebbs[j]]), 
-                    CheckPoint(i as Epoch, xb[ebbs[i]]))| 
-                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    }
+    //     decreases |ebbs| - i 
+    // {
+    //     // true
+    //     if i == |ebbs| - 1 then 
+    //         // Last block in the list is assumed to be justified.
+    //         true
+    //     else 
+    //         //  There should be a justified block at a higher index `j` that is justified
+    //         //  and a supermajority link from `j` to `i`.
+    //         exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
+    //             && |collectAttestationsForLink(
+    //                 links, 
+    //                 CheckPoint(j as Epoch, xb[ebbs[j]]), 
+    //                 CheckPoint(i as Epoch, xb[ebbs[i]]))| 
+    //                     >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    // }
 }

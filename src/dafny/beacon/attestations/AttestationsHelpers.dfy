@@ -160,7 +160,7 @@ module AttestationsHelpers {
      *                  and directly `use state.current_epoch_attestations` or 
      *                  `state.previous_epoch_attestations` in the callers.
      */
-    function method  get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+    function method get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         //  report? -> meaning of i in (a, b)? seems to be closed interval ...
         requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
         ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000

@@ -149,6 +149,8 @@ module EpochProcessingProofs {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
@@ -197,6 +199,7 @@ module EpochProcessingProofs {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
@@ -244,6 +247,7 @@ module EpochProcessingProofs {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>    
@@ -288,6 +292,8 @@ module EpochProcessingProofs {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
         requires isMostRecentJustifiedCheckPoint(s.current_justified_checkpoint, s, store)
 
         requires isJustifiedCheckPoint(s.previous_justified_checkpoint, s, store)
@@ -338,6 +344,8 @@ module EpochProcessingProofs {
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
         requires isMostRecentJustifiedCheckPoint(s.current_justified_checkpoint, s, store)
 
         requires isJustifiedCheckPoint(s.previous_justified_checkpoint, s, store)

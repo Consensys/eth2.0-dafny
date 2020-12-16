@@ -21,7 +21,7 @@ include "../Helpers.dfy"
 include "ForkChoiceTypes.dfy"
 
 /**
- * Fork choice rule for the Beacon Chain.
+ *  Provide definitions of chain, well-formed store, EBB, justified.
  */
 module ForkChoiceHelpers {
     
@@ -33,7 +33,7 @@ module ForkChoiceHelpers {
     import opened AttestationsHelpers
     import opened ForkChoiceTypes
    
-   /**
+    /**
      *  Whether an attestation is well-formed.
      *
      *  @param  a       An attestattion.
@@ -43,6 +43,7 @@ module ForkChoiceHelpers {
     predicate isValidAttestation(a : AttestationData, store: Store, links: seq<PendingAttestation>) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
         /** The head block in `a` is in the store. */
         requires a.beacon_block_root in store.blocks.Keys
     {
@@ -69,7 +70,7 @@ module ForkChoiceHelpers {
     /**
      *  A well-formed store is a store for which each block
      *  with a slot > 0 has a parent in the store.
-     *  Downward closure.
+     *  Downward closure for the parent relation.
      *
      *  @param  store   A store.
      */
@@ -77,43 +78,87 @@ module ForkChoiceHelpers {
     {
         forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
             store.blocks[k].parent_root in store.blocks.Keys
-            && store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot
     }
 
     /**
-     *  A chain of blocks roots is totally ordered slot-wise, 
-     *  and the slot of last block is zero.
+     *  A store where the slots of parent blocks decrease.
+     *
+     *  @param  store   A store.
+     */
+    predicate isSlotDecreasing(store: Store)
+        requires isClosedUnderParent(store)
+    {
+        forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
+            store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot
+    }
+
+    /**
+     *  A chain of blocks roots is a totally ordered (decreasing, slot-wise)
+     *  sequence of block roots, such that the slot of last block is zero.
+     *  In this definition it is not required that the blocks are linkted
+     *  with the parent_root relation.
      *
      *  @param  xr      A non-empty seq of block roots.
      *  @param  store   A store.
+     *
+     *  @example of a chain of size 6.  
+     *  xr = [br5, br4, br3, br2, br1, br0] with 
+     *  store.blocks[br5].slot == 0
+     *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
      */
     predicate isChain(xr: seq<Root>, store: Store)  
     {
         |xr| >= 1
         &&
-        (forall r :: r in xr ==> r in store.blocks.Keys)
-        &&
+        (forall i :: 0 <= i < |xr| ==> xr[i] in store.blocks.Keys)
+        && 
         store.blocks[xr[|xr| - 1]].slot == 0 
-        &&
-        forall i :: 1 <= i < |xr| ==> store.blocks[xr[i - 1]].slot > store.blocks[xr[i]].slot
+        && 
+        if |xr| == 1 then 
+            //  last block with slot 0 is assumed to be a chain.
+            true
+        else 
+            store.blocks[xr[0]].parent_root == xr[1] 
+            && store.blocks[xr[0]].slot > store.blocks[xr[1]].slot
+            && isChain(xr[1..], store)
     }
-        
+
     /**
-     *  The view defined by a block.
+     *  The ancestors of a block root, as block roots.
      *  
      *  @param  br      A hash root of a block that is in the `store`.
      *  @param  store   A store (similar to the view of the validator).
      *  @returns        The ancestors's roots of the block `br` in  `store` with
-     *                  oldest (genesis) the last element of the result.
+     *                  `br` first and oldest (genesis) the last element of the sequence.
+     *
+     *  @example. br block at slot 264. 
+     *  Store ancestors from br given by: br == b0 and then b1, b2, ... b5.
+     *  |chainRoots(br, store)| == 6, chainRoots(br, store)[i] == bi
+     *  store.blocks[chainRoots(br, store)[5]].slot ==  store.blocks[b5].slot == 0
+     *  store.blocks[b5].slot == 0
+     *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
+     *          |............|............|............|............|............|  ...
+     *  block   b5----------->b4---------->b3---->b2------>b1------->b0 == br     
+     *  slot    0             64           129    191      213       264
      */
     function chainRoots(br: Root, store: Store) : seq<Root>
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
 
-        /** Result is a slot-decreasing chain of roots.  */
+        ensures |chainRoots(br, store)| >= 1
+        /** Result is a slot-decreasing chain of linked roots the last one is slot 0..  */
         ensures isChain(chainRoots(br, store), store)
+        // ensures forall i :: 0 <= i < |chainRoots(br, store)| ==>
+        //     chainRoots(br, store)[i] in store.blocks.Keys 
+        // ensures forall i :: 0 <= i < |chainRoots(br, store)| - 1 ==>
+        //     store.blocks[chainRoots(br, store)[i]].parent_root == chainRoots(br, store)[i + 1]
+        // ensures forall i :: 0 <= i < |chainRoots(br, store)| - 1 ==>
+        //     store.blocks[chainRoots(br, store)[i]].slot > store.blocks[chainRoots(br, store)[i + 1]].slot
+        // ensures  store.blocks[chainRoots(br, store)[|chainRoots(br, store)| - 1 ]].slot == 0 
 
         //  Computation always terminates as slot number decreases (well-foundedness).
         decreases store.blocks[br].slot
@@ -126,10 +171,11 @@ module ForkChoiceHelpers {
     }
 
     /**
-     *  Compute the first block root less than or equal to an epoch.
+     *  Compute the first block root in chain with slot number less than or equal to an epoch.
      *  Also known as EBB in the Gasper paper.
      *
-     *  @param  xb      A sequence of block roots, the last one with slot == 0.
+     *  @param  xb      A sequence of block roots which is a chain. First element
+     *                  is the block with highest slot.
      *  @param  e       An epoch.
      *  @param  store   A store.
      *  @return         The index i of the first block root in xb (left to right) with 
@@ -138,8 +184,8 @@ module ForkChoiceHelpers {
      *                  are ordered by slot number.
      *  @note           LEBB(xb) is defined by computeEBB(xb, epoch(first(xb))).
      *  
-     *  epoch   0            1            2            3            4            5  ...
-     *          |............|............|............|............|............|  ...
+     *  epoch   0            1            2            3            4            5  
+     *          |............|............|............|............|............|....
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
      *  slot    0             64           129    191      213       264
      *       
@@ -161,23 +207,31 @@ module ForkChoiceHelpers {
      */
     function computeEBB(xb : seq<Root>, e :  Epoch, store: Store) : nat
 
+        requires |xb| >= 1
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
 
+        ensures forall i :: 0 <= i < |xb| ==>
+            xb[i] in store.blocks.Keys 
         /** The result is in the range of xb. */
         ensures computeEBB(xb, e, store) < |xb|
+        ensures xb[computeEBB(xb, e, store)] in store.blocks.Keys
         /** The slot of the result is bounded. */
         ensures store.blocks[xb[computeEBB(xb, e, store)]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat 
         /** The prefix of xb[..result] has slots >  e * SLOTS_PER_EPOCH. */
         ensures forall j :: 0 <= j < computeEBB(xb, e, store) ==>
             store.blocks[xb[j]].slot as nat > e as nat * SLOTS_PER_EPOCH as nat
 
+        /** This is guaranteed to termninate because the slot of the last 
+         *  element of xb is 0 and condition of the if will eventually hold.
+         */
         decreases xb 
     {
-        if |xb| == 1 then 
-            //  only one choice, must be the block with slot == 0
-            0
-        else if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
+        // if |xb| == 1 then 
+        //     //  only one choice, must be the block with slot == 0
+        //     0
+        // else 
+        if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
             //  first block is a good one
             0
         else 
@@ -193,15 +247,16 @@ module ForkChoiceHelpers {
      *  @param  store   A store.
      */
     lemma {:induction xb} ebbForEpochZeroIsLast(xb : seq<Root>, e :  Epoch, store: Store)
+        requires |xb| >= 1
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
 
         ensures computeEBB(xb, 0, store) == |xb| - 1
-    {   //  Thanks Dsfny
+    {   //  Thanks Dafny
     }
    
     /**
-     *  Compute all the EBBs.
+     *  Compute all the EBBs in a chain of block roots.
      *
      *  @param  xb      A sequence of block roots, the last one has slot equal to 0.
      *  @param  e       An epoch.
@@ -232,8 +287,13 @@ module ForkChoiceHelpers {
      *  LEBB(xb) == (64, 1).
      */
     function computeAllEBBsIndices(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
+        requires |xb| >= 1
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
         /** Each epoch has a block associated to. */
         ensures |computeAllEBBsIndices(xb, e, store)| == e as nat + 1
@@ -251,7 +311,7 @@ module ForkChoiceHelpers {
             forall j :: 0 <= j < computeAllEBBsIndices(xb, e, store)[i] ==>
             store.blocks[xb[j]].slot as nat > (e as nat - i) * SLOTS_PER_EPOCH as nat
         ensures computeAllEBBsIndices(xb, e, store)[|computeAllEBBsIndices(xb, e, store)| - 1] == |xb| - 1
-
+        
         decreases e 
     {
         ebbForEpochZeroIsLast(xb, e, store);
@@ -264,41 +324,6 @@ module ForkChoiceHelpers {
             else 
                 computeAllEBBsIndices(xb, e - 1, store)
         )
-    }
-
-    /**
-     *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
-     *  ingoing votes.
-     *
-     *  @param  i       An index in `ebbs`.
-     *  @param  xb      Sequence of blocks roots (last one expected to be genesis block root).
-     *  @param  ebbs    A sequence of EBB from epoch |ebbs| - 1 to 0. Last element must
-     *                  be pointing to last element of `xv`.
-     *  @param  links   The votes (attestations).
-     */
-    lemma {:induction i} justifiedMustHaveTwoThirdIncoming(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-        /** i is an index in ebbs not epoch 0. Each index represent an epoch so must be unint64. */
-        requires i + 1 < |ebbs| 
-        requires |ebbs| <= 0x10000000000000000
-        /** `xb` has at least one block. */
-        requires |xb| >= 1
-        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-        requires ebbs[|ebbs| - 1] == |xb| - 1
-        
-        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
-        ensures isJustified(i, xb, ebbs, links) ==>
-            |collectAttestationsForTarget(links, CheckPoint(i as Epoch, xb[ebbs[i]]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    {
-        if isJustified(i, xb, ebbs, links) {
-            assert(i < |ebbs| - 1);
-            //  i is not last element of `xv` and cannot be epoch 0.
-            assert( exists j :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-                && |collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            var j :|  i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) && |collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
-            assert(|collectAttestationsForLink(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            attForTgtLargerThanLinks(links, CheckPoint(j as Epoch, xb[ebbs[j]]), CheckPoint(i as Epoch, xb[ebbs[i]]));
-        }
     }
 
     /**
@@ -340,7 +365,8 @@ module ForkChoiceHelpers {
 
     /**
      *  
-     *  @param  i       An index in the sequence of ebbs.
+     *  @param  i       An index in the sequence of ebbs. This is the epoch
+     *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
      *  @param  xb      A sequence of block roots.
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
      *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
@@ -376,13 +402,5 @@ module ForkChoiceHelpers {
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 
                         >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
-
-    /**
-     *  In a state, attestations must originate from the current
-     *  justified checkpoint.
-     */
-     lemma attestationsAreFromCurrentCheckpoint(s : BeaconState)
-     {}
-
-     
+ 
 }
