@@ -1,0 +1,237 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster__24_BytesAndBits {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=BytesAndBits;
+fromBitsToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+byteTo8Bits [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+boolToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+list8BitsToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+isNull [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster__41_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=MathHelpers;
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster__7_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster__17_BoolSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=BoolSeDes;
+boolToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+byteToBool [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster__29_BitListSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=BitListSeDes;
+fromBytesToBitList [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+fromBitlistToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+largestIndexOfOne [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster__5_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+initSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+subgraph cluster__43_SSZ__Merkleise {
+style=filled;
+fontsize="20.0";
+fillcolor="#e0f3db";
+fontcolor=darkolivegreen3;
+penwidth=2;
+label=Merkleise;
+chunkCountBytes32 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+merkleise [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+chunkCountUint8 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+merkleisePow2Chunks [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+hash [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+chunkCount [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+getHashTreeRoot [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+padPow2Chunks [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+packUint8 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+toChunks [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+chunkCountBool [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+packBool [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+rightPadZeros [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+chunkCountBitlist [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+packBytes32 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+is32BytesChunk [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+bitfieldBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+pack [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor=orchid3;
+penwidth=2;
+label=System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+}
+
+subgraph cluster__38_SSZ {
+style=filled;
+fontsize="20.0";
+fillcolor=snow2;
+fontcolor=slategrey;
+penwidth=2;
+label=SSZ;
+deserialise [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+serialise [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+default [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+sizeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+}
+
+subgraph cluster__13_IntSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor="#f0f9e8";
+fontcolor=palegreen4;
+penwidth=2;
+label=IntSeDes;
+byteToUint8 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+uint8ToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+timeSeq -> timeSeq;
+chunkCountBytes32 -> ceil;
+chunkCountBytes32 -> chunkCountBytes32;
+chunkCountBytes32 -> default;
+chunkCountBytes32 -> sizeOf;
+get__prev__power__of__two -> get__prev__power__of__two;
+merkleise -> is32BytesChunk;
+merkleise -> merkleise;
+merkleise -> merkleisePow2Chunks;
+merkleise -> padPow2Chunks;
+chunkCountUint8 -> chunkCountUint8;
+chunkCountUint8 -> pack;
+initSeq -> initSeq;
+initSeq -> requires;
+merkleisePow2Chunks -> get__next__power__of__two;
+merkleisePow2Chunks -> hash;
+merkleisePow2Chunks -> is32BytesChunk;
+merkleisePow2Chunks -> merkleisePow2Chunks;
+fromBitsToBytes -> ceil;
+fromBitsToBytes -> fromBitsToBytes;
+fromBitsToBytes -> list8BitsToByte;
+byteTo8Bits -> byteTo8Bits;
+byteTo8Bits -> byteToBool;
+hash -> hash;
+fromBytesToBitList -> byteTo8Bits;
+fromBytesToBitList -> fromBytesToBitList;
+fromBytesToBitList -> isNull;
+fromBytesToBitList -> largestIndexOfOne;
+chunkCount -> chunkCount;
+chunkCount -> chunkCountBitlist;
+chunkCount -> chunkCountBool;
+chunkCount -> chunkCountBytes32;
+chunkCount -> chunkCountUint8;
+getHashTreeRoot -> bitfieldBytes;
+getHashTreeRoot -> getHashTreeRoot;
+getHashTreeRoot -> is32BytesChunk;
+getHashTreeRoot -> merkleise;
+getHashTreeRoot -> pack;
+boolToBytes -> boolToBytes;
+padPow2Chunks -> get__next__power__of__two;
+padPow2Chunks -> padPow2Chunks;
+padPow2Chunks -> timeSeq;
+packUint8 -> packUint8;
+packUint8 -> serialise;
+packUint8 -> toChunks;
+toChunks -> is32BytesChunk;
+toChunks -> rightPadZeros;
+toChunks -> toChunks;
+boolToByte -> boolToByte;
+isPowerOf2 -> power2;
+power2 -> power2;
+uint8ToBytes -> uint8ToBytes;
+ceil -> ceil;
+chunkCountBool -> chunkCountBool;
+chunkCountBool -> pack;
+list8BitsToByte -> boolToByte;
+list8BitsToByte -> isNull;
+list8BitsToByte -> list8BitsToByte;
+flattenLength -> flattenLength;
+deserialise -> byteToBool;
+deserialise -> byteToUint8;
+deserialise -> fromBytesToBitList;
+serialise -> boolToBytes;
+serialise -> fromBitlistToBytes;
+serialise -> uint8ToBytes;
+packBool -> packBool;
+packBool -> serialise;
+packBool -> toChunks;
+rightPadZeros -> is32BytesChunk;
+rightPadZeros -> rightPadZeros;
+chunkCountBitlist -> ceil;
+chunkCountBitlist -> chunkCountBitlist;
+packBytes32 -> packBytes32;
+packBytes32 -> serialise;
+packBytes32 -> toChunks;
+default -> timeSeq;
+get__next__power__of__two -> get__next__power__of__two;
+fromBitlistToBytes -> ceil;
+fromBitlistToBytes -> fromBitlistToBytes;
+fromBitlistToBytes -> list8BitsToByte;
+bitfieldBytes -> bitfieldBytes;
+bitfieldBytes -> fromBitsToBytes;
+bitfieldBytes -> is32BytesChunk;
+bitfieldBytes -> toChunks;
+sizeOf -> serialise;
+sizeOf -> sizeOf;
+sizeOf -> typeOf;
+pack -> packBool;
+pack -> packBytes32;
+pack -> packUint8;
+pack -> typeOf;
+largestIndexOfOne -> largestIndexOfOne;
+flatten -> flatten;
+flatten -> flattenLength;
+}
