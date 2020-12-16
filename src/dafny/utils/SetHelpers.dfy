@@ -18,6 +18,17 @@
 module SetHelpers {
 
     /**
+     *  If a set is included in another one, their intersection
+     *  is the smallest one.
+     */
+    lemma interSmallest<T>(x : set<T>, y : set<T>) 
+        requires x <= y 
+        ensures x * y == x
+        decreases y 
+    {   //  Thanks Dafny
+    }
+
+    /**
      *  If x [= {0, ..., k - 1} and y [= {0, .., k - 1}
      *  then x U y has at most k elements.
      */
@@ -95,8 +106,8 @@ module SetHelpers {
         ensures |x * y| >= |z| / 3 + 1    //    or equivalently 3 * |x * y| < |z| 
     {
         //  Proof of alternative assumption
-        // assert(|x| >= 2 * |z| / 3 + 1 <==> 2 * |z| < 3 * |x|);
-        // assert(|y| >= 2 * |z| / 3 + 1 <==> 2 * |z| < 3 * |y|);
+        assert(|x| >= 2 * |z| / 3 + 1 <==> 2 * |z| < 3 * |x|);
+        assert(|y| >= 2 * |z| / 3 + 1 <==> 2 * |z| < 3 * |y|);
         //  Proof by contradiction
         if |x * y| < |z| / 3 + 1 {
             //  size of union is sum of sizes minus size of intersection.
@@ -107,7 +118,7 @@ module SetHelpers {
             cardIsMonotonic(x + y, z);
         } 
         //  proof of alternative conclusion
-        // assert(3 * |x * y| > |z| <==> |x * y| >= |z| / 3 + 1 );
+        assert(3 * |x * y| > |z| <==> |x * y| >= |z| / 3 + 1 );
     } 
 
 }
