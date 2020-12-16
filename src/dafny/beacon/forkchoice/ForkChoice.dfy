@@ -354,7 +354,7 @@ module ForkChoice {
          *  @param  store   A store.
          *  @returns        Proof that a valid store is always a chain.
          */
-        lemma {:timeMultiplier 3} {:induction r, store} aValidStoreIsAChain(r: Root, store: Store)    
+        lemma {:timeLimitMultiplier 3} {:induction r, store} aValidStoreIsAChain(r: Root, store: Store)    
             requires r in store.blocks.Keys
             requires storeIsValid(store)
 
@@ -413,7 +413,7 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method {:timeMultiplier 8} on_block(b: BeaconBlock, pre_state : BeaconState) 
+        method {:timeLimitMultiplier 8} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 
