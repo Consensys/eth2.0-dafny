@@ -20,7 +20,7 @@ include "BytesAndBits.dfy"
 include "Constants.dfy"
 
 /**
- *  list<Boolean> serialisation, desrialisation.
+ *  list<Boolean> serialisation, deserialisation.
  *
  */
  module BitListSeDes {
@@ -208,7 +208,7 @@ include "Constants.dfy"
                 calc == {
                     fromBitlistToBytes(fromBytesToBitList(xb)) ;
                     fromBitlistToBytes(byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))]);
-                    
+
                 }
 
                 var bl:= byteTo8Bits(xb[0])[.. largestIndexOfOne(byteTo8Bits(xb[0]))];
