@@ -135,7 +135,7 @@ module EpochProcessingHelpers {
         requires isJustifiedCheckPoint(cp1, s, store)
         //  cp2 is a checkpoint in view(s)
         // requires exists 
-        requires |collectAttestationsForLink(
+        requires |collectValidatorsAttestatingForLink(
                     links, 
                     cp1, 
                     cp2)| 
