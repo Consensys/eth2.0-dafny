@@ -98,11 +98,12 @@ module EpochProcessingProofs {
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
         requires isJustifiedCheckPoint(cp1, s, store)
         //  cp2 is a checkpoint in view(s)
         // requires exists 
-        requires |collectAttestationsForLink(
+        requires |collectValidatorsAttestatingForLink(
                     links, 
                     cp1, 
                     cp2)| 
