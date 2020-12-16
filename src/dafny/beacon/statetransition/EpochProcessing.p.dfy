@@ -377,6 +377,11 @@ module EpochProcessingProofs {
         //  CheckPoint(previous_epoch, get_block_root(s, previous_epoch))
         //  2. apply inductive def of isJustified
         attestationsPrevEpoch(s, store);
+        assert( get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 );
+        assert(get_previous_epoch(s) *  SLOTS_PER_EPOCH   < get_current_epoch(s) *  SLOTS_PER_EPOCH);
+        assert( get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  );
+        assert( s.slot  - get_previous_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT );
+
         //  attestations are from s.previous_justified_checkpoint to LEBB(prev_epoch)
         assert(forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>
             a.data.source == s.previous_justified_checkpoint
