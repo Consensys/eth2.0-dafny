@@ -19,7 +19,7 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 
 /**
- * State transition functional specification for the Beacon Chain.
+ * Epoch processing functional specification.
  */
 module EpochProcessingSpec {
     
@@ -153,6 +153,12 @@ module EpochProcessingSpec {
      *  The first (right to left) bit b0' is set to reflect the new status of the CP at 
      *  the current epoch (4): if it becomes justified, the bit is set to 1 otherwise
      *  left to its previous value (default 0).
+     *
+     *  @note   The previous discussion shows that s.current_justified_checkpoint and
+     *          s.previous_justified_checkpoint are not necessarily the two latest justified CPs.
+     *          s.current_justified_checkpoint is the LJ, but there could be another CP (eg. at epcoh 3)
+     *          that is determined justified between s.current_justified_checkpoint and
+     *          s.previous_justified_checkpoint.
      *  
      */
     function updateJustificationCurrentEpoch(s: BeaconState) : BeaconState 
@@ -213,43 +219,167 @@ module EpochProcessingSpec {
             s
     }
 
-    
     /**
-     *  Update a state finalised checkpoint.
-     *  @param  s   A state.
-     *  @returns    The new state after updating the status of finalised_checkpoint.
-     *  Epochs layout
+     *  Compute the finalised checkpoint of the first state at a new epoch.
      *
-     *  | ............ | ........... | .......... | 
-     *  | ............ | ........... | .......... | 
-     *  e1             e2            e3           e4
-     *  bit[0]        bit[1]        bit[2]        bit[3]
-     *  current       previous
+     *  @param  s       A state s.
+     *  @param  s'      A state that s' == updateJustification(s)
+     *  @returns        The new state after updating the status of finalised_checkpoint.
      *
-    //  *  Python slice a[k:l] means: a[k] ... a[l -1]
+     *  Example.
+     *                                                           LEBB(s)                         
+     *  epoch   0            1            2            3            4            5  
+     *  CP      (B5,0)      (B5,1)        (B5,2)       (B2,3)       (B1,4)
+     *          |............|............|............|............|..........s|....
+     *          |............|............|............|............|..........s|s'...
+     *  block   B5----------->B4---------->B3---->B2------>B1------->B0      
+     *  slot    0             64           129    191      213       264
+     *  bits(s) b3=1          b2=1         b1=1       b0=0                        s
+     *  bits(s')              b3'0         b2'=1      b1'            b0'            s'
+     *                        =======prevAttest=======>
+     *                                      LJ(s)===currentAttest===>LEBB(s)
+     *
+     *  @note   In the diagram above, s' is depicted as the first state in epoch 5,
+     *          but in the updates, the slot (and hence epoch) of s' has njot been 
+     *          incremented yet.
+     *  @todo   Fix the diagram and use s'' = s'(slot := s.slot) 
+     *
+     *  assume current state is such that s.current_justified_checkpoint == (B5, 2)
+     *  where epoch(s) == 4.
+     *  After the justification updates, the justification bits have been updated.
+     *  In this example we assume: 
+     *  - LJ(s) == (B5,2)
+     *  - LEBB(s) = (B1,4)
+     *  It follows that:
+     *  - s'.previous_justified_checkpoint == s.current_justified_checkpoint
+     *  - s'.current_justified_checkpoint is:
+     *      a) s.current_justified_checkpoint if neither prevAttest or currentAttest
+     *      are supermajorities
+     *      b) (B1, 4) (LEBB(s)) if currentAttest is a supermajority 
+     *      c) (B2, 3) (LEBB(prevEpoch(s))) if prevAttest is a supermajority and currentAttest is not
+     *
+     *  The justification bits are as as follows:
+     *      b' = [isSuper(currentAttest), isSuper(PrevAttest) or b0, b1, b2].
+     *
+     *  @note   If b0 was already true (a supermajority from some CP), then it remains true (justified).
+     *          and in that case it must have been the LJ(s).
+     *
+     *  To update the status of a CP from justified to finalised, Gasper relies on 
+     *  k-finalisation, with k = 2.
+     *  The k-finalisation definition is as follow:
+     *  A checkpoint (B0, ep0) is k-finalised, k >= 1  iff:
+     *  - it is the genesis block/epoch
+     *  - or
+     *      c1 (B0, ep0) --> (B1, ep0 + 1) --> ... -> (Bk, ep0 + k) is a chain from (B0, ep0)
+     *      c2 (B0,ep0), (B1, ep0 + 1)...(Bk-1, ep0 + k - 1) are justified
+     *      c3 (B0,ep0) ===Supermajority===> (Bk, ep0 + k).
+     *  For k = 1, A checkpoint (B0, ep0) is 1-finalised, k >= 1:
+     *      c1 (B0, ep0) --> (B1, ep0 + 1) is a chain from (B0, ep0)
+     *      c2 (B0,ep0) is justified
+     *      c3 (B0,ep0) ===Supermajority===> (B2, ep0 + 2).
+     *      
+     *  For k = 2, which is what is used in the Eth2.0 specs:
+     *      c1 (B0, ep0) --> (B1, ep0 + 1) --> (Bk, ep0 + 2) is a chain from (B0, ep0)
+     *      c2 (B0,ep0), (B1, ep0 + 1) are justified
+     *      c3 (B0,ep0) ===Supermajority===> (Bk, ep0 + 2)
+     *  For k = 2 and considering the last four epochs justification bits in b', this yields:
+     *
+     *      H1: s.previous_justified_checkpoint is at epoch 1 (epoch(s) - 3), say (B5,1) is finalised iff:
+     *       c1 (B5,1) --> (B5,2) --> (B2,3) is a chain [OK]
+     *       c2 (B5,1), (B5,2) are justified
+     *       c3 (B5,1)  ===Supermajority===> (B2,3).
+     *      c1 is satisfied by construction of the chain, c2 can be determined by bits b2, b1 i.e.
+     *      b3', b2'. 
+     *      There is a supermajority link L from s.previous_justified_checkpoint at epoch - 3 <==> 
+     *          { attestations are well formed }
+     *      L = s.previous_justified_checkpoint ===Supermajority===> previous LEBB <==>
+     *      (B2,3) is justified <==>
+     *      b0 is true <==>
+     *      b1' is true.
+     *      Overall, s.previous_justified_checkpoint at epoch - 3 is finalised iff b3'=b2'=b1'=true.
+     *
+     *      H2: s.previous_justified_checkpoint is at epoch 2 (epoch(s) - 2)
+     *       c1 (B5,2) --> (B2,3) --> (B1,4) is a chain [OK]
+     *       c2 (B5,2), (B2,3) are justified
+     *       c3 (B5,2) ===Supermajority===> (B1,4).
+     *      c2 is satisifed iff b2'=b1'=true.
+     *      For c3:
+     *      There is a supermajority link L from  s.previous_justified_checkpoint at epoch - 2 <==>
+     *           {attestations are well-formed }
+     *      L = s.previous_justified_checkpoint ===Supermajority===> previous LEBB <==>
+     *      previous LEBB is (B2,3) is justified 
+     *  @note   In that case it seems there cannot be a supermajority link from (B5,2) to (B1,4) and this
+     *          case never happens.
+     *  @todo   Investigate and prove if claim is correct that the previous case cannot happen.
+     *
+     *  Now we check whether the current justified checkpoint can be finalised (it is at an epoch >= 
+     *  previous justified.)
+     *      H3: s.current_justified_checkpoint is at epoch - 2 (2) is finalised iff:
+     *       c1 (B5,2) --> (B2,3) --> (B1,4) is a chain [OK]
+     *       c2 (B5,2), (B2,3) are justified
+     *       c3 (B5,2)  ===Supermajority===> (B1,4).
+     *      c2 is equivalent to b2'=b1'=true. 
+     *      There is a supermajority link L from s.current_justified_checkpoint at epoch - 2 <==>
+     *           {attestations are well-formed }
+     *      L = s.current_justified_checkpoint ===Supermajority===> LEBB(s) <==>
+     *      LEBB(s) is (B1,4) <==>
+     *      (B1,4) is justified <==>
+     *      b0'=true
+     *  Overall, s.current_justified_checkpoint at epoch - 2 is finalised iff b2'=b1'=b0'=true.
+     *
+     *      H4: s.current_justified_checkpoint is at epoch - 1 (3) is finalised iff:
+     *       c1 (B2,3) --> (B1,4) --> (B0,5) is a chain [OK]
+     *       c2 (B2,3), (B1,4) are justified
+     *       c3 (B2,3)  ===Supermajority===> (B0,5).
+     *  @note   I don't see how there can be a supermajority link to (B0,5)
+     *      
+     *  
+     *  epoch   0            1            2            3            4            5  
+     *  CP      (B5,0)      (B5,1)        (B5,2)       (B2,3)       (B1,4)
+     *          |............|............|............|............|..........s|....
+     *          |............|............|............|............|..........s|s'...
+     *  block   B5----------->B4---------->B3---->B2------>B1------->B0      
+     *  slot    0             64           129    191      213       264
+     *  bits(s) b3=1          b2=1         b1=1       b0=0                        s
+     *  bits(s')              b3'0         b2'=1      b1'            b0'            s'
+     *                        =======prevAttest=======>
+     *                                      LJ(s)===currentAttest===>LEBB(s)
+     *  
+     *
+     *  @note   Python array slice a[k:l] means elements from k to l - 1 [a[k] ... a[l -1]]
      */
-    function updateFinalisedCheckpoint(s: BeaconState, prevs: BeaconState) : BeaconState
-        ensures s.slot == updateFinalisedCheckpoint(s, prevs).slot
+    function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState) : BeaconState
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        requires s' == updateJustification(s)
+
+        ensures updateFinalisedCheckpoint(s', s).slot == s.slot == s'.slot
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
-            s 
+            s
         else 
-            var bits : seq<bool> := s.justification_bits;
-            var current_epoch := get_current_epoch(s);
-            if (all(bits[1..4]) && current_epoch >= 3 && prevs.previous_justified_checkpoint.epoch  == current_epoch - 3) then 
+            //  The finalisation bits have been updated 
+            var bits : seq<bool> := s'.justification_bits;
+            var current_epoch := get_current_epoch(s');
+            assert(get_current_epoch(s') == get_current_epoch(s));
+
+            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) then 
+                //  H1
                 //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-                s.(finalised_checkpoint := prevs.previous_justified_checkpoint) 
-            else if (all(bits[1..3]) && prevs.previous_justified_checkpoint.epoch == current_epoch - 2) then 
+                s'.(finalised_checkpoint := s.previous_justified_checkpoint) 
+            else if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) then 
+                //  H2
                 // The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-                s.(finalised_checkpoint := prevs.previous_justified_checkpoint) 
-            else if (false && all(bits[0..3]) && prevs.current_justified_checkpoint.epoch == current_epoch - 2) then 
+                s'.(finalised_checkpoint := s.previous_justified_checkpoint) 
+            else if (false && all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) then 
+                //  H3
                 // The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-                s.(finalised_checkpoint := prevs.current_justified_checkpoint) 
-            else if (false && all(bits[0..2]) && prevs.current_justified_checkpoint.epoch == current_epoch - 1) then 
+                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
+            else if (false && all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
+                //  H4
                 // The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-                s.(finalised_checkpoint := prevs.current_justified_checkpoint) 
+                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
             else
-                s 
+                s' 
     } 
 
     function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
