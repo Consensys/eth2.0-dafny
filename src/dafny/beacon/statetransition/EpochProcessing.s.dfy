@@ -80,14 +80,15 @@ module EpochProcessingSpec {
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             updateJustificationPrevEpoch(s).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
-            &&
-            updateJustificationPrevEpoch(s).justification_bits[0] == false
+            && updateJustificationPrevEpoch(s).justification_bits[0] == false
+        // ensures get_current_epoch(s) == get_current_epoch(updateJustificationPrevEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
             //  Right shift justification_bits and prepend false
             var newJustBits:= [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1];
+
             //  Previous epoch checkpoint status update
             //  get attestations from previous justified to previous epoch CP
             var matching_target_attestations := 
@@ -104,7 +105,9 @@ module EpochProcessingSpec {
                     else 
                         s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
-                justification_bits := if b1 then newJustBits[1 := true] else newJustBits
+                justification_bits := 
+                    if b1 then newJustBits[1 := true] 
+                    else newJustBits
             )
     }
 
@@ -167,9 +170,11 @@ module EpochProcessingSpec {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
-            //  Get attestations for current epoch
+            //  Current epoch checkpoint status update
+            //  get attestations from current justified to LEBB
             var matching_target_attestations := 
                 get_matching_target_attestations(s, get_current_epoch(s));
+            //  Supermajority status
             var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
                         >= get_total_active_balance(s) as nat * 2;
             s.(
@@ -178,7 +183,9 @@ module EpochProcessingSpec {
                         CheckPoint(get_current_epoch(s),get_block_root(s, get_current_epoch(s)))
                     else 
                         s.current_justified_checkpoint,
-                justification_bits := if b1 then s.justification_bits[0 := true] else s.justification_bits
+                justification_bits := 
+                    if b1 then s.justification_bits[0 := true] 
+                    else s.justification_bits
             )
     }
 
@@ -192,28 +199,21 @@ module EpochProcessingSpec {
      */
 
     function updateJustification(s: BeaconState) : BeaconState
-        // requires s.slot % SLOTS_PER_EPOCH != 0
-                requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
-        // ensures updateJustification(s) == 
-        //     updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
+        //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustificationCurrentEpoch(s).justification_bits[1..] == 
-                (s.justification_bits)[1..|s.justification_bits|]
-        // ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==>  updateJustification(s).previous_justified_checkpoint == s.current_justified_checkpoint
+            updateJustification(s).justification_bits[2..] == 
+                (s.justification_bits)[1..|s.justification_bits| - 1]
     {
-        updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
+        if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
+            var k := updateJustificationPrevEpoch(s);
+            updateJustificationCurrentEpoch(k)
+        else 
+            s
     }
 
-    function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
-        // requires s.slot % SLOTS_PER_EPOCH != 0
-                requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-
-    {
-        updateFinalisedCheckpoint(updateJustification(s), s)
-    }
-
-
+    
     /**
      *  Update a state finalised checkpoint.
      *  @param  s   A state.
@@ -251,6 +251,13 @@ module EpochProcessingSpec {
             else
                 s 
     } 
+
+    function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
+            requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        {
+            updateFinalisedCheckpoint(updateJustification(s), s)
+        }
+
 
     /**
      *  Final section of process_final_updates where attestations are rotated.
