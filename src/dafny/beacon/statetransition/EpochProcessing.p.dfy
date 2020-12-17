@@ -143,7 +143,8 @@ module EpochProcessingProofs {
      *  @note           This lemma is not trivial and assumed for now.
      */
     lemma validAttestationsHaveSourceLJ(s : BeaconState, store:  Store)
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) > GENESIS_EPOCH + 1
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
@@ -193,7 +194,8 @@ module EpochProcessingProofs {
      *  @note   ASSUMED
      */
     lemma attestationsCurrentEpoch(s : BeaconState, store:  Store)
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) > GENESIS_EPOCH + 1
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
@@ -241,7 +243,8 @@ module EpochProcessingProofs {
      *  @note   ASSUMED
      */
     lemma attestationsPrevEpoch(s : BeaconState, store:  Store)
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) > GENESIS_EPOCH + 1
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
@@ -286,7 +289,8 @@ module EpochProcessingProofs {
      *  correctly set.
      */
     lemma updateJustificationIsCorrect(s : BeaconState, store:  Store) 
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) > GENESIS_EPOCH + 1
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
@@ -335,8 +339,9 @@ module EpochProcessingProofs {
         
     }
 
-    lemma justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
-        requires s.slot % SLOTS_PER_EPOCH != 0
+    lemma {:timeLimitMultiplier 6} justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) > GENESIS_EPOCH + 1
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  

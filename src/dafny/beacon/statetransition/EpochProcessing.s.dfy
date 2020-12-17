@@ -33,15 +33,32 @@ module EpochProcessingSpec {
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
-     *  Simplified first-cut specification of process_justification_and_finalization.
+     *  Archive justification results on current epoch in previous epoch.
      *
-     *  @param  s   A beacon state the slot of which is not an Epoch boundary. 
+     *  @param  s   A beacon state the slot of which is just before an Epoch boundary. 
      *  @returns    The new state with justification checkpoints updated.
-     *  
+     *
+     *  Example.
+     *  epoch   0            1            2            3            4            5  
+     *  CP      (b5,0)      (b5,1)        (b5,2)       (b2,3)       (b1,4)
+     *          |............|............|............|............|..........s|....
+     *          |............|............|............|............|..........s|s'...
+     *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
+     *  slot    0             64           129    191      213       264
+     *  bits(s) 1            0            1            0            s
+     *  bits(s')             0            1            ?            ?            s'
+     *
+     *  assume current state is such that s.current_justified_checkpoint == (b5, 2)
+     *  where epoch(s) == 4.
+     *  The next state s' will have a slot that corresponds to epoch 5.
+     *  Then s'.previous_justified_checkpoint is the CP justified at the previous 
+     *  (epoch 5 - 1) and is s.current_justified_checkpoint and is (b5, 2).
+     *  The matching attestations in previous epoch must be from s.previous_justified_checkpoint
+     *  to 
      */
     function updateJustificationPrevEpoch(s: BeaconState) : BeaconState 
         /** State's slot is not an Epoch boundary. */
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
         /** Justification bit are right-shifted and last two are not modified.
             Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
          */
@@ -70,7 +87,9 @@ module EpochProcessingSpec {
     }
 
     function updateJustification(s: BeaconState) : BeaconState
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        // requires s.slot % SLOTS_PER_EPOCH != 0
+                requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         // ensures updateJustification(s) == 
         //     updateJustificationCurrentEpoch(updateJustificationPrevEpoch(s))
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
@@ -82,7 +101,9 @@ module EpochProcessingSpec {
     }
 
     function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        // requires s.slot % SLOTS_PER_EPOCH != 0
+                requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
     {
         updateFinalisedCheckpoint(updateJustification(s), s)
     }
@@ -92,7 +113,9 @@ module EpochProcessingSpec {
      */
     function updateJustificationCurrentEpoch(s: BeaconState) : BeaconState 
         /** State's slot is not an Epoch boundary. */
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        // requires s.slot % SLOTS_PER_EPOCH != 0
+                requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         /** Justification bit are right-shifted and last two are not modified.
             Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
          */

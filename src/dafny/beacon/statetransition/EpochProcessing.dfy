@@ -100,7 +100,8 @@ module EpochProcessing {
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
     method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
-        requires s.slot % SLOTS_PER_EPOCH != 0
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
         requires |s.validators| == |s.balances|
 
         ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
