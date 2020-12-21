@@ -321,7 +321,7 @@ module EpochProcessingSpec {
      *      
      *  Now we check whether the current justified checkpoint can be finalised (it is at an epoch >= 
      *  previous justified.)
-     *      H3: s.current_justified_checkpoint is at epoch - 2 (2) is finalised iff:
+     *      H3: s.current_justified_checkpoint is at epoch - 2 (2) is 2-finalised iff:
      *       c1 (B5,2) --> (B2,3) --> (B1,4) is a chain [OK]
      *       c2 (B5,2), (B2,3) are justified
      *       c3 (B5,2)  ===Supermajority===> (B1,4).
@@ -359,7 +359,6 @@ module EpochProcessingSpec {
      *                        =======prevAttest=======>
      *                                      LJ(s)===currentAttest===>LEBB(s)
      *
-     *
      *  @note   Python array slice a[k:l] means elements from k to l - 1 [a[k] ... a[l -1]]
      */
     function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState) : BeaconState
@@ -376,22 +375,23 @@ module EpochProcessingSpec {
             var current_epoch := get_current_epoch(s');
             assert(get_current_epoch(s') == get_current_epoch(s));
 
-            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) then 
-                //  H1
-                //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-                s'.(finalised_checkpoint := s.previous_justified_checkpoint) 
+            //  Determine next finalised checkpoint
+            if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
+                //  H4
+                // The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
+            else if (all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) then 
+                //  H3
+                // The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
             else if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) then 
                 //  H2
                 // The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
                 s'.(finalised_checkpoint := s.previous_justified_checkpoint) 
-            else if (false && all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) then 
-                //  H3
-                // The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
-            else if (false && all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) then 
-                //  H4
-                // The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-                s'.(finalised_checkpoint := s.current_justified_checkpoint) 
+            else if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) then 
+                //  H1
+                //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+                s'.(finalised_checkpoint := s.previous_justified_checkpoint) 
             else
                 s' 
     } 
