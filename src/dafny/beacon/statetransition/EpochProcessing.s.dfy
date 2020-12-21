@@ -265,7 +265,7 @@ module EpochProcessingSpec {
      *          and in that case it must have been the LJ(s).
      *
      *  To update the status of a CP from justified to finalised, Gasper relies on 
-     *  k-finalisation, with k = 2.
+     *  k-finalisation, with k = 1, 2.
      *  The k-finalisation definition is as follow:
      *  A checkpoint (B0, ep0) is k-finalised, k >= 1  iff:
      *  - it is the genesis block/epoch
@@ -282,9 +282,17 @@ module EpochProcessingSpec {
      *      c1 (B0, ep0) --> (B1, ep0 + 1) --> (Bk, ep0 + 2) is a chain from (B0, ep0)
      *      c2 (B0,ep0), (B1, ep0 + 1) are justified
      *      c3 (B0,ep0) ===Supermajority===> (Bk, ep0 + 2)
+     *
+     *  To determine the next and most recent finalised checkpoint, we check in order the 
+     *  following conditions:
+     *      H4.  s.current_justified_checkpoint is at epoch - 1 and is 1-finalised
+     *      H3.  s.current_justified_checkpoint is at epoch - 2 and is 2-finalised 
+     *      H2.  s.previous_justified_checkpoint is at epoch - 2 and is 1-finalised 
+     *      H1.  s.previous_justified_checkpoint is at epoch - 3 and is 2-finalised
+     *
      *  For k = 2 and considering the last four epochs justification bits in b', this yields:
      *
-     *      H1: s.previous_justified_checkpoint is at epoch 1 (epoch(s) - 3), say (B5,1) is finalised iff:
+     *      H1: s.previous_justified_checkpoint is at epoch 1 (epoch(s) - 3), say (B5,1) is 2-finalised iff:
      *       c1 (B5,1) --> (B5,2) --> (B2,3) is a chain [OK]
      *       c2 (B5,1), (B5,2) are justified
      *       c3 (B5,1)  ===Supermajority===> (B2,3).
@@ -296,22 +304,21 @@ module EpochProcessingSpec {
      *      (B2,3) is justified <==>
      *      b0 is true <==>
      *      b1' is true.
-     *      Overall, s.previous_justified_checkpoint at epoch - 3 is finalised iff b3'=b2'=b1'=true.
+     *      Overall, s.previous_justified_checkpoint at epoch - 3 is 2-finalised iff b3'=b2'=b1'=true.
      *
-     *      H2: s.previous_justified_checkpoint is at epoch 2 (epoch(s) - 2)
-     *       c1 (B5,2) --> (B2,3) --> (B1,4) is a chain [OK]
-     *       c2 (B5,2), (B2,3) are justified
-     *       c3 (B5,2) ===Supermajority===> (B1,4).
-     *      c2 is satisifed iff b2'=b1'=true.
+     *      H2: s.previous_justified_checkpoint is at epoch 2 (epoch(s) - 2) is 1-finalised iff:
+     *       c1 (B5,2) --> (B2,3)is a chain [OK]
+     *       c2 (B5,2) is justified
+     *       c3 (B5,2) ===Supermajority===> (B2,3).
+     *      c2 is satisfied iff b2'=true.
      *      For c3:
      *      There is a supermajority link L from  s.previous_justified_checkpoint at epoch - 2 <==>
      *           {attestations are well-formed }
      *      L = s.previous_justified_checkpoint ===Supermajority===> previous LEBB <==>
-     *      previous LEBB is (B2,3) is justified 
-     *  @note   In that case it seems there cannot be a supermajority link from (B5,2) to (B1,4) and this
-     *          case never happens.
-     *  @todo   Investigate and prove if claim is correct that the previous case cannot happen.
-     *
+     *      previous LEBB is (B2,3) is justified <==>
+     *      b1'=true
+     *      Overall, s.previous_justified_checkpoint at epoch - 2 is 1-finalised iff b2'=b1'=true.
+     *      
      *  Now we check whether the current justified checkpoint can be finalised (it is at an epoch >= 
      *  previous justified.)
      *      H3: s.current_justified_checkpoint is at epoch - 2 (2) is finalised iff:
@@ -327,11 +334,18 @@ module EpochProcessingSpec {
      *      b0'=true
      *  Overall, s.current_justified_checkpoint at epoch - 2 is finalised iff b2'=b1'=b0'=true.
      *
-     *      H4: s.current_justified_checkpoint is at epoch - 1 (3) is finalised iff:
-     *       c1 (B2,3) --> (B1,4) --> (B0,5) is a chain [OK]
-     *       c2 (B2,3), (B1,4) are justified
-     *       c3 (B2,3)  ===Supermajority===> (B0,5).
-     *  @note   I don't see how there can be a supermajority link to (B0,5)
+     *      H4: s.current_justified_checkpoint is at epoch - 1 (3) is 1-finalised iff:
+     *       c1 (B2,3) --> (B1,4)  is a chain [OK]
+     *       c2 (B2,3) is justified
+     *       c3 (B2,3)  ===Supermajority===> (B1,4).
+     *      c2 is equivalent to b1'==true
+     *      For c3:
+     *      There is a supermajority link L from  s.current_justified_checkpoint at epoch - 1 <==>
+     *           {attestations are well-formed }
+     *      L = s.current_justified_checkpoint ===Supermajority===> previous LEBB <==>
+     *      previous LEBB is (B1,4) is justified <==>
+     *      b0'=true
+     *      Overall, s.current_justified_checkpoint at epoch - 1 is 1-finalised iff b0'=b1'=true.
      *      
      *  
      *  epoch   0            1            2            3            4            5  
@@ -344,7 +358,7 @@ module EpochProcessingSpec {
      *  bits(s')              b3'0         b2'=1      b1'            b0'            s'
      *                        =======prevAttest=======>
      *                                      LJ(s)===currentAttest===>LEBB(s)
-     *  
+     *
      *
      *  @note   Python array slice a[k:l] means elements from k to l - 1 [a[k] ... a[l -1]]
      */
