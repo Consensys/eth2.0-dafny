@@ -19,10 +19,8 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 
 /**
- *  Epoch processing functional specification.
+ *  Provide a functional specification of Epoch processing.
  *
- *  Provides specification how to update the justified/finalised statuses
- *  of checkpoints in a state.
  */
 module EpochProcessingSpec {
     
