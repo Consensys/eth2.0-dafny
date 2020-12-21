@@ -54,11 +54,11 @@ module EpochProcessing {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-        // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
-        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s), s))
+
         requires |s.validators| == |s.balances|
 
-        // ensures s' == updateFinalisedCheckpoint(updateJustification(s))
+        /** Update justification and finalisation accodring to functional spec. */
+        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s), s))
 
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
         ensures s'.validators == s.validators
@@ -96,6 +96,10 @@ module EpochProcessing {
 
     /**
      *  Update justification and finalisation status.
+     *  
+     *  @param  s   A beacon state.
+     *  @returns    The state obtained after updating the justification/finalisation
+     *              variables of `s`.
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
@@ -104,6 +108,7 @@ module EpochProcessing {
 
         requires |s.validators| == |s.balances|
 
+        /** Computes the next state according to the functional specification. */
         ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
         
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
@@ -195,11 +200,11 @@ module EpochProcessing {
             /*
              *  Epochs layout
              *
-             *  | ............ | ........... | .......... | 
-             *  | ............ | ........... | .......... | 
+             *  | ............ | ........... | .......... | ........ |
+             *  | ............ | ........... | .......... | ........ |
              *  e1             e2            e3           e4
-             *  bit[0]        bit[1]        bit[2]        bit[3]
-             *  current       previous
+             *  bit[3]        bit[2]        bit[1]        bit[0]
+             *  
              *
              *  Python slice a[k:l] means: a[k] ... a[l -1]
              */
