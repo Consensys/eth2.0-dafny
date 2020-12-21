@@ -19,7 +19,10 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 
 /**
- * Epoch processing functional specification.
+ *  Epoch processing functional specification.
+ *
+ *  Provides specification how to update the justified/finalised statuses
+ *  of checkpoints in a state.
  */
 module EpochProcessingSpec {
     
@@ -33,7 +36,7 @@ module EpochProcessingSpec {
     //  Specifications of justification and finalisation of a state and forward to future slot.
 
     /**
-     *  Archive justification results on current epoch in previous epoch.
+     *  Archive justification results on current epoch in previous epoch's record.
      *
      *  @param  s   A beacon state the slot of which is just before an Epoch boundary. 
      *  @returns    The new state with justification of CP before LEBB updated.
@@ -256,13 +259,14 @@ module EpochProcessingSpec {
      *      a) s.current_justified_checkpoint if neither prevAttest or currentAttest
      *      are supermajorities
      *      b) (B1, 4) (LEBB(s)) if currentAttest is a supermajority 
-     *      c) (B2, 3) (LEBB(prevEpoch(s))) if prevAttest is a supermajority and currentAttest is not
+     *      c) (B2, 3) (LEBB(prevEpoch(s))) if prevAttest is a supermajority and 
+     *      currentAttest is not
      *
      *  The justification bits are as as follows:
      *      b' = [isSuper(currentAttest), isSuper(PrevAttest) or b0, b1, b2].
      *
-     *  @note   If b0 was already true (a supermajority from some CP), then it remains true (justified).
-     *          and in that case it must have been the LJ(s).
+     *  @note   If b0 was already true (a supermajority from some CP), then it 
+     *          remains true (justified) and in that case it must have been the LJ(s).
      *
      *  To update the status of a CP from justified to finalised, Gasper relies on 
      *  k-finalisation, with k = 1, 2.
@@ -273,6 +277,7 @@ module EpochProcessingSpec {
      *      c1 (B0, ep0) --> (B1, ep0 + 1) --> ... -> (Bk, ep0 + k) is a chain from (B0, ep0)
      *      c2 (B0,ep0), (B1, ep0 + 1)...(Bk-1, ep0 + k - 1) are justified
      *      c3 (B0,ep0) ===Supermajority===> (Bk, ep0 + k).
+     *
      *  For k = 1, A checkpoint (B0, ep0) is 1-finalised, k >= 1:
      *      c1 (B0, ep0) --> (B1, ep0 + 1) is a chain from (B0, ep0)
      *      c2 (B0,ep0) is justified
@@ -396,15 +401,22 @@ module EpochProcessingSpec {
                 s' 
     } 
 
+    /**
+     *  Combined effect of updating justification and finalisation statuses.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    The state obtained after updating the justification statuses, bits
+     *              and finalisation statuses.
+     */
     function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
             requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-        {
-            updateFinalisedCheckpoint(updateJustification(s), s)
-        }
-
+    {
+        updateFinalisedCheckpoint(updateJustification(s), s)
+    }
 
     /**
      *  Final section of process_final_updates where attestations are rotated.
+     *
      *  @param  s   A beacon state.
      *  @returns    `s` with the attestations rotated.
      */
