@@ -499,33 +499,65 @@ module StateTransition {
      {
          return s;
      }
+     
 
-    predicate isValidAttestationInState(s: BeaconState, a: PendingAttestation)
-    {
-        && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)
-        && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
-        //  attestation is not too recent
-        && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat  
-        //  attestation is not old
-        && a.data.slot as nat + SLOTS_PER_EPOCH as nat >= s.slot as nat 
-        //  if attestation target is current epoch, then the source must
-        //  be the current justified checkpoint
-        && (a.data.target.epoch == get_current_epoch(s) ==> 
-            a.data.source == s.current_justified_checkpoint)
-        //  if attestation target is previous epoch, then the source must
-        //  be the the previous justified checkpoint
-        && (a.data.target.epoch == get_previous_epoch(s) ==> 
-            a.data.source == s.previous_justified_checkpoint)
+    // predicate isValidAttestationInState(s: BeaconState, a: PendingAttestation)
+    // {
+    //     && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)
+    //     && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
+    //     //  attestation is not too recent
+    //     && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat  
+    //     //  attestation is not old
+    //     && a.data.slot as nat + SLOTS_PER_EPOCH as nat >= s.slot as nat 
+    //     //  if attestation target is current epoch, then the source must
+    //     //  be the current justified checkpoint
+    //     && (a.data.target.epoch == get_current_epoch(s) ==> 
+    //         a.data.source == s.current_justified_checkpoint)
+    //     //  if attestation target is previous epoch, then the source must
+    //     //  be the the previous justified checkpoint
+    //     && (a.data.target.epoch == get_previous_epoch(s) ==> 
+    //         a.data.source == s.previous_justified_checkpoint)
         
-    }
+    // }
+    /**
+     *
+     *  Example.
+     *  epoch   0             1                 k               k + 1       
+     *          |............|....         .....|.................|.....................
+     *  state                                                      s
+     *  slot    0                                                  s.slot 
+     *                                            <-SLOTS_PER_EPOCH->
+     *  slot         s.slot - SLOTS_PER_EPOCH = x1                x2 = s.slot - 1
+     *  slot(a)                                   *****************     
+     *                          =======a======>tgt1
+     *                                            =======a======>tgt2
+     *     
+     * 
+     *  epoch(s) = k + 1, and previous epoch is k.
+     *  source and target are checkpoints.
+     *  Target must have an epoch which is k (tgt1, case1) or k + 1 (tgt2, case2).
+     *  a.data.slot (slot(a))is the slot in which ther validator makes the attestation.
+     *  x1 <= slot(a) <= x2.
+     *  Two cases arise: 
+     *      1. compute_epoch_at_slot(a.data.slot) is previous_epoch k 
+     *          in this case the target's epoch must be  previous-epoch k
+     *      2. compute_epoch_at_slot(a.data.slot) is current_epoch k + 1 
+     *          in this case the target's epoch must be  current-epoch k + 1
+     *
+     *  MIN_ATTESTATION_INCLUSION_DELAY is 1.
+     *
+     *  Question: what is the invariant for the attestations in a state?
+     */
+    method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
+        // requires forall a :: a in s.current_epoch_attestations ==> 
+        requires attestationIsWellFormed(s, a)
+        // ensures 
 
-    function method process_attestation(s: BeaconState, a: PendingAttestation): BeaconState
-        requires isValidAttestationInState(s, a)
     {
          // data = attestation.data
-        // assert data.target.epoch in (get_previous_epoch(state), get_current_epoch(state))
-        // assert data.target.epoch == compute_epoch_at_slot(data.slot)
-        // assert data.slot + MIN_ATTESTATION_INCLUSION_DELAY <= state.slot <= data.slot + SLOTS_PER_EPOCH
+        assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
+        assert a.data.target.epoch == compute_epoch_at_slot(a.data.slot);
+        assert a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat;
         // assert data.index < get_committee_count_per_slot(state, data.target.epoch)
 
         // committee = get_beacon_committee(state, data.slot, data.index)
@@ -538,23 +570,38 @@ module StateTransition {
         //     proposer_index=get_beacon_proposer_index(state),
         // )
 
-        if a.data.target.epoch == get_current_epoch(s) then 
+        if a.data.target.epoch == get_current_epoch(s) {
             //  Add a to current attestations
             assert a.data.source == s.current_justified_checkpoint;
-            s.(
+            s' := s.(
                 current_epoch_attestations := s.current_epoch_attestations + [a]
-            )
+            );
             // s.current_epoch_attestations.append(pending_attestation)
-        else 
+        }
+        else {
             assert a.data.source == s.previous_justified_checkpoint;
-            s.(
+            s' := s.(
                 previous_epoch_attestations := s.previous_epoch_attestations + [a]
-            )
+            );
+        }
             // s.previous_epoch_attestations.append(pending_attestation)
             
         // # Verify signature
         // assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
         // s'
+    }
+
+    predicate attestationIsWellFormed(s: BeaconState, a: PendingAttestation)
+    {
+        && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)  
+        /** Epoch of target matches epoch of the slot the attestation is made. */
+        && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
+        /** Attestation is not too old and not too recent. */
+        && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat
+        && if a.data.target.epoch == get_current_epoch(s) then  
+            a.data.source == s.current_justified_checkpoint
+           else 
+            a.data.source == s.previous_justified_checkpoint
     }
     
 }
