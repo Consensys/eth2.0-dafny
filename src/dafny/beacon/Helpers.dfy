@@ -168,12 +168,12 @@ module BeaconHelpers {
      *  Count instances of d in a list of eth1_data.
      */
      function method count_eth1_data_votes(l: ListOfEth1Data, d: Eth1Data) : nat
-     {
-         if |l| == 0 then 0
-         else 
+    {
+        if |l| == 0 then 0
+        else 
             if (l[0] == d) then 1 + count_eth1_data_votes(l[1..], d)
             else count_eth1_data_votes(l[1..], d)
-     }
+    }
     
     
 
