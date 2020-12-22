@@ -153,7 +153,6 @@ module EpochProcessingProofs {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
-
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
             a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)       
@@ -187,6 +186,37 @@ module EpochProcessingProofs {
             assume(a.data.source == lastJustifiedCheckPoint(s, store));
         }
     }
+
+    /**
+     *  Candidate lemma.
+     */
+    // lemma foo101(s : BeaconState, store:  Store, a : PendingAttestation)
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+    //     requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
+    //     requires get_current_epoch(s) > GENESIS_EPOCH + 1
+    //     requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+    //     requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
+    //     requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)
+
+    //     requires a in get_matching_target_attestations(s, get_current_epoch(s))
+    //     ensures a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)
+    // {
+    //     //  The chain from a.beacon_block_root
+    //         var xc := chainRoots(a.data.beacon_block_root, store);
+    //         //  ep(a)
+    //         var ep :=  compute_epoch_at_slot(a.data.slot);
+    //         //  LEBB(a), LE(a) in the attestation
+    //         var indexOfLEBB := computeEBB(xc, ep, store);
+    //         //  EBBS
+    //         var ebbs := computeAllEBBsIndices(xc, ep, store);
+    //         //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
+    //         var indexOfLJ := lastJustified(xc, ebbs, store.attestations) as Epoch;
+    //         // assert(a.data.target);
+
+    // }
 
 
     /**
