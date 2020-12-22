@@ -40,13 +40,15 @@ module BeaconHelpers {
     {   //  Thanks Dafny
     }
 
+    /**
+     *  ( x  /  k ) * k is less than or equal to x.
+     */
     lemma div2(x : nat, k : nat) 
         requires k >= 1 
         ensures ( x / k ) * k <= x
     {
     }
 
-   
     /**
      *  Check that a bitlist has all bits set to 1.
      *  @param      xs  
