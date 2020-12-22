@@ -20,7 +20,6 @@ include "../Helpers.dfy"
 
 /**
  *  Provide a functional specification of Epoch processing.
- *
  */
 module EpochProcessingSpec {
     
@@ -420,6 +419,7 @@ module EpochProcessingSpec {
      */
     function finalUpdates(s: BeaconState) : BeaconState
     {
+        //  rotate the attestations.
         s.(
             previous_epoch_attestations := s.current_epoch_attestations,
             current_epoch_attestations := []
