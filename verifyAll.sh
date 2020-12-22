@@ -55,6 +55,7 @@ do
   fi
 done
 
+echo -e "${BLUE}-------------------------------------------------------${NC}"
 for i in ${!myfiles[@]}; do
   if [ ${mystatus[$i]} -ne 1 ]
   then
