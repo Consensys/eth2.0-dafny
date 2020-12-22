@@ -7,6 +7,9 @@ NC='\033[0m' # No Color
 error=0
 processedfiles=0
 
+myfiles=()
+mystatus=()
+
 # help and usage
 help()
 {
@@ -38,22 +41,37 @@ do
   processedfiles=$((processedfiles + 1))
   echo -e "${BLUE}-------------------------------------------------------${NC}"
   echo -e "${BLUE}Processing $entry${NC}"
+  myfiles+=($entry)
   dafny3 /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:40 /noCheating:0 /vcsCores:10 "$entry"
   # echo "$result"
   if [ $? -eq 0 ] 
   then
       echo -e "${GREEN}No errors in $entry${NC}"
+      mystatus+=(1)
   else
       echo -e "${RED}Some errors occured in $entry${NC}"
       error=$((error + 1))
+      mystatus+=(0)
+  fi
+done
+
+for i in ${!myfiles[@]}; do
+  if [ ${mystatus[$i]} -ne 1 ]
+  then
+    echo -e "${RED}[FAIL] ${myfiles[$i]} has some errors :-(${NC}"
+  else 
+     echo -e "${GREEN}[OK] ${myfiles[$i]}${NC}" 
   fi
 done
 
 if [ $error -ne 0 ]
 then
-  echo -e "${RED}Some files [$error/$processedfiles] has(ve) errors :-("
+  echo -e "Summary: ${RED}Some files [$error/$processedfiles] has(ve) errors :-("
   exit 1
 else 
-  echo -e "${GREEN}No errors occured! Great job.${NC}"
+  echo -e "Summary: ${GREEN}$processedfiles files processed - No errors occured! Great job.${NC}"
   exit 0
 fi
+
+
+
