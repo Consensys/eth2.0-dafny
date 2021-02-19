@@ -112,12 +112,11 @@ include "Constants.dfy"
         if(|l| <= BITS_PER_BYTE) {
             decodeOfEncode8BitsIsIdentity(l + timeSeq(false,BITS_PER_BYTE - |l|)); 
         }
-        else
-        {
+        else {
             calc == {
                 fromBytesToBitVector( fromBitvectorToBytes (l), |l| );
                 fromBytesToBitVector([ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes(l[BITS_PER_BYTE..]), |l|);
-                    { decodeOfEncode8BitsIsIdentity(l[..BITS_PER_BYTE]); }
+                { decodeOfEncode8BitsIsIdentity(l[..BITS_PER_BYTE]); }
                 l[..BITS_PER_BYTE] + fromBytesToBitVector(fromBitvectorToBytes(l[BITS_PER_BYTE..]), |l| - BITS_PER_BYTE);
                 l[..BITS_PER_BYTE] + l[BITS_PER_BYTE..];
                 l;
@@ -142,7 +141,7 @@ include "Constants.dfy"
                 fromBitvectorToBytes(fromBytesToBitVector(xb,len));
                 fromBitvectorToBytes(byteTo8Bits(xb[0])[.. len] );
                 [ list8BitsToByte( byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len)) ];
-                    {assume byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len) == byteTo8Bits(xb[0]);}
+                { assume byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len) == byteTo8Bits(xb[0]);}
                 [ list8BitsToByte( byteTo8Bits(xb[0])) ];
                     {encodeOfDecodeByteIsIdentity(xb[0]);}
                 [xb[0]];
