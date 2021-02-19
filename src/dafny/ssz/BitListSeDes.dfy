@@ -118,7 +118,7 @@ include "Constants.dfy"
      */
     function method fromBytesToBitList(xb : seq<byte>) : seq<bool> 
         requires |xb| >= 1
-        requires xb[|xb|-1] >= 1
+        requires xb[|xb| - 1] >= 1
         ensures BITS_PER_BYTE * (|xb| - 1) >= 0
         ensures BITS_PER_BYTE * (|xb| - 1) <= |fromBytesToBitList(xb)| <= BITS_PER_BYTE * |xb|
 
