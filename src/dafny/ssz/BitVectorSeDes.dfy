@@ -82,7 +82,7 @@ include "Constants.dfy"
      *
      *  @param  xb  A non-empty sequence of bytes, the last element
      *              of which is >= power2(len % 8) if len % 8 != 0.
-     *  @returns    The deserialised bitvector
+     *  @returns    The deserialised bitvector.
      */
     function method fromBytesToBitVector(xb : seq<byte>, len: nat) : seq<bool> 
         requires |xb| > 0
