@@ -147,14 +147,13 @@ include "Constants.dfy"
                     {encodeOfDecodeByteIsIdentity(xb[0]);}
                 [xb[0]];
             }
-        } else // |xb| > 1
-        {
+        } else { // |xb| > 1 
             calc == {
-                 fromBitvectorToBytes(fromBytesToBitVector(xb,len));
-                 fromBitvectorToBytes(byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE));
-                    {encodeOfDecodeByteIsIdentity(xb[0]);}
+                fromBitvectorToBytes(fromBytesToBitVector(xb,len));
+                fromBitvectorToBytes(byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE));
+                { encodeOfDecodeByteIsIdentity(xb[0]); }
                 [xb[0]] + fromBitvectorToBytes(fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE));
-                    {bitvectorEncodeDecodeIsIdentity(xb[1..], len-BITS_PER_BYTE); }
+                { bitvectorEncodeDecodeIsIdentity(xb[1..], len-BITS_PER_BYTE); }
                 [xb[0]] + xb[1..];
                 xb;
             }
