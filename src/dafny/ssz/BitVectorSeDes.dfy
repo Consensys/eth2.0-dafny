@@ -179,8 +179,10 @@ include "Constants.dfy"
      *  Deserialise is injective for bitvectors.
      */
     lemma {:induction xa, xb} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
-        requires fromBytesToBitVector.requires(xa,lena)
-        requires fromBytesToBitVector.requires(xb,lenb)
+        requires |xa| > 0
+        requires lena <= |xa| * BITS_PER_BYTE < lena + BITS_PER_BYTE
+        requires |xb| > 0
+        requires lenb <= |xb| * BITS_PER_BYTE < lenb + BITS_PER_BYTE
         ensures fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ==> xa == xb 
     {
         calc ==> {
