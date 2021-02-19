@@ -67,10 +67,10 @@ include "Constants.dfy"
         decreases l
     {
         if ( |l| <= BITS_PER_BYTE ) then
-            [ list8BitsToByte( l + timeSeq(false,BITS_PER_BYTE - |l|)) ]
+            [ list8BitsToByte( l + timeSeq(false, BITS_PER_BYTE - |l|)) ]
         else  
             //  Encode first 8 bits and recursively encode the rest.
-            [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes(l[BITS_PER_BYTE..])
+            [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes( l[BITS_PER_BYTE..] )
     }
 
     /**
