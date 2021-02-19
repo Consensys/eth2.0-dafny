@@ -104,7 +104,7 @@ include "Constants.dfy"
      *  Decoding of encoded bitvector l returns l. 
      */
     lemma {:induction l} bitvectorDecodeEncodeIsIdentity(l : seq<bool>)
-        requires fromBitvectorToBytes.requires(l)
+        requires |l| > 0
         ensures fromBytesToBitVector( fromBitvectorToBytes (l), |l| ) == l 
     {
         //  The structure of the proof is split in 2 cases to follow
