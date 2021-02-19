@@ -95,7 +95,7 @@ include "Constants.dfy"
             byteTo8Bits(xb[0])[.. len] 
         else 
             //  Recursive decoding.
-            byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len-BITS_PER_BYTE)
+            byteTo8Bits(xb[0]) + fromBytesToBitVector(xb[1..], len - BITS_PER_BYTE)
     }
 
     //  Main proofs  
@@ -109,8 +109,7 @@ include "Constants.dfy"
     {
         //  The structure of the proof is split in 2 cases to follow
         //  the definition of fromBitvectorToBytes and make it easier to prove
-        if(|l| <= BITS_PER_BYTE)
-        {
+        if(|l| <= BITS_PER_BYTE) {
             decodeOfEncode8BitsIsIdentity(l + timeSeq(false,BITS_PER_BYTE - |l|)); 
         }
         else
