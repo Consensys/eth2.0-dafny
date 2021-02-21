@@ -12,11 +12,9 @@
  * under the License.
  */
 
-include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
 include "../utils/Helpers.dfy"
 include "../utils/MathHelpers.dfy"
-include "../utils/SeqHelpers.dfy"
 include "BytesAndBits.dfy"
 include "Constants.dfy"
 
@@ -26,14 +24,11 @@ include "Constants.dfy"
  */
  module BitVectorSeDes {
 
-    import opened NativeTypes
     import opened Eth2Types
     import opened BytesAndBits
     import opened Helpers
     import opened MathHelpers
-    import opened SeqHelpers
     import opened Constants
-
 
     /**
      *  Encode a vector of bits into a sequence of bytes.
