@@ -162,7 +162,7 @@ include "Constants.dfy"
     /**
      *  Serialise is injective for bitvector of the same length.
      */
-    lemma {:induction l1, l2} bitvectorSerialiseIsInjectiveGeneral(l1: seq<bool>, l2 : seq<bool>)
+    lemma {:induction false} bitvectorSerialiseIsInjectiveGeneral(l1: seq<bool>, l2 : seq<bool>)
         requires |l1| > 0 
         requires |l2| > 0
         requires |l1| == |l2|
@@ -178,17 +178,17 @@ include "Constants.dfy"
     /**
      *  Deserialise is injective for bitvectors.
      */
-    lemma {:induction xa, xb} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
+    lemma {:induction false} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
         requires |xa| > 0
         requires lena <= |xa| * BITS_PER_BYTE < lena + BITS_PER_BYTE
         requires |xb| > 0
         requires lenb <= |xb| * BITS_PER_BYTE < lenb + BITS_PER_BYTE
-        ensures fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ==> xa == xb 
+        ensures fromBytesToBitVector(xa, lena) == fromBytesToBitVector(xb, lenb) ==> xa == xb 
     {
         calc ==> {
-            fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ;
+            fromBytesToBitVector(xa, lena) == fromBytesToBitVector(xb, lenb) ;
             ==> {
-                bitvectorEncodeDecodeIsIdentity(xa,lena) ; bitvectorEncodeDecodeIsIdentity(xb, lenb) ;
+                bitvectorEncodeDecodeIsIdentity(xa, lena) ; bitvectorEncodeDecodeIsIdentity(xb, lenb) ;
             }
             xa == xb ;
         }
