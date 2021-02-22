@@ -71,6 +71,7 @@ module StateTransitionSpec {
      */
     function updateEth1Data(s: BeaconState, b: BeaconBlockBody) :  BeaconState 
         requires |s.validators| == |s.balances| 
+        requires |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         ensures |updateEth1Data(s,b).validators| == |updateEth1Data(s,b).balances|
         ensures updateEth1Data(s,b).eth1_deposit_index == s.eth1_deposit_index
         ensures updateEth1Data(s,b).validators == s.validators
