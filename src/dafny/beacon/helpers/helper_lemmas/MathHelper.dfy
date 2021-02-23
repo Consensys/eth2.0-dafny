@@ -286,7 +286,7 @@ module MathHelperLemmas {
         
         var y:= NextYNat(x,n);
 
-        var t :| x * x == n + t;
+        var t :nat :| x * x == n + t;
         var k:= t/x;
         var r:= t%x;        
 
