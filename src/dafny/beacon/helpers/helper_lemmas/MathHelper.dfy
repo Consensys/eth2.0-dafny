@@ -248,6 +248,7 @@ module MathHelperLemmas {
                 (y + 1) as real  * (y + 1) as real;
                 >= calc {
                     (y + 1) as real;
+                    (NextYNat(x,n) + 1) as real;
                     >=  {LemmaYNatPlusOneGreaterThanYReal(x,n);}
                     yr;
                 }
