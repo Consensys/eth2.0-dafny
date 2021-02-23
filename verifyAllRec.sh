@@ -34,7 +34,8 @@ then
 fi
 
 echo "Processing " $1
-./verifyAll.sh $1
+LOG_FILE=$1/verif-`date +'%Y-%m-%d-%H:%M:%S'`.log
+./verifyAll.sh $1 | tee $LOG_FILE
 if [ $? -eq 0 ] # check if errors
 then
   echo -e "${GREEN}No errors in directory $dir${NC}"
