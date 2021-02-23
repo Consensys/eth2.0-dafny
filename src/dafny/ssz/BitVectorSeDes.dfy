@@ -39,9 +39,10 @@ include "Constants.dfy"
      *
      *  The algorithm to encode a vector of bits works as follows:
      *  1. given a vector of bits l, 
-     *  2. if |l| * 8 is not 0, append 8 - |l| % 8 zeros to l 
-     *     to obtain a list of size multiple of 8
-     *     let l' = l + possibly some [0]
+     *  2. if |l| % 8 is not 0, append 8 - (|l| % 8) zeros to l 
+     *     to obtain a vector of size multiple of 8
+     *     let l' = l, if |l| % 8 == 0
+     *              l + [0] * (8 - (|l| % 8)), if |l| % 8 != 0
      *     This ensures that |l'| % 8 == 0 and can be seen as a sequence of Bytes
      *  3. Encode l' with the `list8BitsToByte` algorithm.
      *
@@ -50,22 +51,60 @@ include "Constants.dfy"
      *  l' is a byte and is encoded as a uint8 `n` as follows: the bitvector 
      *  representation of n is reverse(l'). `n` in hexadecimal is thus: 0000.0010 
      *  which is the uint8 0x02.
+     * 
+     *  @example: l = [0,1,0,0,1,1,0,1] yields l' = l as |l| % 8 == 0;
+     *  l' is a byte and is encoded as a uint8 `n` as follows: the bitvector 
+     *  representation of n is reverse(l'). `n` in hexadecimal is thus: 1011.0010 
+     *  which is the uint8 0xD2.
      *  
      */
     function method {:induction l} fromBitvectorToBytes(l : seq<bool>) : seq<byte> 
         requires |l| > 0
         ensures | fromBitvectorToBytes(l) | == ceil( |l|, BITS_PER_BYTE)
         ensures | fromBitvectorToBytes(l) | > 0
+        // The following statement ensures that any padding bit appended to `l` as part of the encoding is of value 0.
+        // This corresponds to checking that, if `len % BITS_PER_BYTE != 0`, then the most significant 
+        // `BITS_PER_BYTE - (len % BITS_PER_BYTE)` bits of the last byte of the encoding must be set to 0
         ensures (|l| % BITS_PER_BYTE) != 0 
                     ==>
-                        fromBitvectorToBytes(l)[|fromBitvectorToBytes(l)|-1] as nat < power2(|l|% BITS_PER_BYTE);        
+                        var startOfZeroBits := |l| % BITS_PER_BYTE;
+                        byteTo8Bits(fromBitvectorToBytes(l)[|fromBitvectorToBytes(l)|-1])[startOfZeroBits..BITS_PER_BYTE] == timeSeq(false,BITS_PER_BYTE - startOfZeroBits)
         decreases l
     {
         if ( |l| <= BITS_PER_BYTE ) then
+            assert |l| != BITS_PER_BYTE ==> |l| % BITS_PER_BYTE == |l|;
+            assert |l| > 0;
             [ list8BitsToByte( l + timeSeq(false, BITS_PER_BYTE - |l|)) ]
         else  
             //  Encode first 8 bits and recursively encode the rest.
             [ list8BitsToByte(l[..BITS_PER_BYTE]) ] + fromBitvectorToBytes( l[BITS_PER_BYTE..] )
+    }
+
+    /**
+     * Verify if a sequence of bytes is a valid encoding for BitVectors
+     *
+     * @param xb  A sequence of bytes
+     * @param len The length of the BitVector encoded by `xb`
+     *
+     * @return `true` iff `xb` is a valid encoding for a BitVector of length `len`
+     *
+     * @note A sequence of bytes is a valid encoding for a BitVector `xb` of length `len` iff all the following
+     *       conditions are true:
+     *      - `xb` is not empty
+     *      - the length of `xb` corresponds to the exact number of bytes required to encode a BitVector of length `len`,
+     *        i.e. ceil(len / BITS_PER_BYTE) == |xb|
+     *      - any bit in `xb` that is a padding bit according to the encoding of a BitVector of length `len` is of value 0, 
+     *        i.e. if `len % BITS_PER_BYTE != 0` then the most significant `BITS_PER_BYTE - (len % BITS_PER_BYTE)` bits of 
+     *        the last byte of `xb` must be set to 0
+     */
+    predicate method isValidBitVectorEncoding(xb : seq<byte>, len: nat)
+    {
+        && |xb| > 0
+        // The following is equivalent to ceil(len / BITS_PER_BYTE) == |xb|
+        && (len - 1)/BITS_PER_BYTE + 1 == |xb|
+        && ((len % BITS_PER_BYTE) != 0 ==>
+                    var startOfZeroBits := len % BITS_PER_BYTE;
+                    byteTo8Bits(xb[|xb|-1])[startOfZeroBits..BITS_PER_BYTE] == timeSeq(false,BITS_PER_BYTE - startOfZeroBits))
     }
 
     /**
@@ -75,13 +114,13 @@ include "Constants.dfy"
      *  The `method` attribute turns it into an executable recursive function
      *  and always terminates (decreases xb).
      *
-     *  @param  xb  A non-empty sequence of bytes, the last element
-     *              of which is >= power2(len % 8) if len % 8 != 0.
+     *  @param  xb  A valid encoding for a BitVector of length `len'
+     *  @param  len The length of the BitVector encoded in `xb`
+     * 
      *  @returns    The deserialised bitvector.
      */
     function method fromBytesToBitVector(xb : seq<byte>, len: nat) : seq<bool> 
-        requires |xb| > 0
-        requires len <= |xb| * BITS_PER_BYTE < len + BITS_PER_BYTE
+        requires isValidBitVectorEncoding(xb,len)
         ensures |fromBytesToBitVector(xb,len)| == len
         decreases xb
     {
@@ -123,8 +162,7 @@ include "Constants.dfy"
      *  Bitvector encoding of a decoded `xb` returns `xb`.
      */
     lemma  {:induction xb} bitvectorEncodeDecodeIsIdentity(xb: seq<byte>, len:nat) 
-        requires |xb| > 0
-        requires len <= |xb| * BITS_PER_BYTE < len + BITS_PER_BYTE
+        requires isValidBitVectorEncoding(xb,len)
         ensures fromBitvectorToBytes( fromBytesToBitVector(xb, len)) == xb
         decreases xb
     {
@@ -136,7 +174,27 @@ include "Constants.dfy"
                 fromBitvectorToBytes(fromBytesToBitVector(xb,len));
                 fromBitvectorToBytes(byteTo8Bits(xb[0])[.. len] );
                 [ list8BitsToByte( byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len)) ];
-                { assume byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len) == byteTo8Bits(xb[0]);}
+                { 
+                    if((len % BITS_PER_BYTE) != 0)
+                    {
+                        assert len % BITS_PER_BYTE == len;
+                        assert 0 < len < BITS_PER_BYTE;
+                        calc == {
+                            byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len);
+                                calc == {
+                                    byteTo8Bits(xb[0])[len..BITS_PER_BYTE];
+                                    timeSeq(false,BITS_PER_BYTE - len);
+                                }
+                            byteTo8Bits(xb[0])[.. len] + byteTo8Bits(xb[0])[len..BITS_PER_BYTE];
+                            byteTo8Bits(xb[0]);
+                        }
+                    }
+                    else
+                    {
+                        assert len == BITS_PER_BYTE;
+                        assert byteTo8Bits(xb[0])[.. len] + timeSeq(false,BITS_PER_BYTE - len) == byteTo8Bits(xb[0]);
+                    }
+                }
                 [ list8BitsToByte( byteTo8Bits(xb[0])) ];
                     {encodeOfDecodeByteIsIdentity(xb[0]);}
                 [xb[0]];
@@ -155,7 +213,7 @@ include "Constants.dfy"
     }
 
     /**
-     *  Serialise is injective for bitvector of the same length.
+     *  Serialise is injective for bitvectors of the same length.
      */
     lemma {:induction false} bitvectorSerialiseIsInjectiveGeneral(l1: seq<bool>, l2 : seq<bool>)
         requires |l1| == |l2| > 0 
@@ -171,12 +229,10 @@ include "Constants.dfy"
     /**
      *  Deserialise is injective for bitvectors.
      */
-    lemma {:induction false} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
-        requires |xa| > 0
-        requires lena <= |xa| * BITS_PER_BYTE < lena + BITS_PER_BYTE
-        requires |xb| > 0
-        requires lenb <= |xb| * BITS_PER_BYTE < lenb + BITS_PER_BYTE
-        ensures fromBytesToBitVector(xa, lena) == fromBytesToBitVector(xb, lenb) ==> xa == xb 
+    lemma {:induction xa, xb} bitvectorDeserialiseIsInjective(xa: seq<byte>, xb : seq<byte>, lena: nat, lenb: nat)
+        requires isValidBitVectorEncoding(xa, lena)
+        requires isValidBitVectorEncoding(xb, lenb)
+        ensures fromBytesToBitVector(xa,lena) == fromBytesToBitVector(xb,lenb) ==> xa == xb 
     {
         calc ==> {
             fromBytesToBitVector(xa, lena) == fromBytesToBitVector(xb, lenb) ;

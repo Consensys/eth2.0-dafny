@@ -33,9 +33,19 @@ then
     exit 2 
 fi
 
+echo "Processing " $1
+./verifyAll.sh $1
+if [ $? -eq 0 ] # check if errors
+then
+  echo -e "${GREEN}No errors in directory $dir${NC}"
+else
+  echo -e "${RED}Some errors occured in directory $dir${NC}"
+  error=$((error + 1))
+fi
+
 # The list of dirs 
-listofdirs=`ls -d $1/*/`
-for dir in $listofdirs "$1"
+listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n'`
+for dir in $listofdirs
 do
     echo "Processing " $dir
     mydirs+=($dir)
