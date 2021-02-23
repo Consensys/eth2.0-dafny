@@ -13,7 +13,9 @@ mystatus=()
 # default dafny configuration for verification
 #defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0 /proverWarnings:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:12 /restartProver /verifySeparately"
 
-defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1"
+# defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1"
+
+defaultverifconf="/dafnyVerify:1 /compile:0  /noCheating:1"
 
 
 # help and usage
@@ -58,7 +60,7 @@ do
   echo -e "${BLUE}Processing $entry with config $config${NC}"
   myfiles+=($entry)
   # Run dafny with a config
-  dafny $config $entry
+  dafny $config $entry 
   # echo "$result"
   if [ $? -eq 0 ] 
   then
