@@ -12,6 +12,8 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0
+
 include "../../utils/Eth2Types.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../../ssz/Constants.dfy"
