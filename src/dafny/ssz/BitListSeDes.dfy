@@ -69,9 +69,10 @@ include "Constants.dfy"
      *  The algorithm to encode list of bits works as follows:
      *  1. given a list of bits l, 
      *  2. append 1 to l, this is a sentinnelle, and let l' = l + [1] 
-     *  3. if |l'| * 8 is not 0, append 8 - (|l| + 1) % 8 zeros to l' 
-     *     to obtain a list of size multiplw of 8
-     *     let l'' = l' + possibly some [0]
+     *  3. if |l'| % 8 is not 0, append 8 - (|l'| % 8) zeros to l' 
+     *     to obtain a list of size multiple of 8
+     *     let l'' = l', if |l'| % 8 == 0
+     *               l' + [0] * (8 - (|l'| % 8)), if |l'| % 8 != 0
      *     This ensures that |l''| % 8 == 0 and can be seen as a sequence of Bytes
      *  4. Encode l'' with the `list8BitsToByte` algorithm.
      *
