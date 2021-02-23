@@ -10,6 +10,9 @@ processedfiles=0
 myfiles=()
 mystatus=()
 
+# default dafny configuration for verification
+defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0 /proverWarnings:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:12 /restartProver /verifySeparately"
+
 # help and usage
 help()
 {
@@ -39,10 +42,20 @@ do
   # check file exists (this can occur if directory does not have *.dfy files)
   [ -f "$entry" ] || continue
   processedfiles=$((processedfiles + 1))
+  # try to get the verification configuration in the file
+  verif=`cat $entry | grep "@dafny" | sed  's/\/\/[ \t]*@dafny[ \t]*//g' | sed 's/[ \t]*$//g'`
+  # echo "verif options [$verif]"
+  if [ -z "$verif" ] 
+  then 
+    config="$defaultverifconf"
+  else 
+    config="$verif"
+  fi
   echo -e "${BLUE}-------------------------------------------------------${NC}"
-  echo -e "${BLUE}Processing $entry${NC}"
+  echo -e "${BLUE}Processing $entry with config $config${NC}"
   myfiles+=($entry)
-  dafny3 /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:40 /noCheating:0 /vcsCores:10 "$entry"
+  # Run dafny with a config
+  dafny $config $entry
   # echo "$result"
   if [ $? -eq 0 ] 
   then
