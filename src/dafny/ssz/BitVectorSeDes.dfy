@@ -60,15 +60,7 @@ include "Constants.dfy"
      */
     function method {:induction l} fromBitvectorToBytes(l : seq<bool>) : seq<byte> 
         requires |l| > 0
-        ensures | fromBitvectorToBytes(l) | == ceil( |l|, BITS_PER_BYTE)
-        ensures | fromBitvectorToBytes(l) | > 0
-        // The following statement ensures that any padding bit appended to `l` as part of the encoding is of value 0.
-        // This corresponds to checking that, if `len % BITS_PER_BYTE != 0`, then the most significant 
-        // `BITS_PER_BYTE - (len % BITS_PER_BYTE)` bits of the last byte of the encoding must be set to 0
-        ensures (|l| % BITS_PER_BYTE) != 0 
-                    ==>
-                        var startOfZeroBits := |l| % BITS_PER_BYTE;
-                        byteTo8Bits(fromBitvectorToBytes(l)[|fromBitvectorToBytes(l)|-1])[startOfZeroBits..BITS_PER_BYTE] == timeSeq(false,BITS_PER_BYTE - startOfZeroBits)
+        ensures isValidBitVectorEncoding(fromBitvectorToBytes(l), |l|)
         decreases l
     {
         if ( |l| <= BITS_PER_BYTE ) then
@@ -100,8 +92,7 @@ include "Constants.dfy"
     predicate method isValidBitVectorEncoding(xb : seq<byte>, len: nat)
     {
         && |xb| > 0
-        // The following is equivalent to ceil(len / BITS_PER_BYTE) == |xb|
-        && (len - 1)/BITS_PER_BYTE + 1 == |xb|
+        && ceil(len, BITS_PER_BYTE) == |xb|
         && ((len % BITS_PER_BYTE) != 0 ==>
                     var startOfZeroBits := len % BITS_PER_BYTE;
                     byteTo8Bits(xb[|xb|-1])[startOfZeroBits..BITS_PER_BYTE] == timeSeq(false,BITS_PER_BYTE - startOfZeroBits))
