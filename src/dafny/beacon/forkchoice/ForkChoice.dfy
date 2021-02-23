@@ -12,6 +12,8 @@
  * under the License.
  */
 
+// @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1
+
 include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/NativeTypes.dfy"
@@ -413,7 +415,7 @@ module ForkChoice {
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
          */
-        method {:timeLimitMultiplier 8} on_block(b: BeaconBlock, pre_state : BeaconState) 
+        method {:timeLimitMultiplier 10} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
 
