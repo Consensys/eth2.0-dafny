@@ -98,6 +98,8 @@ module StateTransitionSpec {
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
         requires |s.validators| == |s.balances| 
         ensures |addBlockToState(s,b).validators| == |addBlockToState(s,b).balances|
+        ensures addBlockToState(s,b).eth1_data_votes == s.eth1_data_votes
+        // ensures |addBlockToState(s,b).eth1_data_votes| == |s.eth1_data_votes|
         ensures addBlockToState(s,b).eth1_deposit_index == s.eth1_deposit_index
         ensures addBlockToState(s,b).validators == s.validators
         ensures addBlockToState(s,b).balances == s.balances
@@ -128,6 +130,8 @@ module StateTransitionSpec {
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
         //  eth1_deposit_index is left unchanged
         ensures s.eth1_deposit_index == resolveStateRoot(s).eth1_deposit_index
+        //  eth1_data_votes unchanged
+        ensures s.eth1_data_votes == resolveStateRoot(s).eth1_data_votes
 
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             resolveStateRoot(s) == advanceSlot(s)
@@ -164,6 +168,7 @@ module StateTransitionSpec {
         ensures |forwardStateToSlot(s, slot).validators| == |forwardStateToSlot(s, slot).balances|
         ensures forwardStateToSlot(s, slot).validators == s.validators
         ensures forwardStateToSlot(s, slot).balances == s.balances
+        ensures forwardStateToSlot(s, slot).eth1_data_votes == s.eth1_data_votes
         
         //  termination ranking function
         decreases slot - s.slot
@@ -218,6 +223,7 @@ module StateTransitionSpec {
             && nextSlot(s).validators  == s.validators
             && nextSlot(s).balances  == s.balances
             && |nextSlot(s).validators| == |nextSlot(s).balances| 
+            && nextSlot(s).eth1_data_votes ==  s.eth1_data_votes
             &&  nextSlot(s).eth1_deposit_index  == s.eth1_deposit_index
 
     {

@@ -12,6 +12,8 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1
+
 include "../../utils/NativeTypes.dfy"
 include "../../utils/NonNativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -69,6 +71,7 @@ module StateTransition {
         && total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
         // note that the |b.body.deposits| and total_deposits should refer to valid deposits
         && |s.validators| == |s.balances|
+        && |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         && b.parent_root == 
             hash_tree_root(
                 forwardStateToSlot(nextSlot(s), 
@@ -275,6 +278,7 @@ module StateTransition {
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root(s.latest_block_header)
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
+        requires |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         requires |s.validators| == |s.balances|
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
@@ -346,7 +350,7 @@ module StateTransition {
     method process_eth1_data(s: BeaconState, b: BeaconBlockBody) returns (s' : BeaconState) 
         requires |s.validators| == |s.balances|
         requires |s.validators| + |b.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
-
+        requires |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         requires s.eth1_deposit_index as int + |b.deposits| < 0x10000000000000000 
 
         ensures s' == updateEth1Data(s,b)
@@ -551,6 +555,8 @@ module StateTransition {
     method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
         // requires forall a :: a in s.current_epoch_attestations ==> 
         requires attestationIsWellFormed(s, a)
+        requires |s.current_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
+        requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
         // ensures 
 
     {

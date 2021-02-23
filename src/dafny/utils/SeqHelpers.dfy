@@ -44,7 +44,7 @@ module SeqHelpers {
         else { x[0] }  + seqToSet(x[1..])
     }
 
-    lemma seqOfDistinctElementsAndSets<T(==)>(x : seq<T>) 
+    lemma {:induction x} seqOfDistinctElementsAndSets<T>(x : seq<T>) 
         requires forall i, j :: 0 <= i < j < |x| ==> x[i] != x[j]
         ensures |x| == |seqToSet(x)|
         decreases x 
