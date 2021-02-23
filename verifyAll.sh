@@ -11,7 +11,10 @@ myfiles=()
 mystatus=()
 
 # default dafny configuration for verification
-defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0 /proverWarnings:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:12 /restartProver /verifySeparately"
+#defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0 /proverWarnings:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:12 /restartProver /verifySeparately"
+
+defaultverifconf="/dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1"
+
 
 # help and usage
 help()
