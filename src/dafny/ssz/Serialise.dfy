@@ -239,7 +239,7 @@ module SSZ {
                                     else
                                         Failure
 
-            case Bitvector_(len) => if |xs| > 0 && len <= |xs| * BITS_PER_BYTE < len + BITS_PER_BYTE then
+            case Bitvector_(len) => if isValidBitVectorEncoding(xs, len) then            
                                         var r : Serialisable := Bitvector(fromBytesToBitVector(xs,len));
                                         Success(r)
                                     else
