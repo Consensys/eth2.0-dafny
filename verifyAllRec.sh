@@ -44,12 +44,13 @@ else
 fi
 
 # The list of dirs 
-listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n'`
+listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d`
+# listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n'`
 for dir in $listofdirs
 do
-    echo "Processing " $dir
+    echo "Processing directories in " $dir
     mydirs+=($dir)
-    ./verifyAll.sh $dir
+    ./verifyAllRec.sh $dir
     if [ $? -eq 0 ] # check if errors
     then
       echo -e "${GREEN}No errors in directory $dir${NC}"
