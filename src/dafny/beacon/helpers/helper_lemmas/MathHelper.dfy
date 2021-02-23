@@ -381,7 +381,7 @@ module MathHelperLemmas {
                 }
             }
             (x - k/2) as real;
-            >= { assume rr/(xr * 2.0) >=0.0; }
+            >= { assert(xr + 2.0 > 0.0) ; assert rr /(xr * 2.0) >= 0.0; }
             xr -kr/2.0 - rr/(xr * 2.0);   
             == calc == {
                 yr;
