@@ -7,6 +7,9 @@ NC='\033[0m' # No Color
 error=0
 processeddirs=0
 
+mydirs=()
+mydirsstatus=()
+
 # help and usage
 help()
 {
@@ -35,19 +38,30 @@ listofdirs=`ls -d $1/*/`
 for dir in $listofdirs "$1"
 do
     echo "Processing " $dir
+    mydirs+=($dir)
     ./verifyAll.sh $dir
     if [ $? -eq 0 ] # check if errors
     then
       echo -e "${GREEN}No errors in directory $dir${NC}"
+      mydirsstatus+=(1)
     else
       echo -e "${RED}Some errors occured in directory $dir${NC}"
       error=$((error + 1))
+      mydirsstatus+=(0)
     fi
 done
 
 if [ $error -ne 0 ]
 then
   echo -e "${RED}Some directories [$error/$processeddirs] has(ve) errors :-("
+  for i in ${!mydirs[@]}; do
+  if [ ${mydirsstatus[$i]} -ne 1 ]
+  then
+    echo -e "${RED}[FAIL] ${mydirs[$i]} has some errors :-(${NC}"
+  else 
+     echo -e "${GREEN}[OK] ${mydirs[$i]}${NC}" 
+  fi
+done
   exit 1
 else 
   echo -e "${GREEN}No errors in any dirs! Great job.${NC}"
