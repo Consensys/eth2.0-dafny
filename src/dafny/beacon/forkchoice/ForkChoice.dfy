@@ -397,16 +397,6 @@ module ForkChoice {
         }
 
         /**
-         *  Canonical chain property.
-         */
-        // lemma atMostOneCanonicalChain(store: Store) 
-        //     ensures forall r :: r in store.blocks.Keys && 
-
-        // {
-        //     assume(forall r :: r in store.blocks.Keys ==> true);
-        // }
-
-        /**
          *  Add a block to the store.
          *  
          *  @param  pre_state   The last beacon state that the block is supposed to attach to.
@@ -521,5 +511,30 @@ module ForkChoice {
             return false;
 
         }
+
+        /**
+         *  Goal 1: canonical chain 
+         */
+        // lemma atMostOneCanonicalChain(store: Store)
+        // {
+
+        // }
+
+        /**
+         *  Canonical chain property.
+         *  Assume fixed set of validators.
+         *  
+         *  If two blocks are finalized and neither is an ancestor of the other, 
+         *  then validators having at least 1/3 of the total stake must have violated 
+         *  one of the the slashing conditions: 
+         *  
+         */
+        // lemma atMostOneCanonicalChain(store: Store) 
+        //     ensures forall r :: r in store.blocks.Keys && 
+
+        // {
+        //     assume(forall r :: r in store.blocks.Keys ==> true);
+        // }
+
     }
 }

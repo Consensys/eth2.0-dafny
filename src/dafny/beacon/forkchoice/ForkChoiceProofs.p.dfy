@@ -81,7 +81,7 @@ module ForckChoiceProofs {
             var k1 := computeAllEBBsIndices(chbr1, j, store);
             //  EBB(br1, j) is k1[0]
             var k2 := computeAllEBBsIndices(chbr2, j, store);
-            isJustified(0, chbr1, k1, store.attestations) && isJustified(0, chbr2, k2, store.attestations)
+            isJustified(0, chbr1, k1, store.rcvdAttestations) && isJustified(0, chbr2, k2, store.rcvdAttestations)
 
         ensures 
             var chbr1 := chainRoots(br1, store);
@@ -92,7 +92,7 @@ module ForckChoiceProofs {
             var k2 := computeAllEBBsIndices(chbr2, j, store);
             var tgt1 := CheckPoint(0 as Epoch, chbr1[k1[0]]);
             var tgt2 := CheckPoint(0 as Epoch, chbr2[k2[0]]);
-            |collectValidatorsIndicesAttestatingForTarget(store.attestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.attestations, tgt2)|
+            |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
             >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
     {
         var chbr1 : seq<Root> := chainRoots(br1, store); //  chain(br1)
@@ -104,17 +104,17 @@ module ForckChoiceProofs {
         var k2 := computeAllEBBsIndices(chbr2, j, store);
         //  EBB(br2, j) is k2[0]
 
-        if (isJustified(0, chbr1, k1, store.attestations) && isJustified(0, chbr2, k2, store.attestations)) {
-            justifiedMustHaveTwoThirdIncoming(0, chbr1, k1, store.attestations);
+        if (isJustified(0, chbr1, k1, store.rcvdAttestations) && isJustified(0, chbr2, k2, store.rcvdAttestations)) {
+            justifiedMustHaveTwoThirdIncoming(0, chbr1, k1, store.rcvdAttestations);
             var tgt1 :=  CheckPoint(0 as Epoch, chbr1[k1[0]]);
-            var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.attestations, tgt1);
+            var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1);
             assert(|attForTgt1| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            justifiedMustHaveTwoThirdIncoming(0, chbr2, k2, store.attestations);
+            justifiedMustHaveTwoThirdIncoming(0, chbr2, k2, store.rcvdAttestations);
             var tgt2 := CheckPoint(0 as Epoch, chbr2[k2[0]]);
-            var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.attestations, tgt2);
+            var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2);
             assert(|attForTgt2| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
 
-            supermajorityForSameEpoch(store.attestations, tgt1, tgt2);
+            supermajorityForSameEpoch(store.rcvdAttestations, tgt1, tgt2);
             //  If the two blocks are the same, more than 2/3 threshold is 
             //  reached.
             if (br1 == br2) {
@@ -150,4 +150,73 @@ module ForckChoiceProofs {
         pigeonHolePrinciple(collectValidatorsIndicesAttestatingForTarget(xa, tgt1), collectValidatorsIndicesAttestatingForTarget(xa, tgt2), k);
     }
 
+    /**
+     *  Canonical chain property.
+     *  Assume fixed set of validators.
+     *  
+     *  If two blocks are finalized and neither is an ancestor of the other, 
+     *  then validators having at least 1/3 of the total stake must have violated 
+     *  one of the the slashing conditions: 
+     *  
+     */
+    // lemma atMostOneCanonicalChain(store: Store) 
+    //     ensures forall r :: r in store.blocks.Keys && 
+
+    // {
+    //     assume(forall r :: r in store.blocks.Keys ==> true);
+    // }
+
+    /**
+     *  Rule I (Gasper slashing conditions).
+     */
+    predicate ruleI(s: Store, links: ListOfAttestations) 
+    {
+        true
+    }
+
+    /**
+     *  Rule II (Gasper slashing conditions).
+     */
+    predicate ruleII(s: Store, links: ListOfAttestations) 
+    {
+        true
+    }
+
+
+    /**
+     *  A list of links is valid if all the attestations in links
+     *  are valid.
+     *  
+     *  @param  store   A store.
+     *  @param  links   The list of attestations received, from most recent
+     *                  first. 
+     */
+    predicate isValidListOfAttestations(store: Store, links: ListOfAttestations) 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+        /** The head block in `a` is in the store. */
+        requires forall k :: k in links ==> k.data.beacon_block_root in store.blocks.Keys
+
+        decreases links
+    {
+        if |links| == 0 then
+            true
+        else  
+            isValidAttestation(links[0].data, store, links[1..]) 
+            &&
+            isValidListOfAttestations(store, links[1..])
+    }
+
+    predicate allAttestationsValidInStore(store: Store) 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+        
+        /** The head block in each `a` is in the store. */
+        requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.blocks.Keys
+
+    {
+        isValidListOfAttestations(store, store.rcvdAttestations)
+    }
 }
