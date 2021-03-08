@@ -164,6 +164,30 @@ module ForkChoiceHelpers {
     }
 
     /**
+     *  The height of a block in the store.
+     *
+     *  @param  br      A block root.
+     *  @param  store   A store.
+     *  @returns        The height of the block br.
+     */
+    function height(br: Root, store: Store): nat 
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+         decreases store.blocks[br].slot
+    {
+        if ( store.blocks[br].slot == 0 ) then
+            //  Should be the genesis block.
+            0
+        else 
+            1 + height(store.blocks[br].parent_root, store)
+    }
+
+    /**
      *  Compute the first block root in chain with slot number less than or equal to an epoch.
      *  Also known as EBB in the Gasper paper.
      *
