@@ -55,7 +55,8 @@ module ForkChoiceTypes {
         blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>,
         threshold: nat,
-        ghost attestations : ListOfAttestations //  attestations received so far
+        ghost rcvdAttestations : ListOfAttestations //  attestations received so far
+        // ghost 
         // checkpoint_states: map<CheckPoint, BeaconState>
         // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )
