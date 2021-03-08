@@ -35,7 +35,23 @@ module ForkChoiceHelpersProofs {
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
 
+    /**
+     *  The height of a block is one less than the length of the chain of ancestors.
+     */
+    lemma heightOfBlockIsLengthOfAncestorsChain(br: Root, store: Store)
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
 
+        ensures 0 <= height(br, store) == |chainRoots(br, store)| - 1
+
+        decreases store.blocks[br].slot
+
+    {   //  Thanks Dafny
+    }
    
     /**
      *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
