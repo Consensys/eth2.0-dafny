@@ -371,7 +371,6 @@ module StateTransition {
 
     }
     
-
     /**
      *  Process the operations defined by a block body.
      *  
@@ -523,20 +522,25 @@ module StateTransition {
     //         a.data.source == s.previous_justified_checkpoint)
         
     // }
+
     /**
+     *  Process attestation section of a block.
+     *  @param  s   A beacon state.
+     *  @param  a   An attestation.
+     *  @returns    ?? s new state
      *
      *  Example.
-     *  epoch   0             1                 k               k + 1       
+     *  epoch   0            1                  k                 k + 1       
      *          |............|....         .....|.................|.....................
      *  state                                                      s
-     *  slot    0                                                  s.slot 
+     *  slot    0          12  .....                               s.slot 
      *                                            <-SLOTS_PER_EPOCH->
      *  slot         s.slot - SLOTS_PER_EPOCH = x1                x2 = s.slot - 1
      *  slot(a)                                   *****************     
      *                          =======a======>tgt1
      *                                            =======a======>tgt2
      *     
-     * 
+     *  
      *  epoch(s) = k + 1, and previous epoch is k.
      *  source and target are checkpoints.
      *  Target must have an epoch which is k (tgt1, case1) or k + 1 (tgt2, case2).
@@ -551,6 +555,8 @@ module StateTransition {
      *  MIN_ATTESTATION_INCLUSION_DELAY is 1.
      *
      *  Question: what is the invariant for the attestations in a state?
+     *  @note   In the actual eth2.0 specs, the input is an Attestation. Here we
+     *          use a PendingAttestation.
      */
     method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
         // requires forall a :: a in s.current_epoch_attestations ==> 
@@ -560,7 +566,7 @@ module StateTransition {
         // ensures 
 
     {
-         // data = attestation.data
+        // data = attestation.data
         assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
         assert a.data.target.epoch == compute_epoch_at_slot(a.data.slot);
         assert a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat;
@@ -597,6 +603,9 @@ module StateTransition {
         // s'
     }
 
+    /**
+     *  Whether an attestation is acceptable.
+     */
     predicate attestationIsWellFormed(s: BeaconState, a: PendingAttestation)
     {
         && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)  
