@@ -47,11 +47,11 @@ module ForkChoiceHelpers {
         /** The head block in `a` is in the store. */
         requires a.beacon_block_root in store.blocks.Keys
     {
-        //  The chain from a.beacon_block_root
+        //  The chain from the block a.beacon_block_root pointed to by a.
         var xc := chainRoots(a.beacon_block_root, store);
-        //  ep(a)
+        //  The epoch of a, ep(a)
         var ep :=  compute_epoch_at_slot(a.slot);
-        //  LEBB(a), LE(a) in the attestation
+        //  Index of LEBB(a), LE(a) in the attestation
         var indexOfLEBB := computeEBB(xc, ep, store);
         //  EBBS
         var ebbs := computeAllEBBsIndices(xc, ep, store);
