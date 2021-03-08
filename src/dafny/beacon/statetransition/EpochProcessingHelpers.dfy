@@ -69,7 +69,7 @@ module EpochProcessingHelpers {
         var roots := chainRoots(r, store); 
         //  |ebbsIndices| ==  get_current_epoch(s) + 1
         var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-        var lastJustified := lastJustified(roots, ebbsIndices, store.attestations);
+        var lastJustified := lastJustified(roots, ebbsIndices, store.rcvdAttestations);
         CheckPoint((|ebbsIndices| - 1 - lastJustified) as Epoch, roots[ebbsIndices[lastJustified]])
     }
 
@@ -116,7 +116,7 @@ module EpochProcessingHelpers {
         var r := get_block_root(s, get_current_epoch(s));
         var roots := chainRoots(r, store); 
         var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-        exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.attestations)
+        exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.rcvdAttestations)
             && cp == CheckPoint((|ebbsIndices| - i) as Epoch, roots[ebbsIndices[i]])
     }
 
@@ -162,7 +162,7 @@ module EpochProcessingHelpers {
         var roots := chainRoots(r, store); 
         var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
         // exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.
-        var lastJustified := lastJustified(roots, ebbsIndices, store.attestations);
+        var lastJustified := lastJustified(roots, ebbsIndices, store.rcvdAttestations);
         cp == CheckPoint((|ebbsIndices| - lastJustified) as Epoch, roots[ebbsIndices[lastJustified]])
     }
 

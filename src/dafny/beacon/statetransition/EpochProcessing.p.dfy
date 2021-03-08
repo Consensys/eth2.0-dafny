@@ -157,7 +157,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>
@@ -238,7 +238,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>
@@ -287,7 +287,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>
@@ -391,7 +391,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)   
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)   
 
         requires 
             var matching_target_attestations_prev_epoch := 
@@ -407,7 +407,7 @@ module EpochProcessingProofs {
         var r := get_block_root(s, get_current_epoch(s));
         var roots := chainRoots(r, store); 
         var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-        assert(exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.attestations)
+        assert(exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.rcvdAttestations)
             && s.previous_justified_checkpoint == CheckPoint((|ebbsIndices| - i) as Epoch, roots[ebbsIndices[i]]));
         
         //  1. attestations in prev_epoch are from s.previous_justified_checkpoint  to 
