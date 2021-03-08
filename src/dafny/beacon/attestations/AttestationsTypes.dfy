@@ -60,7 +60,7 @@ module AttestationsTypes {
     const DEFAULT_CHECKPOINT := CheckPoint(0 as Epoch, DEFAULT_BYTES32)
 
     /** 
-     *  A vote ie. an AttestationData.  
+     *  An AttestationData is basically a vote for a link.
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
      *
@@ -103,7 +103,9 @@ module AttestationsTypes {
     const DEFAULT_ATTESTATION_DATA := 
         AttestationData(0 as Slot,  DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
 
-    // datatype AggregationBits 
+    /**
+     *  Aggregations bits.
+     */
     type AggregationBits = x : seq<bool> | |x| == MAX_VALIDATORS_PER_COMMITTEE witness DEFAULT_AGGREGATION_BITS
 
     const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE)
@@ -129,7 +131,6 @@ module AttestationsTypes {
     signature: BLSSignature
     */
 
-
     /**
      *  Default value for PendingAttestation.
      */
@@ -138,9 +139,8 @@ module AttestationsTypes {
     type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
     /**
-     *  Default bitvector of size 4 initialised with false.
+     *  Default list of attestations is the empty list.
      */
     const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
-    // timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
 
 }
