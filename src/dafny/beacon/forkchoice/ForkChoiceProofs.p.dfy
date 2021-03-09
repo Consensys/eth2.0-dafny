@@ -185,6 +185,7 @@ module ForckChoiceProofs {
         requires isSlotDecreasing(store)
         /** The head block in `a` is in the store. */
         requires forall k :: k in links ==> k.data.beacon_block_root in store.blocks.Keys
+        requires forall k :: k in links ==> k.data.beacon_block_root in store.block_states.Keys
 
         decreases links
     {
@@ -207,7 +208,7 @@ module ForckChoiceProofs {
         
         /** The head block in each `a` is in the store. */
         requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.blocks.Keys
-
+        requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.block_states.Keys
     {
         isValidListOfAttestations(store, store.rcvdAttestations)
     }
