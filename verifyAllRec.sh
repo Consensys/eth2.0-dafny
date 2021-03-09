@@ -4,6 +4,7 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+LOGDIR=logs
 error=0
 processeddirs=0
 
@@ -34,7 +35,9 @@ then
 fi
 
 echo "Processing " $1
-LOG_FILE=$1/verif-`date +'%Y-%m-%d-%H:%M:%S'`.log
+LOG_FILE=$1/$LOGDIR/verif-`date +'%Y-%m-%d-%H:%M:%S'`.log
+mkdir -p $1/$LOGDIR
+echo "creating/using $1/$LOGDIR"
 ./verifyAll.sh $1 | tee $LOG_FILE
 if [ $? -eq 0 ] # check if errors
 then
@@ -44,9 +47,9 @@ else
   error=$((error + 1))
 fi
 
-# The list of dirs 
-listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d`
-# listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n'`
+# The list of dirs, excluding those with a name containing log
+listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d | grep -v log`
+# listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n' | grep -v log`
 for dir in $listofdirs
 do
     echo "Processing directories in " $dir
