@@ -135,7 +135,7 @@ module BeaconChainTypes {
      */  
     datatype BeaconBlock = BeaconBlock( 
         slot: Slot,
-        // proposer_index: ValidatorIndex,
+        proposer_index: ValidatorIndex,
         parent_root: Root,
         state_root: Root,
         body: BeaconBlockBody
@@ -145,7 +145,7 @@ module BeaconChainTypes {
      *  The zeroed (default) block.
      */
     const DEFAULT_BLOCK := BeaconBlock(
-            0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
+            0 as Slot, 0 as ValidatorIndex, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
     )
 
     type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int witness DEFAULT_JUSTIFICATION_BITVECTOR
