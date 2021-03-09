@@ -30,6 +30,12 @@ module NativeTypes {
      *    to represent the type  i:int | -0x8000000000000000 <= i < 0x8000000000000000
      */
 
+    /** Some useful constants. */
+    const MAX_UINT8 := 0x100 - 1
+    const MAX_UINT16 :=  0x10000 - 1
+    const MAX_UINT32 :=  0x100000000 - 1
+    const MAX_UINT64 :=  0x10000000000000000 - 1
+
     /* Signed and unsigned int. */
     newtype{:nativeType "sbyte"} sbyte = i:int | -0x80 <= i < 0x80
     newtype{:nativeType "byte"} uint8 = i:int | 0 <= i < 0x100
