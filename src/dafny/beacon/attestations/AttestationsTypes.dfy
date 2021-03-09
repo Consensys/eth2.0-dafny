@@ -118,9 +118,9 @@ module AttestationsTypes {
      */
     datatype PendingAttestation = PendingAttestation(
         aggregation_bits: AggregationBits,
-        data: AttestationData
+        data: AttestationData,
         // inclusion_delay: Slot
-        // proposer_index: ValidatorIndex
+        proposer_index: ValidatorIndex  //  uint64
     )
 
     /*
@@ -134,7 +134,8 @@ module AttestationsTypes {
     /**
      *  Default value for PendingAttestation.
      */
-    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
+    const DEFAULT_PENDING_ATTESTATION := 
+        PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA, 0)
 
     type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
