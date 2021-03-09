@@ -40,7 +40,7 @@ module ForkChoiceHelpers {
      *  @param  store   A store.
      *  @param  links   A sequence of votes.
      */
-    predicate isValidAttestation(a : AttestationData, store: Store, links: seq<PendingAttestation>) 
+    predicate isValidAttestationData(a : AttestationData, store: Store, links: seq<PendingAttestation>) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
@@ -65,6 +65,33 @@ module ForkChoiceHelpers {
         &&
         //  The source must be the last justified pair in chain(a.beacon_block_root)
         a.source == CheckPoint(ep - indexOfLJ, xc[ebbs[indexOfLJ]])
+        // &&
+        // //  the index of the validator who made the atteatation must be
+        // //  in the validstors state of the state pointed to.
+        // a.proposer_index in store.blocks.Keys[a.beacon_block_root].validators
+    }
+
+    /**
+     *  A valid pending attestation. 
+    *   @param  a       A pending attestattion.
+     *  @param  store   A store.
+     *  @param  links   A sequence of votes.
+     */
+    predicate isValidPendingAttestation(a : PendingAttestation, store: Store, links: seq<PendingAttestation>) 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+        /** The head block in `a` is in the store. */
+        requires a.data.beacon_block_root in store.blocks.Keys
+        requires a.data.beacon_block_root in store.block_states.Keys
+    {
+        isValidAttestationData(a.data, store, links)
+        &&
+        //  The index of the validator who made the attestation must be
+        //  in the validators' set of the state that corresponds
+        //  to the block root in a.
+        var s := a.data.beacon_block_root;
+        a.proposer_index as nat < |store.block_states[s].validators|
     }
 
     /**
