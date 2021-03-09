@@ -192,7 +192,7 @@ module ForckChoiceProofs {
         if |links| == 0 then
             true
         else  
-            isValidAttestation(links[0].data, store, links[1..]) 
+            isValidPendingAttestation(links[0], store, links[1..]) 
             &&
             isValidListOfAttestations(store, links[1..])
     }
