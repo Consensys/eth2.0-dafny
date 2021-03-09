@@ -41,17 +41,6 @@ module ForckChoiceProofs {
     import opened ForkChoiceHelpersProofs
 
     /**
-     *  RuleI for slashing. 
-     *  A validator cannot vote more than once for a given epoch.
-     */
-    // predicate ruleI(xa : seq<PendingAttestation>) 
-    // {
-    //     forall a1, a2 :: a1 in xa && a2 in xa ==>
-
-    // }
-
-
-    /**
      *  Assume two chains from br1 and br2.
      *  There cannot be two justified checkpoints in the two chains
      *  at the same epoch without breaking 1/3-slashability.
@@ -182,7 +171,6 @@ module ForckChoiceProofs {
         true
     }
 
-
     /**
      *  A list of links is valid if all the attestations in links
      *  are valid.
@@ -208,6 +196,10 @@ module ForckChoiceProofs {
             isValidListOfAttestations(store, links[1..])
     }
 
+    /**
+     *  All the attestations in the store received so far are valid.
+     *  @param  store   A store.
+     */
     predicate allAttestationsValidInStore(store: Store) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
@@ -219,4 +211,5 @@ module ForckChoiceProofs {
     {
         isValidListOfAttestations(store, store.rcvdAttestations)
     }
+
 }
