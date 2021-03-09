@@ -157,7 +157,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestationData(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>
@@ -238,7 +238,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestationData(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>
@@ -287,7 +287,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)       
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestationData(a.data, store, store.rcvdAttestations)       
     
         ensures 
             forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>
@@ -371,7 +371,7 @@ module EpochProcessingProofs {
         
     }
 
-    lemma {:timeLimitMultiplier 8} justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
+    lemma {:timeLimitMultiplier 10} justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
@@ -391,7 +391,7 @@ module EpochProcessingProofs {
 
         /** All the attestations in the state are valid.  */
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==>    
-            a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.rcvdAttestations)   
+            a.data.beacon_block_root in store.blocks.Keys && isValidAttestationData(a.data, store, store.rcvdAttestations)   
 
         requires 
             var matching_target_attestations_prev_epoch := 
