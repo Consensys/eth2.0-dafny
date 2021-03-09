@@ -371,7 +371,7 @@ module EpochProcessingProofs {
         
     }
 
-    lemma {:timeLimitMultiplier 10} justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
+    lemma {:timeLimitMultiplier 10} {:induction false} justificationFromPreviousAndSuper(s : BeaconState, store:  Store) 
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
