@@ -103,7 +103,7 @@ module ForckChoiceProofs {
             var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2);
             assert(|attForTgt2| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
 
-            supermajorityForSameEpoch(store.rcvdAttestations, tgt1, tgt2);
+            superMajorityForSameEpoch(store.rcvdAttestations, tgt1, tgt2);
             //  If the two blocks are the same, more than 2/3 threshold is 
             //  reached.
             if (br1 == br2) {
