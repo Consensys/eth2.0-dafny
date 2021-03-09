@@ -70,6 +70,7 @@ module ForkChoice {
         //  block header.
         var anchor_block := BeaconBlock(
             anchor_state.latest_block_header.slot,
+            0 as ValidatorIndex,
             anchor_state.latest_block_header.parent_root,
             //  as per specification of get_forkchoice_store
             hash_tree_root(anchor_state),   //  state_root
