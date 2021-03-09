@@ -49,7 +49,6 @@ fi
 
 # The list of dirs, excluding those with a name containing log
 listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d | grep -v log`
-# listofdirs=`find $1 -maxdepth 1 -mindepth 1 -type d -printf '%p\n' | grep -v log`
 for dir in $listofdirs
 do
     echo "Processing directories in " $dir
