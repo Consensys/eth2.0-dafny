@@ -62,7 +62,7 @@ module ForckChoiceProofs {
      *  @param  j       An epoch.
      *  @param  
      */
-    lemma lemma4_11_a(br1: Root, br2: Root, store: Store, j: Epoch)
+    lemma {:induction false} lemma4_11_a(br1: Root, br2: Root, store: Store, j: Epoch)
          /** The block roots must be from accepted blocks, i.e. in the store. */
         requires br1 in store.blocks.Keys
         requires br2 in store.blocks.Keys
@@ -137,7 +137,7 @@ module ForckChoiceProofs {
      *  @param  tgt1    A checkpoint.
      *  @param  tgt2    A checkpoint.
      */
-    lemma supermajorityForSameEpoch(xa : seq<PendingAttestation>, tgt1: CheckPoint, tgt2: CheckPoint) 
+    lemma {:induction false} superMajorityForSameEpoch(xa : seq<PendingAttestation>, tgt1: CheckPoint, tgt2: CheckPoint) 
         requires tgt1.epoch == tgt2.epoch 
         requires |collectValidatorsIndicesAttestatingForTarget(xa, tgt1)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1  
         requires |collectValidatorsIndicesAttestatingForTarget(xa, tgt2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1  
