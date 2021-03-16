@@ -128,8 +128,11 @@ module ForkChoiceHelpers {
      *
      *  @example of a chain of size 6.  
      *  xr = [br5, br4, br3, br2, br1, br0] with 
-     *  store.blocks[br5].slot == 0
-     *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
+     *  a. store.blocks[br0].slot == 0
+     *  b. store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
+     *  xr is a chain if (---> is the descendant relation):
+     *  1. br0 ---> br1 ---> br2 ---> br3 ---> br4 ---> br5 and
+     *  2. a. and b.
      */
     predicate isChain(xr: seq<Root>, store: Store)  
         decreases xr
@@ -150,14 +153,14 @@ module ForkChoiceHelpers {
     }
 
     /**
-     *  The ancestors of a block root, as block roots.
+     *  The ancestors of a block root, as a sequence of block roots.
      *  
      *  @param  br      A hash root of a block that is in the `store`.
      *  @param  store   A store (similar to the view of the validator).
      *  @returns        The ancestors's roots of the block `br` in  `store` with
-     *                  `br` first and oldest (genesis) the last element of the sequence.
+     *                  `br` first and oldest (genesis) is the last element of the sequence.
      *
-     *  @example. br block at slot 264. 
+     *  @example. br block at slot 134. 
      *  Store ancestors from br given by: br == b0 and then b1, b2, ... b5.
      *  |chainRoots(br, store)| == 6, chainRoots(br, store)[i] == bi
      *  store.blocks[chainRoots(br, store)[5]].slot ==  store.blocks[b5].slot == 0
@@ -165,7 +168,7 @@ module ForkChoiceHelpers {
      *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
      *          |............|............|............|............|............|...
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0 == br     
-     *  slot    0             64           129    191      213       264
+     *  slot    0             32           63     95       109       134
      */
     function chainRoots(br: Root, store: Store) : seq<Root>
         /** The block root must in the store.  */
@@ -230,7 +233,7 @@ module ForkChoiceHelpers {
      *  epoch   0            1            2            3            4            5  
      *          |............|............|............|............|............|....
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
-     *  slot    0             64           129    191      213       264
+     *  slot    0             32           65      95      105       134
      *       
      *  For any sequence xb == [..,b5], EBB(xb, 0) == (b5, 0).
      *
@@ -241,12 +244,13 @@ module ForkChoiceHelpers {
      *
      *  Example 2. xb == [b4, b5].
      *  If e >= 2, EBB(xb,e) == (b4, e). If e == 1, EBB(xb, 1) == (b4,1).
-     *  LEBB(xb) == (64, 1).
+     *  LEBB(xb) == (32, 1).
      *  
      *  Example 3. xb == [b2, b3, b4, b5].
      *  If e >= 3, EBB(xb, e) == (b2, 3). 
-     *  If 1 <= e <= 2, EBB(xb, 2) == (64,e).
-     *  LEBB(xb) == (64, 1).
+     *  If e == 2, EBB(xb, 2) == (b4, 2).
+     *  If e == 1, EBB(xb, 1) == (b0, 1).
+     *  LEBB(xb) == (b4, 2).
      */
     function computeEBB(xb : seq<Root>, e :  Epoch, store: Store) : nat
 
@@ -306,7 +310,7 @@ module ForkChoiceHelpers {
      *  epoch   0            1            2            3            4            5  ...
      *          |............|............|............|............|............|  ...
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
-     *  slot    0             64           129    191      213       264
+     *  slot    0             32           65      95      105       134
      *       
      *  For any sequence xb == [..,b5], EBB(xb, 0) == (b5, 0).
      *
@@ -314,15 +318,8 @@ module ForkChoiceHelpers {
      *  if e >= 5, EBB(xb, e) == (b0, e). 
      *  If e == 4, EBB(xb, 4) == b1 (last block in epoch 4). 
      *  As epoch(b0) == 4, LEBB(xb) == EBB(xb, epoch(b0)) == b1.
+     *  computeAllEBBsIndices(xb, 6) = [b0, b0, b1, b2, b4, b5, b5]
      *
-     *  Example 2. xb == [b4, b5].
-     *  If e >= 2, EBB(xb,e) == (b4, e). If e == 1, EBB(xb, 1) == (b4,1).
-     *  LEBB(xb) == (64, 1).
-     *  
-     *  Example 3. xb == [b2, b3, b4, b5].
-     *  If e >= 3, EBB(xb, e) == (b2, 3). 
-     *  If 1 <= e <= 2, EBB(xb, 2) == (64,e).
-     *  LEBB(xb) == (64, 1).
      */
     function computeAllEBBsIndices(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
         requires |xb| >= 1
@@ -387,6 +384,7 @@ module ForkChoiceHelpers {
 
         ensures lastJustified(xb, ebbs, links) < |ebbs|
         ensures isJustified(lastJustified(xb, ebbs, links), xb, ebbs, links)
+        /** No index less than lastJustified is justified.  */
         ensures forall i :: 0 <= i < lastJustified(xb, ebbs, links) ==> 
             !isJustified(i, xb, ebbs, links)
     //  R1: we can compute it, but this requires a lemma to shift a result on
@@ -443,8 +441,8 @@ module ForkChoiceHelpers {
 
     /**
      *  
-    //  *  @param  i       An index in the sequence of ebbs. This is not the epoch
-    //  *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
+     *  @param  i       An index in the sequence of ebbs. This is not the epoch
+     *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
      *  @param  xb      A sequence of block roots.
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
      *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
@@ -454,8 +452,10 @@ module ForkChoiceHelpers {
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
     predicate isOneFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-        /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
-        requires i < |ebbs| <= 0x10000000000000000
+        /** i is an index in ebbs, and each index represent an epoch so must be uint64.
+         *  i is not the first index.
+         */
+        requires 0 < i < |ebbs|  <= 0x10000000000000000
         /** `xb` has at least one block. */
         requires |xb| >= 1
         /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
@@ -482,6 +482,6 @@ module ForkChoiceHelpers {
         //             CheckPoint(i as Epoch, xb[ebbs[i]]))| 
                         // >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
- 
+    
     
 }
