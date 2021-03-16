@@ -244,7 +244,7 @@ module EpochProcessingProofs {
             forall a :: a in get_matching_target_attestations(s, get_current_epoch(s)) ==>
             a.data.source == lastJustifiedCheckPoint(s, store)
     {
-        
+    
         forall (a : PendingAttestation | a in get_matching_target_attestations(s, get_current_epoch(s)) )
             ensures a.data.source == lastJustifiedCheckPoint(s, store)
         {
