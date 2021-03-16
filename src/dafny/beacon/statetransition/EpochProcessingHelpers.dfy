@@ -166,6 +166,4 @@ module EpochProcessingHelpers {
         cp == CheckPoint((|ebbsIndices| - lastJustified) as Epoch, roots[ebbsIndices[lastJustified]])
     }
 
-    
-  
 }
