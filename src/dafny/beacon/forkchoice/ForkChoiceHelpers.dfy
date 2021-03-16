@@ -467,21 +467,11 @@ module ForkChoiceHelpers {
         decreases |ebbs| - i 
     {
         isJustified(i, xb, ebbs, links) &&
-
-        // true
-        // if i == |ebbs| - 1 then 
-        //     // Last block in the list is assumed to be justified.
-        //     true
-        // else 
-        //     //  There should be a justified block at a higher index `j` that is justified
-        //     //  and a supermajority link from `j` to `i`.
-        //     exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-        //         && |collectValidatorsAttestatingForLink(
-        //             links, 
-        //             CheckPoint(j as Epoch, xb[ebbs[j]]), 
-        //             CheckPoint(i as Epoch, xb[ebbs[i]]))| 
-                        // >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+        |collectValidatorsAttestatingForLink(
+            links, 
+            CheckPoint(i as Epoch, xb[ebbs[i]]), 
+            CheckPoint((i - 1) as Epoch, xb[ebbs[i - 1]]))| 
+                >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
-    
     
 }
