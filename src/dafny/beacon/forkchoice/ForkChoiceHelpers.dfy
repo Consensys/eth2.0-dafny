@@ -73,7 +73,7 @@ module ForkChoiceHelpers {
 
     /**
      *  A valid pending attestation. 
-    *   @param  a       A pending attestattion.
+     *  @param  a       A pending attestattion.
      *  @param  store   A store.
      *  @param  links   A sequence of votes.
      */
@@ -103,7 +103,7 @@ module ForkChoiceHelpers {
      */
     predicate isClosedUnderParent(store: Store) 
     {
-        forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
+        forall k {:trigger store.blocks[k]}:: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
             store.blocks[k].parent_root in store.blocks.Keys
     }
 
@@ -122,8 +122,6 @@ module ForkChoiceHelpers {
     /**
      *  A chain of blocks roots is a totally ordered (decreasing, slot-wise)
      *  sequence of block roots, such that the slot of last block is zero.
-     *  In this definition it is not required that the blocks are linkted
-     *  with the parent_root relation.
      *
      *  @param  xr      A non-empty seq of block roots.
      *  @param  store   A store.
@@ -134,6 +132,7 @@ module ForkChoiceHelpers {
      *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
      */
     predicate isChain(xr: seq<Root>, store: Store)  
+        decreases xr
     {
         |xr| >= 1
         &&
@@ -404,7 +403,7 @@ module ForkChoiceHelpers {
 
     /**
      *  
-     *  @param  i       An index in the sequence of ebbs. This is the epoch
+     *  @param  i       An index in the sequence of ebbs. This is not the epoch
      *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
      *  @param  xb      A sequence of block roots.
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
@@ -415,7 +414,7 @@ module ForkChoiceHelpers {
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
     predicate isJustified(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-        /** i is an index in ebbs, and each index represent an epoch so must be unint64. */
+        /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
         requires i < |ebbs| <= 0x10000000000000000
         /** `xb` has at least one block. */
         requires |xb| >= 1
@@ -441,5 +440,48 @@ module ForkChoiceHelpers {
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 
                         >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
+
+    /**
+     *  
+    //  *  @param  i       An index in the sequence of ebbs. This is not the epoch
+    //  *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
+     *  @param  xb      A sequence of block roots.
+     *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
+     *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
+     *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
+     *  @param  links   All the attestations received so far.
+     *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
+     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
+     */
+    predicate isOneFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
+        /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
+        requires i < |ebbs| <= 0x10000000000000000
+        /** `xb` has at least one block. */
+        requires |xb| >= 1
+        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
+        requires ebbs[|ebbs| - 1] == |xb| - 1
+        
+        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
+        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+
+        decreases |ebbs| - i 
+    {
+        isJustified(i, xb, ebbs, links) &&
+
+        // true
+        // if i == |ebbs| - 1 then 
+        //     // Last block in the list is assumed to be justified.
+        //     true
+        // else 
+        //     //  There should be a justified block at a higher index `j` that is justified
+        //     //  and a supermajority link from `j` to `i`.
+        //     exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
+        //         && |collectValidatorsAttestatingForLink(
+        //             links, 
+        //             CheckPoint(j as Epoch, xb[ebbs[j]]), 
+        //             CheckPoint(i as Epoch, xb[ebbs[i]]))| 
+                        // >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
  
+    
 }
