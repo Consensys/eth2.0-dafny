@@ -61,6 +61,129 @@ module ForkChoiceTypes {
         // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )
 
+    /**
+     *  A well-formed store is a store for which each block
+     *  with a slot > 0 has a parent in the store.
+     *  Downward closure for the parent relation.
+     *
+     *  @param  store   A store.
+     */
+    predicate isClosedUnderParent(store: Store) 
+    {
+        forall k {:trigger store.blocks[k]}:: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
+            store.blocks[k].parent_root in store.blocks.Keys
+    }
+
+    /**
+     *  A store where the slots of parent blocks decrease.
+     *
+     *  @param  store   A store.
+     */
+    predicate isSlotDecreasing(store: Store)
+        requires isClosedUnderParent(store)
+    {
+        forall k :: k in store.blocks.Keys && store.blocks[k].slot > 0 ==>
+            store.blocks[store.blocks[k].parent_root].slot < store.blocks[k].slot
+    }
+
+    /**
+     *  A chain of blocks roots is a totally ordered (decreasing, slot-wise)
+     *  sequence of block roots, such that the slot of last block is zero.
+     *
+     *  @param  xr      A non-empty seq of block roots.
+     *  @param  store   A store.
+     *
+     *  @example of a chain of size 6.  
+     *  xr = [br5, br4, br3, br2, br1, br0] with 
+     *  a. store.blocks[br0].slot == 0
+     *  b. store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
+     *  xr is a chain if (---> is the descendant relation):
+     *  1. br0 ---> br1 ---> br2 ---> br3 ---> br4 ---> br5 and
+     *  2. a. and b.
+     */
+    predicate isChain(xr: seq<Root>, store: Store)  
+        decreases xr
+    {
+        |xr| >= 1
+        &&
+        (forall i :: 0 <= i < |xr| ==> xr[i] in store.blocks.Keys)
+        && 
+        store.blocks[xr[|xr| - 1]].slot == 0 
+        && 
+        if |xr| == 1 then 
+            //  last block with slot 0 is assumed to be a chain.
+            true
+        else 
+            store.blocks[xr[0]].parent_root == xr[1] 
+            && store.blocks[xr[0]].slot > store.blocks[xr[1]].slot
+            && isChain(xr[1..], store)
+    }
+
+    /**
+     *  The ancestors of a block root, as a sequence of block roots.
+     *  
+     *  @param  br      A hash root of a block that is in the `store`.
+     *  @param  store   A store (similar to the view of the validator).
+     *  @returns        The ancestors's roots of the block `br` in  `store` with
+     *                  `br` first and oldest (genesis) is the last element of the sequence.
+     *
+     *  @example. br block at slot 134. 
+     *  Store ancestors from br given by: br == b0 and then b1, b2, ... b5.
+     *  |chainRoots(br, store)| == 6, chainRoots(br, store)[i] == bi
+     *  store.blocks[chainRoots(br, store)[5]].slot ==  store.blocks[b5].slot == 0
+     *  store.blocks[b5].slot == 0
+     *  store.blocks[brk].slot >  store.blocks[brk - 1].slot for k >=1 
+     *          |............|............|............|............|............|...
+     *  block   b5----------->b4---------->b3---->b2------>b1------->b0 == br     
+     *  slot    0             32           63     95       109       134
+     */
+    function chainRoots(br: Root, store: Store) : seq<Root>
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        ensures |chainRoots(br, store)| >= 1  
+        /** Result is a slot-decreasing chain of linked roots the last one is slot 0..  */
+        ensures isChain(chainRoots(br, store), store)
+
+        //  Computation always terminates as slot number decreases (well-foundedness).
+        decreases store.blocks[br].slot
+    {
+        if ( store.blocks[br].slot == 0 ) then
+            //  Should be the genesis block.
+            [ br ]
+        else 
+            [ br ] + chainRoots(store.blocks[br].parent_root, store)
+    }
+
+    /**
+     *  The height of a block in the store.
+     *
+     *  @param  br      A block root.
+     *  @param  store   A store.
+     *  @returns        The height of the block br.
+     */
+    function height(br: Root, store: Store): nat 
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+         decreases store.blocks[br].slot
+    {
+        if ( store.blocks[br].slot == 0 ) then
+            //  Should be the genesis block.
+            0
+        else 
+            1 + height(store.blocks[br].parent_root, store)
+    }
+
+    
 
 
 }
