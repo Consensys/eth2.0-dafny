@@ -156,6 +156,72 @@ module ForckChoiceProofs {
     // }
 
     /**
+     *  In a view G, if (BF, f) in F(G) and (BJ, j) in J(G) with j > f, then BF
+     *  must be an ancestor of BJ , or the blockchain is (1/3)-slashable – 
+     *  specifically, there must exist 2 subsets V1, V2 of V, each with total stake at 
+     *  least 2N/3, such that their intersection all violate slashing condition (S1) 
+     *  or all violate slashing condition (S2).
+     *
+     *  Proof for 1-finalisation.
+     *
+     *  Assume (bf,f) 1-finalised and (bj, j) justified and not a descendant of (bf)
+     *  
+     *  epoch   0                         f              f+1                             
+     *          |............        .....|...................|   
+     *  V1                              (bf,f) ====J====> (b1, f + 1)      
+     *  epoch                 l                j        
+     *                        |.....                           ....|............
+     *  V2                  (bl,l) =========== J ============>  (bj,j)
+     *  
+     *  
+     *  Assume (bj, j) is such that j is the smallest epoch after f such (bj, j) in J(G).
+     *  Note that if j == f, lemma4_11 applies.
+     *  The same reasoning applies to l: l < f or l > f as otherwise lemma4_11 applies to
+     *  l, f.
+     *  As we assume that j is the first/smallest epoch after f such that (bj,j) in J(G), 
+     *  l cannot be > f. So l < f.
+     *  Also j > f + 1 as otherwise lemma4_11 applies.
+     *  Overall: l < f < f + 1 < j. (Fact1)
+     *
+     *  Every attestation a by a validator in V2 is well-formed and such that: 
+     *  - aep(LJ(a)) == l and a.ep == j  (Fact2)
+     *  Every attestation b by a validator in V1 is well-formed and such that:
+     *  - aep(LJ(b)) == f and b.ep == f + 1 (Fact3)
+     *
+     *  Overall combining facts 1, 2, 3: for any validator in V1 /\ V2 that made two 
+     *  attestation a (to b1) and b (to bj), we have
+     *      l          <       f    <     f + 1  <   j
+     *      aep(LJ(a)) < aep(LJ(b)) <     b.ep   <   a.ep 
+     *  which violates S2 (no validator can make nested attestations).
+     *  
+     *   
+     */
+    lemma {:induction false} lemma5_1(bh1: Root, bh2: Root, store: Store, j: Epoch, f: Epoch)
+        /** The block roots must be from accepted blocks, i.e. in the store. */
+        requires bh1 in store.blocks.Keys
+        requires bh2 in store.blocks.Keys
+        /** Epoch is not zero. */
+        requires j > f >= 0 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
+        /** both checkpoints at epoch j are justified. */
+        requires 
+            var chbh1 := chainRoots(bh1, store);
+            var chbh2 := chainRoots(bh2 , store);
+            //  EBB(bh1, j) is k1[0]
+            var k1 := computeAllEBBsIndices(chbh1, j, store);
+            //  EBB(bh1, j) is k1[0]
+            var k2 := computeAllEBBsIndices(chbh2, j, store);
+            isJustified(0, chbh1, k1, store.rcvdAttestations) && isJustified(0, chbh2, k2, store.rcvdAttestations)
+
+    {
+
+    }
+
+    /**
      *  Rule I (Gasper slashing conditions).
      */
     predicate ruleI(s: Store, links: ListOfAttestations) 
@@ -170,6 +236,7 @@ module ForckChoiceProofs {
     {
         true
     }
+
 
     /**
      *  A list of links is valid if all the attestations in links
