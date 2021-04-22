@@ -168,10 +168,12 @@ module ForckChoiceProofs {
      *  
      *  epoch   0                         f              f+1                             
      *          |............        .....|...................|   
-     *  V1                              (bf,f) ====J====> (b1, f + 1)      
-     *  epoch                 l                j        
+     *  blocks                        bf --- ..... ------> b1 ------- .... --> bh1
+     *  V1                              (bf,f) ====J====> (b1, f + 1) 
+     *  epoch                 l                                    j        
      *                        |.....                           ....|............
-     *  V2                  (bl,l) =========== J ============>  (bj,j)
+     *  blocks             bl --- ..... ------ .... ----> bj --- ..... -----> bh2
+     *  V2                  (bl,l) =========== J ============>  (bj,j) 
      *  
      *  
      *  Assume (bj, j) is such that j is the smallest epoch after f such (bj, j) in J(G).
@@ -200,23 +202,47 @@ module ForckChoiceProofs {
         /** The block roots must be from accepted blocks, i.e. in the store. */
         requires bh1 in store.blocks.Keys
         requires bh2 in store.blocks.Keys
-        /** Epoch is not zero. */
+
+        /** The epochs j and f are before the heads slots. */
+        requires f as nat + 1 < 0x10000000000000000
+        requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
+        requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
+
+        /** Epoch is not zero ? */
         requires j > f >= 0 
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
-        /** both checkpoints at epoch j are justified. */
+        /** Checkpoint at epoch f is 1-finalised. */
         requires 
             var chbh1 := chainRoots(bh1, store);
-            var chbh2 := chainRoots(bh2 , store);
-            //  EBB(bh1, j) is k1[0]
-            var k1 := computeAllEBBsIndices(chbh1, j, store);
-            //  EBB(bh1, j) is k1[0]
-            var k2 := computeAllEBBsIndices(chbh2, j, store);
-            isJustified(0, chbh1, k1, store.rcvdAttestations) && isJustified(0, chbh2, k2, store.rcvdAttestations)
+            //  Compute the EBBs indices from epoch f + 1
+            var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
+            //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
+            isOneFinalised(1, chbh1, k1, store.rcvdAttestations) 
 
+        /** Checkpoint at epoch j is justified. */
+        requires 
+            var chbh2 := chainRoots(bh2 , store);
+            //  Compute the EBBs indices from epoch j
+            var k2 := computeAllEBBsIndices(chbh2, j, store);
+            //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
+            isJustified(0, chbh2, k2, store.rcvdAttestations) && isJustified(0, chbh2, k2, store.rcvdAttestations)
+
+        ensures 
+            // var chbh1 := chainRoots(bh1, store);
+            // var chbh2 := chainRoots(bh2 , store);
+            // //  EBB(bh1, j) is k1[0]
+            // var k1 := computeAllEBBsIndices(chbh1, j, store);
+            // //  EBB(bh1, j) is k1[0]
+            // var k2 := computeAllEBBsIndices(chbh2, j, store);
+            // var tgt1 := CheckPoint(0 as Epoch, chbh1[k1[0]]);
+            // var tgt2 := CheckPoint(0 as Epoch, chbh2[k2[0]]);
+            // |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+            // >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
+            true
     {
 
     }
