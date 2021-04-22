@@ -322,7 +322,7 @@ module ForkChoiceHelpers {
      *  
      *  @param  i       An index in the sequence of ebbs. This is not the epoch
      *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
-     *  @param  xb      A sequence of block roots.
+     *  @param  xb      A sequence of block roots from mnost recent to genesis root.
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
      *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
      *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
@@ -331,13 +331,13 @@ module ForkChoiceHelpers {
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
     predicate isOneFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-        /** i is an index in ebbs, and each index represent an epoch so must be uint64.
-         *  i is not the first index.
+        /** i is an index in ebbs, and each index represents an epoch so must be uint64.
+         *  i is not the first index as to be 1-finalised it needs to have at least on descendant.
          */
-        requires i < |ebbs|  <= 0x10000000000000000
-        requires 0 < i 
-        /** `xb` has at least one block. */
-        requires |xb| >= 1
+        requires 0 < i < |ebbs|  <= 0x10000000000000000
+        // requires 0 < i 
+        /** `xb` has at least two blocks. */
+        requires |xb| >= 2
         /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
         requires ebbs[|ebbs| - 1] == |xb| - 1
         
@@ -346,11 +346,13 @@ module ForkChoiceHelpers {
 
         decreases |ebbs| - i 
     {
+        //  1-finalised: is justified and justifies the next EBB.
         isJustified(i, xb, ebbs, links) &&
+        //  note: the EBBs are in reverse order in `ebbs`
         |collectValidatorsAttestatingForLink(
             links, 
-            CheckPoint(i as Epoch, xb[ebbs[i]]), 
-            CheckPoint((i - 1) as Epoch, xb[ebbs[i - 1]]))| 
+            CheckPoint(i as Epoch, xb[ebbs[i]]),                //  source
+            CheckPoint((i - 1) as Epoch, xb[ebbs[i - 1]]))|     //  target
                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
     
