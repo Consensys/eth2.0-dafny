@@ -322,12 +322,12 @@ module ForkChoiceHelpers {
      *  
      *  @param  i       An index in the sequence of ebbs. This is not the epoch
      *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
-     *  @param  xb      A sequence of block roots from mnost recent to genesis root.
+     *  @param  xb      A sequence of block roots from most recent to genesis root.
      *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
      *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
      *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
      *  @param  links   All the attestations received so far.
-     *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
+     *  @returns        Whether (xb[ebbs[i]], i) is 1-finalised according to the votes in *                  `links`.         
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
     predicate isOneFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
@@ -356,4 +356,45 @@ module ForkChoiceHelpers {
                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
     
+    /**
+     *  
+     *  @param  i       An index in the sequence of ebbs. This is not the epoch
+     *                  of a checkpoint but rather the epoch is |ebbs| - 1 - i 
+     *  @param  xb      A sequence of block roots from most recent to genesis root.
+     *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
+     *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
+     *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
+     *  @param  links   All the attestations received so far.
+     *  @returns        Whether (xb[ebbs[i]], i) is 2-finalised according to the votes in *                  `links`.         
+     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
+     */
+    predicate isTwoFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
+        /** i is an index in ebbs, and each index represents an epoch so must be uint64.
+         *  i is not the first or second index as to be 1-finalised it needs to have at least on descendant.
+         */
+        requires 1 < i < |ebbs|  <= 0x10000000000000000
+        // requires 0 < i 
+        /** `xb` has at least two blocks. */
+        requires |xb| >= 3
+        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
+        requires ebbs[|ebbs| - 1] == |xb| - 1
+        
+        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
+        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+
+        decreases |ebbs| - i 
+    {
+        //  2-finalised
+        isJustified(i, xb, ebbs, links) &&
+        //  index i - 1 is justified two 
+        isJustified(i - 1, xb, ebbs, links) &&
+        //  index i - 2 is justified by i
+        //  note: the EBBs are in reverse order in `ebbs`
+        |collectValidatorsAttestatingForLink(
+            links, 
+            CheckPoint(i as Epoch, xb[ebbs[i]]),                //  source
+            CheckPoint((i - 2) as Epoch, xb[ebbs[i - 2]]))|     //  target
+                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
+                
 }
