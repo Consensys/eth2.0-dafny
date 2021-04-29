@@ -144,70 +144,6 @@ module GasperHelpers {
     }
 
     /**
-     *  The index of the first (left to right) i.e. most recent justified ebb.
-     *  
-     *  @param  i       An index in the sequence of ebbs.
-     *  @param  xb      A sequence of block roots.
-     *  @param  ebbs    A sequence of indices. (xb[ebbs(j)],j) is EBB(xb, |ebbs| - 1 - j).
-     *                  The last element (xb[ebbs[|ebbs| - 1]], |ebbs| - 1 - (|ebbs| - 1) )
-     *                  i.e. (xb[|xb| - 1], 0) is assumed to be justified.
-     *  @param  links   All the attestations received so far.
-     *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
-     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
-     */
-    // function lastJustified(xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>): nat
-    //     /** `xb` has at least one block. */
-    //     requires |xb| >= 1
-    //     requires 1 <= |ebbs| <= 0x10000000000000000
-    //     /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-    //     requires ebbs[|ebbs| - 1] == |xb| - 1
-    //     /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-    //     requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
-
-    //     ensures lastJustified(xb, ebbs, links) < |ebbs|
-    //     ensures isJustified(lastJustified(xb, ebbs, links), xb, ebbs, links)
-    //     /** No index less than lastJustified is justified.  */
-    //     ensures forall i :: 0 <= i < lastJustified(xb, ebbs, links) ==> 
-    //         !isJustified(i, xb, ebbs, links)
-   
-    /**
-     *  
-     *  @param  i       An epoch before the epoch of `br`.
-     *  @param  br      A block root.
-     *
-     *  @param  links   All the attestations received so far.
-     *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
-     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
-     */
-    // predicate isJustified(i: nat, br: Root, links : seq<PendingAttestation>)
-    //     /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
-    //     requires i < |ebbs| <= 0x10000000000000000
-    //     /** `xb` has at least one block. */
-    //     requires |xb| >= 1
-    //     /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-    //     requires ebbs[|ebbs| - 1] == |xb| - 1
-        
-    //     /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-    //     requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
-
-    //     decreases |ebbs| - i 
-    // {
-    //     // true
-    //     if i == |ebbs| - 1 then 
-    //         // Last block in the list is assumed to be justified.
-    //         true
-    //     else 
-    //         //  There should be a justified block at a higher index `j` that is justified
-    //         //  and a supermajority link from `j` to `i`.
-    //         exists j  :: i < j < |ebbs| - 1 && isJustified(j, xb, ebbs, links) 
-    //             && |collectValidatorsAttestatingForLink(
-    //                 links, 
-    //                 CheckPoint(j as Epoch, xb[ebbs[j]]), 
-    //                 CheckPoint(i as Epoch, xb[ebbs[i]]))| 
-    //                     >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    // }
-
-    /**
      *  
      *  @param  i       An epoch before the epoch of `br`.
      *  @param  links   All the attestations received so far.
@@ -253,32 +189,34 @@ module GasperHelpers {
      *  @param  links   All the attestations received so far.
      *  @returns        Whether (xb[ebbs[i]], i) is 1-finalised according to the votes in *                  `links`.         
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
+     *
+     *  epoch   0                         f              f+1                             
+     *          |............        .....|...................|   
+     *  blocks                        bf --- ..... ------> b1 ------- .... --> bh1
+     *  V1                              (bf,f) ====J====> (b1, f + 1) 
      */
-    // predicate isOneFinalised(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
-    //     /** i is an index in ebbs, and each index represents an epoch so must be uint64.
-    //      *  i is not the first index as to be 1-finalised it needs to have at least on descendant.
-    //      */
-    //     requires 0 < i < |ebbs|  <= 0x10000000000000000
-    //     // requires 0 < i 
-    //     /** `xb` has at least two blocks. */
-    //     requires |xb| >= 2
-    //     /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-    //     requires ebbs[|ebbs| - 1] == |xb| - 1
-        
-    //     /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-    //     requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+    predicate isOneFinalised(e: Epoch, ebbs: seq<Root>, store: Store, links : seq<PendingAttestation>)
+        /** e is an epoch in ebbs, and each index represents an epoch so must be uint64.
+         *  e is not the first index as to be 1-finalised it needs to have at least one descendant.
+         */
+        requires 0 < e as nat < |ebbs|  <= 0x10000000000000000
+        /** `ebbs` has at least two blocks. */
+        requires |ebbs| >= 2
 
-    //     decreases |ebbs| - i 
-    // {
-    //     //  1-finalised: is justified and justifies the next EBB.
-    //     isJustified(i, xb, ebbs, links) &&
-    //     //  note: the EBBs are in reverse order in `ebbs`
-    //     |collectValidatorsAttestatingForLink(
-    //         links, 
-    //         CheckPoint(i as Epoch, xb[ebbs[i]]),                //  source
-    //         CheckPoint((i - 1) as Epoch, xb[ebbs[i - 1]]))|     //  target
-    //             >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    // }
+        /** The block roots are in the store. */
+        requires forall k:: 0 <= k < |ebbs| ==> ebbs[k] in store.blocks.Keys 
+
+        decreases |ebbs| - e as nat
+    {
+        //  1-finalised: is justified and justifies the next EBB.
+        isJustifiedEpoch(e, ebbs, store, links) &&
+        //  note: the EBBs are in reverse order in `ebbs`
+        |collectValidatorsAttestatingForLink(
+            links,  
+            CheckPoint(e, ebbs[|ebbs| - 1 - e as nat]),         //  source
+            CheckPoint(e - 1, ebbs[|ebbs| - e as nat]))|        //  target
+                >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
     
     /**
      *  
