@@ -15,18 +15,18 @@
 include "../../utils/Eth2Types.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../../ssz/Constants.dfy"
-include "ForkChoiceTypes.dfy"
-include "ForkChoiceHelpers.dfy"
-include "ForkChoiceHelpers.p.dfy"
+include "../forkchoice/ForkChoiceTypes.dfy"
+include "../forkchoice/ForkChoiceHelpers.dfy"
+include "../forkchoice/ForkChoiceHelpers.p.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../BeaconChainTypes.dfy"
-
+ 
 /**
  *  Proofs for the ForkChoice properties.  
  */
-module ForckChoiceProofs {
+module GasperProofs {
     
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
@@ -60,7 +60,7 @@ module ForckChoiceProofs {
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store)
+        requires isSlotDecreasing(store)  
 
         /** both checkpoints at epoch j are justified. */
         requires 
@@ -208,6 +208,9 @@ module ForckChoiceProofs {
         requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
         requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
 
+        // requires 0 <= j < compute_epoch_at_slot(store.blocks[br].slot)   
+
+
         /** Epoch is not zero ? */
         requires j > f >= 0 
         /** The store is well-formed, each block with slot != 0 has a parent
@@ -224,12 +227,15 @@ module ForckChoiceProofs {
             isOneFinalised(1, chbh1, k1, store.rcvdAttestations) 
 
         /** Checkpoint at epoch j is justified. */
-        requires 
-            var chbh2 := chainRoots(bh2 , store);
-            //  Compute the EBBs indices from epoch j
-            var k2 := computeAllEBBsIndices(chbh2, j, store);
-            //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
-            isJustified(0, chbh2, k2, store.rcvdAttestations) && isJustified(0, chbh2, k2, store.rcvdAttestations)
+        requires isJustifiedInStore(bh2, store, j)
+            // var chbh2 := chainRoots(bh2 , store);
+            // //  Compute the EBBs indices from epoch j
+            // var k2 := computeAllEBBsIndices(chbh2, j, store);
+            // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
+            // //  It must be justified, and there is a previous justified checkpoint l 
+            // //  that justifies it.
+            // isJustified(0, chbh2, k2, store.rcvdAttestations) && 
+            //     exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations)
 
         ensures 
             // var chbh1 := chainRoots(bh1, store);
@@ -244,8 +250,76 @@ module ForckChoiceProofs {
             // >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
             true
     {
+        var chbh1 := chainRoots(bh1, store);
+        //  Compute the EBBs indices from epoch f + 1
+        var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
+        //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
+        // assert(isOneFinalised(1, chbh1, k1, store.rcvdAttestations));
+        // assert(isJustified(0, chbh1, k1, store.rcvdAttestations));
 
+        // var chbh2 := chainRoots(bh2 , store);
+        // //  Compute the EBBs indices from epoch j
+        // var k2 := computeAllEBBsIndices(chbh2, j, store);
+        // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
+        // assert(isJustified(0, chbh2, k2, store.rcvdAttestations));
+        // assert(exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations));
+        // var l :| 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations);
+
+        //  proof that j == f not OK
+        // if j == f {
+        //     lemma4_11_a(chbh1[k1[0]], chbh2[k2[0]], store, j);
+        // } else {
+
+        // }
     }
+
+    /**
+     *
+     *  @param  br      A block root (head of the chain).
+     *  @param  store   A store.
+     *  @param  j       An epoch.
+     *  @returns        Whether checkpoint at epoch j is justified in store.
+     */
+    predicate isJustifiedInStore(br: Root, store: Store, j: Epoch)
+        requires br in store.blocks.Keys
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
+        /** Epoch is smaller than epoch of head block root. */
+        requires 0 <= j <= compute_epoch_at_slot(store.blocks[br].slot)   
+    {   
+        //  compute the anscestors of br
+        var chRoots := chainRoots(br , store);
+        //  Compute the EBBs indices (backwards) from epoch j
+        var k2 := computeAllEBBsIndices(chRoots, j, store);
+        //  The EBB at epoch j is (k2[0], j). Check whether epoch j - 0 is justified in store.
+        isJustified(0, chRoots, k2, store.rcvdAttestations)
+    }
+
+    /**
+     *
+     *  @param  br      A block root (head of the chain).
+     *  @param  store   A store.
+     *  @param  j       An epoch.
+     *  @returns        Whether checkpoint at epoch j is one-finalised in store.
+     */
+    predicate isOneFinalisedInStore(br: Root, store: Store, j: Epoch)
+        requires br in store.blocks.Keys
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)    //     /** Epoch is smaller than epoch of head block root. */
+        requires 0 <= j as nat + 1 < compute_epoch_at_slot(store.blocks[br].slot) as nat 
+    {
+        var chRoots := chainRoots(br, store);
+        //  Compute the EBBs indices from epoch j + 1
+        var k1 := computeAllEBBsIndices(chRoots, j + 1, store);
+        //  EBB(br, j + 1) is k1[0] and EBB(br, j) is k1[1]
+        isOneFinalised(1, chRoots, k1, store.rcvdAttestations) 
+    }
+
 
     /**
      *  Rule I (Gasper slashing conditions).
