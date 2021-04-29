@@ -106,15 +106,18 @@ module ForkChoiceTypes {
     {
         |xr| >= 1
         &&
-        (forall i :: 0 <= i < |xr| ==> xr[i] in store.blocks.Keys)
-        && 
-        store.blocks[xr[|xr| - 1]].slot == 0 
-        && 
+        // (forall i :: 0 <= i < |xr| ==> xr[i] in store.blocks.Keys)
+        xr[0] in store.blocks.Keys
+        &&  
+        // store.blocks[xr[|xr| - 1]].slot == 0 
+        // && 
         if |xr| == 1 then 
             //  last block with slot 0 is assumed to be a chain.
-            true
+            // true
+            store.blocks[xr[0]].slot == 0 
         else 
-            store.blocks[xr[0]].parent_root == xr[1] 
+            xr[1] in store.blocks.Keys
+            && store.blocks[xr[0]].parent_root == xr[1] 
             && store.blocks[xr[0]].slot > store.blocks[xr[1]].slot
             && isChain(xr[1..], store)
     }
