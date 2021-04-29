@@ -34,23 +34,22 @@ module GasperHelpers {
     import opened ForkChoiceTypes
    
     /**
-     *  Compute the first block root in chain with slot number less than or equal to an epoch.
-     *  Also known as EBB in the Gasper paper.
+     *  Compute all the EBBs in a chain of block roots.
      *
      *  @param  xb      A sequence of block roots which is a chain. First element
      *                  is the block with highest slot.
      *  @param  e       An epoch.
      *  @param  store   A store.
-     *  @return         The index i of the first block root in xb (left to right) with 
-     *                  slot number less than or equal to the epoch `e`. 
-     *  @note           We don't need the assumption that the list of blocks in `xb`
-     *                  are ordered by slot number.
-     *  @note           LEBB(xb) is defined by computeEBBAtEpoch(xb, epoch(first(xb))).
+     *  @return         The sequence `s` of EBBs for each epoch 0 <= e' <= e in reverse order i.e.
+     *                  the EBB at epoch e' is s[e = e'] with s[0] the EBB at epoch e and 
+     *                  s[|s| - 1] the EBB at epoch 0.
+     *  @note           LEBB(xb) can be obtained by 
+     *                      computeEBBsForAllEpochs(xb, epoch(first(xb)), store)[0].
      *  
-     *  epoch   0            1            2            3            4            5  
-     *          |............|............|............|............|............|....
-     *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
-     *  slot    0             32           65      95      105       134
+     *  epoch   0            1            2            3            4            5           6
+     *          |............|............|............|............|............|...........|
+     *  block   b5----------->b4---------->b3---->b2------>b1--------->b0      
+     *  slot    0             32           65      95      105        134
      *       
      *  For any sequence xb == [..,b5], EBB(xb, 0) == (b5, 0).
      *
@@ -68,11 +67,13 @@ module GasperHelpers {
      *  If e == 2, EBB(xb, 2) == (b4, 2).
      *  If e == 1, EBB(xb, 1) == (b0, 1).
      *  LEBB(xb) == (b4, 2).
+     *  computeEBBsForAllEpochs(xb, 6) = [b0, b0, b1, b2, b4, b5, b5]
+     *
      */
     function computeEBBsForAllEpochs(xb: seq<Root>, e: Epoch, store: Store): seq<Root>
 
         requires |xb| >= 1
-        /** A slot decreasing chain of roots. */
+        /** A (slot decreasing) chain of roots. */
         requires isChain(xb, store)
 
         /** The result is in the range of xb. */
@@ -104,108 +105,43 @@ module GasperHelpers {
     }
 
     /**
-     *  The EBB for epoch 0 is the last element of `xb`.
+     *  Compute all the EBBs in a chain starting at a given block root.
      *
-     *  @param  xb      A sequence of block roots, the last one with slot == 0.
-     *  @param  e       An epoch.
-     *  @param  store   A store.
-     */
-    // lemma {:induction xb} ebbForEpochZeroIsLast(xb : seq<Root>, e :  Epoch, store: Store)
-    //     requires |xb| >= 1
-    //     /** A slot decreasing chain of roots. */
-    //     requires isChain(xb, store)
-
-    //     ensures computeEBBAtEpoch(xb, 0, store) == |xb| - 1
-    // {   //  Thanks Dafny
-    // }
-   
-    /**
-     *  Compute all the EBBs in a chain of block roots.
-     *
-     *  @param  xb      A sequence of block roots, the last one has slot equal to 0.
-     *  @param  e       An epoch.
-     *  @param  store   A store.
-     *  @returns        The sequence of e + 1 EBBs for each epoch 0 <= e' <= e.
-     *                  Element at index 0 <= k < |computeAllEBBsIndices()| is 
-     *                  EBB(xb, e - k).
-     *
-     *  epoch   0            1            2            3            4            5  ...
-     *          |............|............|............|............|............|  ...
-     *  block   b5----------->b4---------->b3---->b2------>b1------->b0      
-     *  slot    0             32           65      95      105       134
-     *       
-     *  For any sequence xb == [..,b5], EBB(xb, 0) == (b5, 0).
-     *
-     *  Example 1. xb == [b0, b1, b2, b3, b4, b5].
-     *  if e >= 5, EBB(xb, e) == (b0, e). 
-     *  If e == 4, EBB(xb, 4) == b1 (last block in epoch 4). 
-     *  As epoch(b0) == 4, LEBB(xb) == EBB(xb, epoch(b0)) == b1.
-     *  computeAllEBBsIndices(xb, 6) = [b0, b0, b1, b2, b4, b5, b5]
-     *
-     */
-    // function computeAllEBBsIndices(xb : seq<Root>, e :  Epoch, store: Store) : seq<nat>
-    //     requires |xb| >= 1
-    //     /** A slot decreasing chain of roots. */
-    //     requires isChain(xb, store)
-
-    //     /** Store is well-formed. */
-    //     requires isClosedUnderParent(store)
-    //     requires isSlotDecreasing(store)
-
-    //     /** Each epoch has a block associated to. */
-    //     ensures |computeAllEBBsIndices(xb, e, store)| == e as nat + 1
-    //     /** The index for each epoch is in the range of xb. */
-    //     ensures forall i :: 0 <= i < e as nat + 1 ==> computeAllEBBsIndices(xb, e, store)[i] < |xb|
-    //     /** The sequence returned is in decreasing order slot-wise. */
-    //     ensures forall i :: 1 <= i < e as nat + 1 ==> 
-    //         store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i - 1]]].slot >= store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i]]].slot
-    //     /** The epoch e - i boundary block has a slot less than (e - i) * SLOTS_PER_EPOCH. */
-    //     ensures forall i :: 0 <= i < e as nat + 1 
-    //         ==> store.blocks[xb[computeAllEBBsIndices(xb, e, store)[i]]].slot as nat <= (e as nat - i) * SLOTS_PER_EPOCH as nat 
-    //     /** The  blocks at index j less than the epoch e - i boundary block have a slot 
-    //         larger than  (e - i) * SLOTS_PER_EPOCH. */
-    //     ensures forall i :: 0 <= i < e as nat + 1 ==> 
-    //         forall j :: 0 <= j < computeAllEBBsIndices(xb, e, store)[i] ==>
-    //         store.blocks[xb[j]].slot as nat > (e as nat - i) * SLOTS_PER_EPOCH as nat
-    //     ensures computeAllEBBsIndices(xb, e, store)[|computeAllEBBsIndices(xb, e, store)| - 1] == |xb| - 1
-        
-    //     decreases e 
-    // {
-    //     ebbForEpochZeroIsLast(xb, e, store);
-    //     //  Get the first boundary block less than or equal to e
-    //     [computeEBBAtEpoch(xb, e, store)] +
-    //     (
-    //         //  if e > 0 recursive call, otherwise, terminate.
-    //         if e == 0 then 
-    //             []
-    //         else 
-    //             computeAllEBBsIndices(xb, e - 1, store)
-    //     )
-    // }
-
-    /**
      *  @param  br      A block root.
      *  @param  e       An epoch.
      *  @param  store   A store.
-     *  @returns        The sequence s of e + 1 block roots that are EBB at each epoch
-     *                  0 <= e' <= e.
-     *                  The EBB at epoch e' is s[e - e'].
-     *  @note           We could change the def to have EBB at epoch e' is s[e'] if it simplifies
-     *                  things.
+     *  @return         The sequence `s` of EBBs for each epoch 0 <= e' <= e in reverse order i.e.
+     *                  the EBB at epoch e' is s[e = e'] with s[0] the EBB at epoch e and 
+     *                  s[|s| - 1] the EBB at epoch 0.
+     *  @note           LEBB(br) is defined by 
+     *                      computeAllEBBSFromRoot(xb, epoch(first(xb)), store)[0].
      */
-    // function computeAllEBBs(br: Root, e:  Epoch, store: Store) : seq<Root>
-    //     /** The block root must in the store.  */
-    //     requires br in store.blocks.Keys
+    function computeAllEBBSFromRoot(br: Root, e: Epoch, store: Store): seq<Root>
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
 
-    //     /** Store is well-formed. */
-    //     requires isClosedUnderParent(store)
-    //     requires isSlotDecreasing(store)
+        /** The result is in the range of xb. */
+        ensures |computeAllEBBSFromRoot(br, e, store)| == e as nat + 1
 
-    //     /** Define this function by its post conditions. */
-    //     ensures |computeAllEBBs(br, e, store)| == e as nat + 1
-    //     ensures forall k:: 0 <= k <= e ==> 
-    //         computeAllEBBs(br, e, store)[k] 
-    //         == chainRoots(br, store)[computeAllEBBsIndices(chainRoots(br, store), e, store)[k]]
+        /** All the block roots are in the store. */
+        ensures forall b:: b in computeAllEBBSFromRoot(br, e, store) ==> b in store.blocks.Keys
+
+        /** EBB for epoch 0 is a block with slot == 0. */
+        ensures store.blocks[computeAllEBBSFromRoot(br, e, store)[e]].slot == 0  
+
+        /** The slots of the EBB at epoch k is less or equal to k * SLOTS_PER_EPOCH. */
+        ensures forall k:: 0 <= k <= e ==>
+            //  EBBs are collected in reverse order, so EBB at epoch k has index e - k
+            store.blocks[computeAllEBBSFromRoot(br, e, store)[e - k]].slot as nat <= k as nat * SLOTS_PER_EPOCH as nat
+
+    {
+        var cr := chainRoots(br, store);
+        computeEBBsForAllEpochs(cr, e, store)
+    }
 
     /**
      *  The index of the first (left to right) i.e. most recent justified ebb.
@@ -278,35 +214,30 @@ module GasperHelpers {
      *  @param  store   A store.
      *
      *  @returns        Whether (ebbs[i], i) is justified according to the votes in *                  `links`.         
-     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
+     *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
      */
-    // predicate isJustifiedEpoch(i: nat, ebbs: seq<Root>, store: Store, links : seq<PendingAttestation>)
-    //     /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
-    //     requires i < |ebbs| <= 0x10000000000000000
-    //     /** `xb` has at least one block. */
-    //     // requires |xb| >= 1
-    //     /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
-    //     // requires ebbs[|ebbs| - 1] == |xb| - 1
-        
-    //     /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
-    //     // requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+    predicate isJustifiedEpoch(e: Epoch, ebbs: seq<Root>, store: Store, links : seq<PendingAttestation>)
+        /** i is an epoch in ebbs, and each index represent an epoch so must be uint64. */
+        requires e as nat <= |ebbs| <= 0x10000000000000000
 
-    //     decreases |ebbs| - i  
-    // {
-    //     // true
-    //     if i == |ebbs| - 1 then 
-    //         // Last block in the list is assumed to be justified.
-    //         store.blocks[ebbs[0]].slot == 0 
-    //     else 
-    //         //  There should be a justified block at a higher index `j` that is justified
-    //         //  and a supermajority link from `j` to `i`.
-    //         exists j  :: i < j < |ebbs| - 1 && isJustifiedEpoch(j, xb, ebbs, links) 
-    //             && |collectValidatorsAttestatingForLink(
-    //                 links, 
-    //                 CheckPoint(j as Epoch, xb[ebbs[j]]), 
-    //                 CheckPoint(i as Epoch, xb[ebbs[i]]))| 
-    //                     >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    // }
+        requires forall k:: 0 <= k < |ebbs| ==> ebbs[k] in store.blocks.Keys 
+
+        decreases |ebbs| - e as nat
+    {
+        // true
+        if e as nat == |ebbs| - 1 then 
+            // Last block in the list is justified if it is genesis (slot == 0).
+            store.blocks[ebbs[0]].slot == 0 
+        else 
+            //  There should be a justified block at a higher index `j` that is justified
+            //  and a supermajority link from `j` to `i`.
+            exists j: Epoch  :: e as nat < j as nat < |ebbs| - 1 && isJustifiedEpoch(j, ebbs, store, links) 
+                && |collectValidatorsAttestatingForLink(
+                    links, 
+                    CheckPoint(j as Epoch, ebbs[j]), 
+                    CheckPoint(e as Epoch, ebbs[e]))| 
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
 
 
     /**
