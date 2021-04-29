@@ -230,9 +230,11 @@ module GasperHelpers {
             // Last block in the list is justified if it is genesis (slot == 0).
             store.blocks[ebbs[0]].slot == 0 
         else 
-            //  There should be a justified block at a higher index `j` that is justified
-            //  and a supermajority link from `j` to `i`.
-            exists j: Epoch  :: e as nat < j as nat < |ebbs| - 1 && isJustifiedEpoch(j, ebbs, store, links) 
+            //  There should be a justified block at a higher index `j` (previous epoch)
+            //  that is justified and a supermajority link from `j` to `e`.
+            exists j: Epoch :: 
+                e as nat < j as nat < |ebbs| - 1 
+                && isJustifiedEpoch(j, ebbs, store, links) 
                 && |collectValidatorsAttestatingForLink(
                     links, 
                     CheckPoint(j as Epoch, ebbs[j]), 
