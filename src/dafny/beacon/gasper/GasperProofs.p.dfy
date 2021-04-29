@@ -52,7 +52,7 @@ module GasperProofs {
      *  @param  
      */
     lemma {:induction false} lemma4_11_a(br1: Root, br2: Root, store: Store, j: Epoch)
-         /** The block roots must be from accepted blocks, i.e. in the store. */
+        /** The block roots must be from accepted blocks, i.e. in the store. */
         requires br1 in store.blocks.Keys
         requires br2 in store.blocks.Keys
         /** Epoch is not zero. */
