@@ -114,9 +114,9 @@ module GasperHelpers {
      *                  the EBB at epoch e' is s[e = e'] with s[0] the EBB at epoch e and 
      *                  s[|s| - 1] the EBB at epoch 0.
      *  @note           LEBB(br) is defined by 
-     *                      computeAllEBBSFromRoot(xb, epoch(first(xb)), store)[0].
+     *                      computeAllEBBsFromRoot(xb, epoch(first(xb)), store)[0].
      */
-    function computeAllEBBSFromRoot(br: Root, e: Epoch, store: Store): seq<Root>
+    function computeAllEBBsFromRoot(br: Root, e: Epoch, store: Store): seq<Root>
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
@@ -125,18 +125,18 @@ module GasperHelpers {
         requires isSlotDecreasing(store)
 
         /** The result is in the range of xb. */
-        ensures |computeAllEBBSFromRoot(br, e, store)| == e as nat + 1
+        ensures |computeAllEBBsFromRoot(br, e, store)| == e as nat + 1
 
         /** All the block roots are in the store. */
-        ensures forall b:: b in computeAllEBBSFromRoot(br, e, store) ==> b in store.blocks.Keys
+        ensures forall b:: b in computeAllEBBsFromRoot(br, e, store) ==> b in store.blocks.Keys
 
         /** EBB for epoch 0 is a block with slot == 0. */
-        ensures store.blocks[computeAllEBBSFromRoot(br, e, store)[e]].slot == 0  
+        ensures store.blocks[computeAllEBBsFromRoot(br, e, store)[e]].slot == 0  
 
         /** The slots of the EBB at epoch k is less or equal to k * SLOTS_PER_EPOCH. */
         ensures forall k:: 0 <= k <= e ==>
             //  EBBs are collected in reverse order, so EBB at epoch k has index e - k
-            store.blocks[computeAllEBBSFromRoot(br, e, store)[e - k]].slot as nat <= k as nat * SLOTS_PER_EPOCH as nat
+            store.blocks[computeAllEBBsFromRoot(br, e, store)[e - k]].slot as nat <= k as nat * SLOTS_PER_EPOCH as nat
 
     {
         var cr := chainRoots(br, store);
@@ -144,38 +144,80 @@ module GasperHelpers {
     }
 
     /**
-     *  
-     *  @param  i       An epoch before the epoch of `br`.
-     *  @param  links   All the attestations received so far.
-     *  @param  store   A store.
+     *  Whether a checkpoint is justified.
      *
-     *  @returns        Whether (ebbs[i], i) is justified according to the votes in *                  `links`.         
+     *  @param  ebbs    A sequence of block roots. Should be the checkpoints (EBBs)
+     *                  at each epoch |ebbs| - 1,  ... |ebbs| - 1 - k, ... 0.
+     *                  (ebbs[|ebbs| - 1 - k], k) is the EBB at epoch k.
+     *  @param  e       An epoch <= |ebbs| - 1.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
      *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
+     *  epoch       0                    e                              |ebbs| - 1
+     *              |............   .... |....    .....|...................|..........
+     *  ChkPt  ebbs[|ebbs| - 1] ... (ebbs[|ebbs| - 1 - e], e) ....    ebbs[0]
+     *  
      */
-    predicate isJustifiedEpoch(e: Epoch, ebbs: seq<Root>, store: Store, links : seq<PendingAttestation>)
+    predicate isJustifiedEpoch(ebbs: seq<Root>, e: Epoch, store: Store, links : seq<PendingAttestation>)
         /** i is an epoch in ebbs, and each index represent an epoch so must be uint64. */
-        requires e as nat <= |ebbs| <= 0x10000000000000000
+        requires e as nat + 1 <= |ebbs| <= 0x10000000000000000
 
         /** The block roots are in the store. */
         requires forall k:: 0 <= k < |ebbs| ==> ebbs[k] in store.blocks.Keys 
 
-        decreases |ebbs| - e as nat
+        decreases e
     {
         // true
-        if e as nat == |ebbs| - 1 then 
-            // Last block in the list is justified if it is genesis (slot == 0).
-            store.blocks[ebbs[0]].slot == 0 
+        if e as nat == 0 then 
+            //  Last block in the list is justified if it is genesis (slot == 0).
+            //  This is the sole purpose of the store argument. |ebbs| - 1 - 0 
+            //  is the EBB at epoch 0. 
+            store.blocks[ebbs[|ebbs| - 1]].slot == 0 
         else 
-            //  There should be a justified block at a higher index `j` (previous epoch)
+            //  There should be a justified block at a previous epoch j
             //  that is justified and a supermajority link from `j` to `e`.
             exists j: Epoch :: 
-                e as nat < j as nat < |ebbs| - 1 
-                && isJustifiedEpoch(j, ebbs, store, links) 
+                j < e  
+                && isJustifiedEpoch(ebbs, j, store, links) 
                 && |collectValidatorsAttestatingForLink(
                     links, 
-                    CheckPoint(j as Epoch, ebbs[j]), 
-                    CheckPoint(e as Epoch, ebbs[e]))| 
+                    CheckPoint(j as Epoch, ebbs[|ebbs| - 1 - j as nat]), 
+                    CheckPoint(e as Epoch, ebbs[|ebbs| - 1 - e as nat]))| 
                         >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
+
+    /**
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
+     *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
+     *  epoch       0                    e                              |ebbs| - 1
+     *              |............   .... |....    .....|...................|..........
+     *  ChkPt  ebbs[|ebbs| - 1] ... (ebbs[|ebbs| - 1 - e], e) ....    ebbs[0]
+     *  
+     */
+    predicate isJustifiedEpochFromRoot(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>) 
+        requires br in store.blocks.Keys 
+
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {
+        //  Compute the checkpoints before epoch e and check checkpoint at e justified.
+        var cr := computeAllEBBsFromRoot(br, e, store);
+        //  There are e + 1 EBBs in cr
+        //  cr[0] is the EBB at epoch e, cr[k] at epoch e - k, cr[|cr| - 1] 
+        //  at epoch e - |cr| + 1 == 0
+        assert(|cr| == e as nat + 1);
+        isJustifiedEpoch(cr, e, store, links)
     }
 
     /**
@@ -209,7 +251,7 @@ module GasperHelpers {
         decreases |ebbs| - e as nat
     {
         //  1-finalised: is justified and justifies the next EBB.
-        isJustifiedEpoch(e, ebbs, store, links) &&
+        isJustifiedEpoch(ebbs, e, store, links) &&
         //  note: the EBBs are in reverse order in `ebbs`
         |collectValidatorsAttestatingForLink(
             links,  
