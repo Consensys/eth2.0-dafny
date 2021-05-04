@@ -121,4 +121,25 @@ module SetHelpers {
         assert(3 * |x * y| > |z| <==> |x * y| >= |z| / 3 + 1 );
     } 
 
+    /**
+     *  If two sets x and y have elements within [0, u[ and
+     *  cadinality >= 2 * u / 3 + 1, then their intersection has more
+     *  than u / 3 + 1 elements.
+     *
+     */
+    lemma pigeonHolePrincipleNat(x : set<nat>, y: set<nat>, u: nat) 
+        requires forall e:: e in x ==> e < u 
+        requires forall e:: e in y ==> e < u 
+        requires  |x| >= 2 * u / 3 + 1  
+        requires  |y| >= 2 * u / 3 + 1  
+        ensures |x * y| >= u / 3 + 1
+    {
+        var z := set k: nat | 0 <= k < u :: k;
+        assert(x <= z);
+        assert(y <= z);
+        successiveNatSetCardBound(z, u);
+        assert(|z| == u);
+        pigeonHolePrinciple(x, y, z);
+        
+    }
 }
