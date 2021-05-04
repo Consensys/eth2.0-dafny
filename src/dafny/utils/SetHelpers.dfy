@@ -42,7 +42,7 @@ module SetHelpers {
     }
 
     /**
-     *  If  x [= {0, ..., k - 1} then x has at most k elements.
+     *  If  x <= {0, ..., k - 1} then x has at most k elements.
      */
     lemma natSetCardBound(x : set<nat>, k : nat) 
         requires forall e :: e in x ==> e < k
