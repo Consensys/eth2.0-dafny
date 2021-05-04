@@ -224,6 +224,22 @@ module GasperHelpers {
         isJustifiedEpoch(cr, e, store, links)
     }
 
+
+    /**
+     *  The most recent justified EBB before epoch.
+     */
+    function lastJustified(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>): (l : Epoch)
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)        ensures 0 <= l <= e
+        ensures 
+            var cr := computeAllEBBsFromRoot(br, e, store);
+            isJustifiedEpochFromRoot(br, l, store, links) &&
+            forall k :: l < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
+            
     /**
      *  
      *  @param  ebbs    A sequence of block roots. Should be the checkpoints (EBBs)
@@ -242,9 +258,9 @@ module GasperHelpers {
      */
     predicate isOneFinalised(ebbs: seq<Root>, f: Epoch, store: Store, links : seq<PendingAttestation>)
         /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
-         *  f is not the first index as to be 1-finalised it needs to have at least one descendant.
+         *  f + 1 must be an epoch as to be 1-finalised EBB@f needs one descendant.
          */
-        requires 0 < f as nat < |ebbs| < MAX_UINT64
+        requires 0 <= f as nat + 1 <= |ebbs| - 1 <= MAX_UINT64
         /** `ebbs` has at least two blocks. */
         requires |ebbs| >= 2
 
@@ -261,6 +277,43 @@ module GasperHelpers {
             CheckPoint(f, ebbs[|ebbs| - 1 - f as nat]),                     //  source
             CheckPoint(f + 1, ebbs[|ebbs| - 1 - (f + 1) as nat]))|          //  target
                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
+
+    /** 
+     *
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
+     *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
+     */
+    predicate isOneFinalisedFromRoot(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
+
+        requires br in store.blocks.Keys 
+
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
+         *  f + 1 must be an epoch
+         */
+        requires 0 < f as nat + 1 <= MAX_UINT64 
+
+    {
+        //  Compute the EBBs from `br` before epoch f + 1 
+        var cr := computeAllEBBsFromRoot(br, f + 1, store);
+        //  There are (f + 1) + 1 EBBs in cr indexed from 0 to f + 1
+        //  cr[0] is the EBB at epoch f + 1, cr[k] at epoch f + 1 - k, cr[|cr| - 1 == f + 1] 
+        //  at epoch f + 1 - |cr| + 1 == 0
+        assert(|cr| == f as nat + 2);
+        //  Return whether epoch f is finalised in `cr`
+        isOneFinalised(cr, f, store, links)
+
     }
     
     /**
@@ -303,5 +356,77 @@ module GasperHelpers {
     //         CheckPoint((i - 2) as Epoch, xb[ebbs[i - 2]]))|     //  target
     //              >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     // }
-                
+
+    /**
+     *  The height of a block is one less than the length of the chain of ancestors.
+     */
+    lemma heightOfBlockIsLengthOfAncestorsChain(br: Root, store: Store)
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        ensures 0 <= height(br, store) == |chainRoots(br, store)| - 1
+
+        decreases store.blocks[br].slot
+
+    {   //  Thanks Dafny
+    }
+   
+    /**
+     *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
+     *  ingoing votes.
+     *
+     *  @param  i       An index in `ebbs`.
+     *  @param  xb      Sequence of blocks roots (last one expected to be genesis block root).
+     *  @param  ebbs    A sequence of EBB from epoch |ebbs| - 1 to 0. Last element must
+     *                  be pointing to last element of `xv`.
+     *  @param  links   The votes (attestations).
+     */
+    lemma {:induction e} justifiedMustHaveTwoThirdIncoming(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>)
+
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        
+        requires e > 0 && isJustifiedEpochFromRoot(br, e, store, links)
+
+        ensures 
+            //  The EBBs before e
+            var cr := computeAllEBBsFromRoot(br, e, store);
+            //  The total number of attestations to EBB at epoch e is a supermajority.
+            |collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| 
+                >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    {
+        if e > 0 && isJustifiedEpochFromRoot(br, e, store, links) {
+            var cr := computeAllEBBsFromRoot(br, e, store);
+            assert(isJustifiedEpoch(cr, e, store, links));
+            assert(|cr| == e as nat + 1);
+            assert( exists j :: j < e 
+                && isJustifiedEpoch(cr, j, store, links) 
+                && |collectValidatorsAttestatingForLink(links, CheckPoint(j as Epoch, cr[|cr| - 1 - j as nat]), CheckPoint(e, cr[0]))| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            var j :|  j < e  
+                && isJustifiedEpoch(cr, j, store, links) 
+                && 
+                    |collectValidatorsAttestatingForLink(
+                            links, 
+                            CheckPoint(j as Epoch,  cr[|cr| - 1 - j as nat]),   // source
+                            CheckPoint(e, cr[0]))|                              // target
+                    >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            //  The number of total attestations for the target is larger than 
+            //  than the number of attestations for target from each source
+            attForTgtLargerThanLinks(links, 
+                CheckPoint(j as Epoch, cr[|cr| - 1 - j as nat]), 
+                CheckPoint(e, cr[0])
+            );
+            assert(|collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            
+        }
+    }
+
 }
