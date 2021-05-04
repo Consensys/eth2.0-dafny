@@ -21,8 +21,8 @@
 include "../utils/Eth2Types.dfy"
 
 module Constants {  
+  
   import opened NativeTypes
-
   import opened Eth2Types
 
   //  Powers of 2
