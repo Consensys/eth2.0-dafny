@@ -14,6 +14,7 @@
 
 include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
+include "../../utils/NativeTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../BeaconChainTypes.dfy"
@@ -27,6 +28,7 @@ module GasperHelpers {
     
     import opened Constants
     import opened Eth2Types
+    import opened NativeTypes
     import opened BeaconChainTypes
     import opened BeaconHelpers
     import opened AttestationsTypes
@@ -162,8 +164,8 @@ module GasperHelpers {
      *  
      */
     predicate isJustifiedEpoch(ebbs: seq<Root>, e: Epoch, store: Store, links : seq<PendingAttestation>)
-        /** i is an epoch in ebbs, and each index represent an epoch so must be uint64. */
-        requires e as nat + 1 <= |ebbs| <= 0x10000000000000000
+        /** e is an epoch in ebbs, and each index represent an epoch so must be uint64. */
+        requires e as nat <= |ebbs| < MAX_UINT64
 
         /** The block roots are in the store. */
         requires forall k:: 0 <= k < |ebbs| ==> ebbs[k] in store.blocks.Keys 
@@ -242,7 +244,7 @@ module GasperHelpers {
         /** e is an epoch in ebbs, and each index represents an epoch so must be uint64.
          *  e is not the first index as to be 1-finalised it needs to have at least one descendant.
          */
-        requires 0 < e as nat < |ebbs|  <= 0x10000000000000000
+        requires 0 < e as nat < |ebbs| < MAX_UINT64
         /** `ebbs` has at least two blocks. */
         requires |ebbs| >= 2
 
