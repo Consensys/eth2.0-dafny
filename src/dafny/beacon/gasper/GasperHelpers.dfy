@@ -144,7 +144,7 @@ module GasperHelpers {
     }
 
     /**
-     *  Whether a checkpoint is justified.
+     *  Whether a checkpoint at a given epoch is justified or not.
      *
      *  @param  ebbs    A sequence of block roots. Should be the checkpoints (EBBs)
      *                  at each epoch |ebbs| - 1,  ... |ebbs| - 1 - k, ... 0.
@@ -170,11 +170,10 @@ module GasperHelpers {
 
         decreases e
     {
-        // true
         if e as nat == 0 then 
-            //  Last block in the list is justified if it is genesis (slot == 0).
-            //  This is the sole purpose of the store argument. |ebbs| - 1 - 0 
-            //  is the EBB at epoch 0. 
+            //  Last block in the list is justified if it is genesis (i.e. slot == 0).
+            //  This is the sole purpose of the `store` paramneter. 
+            //  root at index |ebbs| - 1 - 0 is the EBB at epoch 0. 
             store.blocks[ebbs[|ebbs| - 1]].slot == 0 
         else 
             //  There should be a justified block at a previous epoch j
@@ -197,6 +196,8 @@ module GasperHelpers {
      *
      *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
      *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
+     *  
      *
      *  epoch       0                    e                              |ebbs| - 1
      *              |............   .... |....    .....|...................|..........
