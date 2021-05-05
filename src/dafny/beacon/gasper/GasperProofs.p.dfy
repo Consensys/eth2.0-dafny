@@ -56,7 +56,6 @@ module GasperProofs {
         /** The block roots must be from accepted blocks, i.e. in the store. */
         requires br1 in store.blocks.Keys
         requires br2 in store.blocks.Keys
-
         /** Two distinct block roots.  */
         requires br1 != br2 
         /** Epoch is not zero. */
