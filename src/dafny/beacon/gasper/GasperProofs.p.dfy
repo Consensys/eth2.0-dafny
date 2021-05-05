@@ -83,7 +83,7 @@ module GasperProofs {
             >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
     {
 
-        //  chain of rootz from br1 and br2
+        //  chain of roots from br1 and br2
         var cr1 := computeAllEBBsFromRoot(br1, j, store);
         var cr2 := computeAllEBBsFromRoot(br2, j, store);
 
