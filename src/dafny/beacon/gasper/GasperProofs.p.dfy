@@ -16,8 +16,6 @@ include "../../utils/Eth2Types.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
-// include "../forkchoice/ForkChoiceHelpers.dfy"
-// include "../forkchoice/ForkChoiceHelpers.p.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
@@ -34,12 +32,10 @@ module GasperProofs {
     import opened SetHelpers
     import opened Constants
     import opened ForkChoiceTypes
-    // import opened ForkChoiceHelpers
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened BeaconChainTypes
-    // import opened ForkChoiceHelpersProofs
     import opened GasperHelpers
 
     /**
