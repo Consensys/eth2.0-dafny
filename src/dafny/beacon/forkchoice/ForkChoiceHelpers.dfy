@@ -39,6 +39,17 @@ module ForkChoiceHelpers {
      *  @param  a       An attestattion.
      *  @param  store   A store.
      *  @param  links   A sequence of votes.
+     *
+     *  @returns        Whether an attestation data is valid.
+     *                  The attestation has a Beacon block root as entry point
+     *                  that defines its view of the block tree head.
+     *                  It has a slot a.slot which in which the validator (ref by index) 
+     *                  is making the attestation.
+     *                  
+     *                  An attestation is valid if:
+     *                  1. its target is the last epoch boundary block (relative to 
+     *                      the epoch that corresponds to a.slot)
+     *                  2. its source is the last justified pair in the view of a. 
      */
     predicate isValidAttestationData(a : AttestationData, store: Store, links: seq<PendingAttestation>) 
         /** Store is well-formed. */
