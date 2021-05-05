@@ -82,7 +82,7 @@ module GasperProofs {
             //  EBB(br2, j) is k2[0]
             var tgt1 := CheckPoint(j as Epoch, k1[0]);
             var tgt2 := CheckPoint(j as Epoch, k2[0]); 
-            //  set of indices of validators attesting for tgt1 and tgt2 is bounded
+            //  Set of indices of validators attesting for tgt1 and tgt2 is bounded
             //  from below
             |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
             >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
