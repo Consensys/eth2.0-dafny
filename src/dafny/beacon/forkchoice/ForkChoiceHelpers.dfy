@@ -63,7 +63,7 @@ module ForkChoiceHelpers {
         //  The epoch of a, ep(a)
         var ep :=  compute_epoch_at_slot(a.slot);
         //  Index of LEBB(a), LE(a) in the attestation
-        var indexOfLEBB := computeEBB(xc, ep, store);
+        var indexOfLEBB := computeEBBAtEpoch(xc, ep, store);
         //  EBBS
         var ebbs := computeAllEBBsIndices(xc, ep, store);
         //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
@@ -84,6 +84,7 @@ module ForkChoiceHelpers {
 
     /**
      *  A valid pending attestation. 
+     *
      *  @param  a       A pending attestation.
      *
      *  @param  store   A store.
@@ -118,7 +119,7 @@ module ForkChoiceHelpers {
      *                  slot number less than or equal to the epoch `e`. 
      *  @note           We don't need the assumption that the list of blocks in `xb`
      *                  are ordered by slot number.
-     *  @note           LEBB(xb) is defined by computeEBB(xb, epoch(first(xb))).
+     *  @note           LEBB(xb) is defined by computeEBBAtEpoch(xb, epoch(first(xb))).
      *  
      *  epoch   0            1            2            3            4            5  
      *          |............|............|............|............|............|....
@@ -142,7 +143,7 @@ module ForkChoiceHelpers {
      *  If e == 1, EBB(xb, 1) == (b0, 1).
      *  LEBB(xb) == (b4, 2).
      */
-    function computeEBB(xb : seq<Root>, e :  Epoch, store: Store) : nat
+    function computeEBBAtEpoch(xb : seq<Root>, e :  Epoch, store: Store) : nat
 
         requires |xb| >= 1
         /** A slot decreasing chain of roots. */
@@ -150,12 +151,12 @@ module ForkChoiceHelpers {
 
         ensures forall i :: 0 <= i < |xb| ==> xb[i] in store.blocks.Keys 
         /** The result is in the range of xb. */
-        ensures computeEBB(xb, e, store) < |xb|
-        ensures xb[computeEBB(xb, e, store)] in store.blocks.Keys
+        ensures computeEBBAtEpoch(xb, e, store) < |xb|
+        ensures xb[computeEBBAtEpoch(xb, e, store)] in store.blocks.Keys
         /** The slot of the result is bounded. */
-        ensures store.blocks[xb[computeEBB(xb, e, store)]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat 
+        ensures store.blocks[xb[computeEBBAtEpoch(xb, e, store)]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat 
         /** The prefix of xb[..result] has slots >  e * SLOTS_PER_EPOCH. */
-        ensures forall j :: 0 <= j < computeEBB(xb, e, store) ==>
+        ensures forall j :: 0 <= j < computeEBBAtEpoch(xb, e, store) ==>
             store.blocks[xb[j]].slot as nat > e as nat * SLOTS_PER_EPOCH as nat
 
         /** This is guaranteed to termninate because the slot of the last 
@@ -168,7 +169,7 @@ module ForkChoiceHelpers {
             0
         else 
             //  first block has too large a slot, search suffix of xb.
-            1 + computeEBB(xb[1..], e, store)
+            1 + computeEBBAtEpoch(xb[1..], e, store)
     }
 
     /**
@@ -183,7 +184,7 @@ module ForkChoiceHelpers {
         /** A slot decreasing chain of roots. */
         requires isChain(xb, store)
 
-        ensures computeEBB(xb, 0, store) == |xb| - 1
+        ensures computeEBBAtEpoch(xb, 0, store) == |xb| - 1
     {   //  Thanks Dafny
     }
    
@@ -241,7 +242,7 @@ module ForkChoiceHelpers {
     {
         ebbForEpochZeroIsLast(xb, e, store);
         //  Get the first boundary block less than or equal to e
-        [computeEBB(xb, e, store)] +
+        [computeEBBAtEpoch(xb, e, store)] +
         (
             //  if e > 0 recursive call, otherwise, terminate.
             if e == 0 then 
@@ -250,6 +251,30 @@ module ForkChoiceHelpers {
                 computeAllEBBsIndices(xb, e - 1, store)
         )
     }
+
+    /**
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @returns        The sequence s of e + 1 block roots that are EBB at each epoch
+     *                  0 <= e' <= e.
+     *                  The EBB at epoch e' is s[e - e'].
+     *  @note           We could change the def to have EBB at epoch e' is s[e'] if it simplifies
+     *                  things.
+     */
+    function computeAllEBBs(br: Root, e:  Epoch, store: Store) : seq<Root>
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
+
+        /** Define this function by its post conditions. */
+        ensures |computeAllEBBs(br, e, store)| == e as nat + 1
+        ensures forall k:: 0 <= k <= e ==> 
+            computeAllEBBs(br, e, store)[k] 
+            == chainRoots(br, store)[computeAllEBBsIndices(chainRoots(br, store), e, store)[k]]
 
     /**
      *  The index of the first (left to right) i.e. most recent justified ebb.
@@ -277,18 +302,7 @@ module ForkChoiceHelpers {
         /** No index less than lastJustified is justified.  */
         ensures forall i :: 0 <= i < lastJustified(xb, ebbs, links) ==> 
             !isJustified(i, xb, ebbs, links)
-    //  R1: we can compute it, but this requires a lemma to shift a result on
-    //  isJustified(i, ebbs[1..], ...) to isJustified(1 + i, ebbs)
-    // {
-    //     if isJustified(0, xb, ebbs, links) then 
-    //         // assert(isJustified(0,  xb, ebbs, links));
-    //         0
-    //     else 
-    //          // use of a lemma would be needed here, see R1 above.
-    //         // assert(isJustified(1 + lastJustified(xb, ebbs[1..], links), xb, ebbs, links));
-    //         1 + lastJustified(xb, ebbs[1..], links)
-    // }
-
+   
     /**
      *  
      *  @param  i       An index in the sequence of ebbs. This is not the epoch
@@ -301,7 +315,7 @@ module ForkChoiceHelpers {
      *  @returns        Whether (xb[ebbs[i]], i) is justified according to the votes in *                  `links`.         
      *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
      */
-    predicate isJustified(i: nat, xb : seq<Root>, ebbs: seq<nat>,  links : seq<PendingAttestation>)
+    predicate isJustified(i: nat, xb : seq<Root>, ebbs: seq<nat>, links : seq<PendingAttestation>)
         /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
         requires i < |ebbs| <= 0x10000000000000000
         /** `xb` has at least one block. */
@@ -326,6 +340,67 @@ module ForkChoiceHelpers {
                     links, 
                     CheckPoint(j as Epoch, xb[ebbs[j]]), 
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
+
+
+    predicate isJustified3(i: nat, xb : seq<Root>, ebbs: seq<nat>, links : seq<PendingAttestation>)
+        /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
+        requires i < |ebbs| <= 0x10000000000000000
+        /** `xb` has at least one block. */
+        requires |xb| >= 1
+        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
+        requires ebbs[|ebbs| - 1] == |xb| - 1
+        
+        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
+        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] < |xb|
+
+        decreases |ebbs| - i 
+    {
+        // true
+        if i == |ebbs| - 1 then 
+            // Last block in the list is assumed to be justified.
+            true
+        else 
+            //  There should be a justified block at a higher index `j` that is justified
+            //  and a supermajority link from `j` to `i`.
+            exists j  :: i < j < |ebbs| - 1 && isJustified3(j, xb, ebbs, links) 
+                && |collectValidatorsAttestatingForLink(
+                    links, 
+                    CheckPoint(j as Epoch, xb[ebbs[j]]), 
+                    CheckPoint(i as Epoch, xb[ebbs[i]]))| 
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
+
+
+    /**
+     *  ebbs[k] is the the EBB at epoch |ebbs| - 1 - k    
+     */
+    predicate isJustified2(i: nat, ebbs: seq<Root>, store: Store, links : seq<PendingAttestation>)
+        /** i is an index in ebbs, and each index represent an epoch so must be uint64. */
+        requires i < |ebbs| <= 0x10000000000000000
+        /** `xb` has at least one block. */
+        // requires |xb| >= 1
+        /** The last element of ebbs is the EBB at epoch 0 and should be the last block in `xb`. */
+        // requires ebbs[|ebbs| - 1] == |xb| - 1
+        
+        /** (xb[ebbs[j]], j) is the EBB at epoch |ebbs| - j and must be an index in `xb`.  */
+        requires forall i :: 0 <= i < |ebbs| ==> ebbs[i] in store.blocks.Keys
+
+        decreases |ebbs| - i 
+    {
+        // true
+        if i == |ebbs| - 1 then 
+            // Last block in the list is justified it has slot 0
+            store.blocks[ebbs[0]].slot == 0
+        else 
+            //  There should be a justified block at a higher index `j` that is justified
+            //  and a supermajority link from `j` to `i`.
+            exists j  :: i < j < |ebbs| - 1 && isJustified2(j, ebbs, store, links) 
+                && |collectValidatorsAttestatingForLink(
+                    links, 
+                    CheckPoint(j as Epoch, ebbs[j]), 
+                    CheckPoint(i as Epoch, ebbs[i]))| 
                         >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
 
