@@ -326,7 +326,7 @@ module GasperProofs {
     }
 
 
-        /**
+    /**
      *  Whether an attestation is well-formed.
      *
      *  @param  a       An attestattion.
