@@ -425,7 +425,6 @@ module GasperHelpers {
                 CheckPoint(e, cr[0])
             );
             assert(|collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            
         }
     }
 
