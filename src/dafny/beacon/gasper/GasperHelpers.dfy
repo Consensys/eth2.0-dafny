@@ -35,6 +35,8 @@ module GasperHelpers {
     import opened AttestationsHelpers
     import opened ForkChoiceTypes
    
+    //   EBBs
+
     /**
      *  Compute all the EBBs in a chain of block roots.
      *
@@ -106,89 +108,6 @@ module GasperHelpers {
             computeEBBsForAllEpochs(xb[1..], e, store)
     }
 
-    //  Some useful lemmas about the sequence of EBBs.
-
-    /**
-     *  If first block has an epoch larger than e, the blocks in the EBBs before
-     *  `e` are in tail(xb).
-     *
-     *  @param  xb      A sequence of block roots which is a chain. First element
-     *                  is the block with highest slot.
-     *  @param  e       An epoch.
-     *  @param  store   A store.    
-     */
-    lemma skipFirstBlock(xb: seq<Root>, e: Epoch, store: Store)
-        requires |xb| >= 1
-        /** A (slot decreasing) chain of roots. */
-        requires isChain(xb, store)
-        /** The first block's epoch is larger than e.  */
-        requires store.blocks[xb[0]].slot as nat > e as nat * SLOTS_PER_EPOCH as nat 
-        /** The blocks in the EBBs before e are in tail(xb) */
-        ensures computeEBBsForAllEpochs(xb, e, store) == computeEBBsForAllEpochs(xb[1..], e, store)
-    {
-        //  Thanks Dafny
-    }
-
-    /**
-     *  Relate EBBs at successive epochs.
-     *
-     *  @param  xb      A sequence of block roots which is a chain. First element
-     *                  is the block with highest slot.
-     *  @param  e       An epoch.
-     *  @param  store   A store.    
-     */
-    lemma succEBBs(xb: seq<Root>, e: Epoch, store: Store)
-
-        requires |xb| >= 1
-        /** A (slot decreasing) chain of roots. */
-        requires isChain(xb, store)
-        /** Not epoch 0. */
-        requires e > 0 
-        /** The EBBs from epoch e - 1 are the suffix of the EBBs at epoch e. */
-        ensures 
-            computeEBBsForAllEpochs(xb, e - 1, store) == computeEBBsForAllEpochs(xb, e, store)[1..]
-    {
-        if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat {
-            //  Thanks Dafny
-        } else {
-            if e - 1 == 0 {
-                //  Thanks Dafny 
-            } else {
-                calc == {
-                    computeEBBsForAllEpochs(xb, e - 1, store);
-                    {  skipFirstBlock(xb, e, store); }
-                    computeEBBsForAllEpochs(xb[1..], e - 1, store);
-                }
-                succEBBs(xb[1..], e - 1, store);
-            }
-        }
-    }
-
-    /**
-     *  Relate EBBs at successive epochs.
-     *
-     *  @param  br      A block root.
-     *  @param  e       An epoch.
-     *  @param  store   A store.
-     *  @return         See ensures.
-     */
-    lemma succEBBsFromRoot(br: Root, e: Epoch, store: Store)
-        /** The block root must in the store.  */
-        requires br in store.blocks.Keys
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)
-        /** Not epoch 0 */
-        requires e > 0 
-        /** The EBBs from epoch e - 1 are the suffix of the EBBs at epoch e. */
-        ensures computeAllEBBsFromRoot(br, e - 1, store) == 
-            computeAllEBBsFromRoot(br, e, store)[1..]
-    {
-        var cr := chainRoots(br, store);
-        succEBBs(cr, e, store);
-    }
-
     /**
      *  Compute all the EBBs in a chain starting at a given block root.
      *
@@ -226,6 +145,8 @@ module GasperHelpers {
         var cr := chainRoots(br, store);
         computeEBBsForAllEpochs(cr, e, store)
     }
+
+    //  Justification definitions.
 
     /**
      *  Whether a checkpoint at a given epoch is justified or not.
@@ -319,6 +240,8 @@ module GasperHelpers {
             var cr := computeAllEBBsFromRoot(br, e, store);
             isJustifiedEpochFromRoot(br, l, store, links) &&
             forall k :: l < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
+
+    //  Finalisation definition.   
             
     /** 
      *  Whether checkpoint at epoch f is 1-finalised.
@@ -397,6 +320,87 @@ module GasperHelpers {
     //              >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     // }
 
+    //  Some useful lemmas about the sequence of EBBs.
+
+    /**
+     *  If first block has an epoch larger than e, the blocks in the EBBs before
+     *  `e` are in tail(xb).
+     *
+     *  @param  xb      A sequence of block roots which is a chain. First element
+     *                  is the block with highest slot.
+     *  @param  e       An epoch.
+     *  @param  store   A store.    
+     */
+    lemma skipFirstBlock(xb: seq<Root>, e: Epoch, store: Store)
+        requires |xb| >= 1
+        /** A (slot decreasing) chain of roots. */
+        requires isChain(xb, store)
+        /** The first block's epoch is larger than e.  */
+        requires store.blocks[xb[0]].slot as nat > e as nat * SLOTS_PER_EPOCH as nat 
+        /** The blocks in the EBBs before e are in tail(xb) */
+        ensures computeEBBsForAllEpochs(xb, e, store) == computeEBBsForAllEpochs(xb[1..], e, store)
+    {   //  Thanks Dafny
+    }
+
+    /**
+     *  Relate EBBs at successive epochs.
+     *
+     *  @param  xb      A sequence of block roots which is a chain. First element
+     *                  is the block with highest slot.
+     *  @param  e       An epoch.
+     *  @param  store   A store.    
+     */
+    lemma succEBBs(xb: seq<Root>, e: Epoch, store: Store)
+        requires |xb| >= 1
+        /** A (slot decreasing) chain of roots. */
+        requires isChain(xb, store)
+        /** Not epoch 0. */
+        requires e > 0 
+        /** The EBBs from epoch e - 1 are the suffix of the EBBs at epoch e. */
+        ensures 
+            computeEBBsForAllEpochs(xb, e - 1, store) == computeEBBsForAllEpochs(xb, e, store)[1..]
+    {
+        if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat {
+            //  Thanks Dafny
+        } else {
+            if e - 1 == 0 {
+                //  Thanks Dafny 
+            } else {
+                calc == {
+                    computeEBBsForAllEpochs(xb, e - 1, store);
+                    {  skipFirstBlock(xb, e, store); }
+                    computeEBBsForAllEpochs(xb[1..], e - 1, store);
+                }
+                succEBBs(xb[1..], e - 1, store);
+            }
+        }
+    }
+
+    /**
+     *  Relate EBBs at successive epochs.
+     *
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @return         See ensures.
+     */
+    lemma succEBBsFromRoot(br: Root, e: Epoch, store: Store)
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        /** Not epoch 0 */
+        requires e > 0 
+        /** The EBBs from epoch e - 1 are the suffix of the EBBs at epoch e. */
+        ensures computeAllEBBsFromRoot(br, e - 1, store) == 
+            computeAllEBBsFromRoot(br, e, store)[1..]
+    {
+        var cr := chainRoots(br, store);
+        succEBBs(cr, e, store);
+    }
+
     /**
      *  The height of a block is one less than the length of 
      *  the chain of ancestors.
@@ -443,7 +447,7 @@ module GasperHelpers {
         requires e > 0 && isJustifiedEpochFromRoot(br, e, store, links)
         /** Checkpoint at epoch e has more than 2/3 incoming votes. */
         ensures 
-            //  The EBBs before e
+            //  The EBBs before e. The checkpoint at e is (cr[0], e)
             var cr := computeAllEBBsFromRoot(br, e, store);
             //  The total number of attestations to EBB at epoch e is a supermajority.
             |collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| 
