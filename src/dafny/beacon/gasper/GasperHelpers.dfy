@@ -94,7 +94,7 @@ module GasperHelpers {
 
         decreases xb, e
     {
-        if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat  then 
+        if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat then 
             //  first block is a good one. If e > 0 continue with e - 1, stop otherwise.
             assert(e == 0 ==> store.blocks[xb[0]].slot == 0);
             [xb[0]] + 
@@ -240,45 +240,6 @@ module GasperHelpers {
             isJustifiedEpochFromRoot(br, l, store, links) &&
             forall k :: l < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
             
-    /**
-     *  
-     *  @param  ebbs    A sequence of block roots. Should be the checkpoints (EBBs)
-     *                  at each epoch |ebbs| - 1,  ... |ebbs| - 1 - k, ... 0.
-     *                  (ebbs[|ebbs| - 1 - k], k) is the EBB at epoch k.
-     *  @param  f       An epoch <= |ebbs| - 1.
-     *  @param  store   A store.
-     *  @param  links   A list of attestations.
-     *
-     *  @returns        Whether (ebbs[|ebbs| - 1 - f], f) is 1-finalised according to the votes in *                  `links`.         
-     *  @note           ebbs contains EBB for epochs |ebbs| - 1 down to 0. 
-     *
-     *  epoch   0                         f                  f+1                             
-     *          |............        .....|...................|   
-     *  V1                              (bf,f) ====J====> (b1, f + 1) 
-     */
-    predicate isOneFinalised(ebbs: seq<Root>, f: Epoch, store: Store, links : seq<PendingAttestation>)
-        /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
-         *  f + 1 must be an epoch as to be 1-finalised EBB@f needs one descendant.
-         */
-        requires 0 <= f as nat + 1 <= |ebbs| - 1 <= MAX_UINT64
-        /** `ebbs` has at least two blocks. */
-        requires |ebbs| >= 2
-
-        /** The block roots are in the store. */
-        requires forall k:: 0 <= k < |ebbs| ==> ebbs[k] in store.blocks.Keys 
-
-        decreases |ebbs| - f as nat
-    {
-        //  1-finalised: EBB is justified and it justifies the next EBB.
-        isJustifiedEpoch(ebbs, f, store, links) &&
-        //  note: the EBBs are in reverse order in `ebbs`
-        |collectValidatorsAttestatingForLink(
-            links,  
-            CheckPoint(f, ebbs[|ebbs| - 1 - f as nat]),                     //  source
-            CheckPoint(f + 1, ebbs[|ebbs| - 1 - (f + 1) as nat]))|          //  target
-                >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-    }
-
     /** 
      *
      *  @param  br      A block root.
@@ -293,12 +254,10 @@ module GasperHelpers {
     predicate isOneFinalisedFromRoot(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
 
         requires br in store.blocks.Keys 
-
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
-
         /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
          *  f + 1 must be an epoch
          */
