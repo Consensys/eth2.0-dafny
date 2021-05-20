@@ -471,4 +471,32 @@ module GasperHelpers {
         }
     }
 
+    /** 
+     *  A 1-finalsised checkpoint is justified.
+     *  
+     *  @param  br      A block root.
+     *  @param  f       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     */
+    lemma oneFinalisedImpliesJustified(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
+        requires br in store.blocks.Keys 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+        /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
+         *  f + 1 must be an epoch
+         */
+        requires 0 < f as nat + 1 <= MAX_UINT64 
+        /** Checkpoint at Epoch f is 1-finalised. */
+        requires isOneFinalisedFromRoot(br, f, store, links)
+        /** ChecvkPoint at Epoch f is justified. */
+        ensures isJustifiedEpochFromRoot(br, f, store, links)
+    {
+        var cr := computeAllEBBsFromRoot(br, f + 1, store);
+        var cr2 := computeAllEBBsFromRoot(br, f , store);
+        succEBBsFromRoot(br, f + 1 , store);
+    }
 }
