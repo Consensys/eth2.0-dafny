@@ -347,14 +347,16 @@ module GasperHelpers {
         requires 0 <= f as nat + 1 <= MAX_UINT64 
     {
         //  Compute the EBBs from `br` before epoch f + 1 
-        var cr := computeAllEBBsFromRoot(br, f + 1, store);
-        //  There are (f + 1) + 1 EBBs in cr indexed from 0 to f + 1
-        //  cr[0] is the EBB at epoch f + 1, cr[k] at epoch f + 1 - k, cr[|cr| - 1 == f + 1] 
-        //  at epoch f + 1 - |cr| + 1 == 0
-        assert(|cr| == f as nat + 2);
-        //  Return whether epoch f is finalised in `cr`
-        isOneFinalised(cr, f, store, links)
-
+        var ebbs := computeAllEBBsFromRoot(br, f + 1, store);
+        //  1-finalised: EBB at epoch f is justified (take suffix of ebbs that
+        // contains the ebbs from epoch f to epoch 0) 
+        isJustifiedEpoch(ebbs[1..], f, store, links) &&
+        //  and it justifies the next EBB. note: the EBBs are in reverse order in `ebbs`
+        |collectValidatorsAttestatingForLink(
+            links,  
+            CheckPoint(f, ebbs[|ebbs| - 1 - f as nat]),                     //  source
+            CheckPoint(f + 1, ebbs[|ebbs| - 1 - (f + 1) as nat]))|          //  target
+                >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
     
     /**
