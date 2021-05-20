@@ -344,8 +344,7 @@ module GasperHelpers {
         /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
          *  f + 1 must be an epoch
          */
-        requires 0 < f as nat + 1 <= MAX_UINT64 
-
+        requires 0 <= f as nat + 1 <= MAX_UINT64 
     {
         //  Compute the EBBs from `br` before epoch f + 1 
         var cr := computeAllEBBsFromRoot(br, f + 1, store);
