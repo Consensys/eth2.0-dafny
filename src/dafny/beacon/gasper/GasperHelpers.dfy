@@ -222,7 +222,6 @@ module GasperHelpers {
         ensures forall k:: 0 <= k <= e ==>
             //  EBBs are collected in reverse order, so EBB at epoch k has index e - k
             store.blocks[computeAllEBBsFromRoot(br, e, store)[e - k]].slot as nat <= k as nat * SLOTS_PER_EPOCH as nat
-
     {
         var cr := chainRoots(br, store);
         computeEBBsForAllEpochs(cr, e, store)
@@ -291,7 +290,6 @@ module GasperHelpers {
      */
     predicate isJustifiedEpochFromRoot(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>) 
         requires br in store.blocks.Keys 
-
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
@@ -306,7 +304,6 @@ module GasperHelpers {
         //  Return whether epoch e is justified in `cr`
         isJustifiedEpoch(cr, e, store, links)
     }
-
 
     /**
      *  The most recent justified EBB before epoch.
@@ -324,7 +321,8 @@ module GasperHelpers {
             forall k :: l < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
             
     /** 
-     *
+     *  Whether checkpoint at epoch f is 1-finalised.
+     *  
      *  @param  br      A block root.
      *  @param  e       An epoch.
      *  @param  store   A store.
@@ -335,7 +333,6 @@ module GasperHelpers {
      *
      */
     predicate isOneFinalisedFromRoot(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
-
         requires br in store.blocks.Keys 
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
@@ -401,44 +398,50 @@ module GasperHelpers {
     // }
 
     /**
-     *  The height of a block is one less than the length of the chain of ancestors.
+     *  The height of a block is one less than the length of 
+     *  the chain of ancestors.
+     *  
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
      */
-    lemma heightOfBlockIsLengthOfAncestorsChain(br: Root, store: Store)
+    lemma {:induction br} heightOfBlockIsLengthOfAncestorsChain(br: Root, store: Store)
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
-
+        /** Lenght constraint. */
         ensures 0 <= height(br, store) == |chainRoots(br, store)| - 1
 
         decreases store.blocks[br].slot
-
     {   //  Thanks Dafny
     }
    
     /**
      *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
      *  ingoing votes.
+     *  
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
      *
-     *  @param  i       An index in `ebbs`.
-     *  @param  xb      Sequence of blocks roots (last one expected to be genesis block root).
-     *  @param  ebbs    A sequence of EBB from epoch |ebbs| - 1 to 0. Last element must
-     *                  be pointing to last element of `xv`.
-     *  @param  links   The votes (attestations).
+     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
+     *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
      */
     lemma {:induction e} justifiedMustHaveTwoThirdIncoming(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>)
-
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
-        
+        /** Checkpoint at epoch e is justified. */
         requires e > 0 && isJustifiedEpochFromRoot(br, e, store, links)
-
+        /** Checkpoint at epoch e has more than 2/3 incoming votes. */
         ensures 
             //  The EBBs before e
             var cr := computeAllEBBsFromRoot(br, e, store);
