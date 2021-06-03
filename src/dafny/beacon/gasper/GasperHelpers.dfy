@@ -350,7 +350,7 @@ module GasperHelpers {
      *  @param  e       An epoch.
      *  @param  store   A store.    
      */
-    lemma succEBBs(xb: seq<Root>, e: Epoch, store: Store)
+    lemma {:induction xb, e} succEBBs(xb: seq<Root>, e: Epoch, store: Store)
         requires |xb| >= 1
         /** A (slot decreasing) chain of roots. */
         requires isChain(xb, store)
@@ -359,6 +359,8 @@ module GasperHelpers {
         /** The EBBs from epoch e - 1 are the suffix of the EBBs at epoch e. */
         ensures 
             computeEBBsForAllEpochs(xb, e - 1, store) == computeEBBsForAllEpochs(xb, e, store)[1..]
+
+        decreases xb, e 
     {
         if store.blocks[xb[0]].slot as nat <= e as nat * SLOTS_PER_EPOCH as nat {
             //  Thanks Dafny
