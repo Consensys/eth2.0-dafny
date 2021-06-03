@@ -13,6 +13,7 @@
  */
 
 include "../../utils/Eth2Types.dfy"
+include "../../utils/NativeTypes.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
@@ -29,6 +30,7 @@ module GasperProofs {
     
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
+    import opened NativeTypes
     import opened SetHelpers
     import opened Constants
     import opened ForkChoiceTypes
@@ -144,15 +146,15 @@ module GasperProofs {
     // }
 
     /**
-     *  In a view G, if (BF, f) in F(G) and (BJ, j) in J(G) with j > f, then BF
-     *  must be an ancestor of BJ , or the blockchain is (1/3)-slashable – 
+     *  In a view G, if (Bf, f) in F(G) and (Bj, j) in J(G) with j > f, then Bf
+     *  must be an ancestor of Bj , or the blockchain is (1/3)-slashable – 
      *  specifically, there must exist 2 subsets V1, V2 of V, each with total stake at 
      *  least 2N/3, such that their intersection all violate slashing condition (S1) 
      *  or all violate slashing condition (S2).
      *
      *  Proof for 1-finalisation.
      *
-     *  Assume (bf,f) 1-finalised and (bj, j) justified and not a descendant of (bf)
+     *  Assume (bf,f) 1-finalised and (bj, j) justified and bf not a descendant of bf.
      *  
      *  epoch   0                         f              f+1                             
      *          |............        .....|...................|   
@@ -186,80 +188,97 @@ module GasperProofs {
      *  
      *   
      */
-    // lemma {:induction false} lemma5_1(bh1: Root, bh2: Root, store: Store, j: Epoch, f: Epoch)
-    //     /** The block roots must be from accepted blocks, i.e. in the store. */
-    //     requires bh1 in store.blocks.Keys
-    //     requires bh2 in store.blocks.Keys
+    lemma {:induction false} lemma5_1(bh1: Root, bh2: Root, store: Store, j: Epoch, f: Epoch)
+        /** The block roots must be from accepted blocks, i.e. blocks in the store. */
+        requires bh1 in store.blocks.Keys
+        requires bh2 in store.blocks.Keys
 
-    //     /** The epochs j and f are before the heads slots. */
-    //     requires f as nat + 1 < 0x10000000000000000
-    //     requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
-    //     requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
+        /** The epochs j and f are before the heads slots. */
+        requires f as nat + 1 <= MAX_UINT64
+        requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
+        requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
 
-    //     // requires 0 <= j < compute_epoch_at_slot(store.blocks[br].slot)   
+        // requires 0 <= j < compute_epoch_at_slot(store.blocks[br].slot)   
 
+        //  The two blocks are not equal.
+        requires bh1 != bh2 
 
-    //     /** Epoch is not zero ? */
-    //     requires j > f >= 0 
-    //     /** The store is well-formed, each block with slot != 0 has a parent
-    //         which is itself in the store. */
-    //     requires isClosedUnderParent(store)
-    //     requires isSlotDecreasing(store)
+        /** Epoch is not zero */
+        requires j >= f > 0 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)
 
-    //     /** Checkpoint at epoch f is 1-finalised. */
-    //     requires 
-    //         var chbh1 := chainRoots(bh1, store);
-    //         //  Compute the EBBs indices from epoch f + 1
-    //         var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
-    //         //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
-    //         isOneFinalised(1, chbh1, k1, store.rcvdAttestations) 
+        /** Checkpoint at epoch f is 1-finalised. */
+        requires 
+            // var chbh1 := chainRoots(bh1, store);
+            //  Compute the EBBs indices from epoch f + 1
+            // var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
+            //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
+            isOneFinalisedFromRoot(bh1, f, store, store.rcvdAttestations) 
 
-    //     /** Checkpoint at epoch j is justified. */
-    //     requires isJustifiedInStore(bh2, store, j)
-    //         // var chbh2 := chainRoots(bh2 , store);
-    //         // //  Compute the EBBs indices from epoch j
-    //         // var k2 := computeAllEBBsIndices(chbh2, j, store);
-    //         // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
-    //         // //  It must be justified, and there is a previous justified checkpoint l 
-    //         // //  that justifies it.
-    //         // isJustified(0, chbh2, k2, store.rcvdAttestations) && 
-    //         //     exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations)
+        /** Checkpoint at epoch j is justified. */
+        requires isJustifiedEpochFromRoot(bh2, j, store, store.rcvdAttestations)
+            // var chbh2 := chainRoots(bh2 , store);
+            // //  Compute the EBBs indices from epoch j
+            // var k2 := computeAllEBBsIndices(chbh2, j, store);
+            // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
+            // //  It must be justified, and there is a previous justified checkpoint l 
+            // //  that justifies it.
+            // isJustified(0, chbh2, k2, store.rcvdAttestations) && 
+            //     exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations)
 
-    //     ensures 
-    //         // var chbh1 := chainRoots(bh1, store);
-    //         // var chbh2 := chainRoots(bh2 , store);
-    //         // //  EBB(bh1, j) is k1[0]
-    //         // var k1 := computeAllEBBsIndices(chbh1, j, store);
-    //         // //  EBB(bh1, j) is k1[0]
-    //         // var k2 := computeAllEBBsIndices(chbh2, j, store);
-    //         // var tgt1 := CheckPoint(0 as Epoch, chbh1[k1[0]]);
-    //         // var tgt2 := CheckPoint(0 as Epoch, chbh2[k2[0]]);
-    //         // |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
-    //         // >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
-    //         true
-    // {
-    //     var chbh1 := chainRoots(bh1, store);
-    //     //  Compute the EBBs indices from epoch f + 1
-    //     var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
-    //     //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
-    //     // assert(isOneFinalised(1, chbh1, k1, store.rcvdAttestations));
-    //     // assert(isJustified(0, chbh1, k1, store.rcvdAttestations));
+        requires j == f 
 
-    //     // var chbh2 := chainRoots(bh2 , store);
-    //     // //  Compute the EBBs indices from epoch j
-    //     // var k2 := computeAllEBBsIndices(chbh2, j, store);
-    //     // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
-    //     // assert(isJustified(0, chbh2, k2, store.rcvdAttestations));
-    //     // assert(exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations));
-    //     // var l :| 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations);
+        ensures 
+            // var chbh1 := chainRoots(bh1, store);
+            // var chbh2 := chainRoots(bh2 , store);
+            //  EBB(bh1, j) is k1[0]
+            var k1 := computeAllEBBsFromRoot(bh1, f, store);
+            //  EBB(bh1, j) is k1[0]
+            var k2 := computeAllEBBsFromRoot(bh2, j, store);
+            var tgt1 := CheckPoint(f as Epoch, k1[0]);
+            var tgt2 := CheckPoint(j as Epoch, k2[0]);
+            // true
+            |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
+            // true
+    {
+        // var chbh1 := chainRoots(bh1, store);
+        //  Compute the EBBs indices from epoch f + 1
+        // var k1 := computeAllEBBsFromRoot(bh1, f + 1, store);
+        //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
+        // assert(isOneFinalised(1, chbh1, k1, store.rcvdAttestations));
+        // assert(isJustified(0, chbh1, k1, store.rcvdAttestations));
 
-    //     //  proof that j == f not OK
-    //     // if j == f {
-    //     //     lemma4_11_a(chbh1[k1[0]], chbh2[k2[0]], store, j);
-    //     // } else {
+        // var chbh2 := chainRoots(bh2 , store);
+        // //  Compute the EBBs indices from epoch j
+        // var k2 := computeAllEBBsIndices(chbh2, j, store);
+        // //  The EBB at j, EBB(chbh2, j) is (k2[0], j)
+        // assert(isJustified(0, chbh2, k2, store.rcvdAttestations));
+        // assert(exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations));
+        // var l :| 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations);
+        oneFinalisedImpliesJustified(bh1, f, store, store.rcvdAttestations);
+        // assert(isJustifiedEpochFromRoot(bh1, f, store, store.rcvdAttestations));
+        //  this should be proved rather
+        // assume(bf != bf);
+        //  proof that j == f and bf != bj we have a contradiction
+        if j == f {
+            //  bf != bj and we can apply lemma_4_11
+            lemma4_11_a(bh1, bh2, store, j);
+            var k1 := computeAllEBBsFromRoot(bh1, f, store);
+            //  EBB(bh1, j) is k1[0]
+            var k2 := computeAllEBBsFromRoot(bh2, j, store);
+            var tgt1 := CheckPoint(f as Epoch, k1[0]);
+            var tgt2 := CheckPoint(j as Epoch, k2[0]);
+            assert(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
 
-    //     // }
-    // }
+        } else {
+
+        }
+    }
 
     /**
      *
@@ -311,10 +330,18 @@ module GasperProofs {
 
     /**
      *  Rule I (Gasper slashing conditions).
+     *
+     *  (S1) No validator makes two distinct attestations a1 a2 
+     *  with ep(a1) == ep (a2). Note this
+     *  condition is equivalent to aep (LE(a1)) = aep (LE(a2)).
+     *  and LE(a) is the last epoch boundary pair (checkpoint) 
+     *  of a i.e. (B, ep(slot(a))).
      */
     predicate ruleI(s: Store, links: ListOfAttestations) 
     {
         true
+        // forall a1, a2 :: PendingAttestation ==> 
+        //     aep(LE(a1)) != aep(LE(a2))
     }
 
     /**
