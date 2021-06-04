@@ -194,6 +194,36 @@ module GasperHelpers {
     }
 
     /**
+     *
+     *  @param  br      A block root.
+     *  @param  e1      An epoch.
+     *  @param  j       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @return         Proves that if an epoch e1 is justified in xs, the e1 + 1 
+     *                  EBBs, from root bh, and a previous epoch j < e1 is such 
+     *                  that j is justified in the xs, then j is justified in the 
+     *                  xs from nh. 
+     */
+    lemma foo(bh: Root, e1: Epoch, j: Epoch, store: Store, links : seq<PendingAttestation>)
+
+        requires bh in store.blocks.Keys 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        requires isJustifiedEpochFromRoot(bh, e1, store, links)
+        requires j < e1 && isJustifiedEpoch(
+               computeAllEBBsFromRoot(bh, e1, store), j, store, store.rcvdAttestations)
+        ensures  
+            isJustifiedEpochFromRoot(bh, j, store, links)
+    {
+        assume(isJustifiedEpochFromRoot(bh, j, store, links));
+    }
+
+    /**
      *  @param  br      A block root.
      *  @param  e       An epoch.
      *  @param  store   A store.

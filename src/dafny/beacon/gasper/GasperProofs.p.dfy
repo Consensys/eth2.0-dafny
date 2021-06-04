@@ -229,7 +229,7 @@ module GasperProofs {
             // isJustified(0, chbh2, k2, store.rcvdAttestations) && 
             //     exists l :: 0 < l < |k2| && isJustified(l, chbh2, k2, store.rcvdAttestations)
 
-        requires j == f 
+        // requires j == f 
 
         ensures 
             // var chbh1 := chainRoots(bh1, store);
@@ -276,6 +276,50 @@ module GasperProofs {
             >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
 
         } else {
+            //  j > f 
+            oneFinalisedImpliesJustified(bh1, f, store, store.rcvdAttestations);
+            assert(isJustifiedEpochFromRoot(bh1, f, store, store.rcvdAttestations));
+            //  let l be the EBB that justifies epoch j 
+            assert(isJustifiedEpochFromRoot(bh2, j, store, store.rcvdAttestations));
+            // var l :| 
+            //  for this case, the reasoning is more involved,
+            var k1 := computeAllEBBsFromRoot(bh1, f, store);
+            //  EBB(bh1, j) is k1[0]
+            var k2 := computeAllEBBsFromRoot(bh2, j, store);
+            // assert(isJustifiedEpoch(k2, j, store, store.rcvdAttestations));
+
+            var tgt1 := CheckPoint(f as Epoch, k1[0]);
+            var tgt2 := CheckPoint(j as Epoch, k2[0]);
+
+            
+            // var tgtl := CheckPoint(l as Epoch, k2[j - l]);
+            var l :| l < j && isJustifiedEpoch(k2, l, store, store.rcvdAttestations); 
+            // assume(isJustifiedEpochFromRoot(bh2, l, store, store.rcvdAttestations));
+            // calc {
+            //     isJustifiedEpoch(k2, l, store, store.rcvdAttestations);
+            //     ==>
+            //     isJustifiedEpochFromRoot(bh2, l, store, store.rcvdAttestations);
+            // }
+            //  later assume that j is the smallest epoch after f that is justified and remove
+            //  this assume(l <= f);
+            assume(0 < l <= f);
+            if (l == f) {
+                // assert(isJustifiedEpochFromRoot(bh1, f, store, store.rcvdAttestations));
+                //  get the checkpoijnt at epoch l 
+                var kl := computeAllEBBsFromRoot(bh2, l, store);
+                var tgtl := CheckPoint(l as Epoch, kl[0]);
+                foo(bh2, j, l, store, store.rcvdAttestations);
+                assert(isJustifiedEpochFromRoot(bh2, l, store, store.rcvdAttestations));
+                //  Apply lemma 4
+                lemma4_11_a(bh1, bh2, store, l);
+                assert(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgtl)|
+                >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
+            }
+           
+
+           
+            assume(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
 
         }
     }
