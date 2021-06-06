@@ -194,19 +194,20 @@ module GasperHelpers {
     }
 
     /**
-     *
+     *  Lift justification status to fromRoot.
+     *  
      *  @param  br      A block root.
      *  @param  e1      An epoch.
      *  @param  j       An epoch.
      *  @param  store   A store.
      *  @param  links   A list of attestations.
      *
-     *  @return         Proves that if an epoch e1 is justified in xs, the e1 + 1 
-     *                  EBBs, from root bh, and a previous epoch j < e1 is such 
-     *                  that j is justified in the xs, then j is justified in the 
-     *                  xs from nh. 
+     *  @return         Proves that if an epoch e1 is justified in xs, and in the e1 + 1 
+     *                  EBBs, from root bh, a previous epoch j < e1 is such 
+     *                  that j is justified in xs, then j is justified in the 
+     *                  xs from bh. 
      */
-    lemma foo(bh: Root, e1: Epoch, j: Epoch, store: Store, links : seq<PendingAttestation>)
+    lemma liftFromRoot(bh: Root, e1: Epoch, j: Epoch, store: Store, links: seq<PendingAttestation>)
 
         requires bh in store.blocks.Keys 
         /** The store is well-formed, each block with slot != 0 has a parent
