@@ -193,7 +193,7 @@ module GasperProofs {
         requires bh1 in store.blocks.Keys
         requires bh2 in store.blocks.Keys
 
-        /** The epochs j and f are before the heads slots. */
+        /** The epochs j and f are before the heads' slots. */
         requires f as nat + 1 <= MAX_UINT64
         requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
         requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
@@ -232,18 +232,20 @@ module GasperProofs {
         // requires j == f 
 
         ensures 
-            // var chbh1 := chainRoots(bh1, store);
-            // var chbh2 := chainRoots(bh2 , store);
-            //  EBB(bh1, j) is k1[0]
-            var k1 := computeAllEBBsFromRoot(bh1, f, store);
-            //  EBB(bh1, j) is k1[0]
-            var k2 := computeAllEBBsFromRoot(bh2, j, store);
-            var tgt1 := CheckPoint(f as Epoch, k1[0]);
-            var tgt2 := CheckPoint(j as Epoch, k2[0]);
-            // true
-            |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
-            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
-            // true
+            // should be: !RuleI or !ruleII
+
+        //     // var chbh1 := chainRoots(bh1, store);
+        //     // var chbh2 := chainRoots(bh2 , store);
+        //     //  EBB(bh1, j) is k1[0]
+        //     var k1 := computeAllEBBsFromRoot(bh1, f, store);
+        //     //  EBB(bh1, j) is k1[0]
+        //     var k2 := computeAllEBBsFromRoot(bh2, j, store);
+        //     var tgt1 := CheckPoint(f as Epoch, k1[0]);
+        //     var tgt2 := CheckPoint(j as Epoch, k2[0]);
+        //     // true
+        //     |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+        //     >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
+            true
     {
         // var chbh1 := chainRoots(bh1, store);
         //  Compute the EBBs indices from epoch f + 1
@@ -300,6 +302,7 @@ module GasperProofs {
             //     ==>
             //     isJustifiedEpochFromRoot(bh2, l, store, store.rcvdAttestations);
             // }
+
             //  later assume that j is the smallest epoch after f that is justified and remove
             //  this assume(l <= f);
             assume(0 < l <= f);
@@ -308,19 +311,35 @@ module GasperProofs {
                 //  get the checkpoijnt at epoch l 
                 var kl := computeAllEBBsFromRoot(bh2, l, store);
                 var tgtl := CheckPoint(l as Epoch, kl[0]);
-                foo(bh2, j, l, store, store.rcvdAttestations);
+                liftFromRoot(bh2, j, l, store, store.rcvdAttestations);
                 assert(isJustifiedEpochFromRoot(bh2, l, store, store.rcvdAttestations));
                 //  Apply lemma 4
                 lemma4_11_a(bh1, bh2, store, l);
                 assert(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgtl)|
                 >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
+            } else {
+                //  l < f 
+                assert(l < f);
+                //  In this case, we can show that the validators in V1 /\ V2 
+                //  violated rule II
+                // var c1: collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1);
+                //  collect indices that attest l == J ==> j 
+                var kl := computeAllEBBsFromRoot(bh2, l, store);
+                var srcl := CheckPoint(l as Epoch, kl[0]);
+                var i1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, srcl, tgt2);
+                //  collect indices that attest f == J ==> f + 1
+                var k2 := computeAllEBBsFromRoot(bh1, f + 1, store);
+                var srcf := CheckPoint(f + 1 as Epoch, k2[0]);
+                var tgtfPlusOne := CheckPoint(f as Epoch, k2[1]);
+                var i2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, srcf, tgtfPlusOne);
+
+                //  Take a validator in i1 /\ i2, it has made a nested attestation that 
+                //  violates ruleII.
+                
+            
+                // assume(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
+            // >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
             }
-           
-
-           
-            assume(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
-            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
-
         }
     }
 
