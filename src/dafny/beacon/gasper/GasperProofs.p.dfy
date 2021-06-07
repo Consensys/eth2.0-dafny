@@ -335,7 +335,16 @@ module GasperProofs {
 
                 //  Take a validator in i1 /\ i2, it has made a nested attestation that 
                 //  violates ruleII.
-                
+                if ( i1 * i2 != {} ) {
+                    var v :| i in i1 * i2 ;
+                    //  Get two attestations made by validator v in i1 /\ i2
+                    //  Must exist by post-conditions of collectValidatorsAttestatingForLink(...)
+                    var a1 : PendingAttestation :| a1.data.source == srcl && a1.data.target == tgt2 && a1.aggregation_bits[v];
+                    var a2 : PendingAttestation :| a2.data.source == srcf && a2.data.target == tgtfPlusOne && a2.aggregation_bits[v];
+                    //  Validator v violates rule II
+                    
+
+                }
             
                 // assume(|collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
             // >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);
