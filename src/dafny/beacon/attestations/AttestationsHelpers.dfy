@@ -74,6 +74,12 @@ module AttestationsHelpers {
         ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        ensures forall v :: v in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
+            exists a :: a in xa 
+                && a.data.source == src 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v]
+
         decreases xa
     {
         if |xa| == 0 then 
