@@ -278,11 +278,13 @@ module GasperHelpers {
      *  Whether checkpoint at epoch f is 1-finalised.
      *  
      *  @param  br      A block root.
-     *  @param  e       An epoch.
+     *  @param  f       An epoch.
      *  @param  store   A store.
      *  @param  links   A list of attestations.
      *
-     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
+     *  @returns        Whether the checkpoint c at epoch f in the EBBs from br,
+     *                  is 1-finalised. It is iff (i) c is justifiedm and (ii) there
+     *                  is supermajority link from c to the checkpoint at epoch f + 1.   
      *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
      *
      */
@@ -436,7 +438,7 @@ module GasperHelpers {
 
     /**
      *  The height of a block is one less than the length of 
-     *  the chain of ancestors.
+     *  the chain of ancestors. [page 8, 3.1 of GasperFFG paper].
      *  
      *  @param  br      A block root.
      *  @param  e       An epoch.
