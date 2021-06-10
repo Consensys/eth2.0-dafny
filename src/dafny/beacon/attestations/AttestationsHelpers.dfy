@@ -105,6 +105,10 @@ module AttestationsHelpers {
         ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+        ensures forall v :: v in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
+            exists a :: a in xa 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v]       
         decreases xa
     {
         if |xa| == 0 then 
