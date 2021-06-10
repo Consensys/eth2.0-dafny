@@ -72,7 +72,7 @@ module GasperProofs {
             isJustifiedEpochFromRoot(br1, j, store, store.rcvdAttestations) 
             && isJustifiedEpochFromRoot(br2, j, store, store.rcvdAttestations)
 
-        ensures 
+        ensures     //  PostC 1
             var k1 := computeAllEBBsFromRoot(br1, j, store);
             //  EBB(br1, j) is k1[0]
             var k2 := computeAllEBBsFromRoot(br2, j, store);
@@ -98,7 +98,6 @@ module GasperProofs {
             tgt1 != tgt2 ==> 
                 forall i :: i in i1 * i2 ==> validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
     {
-
         //  chain of roots from br1 and br2
         var cr1 := computeAllEBBsFromRoot(br1, j, store);
         var cr2 := computeAllEBBsFromRoot(br2, j, store);
@@ -111,7 +110,7 @@ module GasperProofs {
         var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1);
         var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2);
 
-        //  Lower bound for attestations to a justified checkpoint
+        //  PostC 1: Lower bound for attestations to a justified checkpoint
         justifiedMustHaveTwoThirdIncoming(br1, j, store, store.rcvdAttestations);
         justifiedMustHaveTwoThirdIncoming(br2, j, store, store.rcvdAttestations);
         assert(|attForTgt1| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
