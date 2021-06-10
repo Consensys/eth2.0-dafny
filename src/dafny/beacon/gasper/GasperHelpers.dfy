@@ -260,17 +260,20 @@ module GasperHelpers {
     /**
      *  The most recent justified EBB before epoch.
      */
-    function lastJustified(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>): (l : Epoch)
+    function lastJustified(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>): (c :  CheckPoint)
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)        ensures 0 <= l <= e
+        requires isSlotDecreasing(store)        
+        
+        ensures 0 <= c.epoch <= e 
         ensures 
             var cr := computeAllEBBsFromRoot(br, e, store);
-            isJustifiedEpochFromRoot(br, l, store, links) &&
-            forall k :: l < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
+            isJustifiedEpochFromRoot(br, c.epoch, store, links) &&
+            c.root == cr[e - c.epoch]
+            && forall k :: c.epoch < k <= e ==> !isJustifiedEpochFromRoot(br, k, store, links)
 
     //  Finalisation definition.   
             
