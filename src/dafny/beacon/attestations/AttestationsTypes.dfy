@@ -52,20 +52,22 @@ module AttestationsTypes {
      *                  although it does not seem to appear anywhere in the specs.
      */
     datatype CheckPoint = CheckPoint(
-        epoch: Epoch,
-        root: Root        
+        epoch: Epoch,   //  aep attestation epoch
+        root: Root      //  block root  (ep(B) may be different to epoch)
     )    
 
     /** Default value for CheckPoint. */
     const DEFAULT_CHECKPOINT := CheckPoint(0 as Epoch, DEFAULT_BYTES32)
 
     /** 
-     *  An AttestationData is basically a vote for a link.
+     *  An AttestationData is (a vote for) a link/checkpoint edge  
+     *  source -> target.
      *  
      *  @link{https://benjaminion.xyz/eth2-annotated-spec/phase0/beacon-chain/#attestationdata}
      *
      *  @param  slot                A slot number. The slot in which the validator makes
-     *                              the attestation. Each active validator should be making 
+     *                              the attestation. ep(this) in the Gasper paper.
+     *                              Each active validator should be making 
      *                              exactly one attestation per epoch. Validators have an 
      *                              assigned slot for their attestation, and it is recorded here.
      *  @param  beacon_block_root   Block determined to be the head of the chain as per running 
@@ -73,28 +75,29 @@ module AttestationsTypes {
      *                              to be used to update justifications and finalisations.
      *                              The slot of this root should be less than or equal to slot.
      *  @param  source              The source (why should it be justified?) checkpoint (FFG link).
+     *                              LJ(this) (latest justified) in the Gasper paper.
      *  @param  target              The target (why should it be justified) checkpoint (FFG link).
+     *                              LE(this) the last epoch boundary pair for this.
+     *                              This should the last epoch boundary block from *                               this.beacon_block_root i.e.LEBB(beacon_block_root) .
      *
      *  @note                       The `source` and `target` are not independent from the 
      *                              `beacon_block_root`. As specified in the Gasper paper, they 
-     *                              must be LJ(-) and LE(-) respectively. 
-     *                              LJ(-) is the last (most recent) justified checkpoint in 
-     *                              view(beacon_block_root), and LE(-) is the last epoch boundary
+     *                              must be LJ(this) and LE(this) respectively. 
+     *                              LJ(this) is the last (most recent) justified checkpoint in 
+     *                              view(beacon_block_root), and LE(this) is the last epoch boundary
      *                              pair in view(beacon_block_root).
-     *
-     *  @note                       We must have target.epoch == epoch(slot).
-     *
+     *  @note                       As a consequence We must have this.target.epoch == epoch(slot).
      *
      *  @note   As (source, target) forms a pair, they should probably be grouped together
      *          say as a Link rather than provided separately. 
      *          The pair stands for a `vote` for a link between source and target.
      */
     datatype AttestationData = AttestationData(
-        slot: Slot,
+        slot: Slot,                 //  ep(alpha) in the Gasper paper
         // index, CommitteeIndex, not used, should be the committee the validator belongs to.
-        beacon_block_root: Root, 
-        source: CheckPoint,
-        target: CheckPoint        //    target.epoch == epoch(slot)
+        beacon_block_root: Root,    //  this attestation attest this block_root
+        source: CheckPoint,         //  An checkpoint edge source/target
+        target: CheckPoint          //    target.epoch == epoch(slot)
     )    
 
     /**
