@@ -83,6 +83,20 @@ module GasperProofs {
             //  from below
             |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
             >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
+
+        //  every validator in the intersection violates ruleI
+        ensures     //  PostC 2
+            var k1 := computeAllEBBsFromRoot(br1, j, store);
+            //  EBB(br1, j) is k1[0]
+            var k2 := computeAllEBBsFromRoot(br2, j, store);
+            //  EBB(br2, j) is k2[0]
+            var tgt1 := CheckPoint(j as Epoch, k1[0]);
+            var tgt2 := CheckPoint(j as Epoch, k2[0]); 
+            //  Every validator in i1 * i2 violates ruleI
+            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1); 
+            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2); 
+            tgt1 != tgt2 ==> 
+                forall i :: i in i1 * i2 ==> validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
     {
 
         //  chain of roots from br1 and br2
@@ -105,6 +119,19 @@ module GasperProofs {
 
         //  Lower bound for intersection of set of attesters
         superMajorityForSameEpoch(store.rcvdAttestations, tgt1, tgt2);
+
+        //  PostC 2
+        if tgt1 != tgt2 {
+            forall (i | i in attForTgt1 * attForTgt2) 
+                ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+                {
+                    var a1 : PendingAttestation :| a1.data.target == tgt1 && a1.aggregation_bits[i];
+                    var a2 : PendingAttestation :| a2.data.target == tgt2 && a2.aggregation_bits[i];
+                    // assert(a1 in store.rcvdAttestations && a2 in store.rcvdAttestations);
+                    // assert(validatorViolatesRuleIv2(a1, a2, store.rcvdAttestations, i as ValidatorIndex));
+                    assert(validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex));
+                }
+        }
     }
 
     /**
