@@ -432,47 +432,23 @@ module GasperProofs {
 
         /** The epochs j and f are before the heads' slots. */
         requires cp2.epoch as nat + 1 <= MAX_UINT64
-        // requires compute_epoch_at_slot(store.blocks[bh1].slot) >= f + 1
-        // requires compute_epoch_at_slot(store.blocks[bh2].slot) >= j 
-
-        // requires 0 <= j < compute_epoch_at_slot(store.blocks[br].slot)   
 
         //  The two blocks are not equal.
         requires cp1.root != cp2.root 
 
         /** Epoch is not zero */
         requires cp2.epoch >= cp1.epoch > 0 
+
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
         /** Checkpoint at epoch f is 1-finalised. */
-        requires 
-            // var chbh1 := chainRoots(bh1, store);
-            //  Compute the EBBs indices from epoch f + 1
-            // var k1 := computeAllEBBsIndices(chbh1, f + 1, store);
-            //  EBB(bh1, f + 1) is k1[0], EBB(bh1, f) is k1[1]
-            isOneFinalised(cp1, store) 
+        requires isOneFinalised(cp1, store) 
 
         /** Checkpoint at epoch j is justified. */
         requires isJustified(cp2, store)
-
-        ensures 
-            // should be: !RuleI or !ruleII
-
-        //     // var chbh1 := chainRoots(bh1, store);
-        //     // var chbh2 := chainRoots(bh2 , store);
-        //     //  EBB(bh1, j) is k1[0]
-        //     var k1 := computeAllEBBsFromRoot(bh1, f, store);
-        //     //  EBB(bh1, j) is k1[0]
-        //     var k2 := computeAllEBBsFromRoot(bh2, j, store);
-        //     var tgt1 := CheckPoint(f as Epoch, k1[0]);
-        //     var tgt2 := CheckPoint(j as Epoch, k2[0]);
-        //     // true
-        //     |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
-        //     >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
-            true
 
         //  Case 1: j == f, covered by lemma 4.
         ensures cp1.epoch == cp2.epoch ==> 
