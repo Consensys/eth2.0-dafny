@@ -107,6 +107,7 @@ module StateTransitionSpec {
         s.(
             latest_block_header := BeaconBlockHeader(
                 b.slot,
+                b.proposer_index,
                 b.parent_root,
                 DEFAULT_BYTES32
             )

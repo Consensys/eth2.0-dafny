@@ -18,6 +18,9 @@ include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "EpochProcessing.s.dfy"
+include "ProcessOperations.s.dfy"
+include "../../utils/Eth2Types.dfy"
+
 /**
  * State transition function for the Beacon Chain.
  */
@@ -31,6 +34,8 @@ module EpochProcessing {
     import opened BeaconHelpers
     import opened AttestationsHelpers
     import opened EpochProcessingSpec
+    import opened ProcessOperationsSpec
+    import opened Eth2Types
 
 // # Attestations
 //     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
@@ -78,6 +83,215 @@ module EpochProcessing {
         // assume(s' == resolveStateRoot(s));
         return s';
     }
+
+    /* */
+    method process_rewards_and_penalties(s: BeaconState)  returns (s' : BeaconState)
+        requires |s.validators| == |s.balances|
+        requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
+        requires integer_square_root(get_total_active_balance(s)) > 1
+        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+
+        requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
+        requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
+
+        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    
+        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    
+        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    
+        requires get_current_epoch(s) != GENESIS_EPOCH ==> 
+                    var (rewards,penalties) := get_attestation_deltas(s); 
+                    forall v :: 0 <= v < |rewards| ==> s.balances[v] as nat + rewards[v] as nat < 0x10000000000000000;
+        
+        ensures  get_current_epoch(s) == GENESIS_EPOCH ==> s' == s
+        ensures  get_current_epoch(s) != GENESIS_EPOCH ==> 
+                    var (rewards,penalties) := get_attestation_deltas(s); 
+                    s' == updateRewardsAndPenalties(s, rewards, penalties)
+    {
+        if get_current_epoch(s) == GENESIS_EPOCH {
+            return s;
+        }
+        
+        s' := s;
+        var (rewards, penalties) := get_attestation_deltas(s');
+        
+        var i := 0;
+
+        assert s' == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]);
+        //assume forall v :: 0 <= v < |rewards| ==> s.balances[v] as nat + rewards[v] as nat < 0x10000000000000000;
+
+        while i < |s'.validators| //for index in range(len(state.validators)):
+            invariant i <= |rewards| == |penalties|
+            invariant |rewards| == |penalties| == |s.validators| == |s.balances| == |s'.validators| == |s'.balances|
+            invariant |rewards[..i]| == |penalties[..i]| <= |s.validators| == |s.balances|
+            //invariant forall v :: i <= v < |s.balances| ==> s'.balances[v] == s.balances[v]
+            //invariant forall v :: 0 <= v < i ==> s'.balances[v] == if s.balances[v] + rewards[v] > penalties[v] then s.balances[v] + rewards[v] - penalties[v] else 0 as Gwei;
+            //invariant forall v :: 0 <= v < i ==> s'.balances[v] == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]).balances[v];
+            //invariant forall v :: i <= v < |s.balances| ==> s'.balances[v] == s.balances[v] == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]).balances[v];
+            //invariant forall v :: 0 <= v < |s.balances| ==> s'.balances[v] == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]).balances[v];
+            //invariant forall v :: 0 <= v < |s.validators| ==> s'.validators[v] == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]).validators[v];
+            invariant i == |rewards[..i]|
+            invariant s' == updateRewardsAndPenalties(s, rewards[..i], penalties[..i])
+        {
+            assert i < |rewards|;
+            assert i < |s'.balances|;
+            //assume s'.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
+            
+            s' := increase_balance(s', i as ValidatorIndex, rewards[i]);
+            s' := decrease_balance(s', i as ValidatorIndex, penalties[i]);
+            assert s'.balances[i] == if s.balances[i] + rewards[i] > penalties[i] then s.balances[i] + rewards[i] - penalties[i] else 0 as Gwei;
+            assert forall v :: 0 <= v <= i ==> s'.balances[v] == if s.balances[v] + rewards[v] > penalties[v] then s.balances[v] + rewards[v] - penalties[v] else 0 as Gwei;
+            i := i + 1;
+        } 
+        assert rewards[..i] == rewards;
+        assert penalties[..i] == penalties;
+        assert s' == updateRewardsAndPenalties(s, rewards, penalties);
+    }
+
+    // function rewardsAndPenalties(s: BeaconState) : BeaconState
+    //     requires |s.validators| == |s.balances|
+    //     requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
+    //     requires integer_square_root(get_total_active_balance(s)) > 1
+    //     requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+
+    //     requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
+    //     requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
+
+    //     requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+    //     requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+    //     requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    
+    //     requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+    //     requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+    //     requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    
+    //     requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+    //     requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+    //     requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    // {
+    //     if get_current_epoch(s) == GENESIS_EPOCH then   
+    //         s
+    //     else
+    //         var (rewards, penalties) := get_attestation_deltas(s);
+    //         updateRewardsAndPenalties(s, rewards, penalties)
+    // }
+
+    function updateRewardsAndPenalties(s: BeaconState, rewards: seq<Gwei>, penalties: seq<Gwei>): BeaconState
+        requires |rewards| == |penalties| <= |s.validators| == |s.balances|
+        requires forall i :: 0 <= i < |rewards| ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000
+
+        
+        ensures |s.balances| == |updateRewardsAndPenalties(s, rewards, penalties).balances|
+        ensures |s.validators| == |updateRewardsAndPenalties(s, rewards, penalties).validators|
+        ensures forall i :: |rewards| <= i < |s.balances| ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] == s.balances[i]
+        ensures forall i :: 0 <= i < |rewards| ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] == if s.balances[i] + rewards[i] > penalties[i] then 
+                                                        s.balances[i] + rewards[i] - penalties[i]
+                                                    else    
+                                                        0 as Gwei
+        ensures forall i :: 0 <= i < |s.validators| ==> updateRewardsAndPenalties(s, rewards, penalties).validators[i] == s.validators[i]
+        ensures updateRewardsAndPenalties(s, rewards, penalties) == s.(balances := updateRewardsAndPenalties(s, rewards, penalties).balances)
+
+        decreases |rewards|, |penalties|
+    {
+        if |rewards| == 0 then s
+        else
+            var index := |rewards| - 1;
+            // var s' := if rewards[|rewards|-1] > penalties[|penalties|-1] then 
+            //                 //assume s.balances[index] as nat + rewards[|rewards|-1] as nat - penalties[|penalties|-1] as nat < 0x10000000000000000;
+            //                 increase_balance(s, index as ValidatorIndex, rewards[|rewards|-1] - penalties[|penalties|-1])
+            //             else 
+            //                 //assume s.balances[index] as nat + penalties[|penalties|-1] as nat - rewards[|rewards|-1] as nat < 0x10000000000000000;
+            //                 decrease_balance(s, index as ValidatorIndex, penalties[|penalties|-1] - rewards[|rewards|-1]);
+            var s1 := increase_balance(s, index as ValidatorIndex, rewards[index]);
+            assert s1.balances[index] == s.balances[index] + rewards[index];
+
+            var s2 := decrease_balance(s1, index as ValidatorIndex, penalties[index]);
+            assert s2.balances[index] == if s1.balances[index] > penalties[index] then s1.balances[index] - penalties[index] else 0 as Gwei;
+            assert if s.balances[index] + rewards[index] > penalties[index] then s2.balances[index] == s.balances[index] + rewards[index] - penalties[index] 
+                                                                         else s2.balances[index] == 0 as Gwei;
+
+            //updateRewardsAndPenaltiesLemma(s, rewards, penalties);
+            updateRewardsAndPenalties(s2, rewards[..index], penalties[..index])
+            //s.(balances := increase_balance(s,get_validator_index(pk, d.data.pubkey),d.data.amount).balances)
+    }
+
+    // lemma updateRewardsAndPenaltiesLemma(s: BeaconState, rewards: seq<Gwei>, penalties: seq<Gwei>)
+    //     requires |rewards| == |penalties| <= |s.validators| == |s.balances|
+    //     requires forall i :: 0 <= i < |rewards| ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000
+
+        
+    //     ensures forall i :: 0 <= i < |rewards| ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] ==  if s.balances[i] + rewards[i] > penalties[i] then 
+    //                                                     s.balances[i] + rewards[i] - penalties[i]
+    //                                                 else    
+    //                                                     0 as Gwei
+
+    //     decreases |rewards|, |penalties|
+        
+    // {
+    //     if |rewards| == 0 {}
+    //     else {
+            
+    //         var index := |rewards| - 1;
+
+    //         var s1 := increase_balance(s, index as ValidatorIndex, rewards[index]);
+    //         assert s1.balances[index] == s.balances[index] + rewards[index];
+    //         assert forall i :: 0 <= i < index ==> s1.balances[i] == s.balances[i];
+
+
+    //         var s2 := decrease_balance(s1, index as ValidatorIndex, penalties[index]);
+    //         assert s2.balances[index] == if s1.balances[index] > penalties[index] then s1.balances[index] - penalties[index] else 0 as Gwei;
+    //         assert s2.balances[index] == if s.balances[index] + rewards[index] > penalties[index] then 
+    //                                         s.balances[index] + rewards[index] - penalties[index] 
+    //                                     else 
+    //                                         0 as Gwei;
+    //         assert forall i :: 0 <= i < index ==> s2.balances[i] == s.balances[i];
+    //         assert index == |rewards[..index]|;
+
+
+    //         assert updateRewardsAndPenalties(s, rewards, penalties) == updateRewardsAndPenalties(s2, rewards[..index], penalties[..index]);
+
+    //         assert updateRewardsAndPenalties(s, rewards, penalties).balances[index] == if s.balances[index] + rewards[index] > penalties[index] then 
+    //                                         s.balances[index] + rewards[index] - penalties[index] 
+    //                                     else 
+    //                                         0 as Gwei;            
+
+    //         updateRewardsAndPenaltiesLemma(s2, rewards[..index], penalties[..index]);
+
+    //         assert forall i :: 0 <= i < |rewards[..index]| ==> updateRewardsAndPenalties(s2, rewards[..index], penalties[..index]).balances[i] == if s2.balances[i] + rewards[i] > penalties[i] then 
+    //                                                                 s2.balances[i] + rewards[i] - penalties[i]
+    //                                                             else    
+    //                                                                 0 as Gwei;
+
+            
+
+    //         assert forall i :: 0 <= i < |rewards[..index]| ==> updateRewardsAndPenalties(s2, rewards[..index], penalties[..index]).balances[i] == if s.balances[i] + rewards[i] > penalties[i] then 
+    //                                                                 s.balances[i] + rewards[i] - penalties[i]
+    //                                                             else    
+    //                                                                 0 as Gwei;
+
+            
+    //         //assert forall i :: 0 <= i < index ==> s2.balances[i] + rewards[i] == s.balances[i] + rewards[i];
+    //         //assert forall i :: 0 <= i < index ==> s2.balances[i] + rewards[i] - penalties[i] == s.balances[i] + rewards[i] - penalties[i];
+
+    //         // assert forall i :: 0 <= i < index ==> if s.balances[i] + rewards[i] > penalties[i] then 
+    //         //                                             updateRewardsAndPenalties(s, rewards, penalties).balances[i] == s.balances[i] + rewards[i] - penalties[i]
+    //         //                                       else     
+    //         //                                             updateRewardsAndPenalties(s, rewards, penalties).balances[i] == 0 as Gwei;
+
+
+
+    //     }
+
+    // }
+
+
 
     /**
      *  Rotate the attestations.

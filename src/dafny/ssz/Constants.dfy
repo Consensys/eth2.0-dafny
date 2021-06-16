@@ -26,58 +26,61 @@ module Constants {
   import opened Eth2Types
 
   //  Powers of 2
-  const TWO_UP_0 := 1;
-  const TWO_UP_1 := 2;
-  const TWO_UP_2 := TWO_UP_1 * TWO_UP_1;
-  const TWO_UP_3 := TWO_UP_1 * TWO_UP_2;
-  const TWO_UP_4 := TWO_UP_2 * TWO_UP_2;
-  const TWO_UP_5 := TWO_UP_1 * TWO_UP_4;
-  const TWO_UP_6 := TWO_UP_1 * TWO_UP_5;
-  const TWO_UP_7 := TWO_UP_1 * TWO_UP_6;
-  const TWO_UP_8 := TWO_UP_1 * TWO_UP_7;
-  const TWO_UP_9 := TWO_UP_1 * TWO_UP_8;
-  const TWO_UP_10 := TWO_UP_5 * TWO_UP_5;
-  const TWO_UP_11 := TWO_UP_6 * TWO_UP_5;
-  const TWO_UP_12 := TWO_UP_1 * TWO_UP_11;
-  const TWO_UP_13 := TWO_UP_2 * TWO_UP_11;
-  const TWO_UP_14 := TWO_UP_1 * TWO_UP_13;
-  const TWO_UP_16 := TWO_UP_5 * TWO_UP_11;
-  const TWO_UP_24 := TWO_UP_12 * TWO_UP_12;
-  const TWO_UP_25 := TWO_UP_1 * TWO_UP_24;
-  const TWO_UP_32 := TWO_UP_16 * TWO_UP_16;
-  const TWO_UP_40 := TWO_UP_10 * TWO_UP_10 * TWO_UP_10 * TWO_UP_10;
-  const TWO_UP_64 := TWO_UP_32 * TWO_UP_32;
+  const TWO_UP_0 : uint64 := 1;
+  const TWO_UP_1 : uint64 := 2;
+  const TWO_UP_2 : uint64 := TWO_UP_1 * TWO_UP_1;
+  const TWO_UP_3 : uint64 := TWO_UP_1 * TWO_UP_2;
+  const TWO_UP_4 : uint64 := TWO_UP_2 * TWO_UP_2;
+  const TWO_UP_5 : uint64 := TWO_UP_1 * TWO_UP_4;
+  const TWO_UP_6 : uint64 := TWO_UP_1 * TWO_UP_5;
+  const TWO_UP_7 : uint64 := TWO_UP_1 * TWO_UP_6;
+  const TWO_UP_8 : uint64 := TWO_UP_1 * TWO_UP_7;
+  const TWO_UP_9 : uint64 := TWO_UP_1 * TWO_UP_8;
+  const TWO_UP_10 : uint64 := TWO_UP_5 * TWO_UP_5;
+  const TWO_UP_11 : uint64 := TWO_UP_6 * TWO_UP_5;
+  const TWO_UP_12 : uint64 := TWO_UP_1 * TWO_UP_11;
+  const TWO_UP_13 : uint64 := TWO_UP_2 * TWO_UP_11;
+  const TWO_UP_14 : uint64 := TWO_UP_1 * TWO_UP_13;
+  const TWO_UP_16 : uint64 := TWO_UP_5 * TWO_UP_11;
+  const TWO_UP_18 : uint64 := TWO_UP_2 * TWO_UP_16;
+  const TWO_UP_24 : uint64 := TWO_UP_12 * TWO_UP_12;
+  const TWO_UP_25 : uint64 := TWO_UP_1 * TWO_UP_24;
+  const TWO_UP_32 : uint64 := TWO_UP_16 * TWO_UP_16;
+  const TWO_UP_40 : uint64 := TWO_UP_10 * TWO_UP_10 * TWO_UP_10 * TWO_UP_10;
+  const TWO_UP_64  := TWO_UP_32 as nat * TWO_UP_32 as nat;
   const TWO_UP_128 := TWO_UP_64 * TWO_UP_64;
   
   const TWO_UP_256 := TWO_UP_128 * TWO_UP_128;
 
   //  Powers of 10
-  const TEN_UP_2 := 10 * 10;
-  const TEN_UP_4 := TEN_UP_2 * TEN_UP_2;
-  const TEN_UP_9 := 10 * TEN_UP_4 * TEN_UP_4;
+  const TEN_UP_2 : uint64 := 10 * 10;
+  const TEN_UP_4 : uint64 := TEN_UP_2 * TEN_UP_2;
+  const TEN_UP_9 : uint64 := 10 * TEN_UP_4 * TEN_UP_4;
 
   //  (Non-configurable) constants
-  const BASE_REWARDS_PER_EPOCH := 4 ;
-  const DEPOSIT_CONTRACT_TREE_DEPTH := 2 * 2 * 2 * 2 * 2 ; // 2^5
+  const BASE_REWARDS_PER_EPOCH : uint64 := 4;
+  const DEPOSIT_CONTRACT_TREE_DEPTH : uint64 := 2 * 2 * 2 * 2 * 2 ; // 2^5
   const SECONDS_PER_DAY := 86400  ;
   const JUSTIFICATION_BITS_LENGTH : uint64 := 4 ;
   const ENDIANNESS := "little" ;
 
   // Configuration -- Misc
-  const  MAX_COMMITTEES_PER_SLOT := TWO_UP_6; // 2^6                 
-  const  TARGET_COMMITTEE_SIZE := TWO_UP_7 ; // 2^7                   
-  const  MAX_VALIDATORS_PER_COMMITTEE := TWO_UP_11 ; // 2^11           
-  const  MIN_PER_EPOCH_CHURN_LIMIT := TWO_UP_2 ; // 2^2               
-  const  CHURN_LIMIT_QUOTIENT := TWO_UP_16 ; // 2^16                   
-  const  SHUFFLE_ROUND_COUNT := 90;                        
+  const  MAX_COMMITTEES_PER_SLOT : uint64 := TWO_UP_6; // 2^6                 
+  const  TARGET_COMMITTEE_SIZE : uint64 := TWO_UP_7 ; // 2^7                   
+  const  MAX_VALIDATORS_PER_COMMITTEE : uint64 := TWO_UP_11 ; // 2^11       
+  const  SHUFFLE_ROUND_COUNT : uint64 := 90;  
+
+  const  MIN_PER_EPOCH_CHURN_LIMIT : uint64 := TWO_UP_2; // 2^2               
+  const  CHURN_LIMIT_QUOTIENT : uint64 := TWO_UP_16; // 2^16 
+
   const  MIN_GENESIS_ACTIVE_VALIDATOR_COUNT := TWO_UP_16; // 2^16     
   const  MIN_GENESIS_TIME := 1578009600;                     
 
     // Configuration -- Gwei values
-  const MIN_DEPOSIT_AMOUNT := TWO_UP_0 * TEN_UP_9 ; // 2^0 * 10 ^ 9         
-  const MAX_EFFECTIVE_BALANCE := TWO_UP_5 * TEN_UP_9; // 2 ^ 5 * 10 ^ 9      
-  const EJECTION_BALANCE := TWO_UP_4 * TEN_UP_9; // 2 ^ 4 * 10 ^ 9           
-  const EFFECTIVE_BALANCE_INCREMENT := TWO_UP_0 * TEN_UP_9; //2 ^ 0 * 10 ^ 9
+  const MIN_DEPOSIT_AMOUNT : Gwei := (TWO_UP_0 * TEN_UP_9) as Gwei; // 2^0 * 10 ^ 9         
+  const MAX_EFFECTIVE_BALANCE : Gwei := (TWO_UP_5 * TEN_UP_9) as Gwei; // 2 ^ 5 * 10 ^ 9      
+  const EJECTION_BALANCE : Gwei := (TWO_UP_4 * TEN_UP_9) as Gwei; // 2 ^ 4 * 10 ^ 9           
+  const EFFECTIVE_BALANCE_INCREMENT : Gwei := (TWO_UP_0 * TEN_UP_9) as Gwei; //2 ^ 0 * 10 ^ 9
 
   // Configuration -- Initial values
   
@@ -85,7 +88,9 @@ module Constants {
    *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#constants}
    */
   const GENESIS_SLOT := 0 as Slot              
-  const GENESIS_EPOCH := 0 as Epoch    
+  const GENESIS_EPOCH := 0 as Epoch  
+
+  const FAR_FUTURE_EPOCH := (TWO_UP_64 - 1) as Epoch  
 
   // This should be of type Bytes in types.k
   // TODO: check that the type is OK (as int and uints are bounded ints, should be OK.)
@@ -103,16 +108,17 @@ module Constants {
    *  The number of slots in one EPOCH.
    *  @note Current slot time seems to approx 6 seconds.
    */
-  const  SLOTS_PER_EPOCH : uint64 := TWO_UP_5 as uint64; // 2 ^Int 5                           
+  const  SLOTS_PER_EPOCH : uint64 := TWO_UP_5; // 2 ^Int 5                           
   const  MIN_SEED_LOOKAHEAD:= TWO_UP_0 ; // 2 ^ 0                        
-  const  MAX_SEED_LOOKAHEAD:= TWO_UP_2 ; // 2 ^ 2                        
+  const  MAX_SEED_LOOKAHEAD : uint64 := TWO_UP_2; // 2 ^ 2                        
   const  SLOTS_PER_ETH1_VOTING_PERIOD:= TWO_UP_10; // 2 ^ 10             
   const  SLOTS_PER_HISTORICAL_ROOT : uint64 := TWO_UP_13 as uint64 ; // 2 ^ 13  (= 8,192)            
   const  MIN_VALIDATOR_WITHDRAWABILITY_DELAY:= TWO_UP_8; // 2 ^ 8       
   const  PERSISTENT_COMMITTEE_PERIOD:= TWO_UP_11; // 2 ^ 11              
   const  MAX_EPOCHS_PER_CROSSLINK:= TWO_UP_6; // 2 ^ 6                  
-  const  MIN_EPOCHS_TO_INACTIVITY_PENALTY:= TWO_UP_2; // 2 ^ 2          
+  const  MIN_EPOCHS_TO_INACTIVITY_PENALTY:= TWO_UP_2 as uint64; // 2 ^ 2          
   const  EARLY_DERIVED_SECRET_PENALTY_MAX_FUTURE_EPOCHS:= TWO_UP_14; // 2 ^ 14
+  const  SHARD_COMMITTEE_PERIOD	: Epoch := TWO_UP_8 as Epoch; // uint64(2**8) (= 256)	epochs	~27 hours
 
   // Configuration -- State list lengths
   const  EPOCHS_PER_HISTORICAL_VECTOR := TWO_UP_16; // 2 ^ 16              
@@ -125,9 +131,9 @@ module Constants {
   const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40                  
 
   // Configuration -- Rewards and penalties
-  const BASE_REWARD_FACTOR := TWO_UP_6; // 2 ^ 6                         
+  const BASE_REWARD_FACTOR := TWO_UP_6 as uint64; // 2 ^ 6                         
   const WHISTLEBLOWER_REWARD_QUOTIENT := TWO_UP_9; // 2 ^ 9              
-  const PROPOSER_REWARD_QUOTIENT := TWO_UP_3; // 2 ^ 3                   
+  const PROPOSER_REWARD_QUOTIENT := TWO_UP_3 as uint64; // 2 ^ 3                   
   const INACTIVITY_PENALTY_QUOTIENT := TWO_UP_25; // 2 ^ 25               
   const MIN_SLASHING_PENALTY_QUOTIENT := TWO_UP_5; // 2 ^ 5              
 
@@ -146,8 +152,8 @@ module Constants {
   // As per the rules in K, the domain types are strings and rewritten into 
   //  fixed sequences of Bytes4 
   // TODO: Check DomainType. Why are they rewitten into 5 different strings in K?
-  const DOMAIN_BEACON_PROPOSER := 0x00000000 ;
-  const DOMAIN_BEACON_ATTESTER := 0x01000000  ;
+  const DOMAIN_BEACON_PROPOSER : DomainType := Bytes([0,0,0,0]); // 0x00000000;
+  const DOMAIN_BEACON_ATTESTER : DomainType := Bytes([0x1,0,0,0]); //0x01000000  ;
   const DOMAIN_RANDAO := 0x02000000  ;
   const DOMAIN_DEPOSIT := 0x03000000 ;
   const DOMAIN_VOLUNTARY_EXIT := 0x04000000  ;

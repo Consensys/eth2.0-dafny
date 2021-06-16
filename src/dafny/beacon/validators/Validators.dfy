@@ -41,15 +41,15 @@ module Validators {
     datatype Validator = Validator(
         pubkey: BLSPubkey,
         // withdrawalCredentials: Hash,
-        effectiveBalance: Gwei
-        // slashed: bool,
+        effectiveBalance: Gwei,
+        slashed: bool,
         // activationEligibilityEpoch: Epoch,
-        // activationEpoch: Epoch
-        // exitEpoch: int,
-        // withdrawableEpoch: int
+        activationEpoch: Epoch,
+        exitEpoch: Epoch,
+        withdrawableEpoch: Epoch
     )
     
-    const DEFAULT_VALIDATOR := Validator(DEFAULT_BYTES48, 0)
+    const DEFAULT_VALIDATOR := Validator(DEFAULT_BYTES48, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH)
     
      /**
      *  Deposit data.
@@ -111,7 +111,7 @@ module Validators {
      *                              defined by validator_index.
      */
     datatype VoluntaryExit = VoluntaryExit(
-        epoch: int,
+        epoch: Epoch,
         validator_index: ValidatorIndex,
         signature: BLSSignature
     )

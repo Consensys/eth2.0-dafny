@@ -289,9 +289,24 @@ module Eth2Types {
     /** An epoch is unsigned int over 64 bits. */
     type Epoch = uint64
 
-    /* Validator registry index. */
+    /** A committee index at a slot. */
+    type CommitteeIndex = uint64
+    
+    /** Validator registry index. */
     type ValidatorIndex = uint64
 
+    /** A fork version number */
+    type Version = Bytes4
+
+    /** A domain type. */
+    type DomainType	= Bytes4	
+
+    /** A digest of the current fork data. */
+    type ForkDigest	= Bytes4	
+
+    /** A signature domain. */
+    type Domain	= Bytes32	
+    
     /** The default zeroed Bytes32.  */
     const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 

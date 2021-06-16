@@ -107,7 +107,7 @@ module StateTransition {
         requires |s.validators| == |s.balances| 
 
         /** The next state latest_block_header is same as b except for state_root that is 0. */
-        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
         /** s' slot is now adjusted to the slot of b. */
         ensures s'.slot == b.slot
         /** s' parent_root is the hash of the state obtained by resolving/forwarding s to
@@ -283,10 +283,9 @@ module StateTransition {
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
 
-
         ensures s' == updateDeposits(updateEth1Data(addBlockToState(s, b), b.body), b.body.deposits)
         ensures s'.slot == b.slot
-        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
         ensures |s'.validators| == |s'.balances|
     {
         //  Start by creating a block header from the ther actual block.
@@ -322,7 +321,7 @@ module StateTransition {
 
         ensures s' == addBlockToState(s, b)
         ensures s'.slot == b.slot
-        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+        ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
         ensures s'.validators == s.validators
         ensures s'.balances == s.balances
         ensures |s'.validators| == |s'.balances|
@@ -331,6 +330,7 @@ module StateTransition {
         s':= s.(
             latest_block_header := BeaconBlockHeader(
                 b.slot,
+                b.proposer_index,
                 b.parent_root,
                 DEFAULT_BYTES32
             )
@@ -555,8 +555,8 @@ module StateTransition {
     method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
         // requires forall a :: a in s.current_epoch_attestations ==> 
         requires attestationIsWellFormed(s, a)
-        requires |s.current_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
-        requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
+        requires |s.current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
         // ensures 
 
     {

@@ -72,15 +72,15 @@ module AttestationsHelpers {
      */
      function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
         ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
-            e < MAX_VALIDATORS_PER_COMMITTEE
-        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+            e < MAX_VALIDATORS_PER_COMMITTEE as nat
+        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
         decreases xa
     {
         if |xa| == 0 then 
             { }
         else 
             unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectValidatorsAttestatingForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE);
+                collectValidatorsAttestatingForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE as nat);
             (if xa[0].data.source == src && xa[0].data.target == tgt then 
                 trueBitsCount(xa[0].aggregation_bits)
             else 
@@ -97,15 +97,15 @@ module AttestationsHelpers {
      */
     function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
         ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
-            e < MAX_VALIDATORS_PER_COMMITTEE
-        ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
+            e < MAX_VALIDATORS_PER_COMMITTEE as nat
+        ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
         decreases xa
     {
         if |xa| == 0 then 
             { }
         else 
             unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
+                collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE as nat);
             (if xa[0].data.target == tgt then 
                 trueBitsCount(xa[0].aggregation_bits)
             else 
@@ -164,6 +164,11 @@ module AttestationsHelpers {
         //  report? -> meaning of i in (a, b)? seems to be closed interval ...
         requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
         ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000
+
+        // this property will be assumed for the moment
+        //ensures forall i :: 0 <= i < |get_matching_source_attestations(state, epoch)| 
+        //    ==> get_matching_source_attestations(state, epoch)[i].data.index 
+        //        < get_committee_count_per_slot(state, compute_epoch_at_slot(get_matching_source_attestations(state, epoch)[i].data.slot)) <= TWO_UP_6
     {
         // assert epoch in (get_previous_epoch(state), get_current_epoch(state))
         // return state.current_epoch_attestations if epoch == get_current_epoch(state) else state.previous_epoch_attestations
@@ -223,6 +228,23 @@ module AttestationsHelpers {
         filterAttestations(ax, get_block_root(state, epoch))
     }
 
+    function method get_matching_head_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
+        requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
+        requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
+        requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
+        
+        ensures |get_matching_head_attestations(state, epoch)| < 0x10000000000000000
+        ensures forall a :: a in get_matching_head_attestations(state, epoch) ==>
+                    a.data.slot < state.slot &&
+                    state.slot - a.data.slot <= SLOTS_PER_HISTORICAL_ROOT &&
+                    a.data.beacon_block_root == get_block_root_at_slot(state, a.data.slot)
+
+    {
+        var ax := get_matching_target_attestations(state, epoch);
+        filterAttestationsyy(ax, state)
+    }
+    
+
     function method get_attesting_balance(state: BeaconState, attestations: seq<PendingAttestation>) : Gwei 
         requires |attestations| < 0x10000000000000000
     // """
@@ -234,15 +256,36 @@ module AttestationsHelpers {
         |attestations| as Gwei 
     }
 
-    // function method get_unslashed_attesting_indices(state: BeaconState,
-                                    // attestations: seq<PendingAttestation>): set<ValidatorIndex>
-    // output = set()  # type: Set[ValidatorIndex]
-    // for a in attestations:
-    //     output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
-    // return set(filter(lambda index: not state.validators[index].slashed, output))
-    // {
-    //     attestations 
-    // }
+    function method get_unslashed_attesting_indices(s: BeaconState, attestations: seq<PendingAttestation>): set<ValidatorIndex>
+        //requires forall i :: 0 <= i < |attestations| ==> attestations[i].data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(attestations[i].data.slot)) <= TWO_UP_6
+        requires forall a :: a in attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        requires forall a :: a in attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+
+        ensures forall i  :: i in get_unslashed_attesting_indices(s, attestations) ==> i as nat < |s.validators|
+    {
+        if |attestations| == 0 then {}
+        else 
+            // output = set()  # type: Set[ValidatorIndex]
+            // for a in attestations:
+            //      output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+            //      return set(filter(lambda index: not state.validators[index].slashed, output))       
+            var indices := get_attesting_indices(s, attestations[0].data, attestations[0].aggregation_bits);
+            var unslashed_indices := unslashed_attesting_indices_helper(s,indices);
+            unslashed_indices + get_unslashed_attesting_indices(s, attestations[1..])
+    }
+    
+    function method unslashed_attesting_indices_helper(s: BeaconState, indices: set<ValidatorIndex>): set<ValidatorIndex>
+        requires forall i  :: i in indices ==> i as nat < |s.validators|
+        ensures forall i  :: i in unslashed_attesting_indices_helper(s, indices) ==> i as nat < |s.validators|
+    {
+       if indices == {} then {}
+       else 
+            var x := PickIndex(indices);
+            if !s.validators[x].slashed then {x} + unslashed_attesting_indices_helper(s, indices - {x})
+            else unslashed_attesting_indices_helper(s, indices - {x})
+    }
+
 
     // function method  get_total_balance(state: BeaconState, indices: set<ValidatorIndex>) : Gwei
     // """
@@ -255,7 +298,61 @@ module AttestationsHelpers {
         //  for now we return the size of indices
         // |indices| as Gwei 
     // }
-    
+
+
+    function method get_total_balance(s: BeaconState, indices: set<ValidatorIndex>) : Gwei
+        requires forall i : ValidatorIndex :: i in indices ==> i as nat < |s.validators|
+
+    {
+        max(EFFECTIVE_BALANCE_INCREMENT as nat, get_total_balance_helper(s, indices) as nat) as Gwei
+    }
+
+    function method get_total_balance_helper(s: BeaconState, indices: set<ValidatorIndex>) : Gwei
+        requires forall i : ValidatorIndex :: i in indices ==> i as nat < |s.validators|
+    {
+        if |indices| == 0 then 0 as Gwei
+        else
+            var y := PickIndex(indices);
+            assume s.validators[y].effectiveBalance as nat + get_total_balance_helper(s, indices - {y}) as nat < 0x10000000000000000;
+            s.validators[y].effectiveBalance + get_total_balance_helper(s, indices - {y}) 
+    }
+
+    function method PickIndex(s: set<ValidatorIndex>): ValidatorIndex
+        requires s != {}
+    {
+        HasMinimum(s);
+        var z :| z in s && forall y :: y in s ==> z as nat <= y as nat;
+        z
+    }
+
+    lemma HasMinimum(s: set<ValidatorIndex>)
+        requires s != {}
+        ensures exists z :: z in s && forall y :: y in s ==> z <= y
+        // Ref: https://stackoverflow.com/questions/51207795/the-hilbert-epsilon-operator
+    {
+        var z :| z in s;
+        if s == {z} {
+            // the mimimum of a singleton set is its only element
+        } else if forall y :: y in s ==> z <= y {
+            // we happened to pick the minimum of s
+        } else {
+            // s-{z} is a smaller, nonempty set and it has a minimum
+            var s' := s - {z};
+            HasMinimum(s');
+            var z' :| z' in s' && forall y :: y in s' ==> z' <= y;
+            // the minimum of s' is the same as the miminum of s
+            forall y | y in s
+            ensures z' <= y
+            {
+            if
+            case y in s' =>
+                assert z' <= y;  // because z' in minimum in s'
+            case y == z =>
+                var k :| k in s && k < z;  // because z is not minimum in s
+                assert k in s';  // because k != z
+            }
+        }
+    }
 
     function method get_total_active_balance(state: BeaconState) : Gwei
         // requires |state.validators| < 0x10000000000000000
@@ -267,6 +364,43 @@ module AttestationsHelpers {
         // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
         assert(|state.validators| < 0x10000000000000000);
         |state.validators| as uint64
+    }
+
+    // def get_attesting_indices(state: BeaconState,
+    //                       data: AttestationData,
+    //                       bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]) -> Set[ValidatorIndex]:
+    // """
+    // Return the set of attesting indices corresponding to ``data`` and ``bits``.
+    // """
+    // committee = get_beacon_committee(state, data.slot, data.index)
+    // return set(index for i, index in enumerate(committee) if bits[i])
+    function method get_attesting_indices(s: BeaconState, data: AttestationData, bits: AggregationBits) : set<ValidatorIndex>
+        requires TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(data.slot)) <= TWO_UP_6
+        requires 0 < |get_beacon_committee(s, data.slot, data.index)| == |bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat
+
+        ensures forall i :: i in get_attesting_indices(s, data, bits) ==> i as nat < |s.validators|
+    {
+        var committee := get_beacon_committee(s, data.slot, data.index);
+        assert |committee| <= |bits|;
+        assert forall e :: e in committee ==> e as nat < |s.validators|;
+        filterIndicesxx(committee, bits)
+
+    }
+
+    function method filterIndicesxx(sv : seq<ValidatorIndex>, bits: AggregationBits) : set<ValidatorIndex>
+        requires |sv| <= |bits|
+        ensures |filterIndicesxx(sv, bits)| <= |sv|
+        ensures forall i :: 0 <= i < |sv| && bits[i] ==> sv[i] in filterIndicesxx(sv, bits)
+        ensures |filterIndicesxx(sv, bits)| <= |sv|
+        ensures forall i :: i in filterIndicesxx(sv, bits) ==> i in sv
+        decreases sv
+    {
+        if |sv| == 0 then 
+            {}
+        else 
+            (if bits[0] then {sv[0]} else {})
+                + filterIndicesxx(sv[1..], bits[1..])
     }
 
     /**
@@ -286,6 +420,25 @@ module AttestationsHelpers {
         else 
             (if xl[0].data.target.root == br then [xl[0]] else [])
                 + filterAttestations(xl[1..], br)
+    }
+
+    function method filterAttestationsyy(xl : seq<PendingAttestation>, s : BeaconState) : seq<PendingAttestation>
+        ensures |filterAttestationsyy(xl, s)| <= |xl|
+        ensures forall a :: a in xl && 
+                            a.data.slot < s.slot &&
+                            s.slot - a.data.slot <= SLOTS_PER_HISTORICAL_ROOT &&
+                            a.data.beacon_block_root == get_block_root_at_slot(s, a.data.slot) <==> a in filterAttestationsyy(xl, s) 
+        decreases xl
+    {
+        if |xl| == 0 then 
+            []
+        else 
+            (if xl[0].data.slot < s.slot &&
+                s.slot - xl[0].data.slot <= SLOTS_PER_HISTORICAL_ROOT &&
+                xl[0].data.beacon_block_root == get_block_root_at_slot(s, xl[0].data.slot) then [xl[0]] else [])
+
+                + filterAttestationsyy(xl[1..], s)
+
     }
    
 }

@@ -43,6 +43,9 @@ module BeaconChainTypes {
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != DEFAULT_BYTES32
 
+    function method hash<T(==)>(t : T) : Bytes32 
+        ensures hash(t) != DEFAULT_BYTES32
+
 
     /** The historical roots type.  */
     type VectorOfHistRoots = x : seq<Root> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
@@ -50,6 +53,21 @@ module BeaconChainTypes {
 
     /** Empty vector of historical roots. */
     const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
+
+
+    /** The randao mixes type.  */
+    type VectorOfRandaoMix = x : seq<Bytes32> |  |x| == EPOCHS_PER_HISTORICAL_VECTOR as int
+        witness DEFAULT_RANDAO_MIX
+
+    /** Empty vector of randao mixes. */
+    const DEFAULT_RANDAO_MIX := timeSeq<Bytes32>(DEFAULT_BYTES32, EPOCHS_PER_HISTORICAL_VECTOR as int)
+
+    /** The slashings type.  */
+    type VectorOfSlashings = x : seq<Gwei> |  |x| == EPOCHS_PER_SLASHINGS_VECTOR as int
+        witness DEFAULT_SLASHINGS
+
+    /** Empty vector of slashings. */
+    const DEFAULT_SLASHINGS := timeSeq<Gwei>(0 as Gwei, EPOCHS_PER_SLASHINGS_VECTOR as int)
 
     /**
      *  Beacon chain block header.
@@ -62,7 +80,7 @@ module BeaconChainTypes {
      */
     datatype BeaconBlockHeader = BeaconBlockHeader(
         slot: Slot,
-        // proposer_index: ValidatorIndex,
+        proposer_index: ValidatorIndex,
         parent_root: Root,
         state_root: Root
         // body_root: Root
@@ -73,6 +91,7 @@ module BeaconChainTypes {
      */
     const DEFAULT_BLOCK_HEADER := BeaconBlockHeader(
         0 as Slot,
+        0 as ValidatorIndex,
         DEFAULT_BYTES32,
         DEFAULT_BYTES32
     )
@@ -94,17 +113,17 @@ module BeaconChainTypes {
         // randao_reveal: BLSSignature,
         eth1_data: Eth1Data,
         // graffiti: uint32,                          //  In K: Bytes32
-        // proposer_slashings: seq<ProposerSlashing>,
-        // attester_slashings: seq<AttesterSlashing>,
+        proposer_slashings: seq<ProposerSlashing>,
+        attester_slashings: seq<AttesterSlashing>,
         attestations: ListOfAttestations,
-        deposits: seq<Deposit>
-        // voluntary_exits: seq<VoluntaryExit>
+        deposits: seq<Deposit>,
+        voluntary_exits: seq<VoluntaryExit>
     )
 
     /**
      *  The zeroed (default) block body.
      */
-    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_ETH1DATA, [], [])
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_ETH1DATA, [], [], [], [], [])
 
     /**
      *  Beacon block.
@@ -135,7 +154,7 @@ module BeaconChainTypes {
      */  
     datatype BeaconBlock = BeaconBlock( 
         slot: Slot,
-        // proposer_index: ValidatorIndex,
+        proposer_index: ValidatorIndex,
         parent_root: Root,
         state_root: Root,
         body: BeaconBlockBody
@@ -145,7 +164,7 @@ module BeaconChainTypes {
      *  The zeroed (default) block.
      */
     const DEFAULT_BLOCK := BeaconBlock(
-            0 as Slot, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
+            0 as Slot, 0 as ValidatorIndex, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
     )
 
     type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int witness DEFAULT_JUSTIFICATION_BITVECTOR
@@ -299,6 +318,10 @@ module BeaconChainTypes {
         //  Registry
         validators: ListOfValidators,
         balances: ListOfBalances,
+        //  Randomness
+        randao_mixes: VectorOfRandaoMix,
+        // slashings
+        slashings: VectorOfSlashings,
         //  previous_epoch_attestations: seq<>,
         //  Attestations
         previous_epoch_attestations: ListOfAttestations,
@@ -323,6 +346,8 @@ module BeaconChainTypes {
             0,
             DEFAULT_LIST_VALIDATORS,
             DEFAULT_LIST_BALANCES,
+            DEFAULT_RANDAO_MIX,
+            DEFAULT_SLASHINGS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_LIST_ATTESTATIONS,
             DEFAULT_JUSTIFICATION_BITVECTOR,
@@ -349,7 +374,6 @@ module BeaconChainTypes {
      *  
      */ 
     datatype ProposerSlashing = ProposerSlashing(
-        proposer_index: ValidatorIndex,
         header_1: BeaconBlockHeader,
         header_2: BeaconBlockHeader
     )
