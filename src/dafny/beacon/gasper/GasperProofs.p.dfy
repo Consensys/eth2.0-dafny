@@ -138,11 +138,11 @@ module GasperProofs {
         requires bh1 in store.blocks.Keys
         requires bh2 in store.blocks.Keys
 
-        /** The block roots of the chckpoins must be from accepted blocks, i.e. in the store. */
+        /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
         requires cp1.root in store.blocks.Keys
         requires cp2.root in store.blocks.Keys
         
-        /** The chckpoints are distinct but have same epoch. */
+        /** The checkpoints are distinct but have same epoch. */
         requires cp1.epoch == cp2.epoch 
         requires cp1.root != cp2.root 
 
