@@ -133,6 +133,47 @@ module GasperProofs {
         }
     }
 
+    lemma lemma4_11v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store) 
+        /** The block roots must be from accepted blocks, i.e. in the store. */
+        requires bh1 in store.blocks.Keys
+        requires bh2 in store.blocks.Keys
+
+        /** The block roots of the chckpoins must be from accepted blocks, i.e. in the store. */
+        requires cp1.root in store.blocks.Keys
+        requires cp2.root in store.blocks.Keys
+        
+        /** The chckpoints are distinct but have same epoch. */
+        requires cp1.epoch == cp2.epoch 
+        requires cp1.root != cp2.root 
+
+        /** The store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** The checkpoints are both justified. */
+        requires 
+            && isJustifiedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations)
+            && isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
+    
+        /** Each validator that attested for cp1 and cp2 violates rule I. */
+        ensures 
+            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
+            forall i :: i in i1 * i2 ==> validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+    {
+        //  Attestations for tgt1 ands tgt2
+        var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
+        var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
+
+        //  Proof that each validator that attested for cp1 and cp2 violates rule I
+        forall (i | i in attForTgt1 * attForTgt2) 
+            ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+        {
+            //  Thanks Dafny
+        }
+    }
+
+
     /**
      *  Two checkpoints with the same epoch.
      *  Assume they both have A1 and A2 attestations more than 2/3 of total incoming attestations. 
