@@ -525,7 +525,7 @@ module GasperHelpers {
      *  @param  links   A list of attestations.
      *
      */
-    lemma oneFinalisedImpliesJustified(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
+    lemma oneFinalisedImpliesJustifiedFromRoot(br: Root, f: Epoch, store: Store, links : seq<PendingAttestation>)
         requires br in store.blocks.Keys 
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
