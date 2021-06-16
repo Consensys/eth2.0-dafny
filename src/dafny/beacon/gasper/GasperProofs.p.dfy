@@ -173,7 +173,6 @@ module GasperProofs {
         }
     }
 
-
     /**
      *  Two checkpoints with the same epoch.
      *  Assume they both have A1 and A2 attestations more than 2/3 of total incoming attestations. 
