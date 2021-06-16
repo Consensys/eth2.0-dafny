@@ -258,6 +258,24 @@ module GasperHelpers {
     }
 
     /**
+     *  Whether a checkpoint is justified in a store.
+     *  
+     *  @param  cp      A checkpoint.
+     *  @param  store   A store.
+     *  @returns        Whether cp is justified but some attestations in store.
+     */
+    predicate isJustified(cp: CheckPoint, store: Store)
+        /** The block root must in the store.  */
+        requires cp.root in store.blocks.Keys         
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {
+        exists br: Root :: br in store.blocks.Keys && isJustifiedEpochFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
+    }
+
+    /**
      *  The most recent justified EBB before epoch.
      */
     function lastJustified(br: Root, e: Epoch, store: Store, links : seq<PendingAttestation>): (c :  CheckPoint)
@@ -315,6 +333,19 @@ module GasperHelpers {
                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
     
+    predicate isOneFinalised(cp: CheckPoint, store: Store) 
+         /** The block root must in the store.  */
+        requires cp.root in store.blocks.Keys      
+        requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
+   
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {
+        exists br: Root :: br in store.blocks.Keys && isOneFinalisedFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
+    }
+
     /**
      *  
      *  @param  i       An index in the sequence of ebbs. This is not the epoch
