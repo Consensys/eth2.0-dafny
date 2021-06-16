@@ -544,4 +544,34 @@ module GasperHelpers {
         var cr2 := computeAllEBBsFromRoot(br, f , store);
         succEBBsFromRoot(br, f + 1 , store);
     }
+
+    /** 
+     *  A 1-finalised checkpoint is justified.
+     *  
+     *  @param  br      A block root.
+     *  @param  f       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     */
+    // lemma oneFinalisedImpliesJustified(cp: CheckPoint, store: Store)
+    //     /** Checkpoint is valid. */
+    //     requires cp.root in store.blocks.Keys 
+    //     requires 0 < cp.epoch as nat + 1 <= MAX_UINT64 
+    //     /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)  
+        
+    //     /** Checkpoint cp is 1-finalised. */
+    //     requires isOneFinalised(cp, store)
+
+    //     /** CheckPoint cp is justified. */
+    //     ensures isJustified(cp, store)
+    // {
+    //     //  Get a witness for one-finalisation.
+    //     var br :| br in store.blocks.Keys && isOneFinalisedFromRoot(br, cp.epoch, store, store.rcvdAttestations);
+    //     //  Apply version of this lemma from root.
+    //     oneFinalisedImpliesJustifiedFromRoot(br, cp.epoch, store, store.rcvdAttestations);
+    // }
 }
