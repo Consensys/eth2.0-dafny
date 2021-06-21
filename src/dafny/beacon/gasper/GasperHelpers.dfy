@@ -257,6 +257,24 @@ module GasperHelpers {
         isJustifiedEpoch(cr, e, store, links)
     }
 
+    predicate isJustifiedCheckPointFromRoot(br: Root, cp: CheckPoint, store: Store, links : seq<PendingAttestation>) 
+        requires br in store.blocks.Keys 
+        requires cp.root in store.blocks.Keys
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {
+        //  Compute the EBBs from `br` before epoch e 
+        var cr := computeAllEBBsFromRoot(br, cp.epoch, store);
+        //  There are e + 1 EBBs in cr indexed from 0 to |e|
+        //  cr[0] is the EBB at epoch e, cr[k] at epoch e - k, cr[|cr| - 1 == e] 
+        //  at epoch e - |cr| + 1 == 0
+        assert(|cr| == cp.epoch as nat + 1);
+        //  Return whether epoch e is justified in `cr`
+        cp.root == cr[0] && isJustifiedEpoch(cr, cp.epoch, store, links)
+    }
+
     /**
      *  Whether a checkpoint is justified in a store.
      *  
@@ -272,7 +290,10 @@ module GasperHelpers {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
     {
-        exists br: Root :: br in store.blocks.Keys && isJustifiedEpochFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
+        exists br: Root :: 
+            br in store.blocks.Keys 
+            // && cp.root == computeAllEBBsFromRoot(br, cp.epoch, store)[0]
+            && isJustifiedEpochFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
     }
 
     /**
@@ -332,6 +353,44 @@ module GasperHelpers {
             CheckPoint(f + 1, ebbs[|ebbs| - 1 - (f + 1) as nat]))|          //  target
                 >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     }
+
+/** 
+     *  Whether a checkpoint is 1-finalised relative to a given block head.
+     *  
+     *  @param  br      A block root.
+     *  @param  cp      A checkpoint.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @returns        Whether the checkpoint cp is 1-finalised.
+     *                  It is iff (i) cp is justified and (ii) there is a supermajority
+     *                  link from cp to the next checkpoint at epoch cp.epoch + 1.   
+     *
+     */
+     predicate isOneFinalisedCheckPointFromRoot(br: Root, cp: CheckPoint, store: Store, links : seq<PendingAttestation>) 
+        /** The block root is in store. */
+        requires br in store.blocks.Keys 
+        /** The checkpoint is valid. */
+        requires cp.root in store.blocks.Keys
+        requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
+
+        /** The store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {        
+        //  1-finalised must be justified
+        isJustifiedCheckPointFromRoot(br, cp, store, links) 
+        //  and it justifies the next EBB. note: the EBBs are in reverse order in `ebbs`
+        && 
+            var f := cp.epoch;
+            //  Compute the EBBs from `br` before epoch cp.epoch + 1 
+            var ebbs := computeAllEBBsFromRoot(br, f + 1, store);
+            |collectValidatorsAttestatingForLink(
+                links,  
+                CheckPoint(f, ebbs[|ebbs| - 1 - f as nat]),                     //  source
+                CheckPoint(f + 1, ebbs[|ebbs| - 1 - (f + 1) as nat]))|          //  target
+                    >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    }
     
     predicate isOneFinalised(cp: CheckPoint, store: Store) 
          /** The block root must in the store.  */
@@ -342,8 +401,13 @@ module GasperHelpers {
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
+
     {
-        exists br: Root :: br in store.blocks.Keys && isOneFinalisedFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
+        exists br: Root :: 
+            br in store.blocks.Keys 
+            // && cp == CheckPoint(cp.epoch, computeAllEBBsFromRoot(br, cp.epoch, store)[0])
+            && cp.root == computeAllEBBsFromRoot(br, cp.epoch, store)[0]
+            && isOneFinalisedFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
     }
 
     /**
@@ -548,7 +612,7 @@ module GasperHelpers {
     }
 
     /** 
-     *  A 1-finalsised checkpoint is justified.
+     *  A 1-finalised checkpoint is justified.
      *  
      *  @param  br      A block root.
      *  @param  f       An epoch.
@@ -574,6 +638,27 @@ module GasperHelpers {
         var cr := computeAllEBBsFromRoot(br, f + 1, store);
         var cr2 := computeAllEBBsFromRoot(br, f , store);
         succEBBsFromRoot(br, f + 1 , store);
+    }
+
+    lemma oneFinalisedImpliesJustifiedFromRootCP(br: Root, cp: CheckPoint, store: Store, links : seq<PendingAttestation>)
+        requires br in store.blocks.Keys 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+        /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
+         *  f + 1 must be an epoch
+         */
+        requires cp.root in store.blocks.Keys
+        requires 0 < cp.epoch as nat + 1 <= MAX_UINT64 
+        /** Checkpoint at Epoch f is 1-finalised. */
+        requires isOneFinalisedCheckPointFromRoot(br, cp, store, links)
+        /** ChecvkPoint at Epoch f is justified. */
+        ensures isJustifiedCheckPointFromRoot(br, cp, store, links)
+    {
+        var cr := computeAllEBBsFromRoot(br, cp.epoch + 1, store);
+        var cr2 := computeAllEBBsFromRoot(br, cp.epoch , store);
+        succEBBsFromRoot(br, cp.epoch + 1 , store);
     }
 
     /** 

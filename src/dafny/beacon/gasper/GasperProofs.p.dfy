@@ -133,7 +133,7 @@ module GasperProofs {
         }
     }
 
-    lemma lemma4_11v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store) 
+    lemma {:induction false} lemma4_11v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store) 
         /** The block roots must be from accepted blocks, i.e. in the store. */
         requires bh1 in store.blocks.Keys
         requires bh2 in store.blocks.Keys
@@ -422,7 +422,7 @@ module GasperProofs {
         }
     }
 
- /**
+    /**
      *  In a view G, if (Bf, f) in F(G) and (Bj, j) in J(G) with j > f, then Bf
      *  must be an ancestor of Bj , or the blockchain is (1/3)-slashable – 
      *  specifically, there must exist 2 subsets V1, V2 of V, each with total stake at 
@@ -465,16 +465,20 @@ module GasperProofs {
      *  
      *   
      */
-    lemma {:induction false} lemma5v2(cp1: CheckPoint, cp2: CheckPoint, store: Store)
+    lemma {:induction false} lemma5v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store)
+        /** The block roots must be from accepted blocks, i.e. in the store. */
+        requires bh1 in store.blocks.Keys
+        requires bh2 in store.blocks.Keys
+
         /** The block roots must be from accepted blocks, i.e. blocks in the store. */
         requires cp1.root in store.blocks.Keys
         requires cp2.root in store.blocks.Keys
 
-        /** The epochs j and f are before the heads' slots. */
+        /** cp1 is one-finalised so its epoch + 1 is less than MAX int 64. */
         requires cp2.epoch as nat + 1 <= MAX_UINT64
 
-        //  The two blocks are not equal.
-        requires cp1.root != cp2.root 
+        /** The two checkpoints are different. */  
+        requires cp1 != cp2 
 
         /** Epoch is not zero */
         requires cp2.epoch >= cp1.epoch > 0 
@@ -484,13 +488,13 @@ module GasperProofs {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
-        /** Checkpoint at epoch f is 1-finalised. */
-        requires isOneFinalised(cp1, store) 
+        /** Checkpoint at epoch f == cp1.epoch is 1-finalised. */
+        requires isOneFinalisedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations) 
 
         /** Checkpoint at epoch j is justified. */
-        requires isJustified(cp2, store)
+        requires isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
 
-        //  Case 1: j == f, covered by lemma 4.
+        //  Case 1: cp1.epoch == cp2.epoch (covered by lemma 4 in the proof)
         ensures cp1.epoch == cp2.epoch ==> 
             var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
             var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
@@ -498,35 +502,12 @@ module GasperProofs {
             forall i :: i in i1 * i2 ==> 
                 validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
     {
-        var bh1 :| bh1 in store.blocks.Keys && isOneFinalisedFromRoot(bh1, cp1.epoch, store, store.rcvdAttestations);
-        var bh2 :| bh2 in store.blocks.Keys && isJustifiedEpochFromRoot(bh2, cp2.epoch, store, store.rcvdAttestations);
-
         if (cp1.epoch == cp2.epoch) {
-            //  Show that lemma 4 applies
-            //  bf != bj and we can apply lemma_4_11
-            var k1 := computeAllEBBsFromRoot(bh1, cp1.epoch, store);
-            //  EBB(bh1, j) is k1[0]
-            var k2 := computeAllEBBsFromRoot(bh2, cp2.epoch, store);
-            var tgt1 := CheckPoint(cp1.epoch as Epoch, k1[0]);
-            var tgt2 := CheckPoint(cp2.epoch as Epoch, k2[0]);
-            assert(tgt1.epoch == cp1.epoch);
-            assume(tgt1.root == cp1.root);
-            assert(tgt2.epoch == cp2.epoch);
-            assume(tgt2.root == cp2.root);
-            //  Collect validators for tgt1 and tgt2
-            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-            assert(cp1 != cp2);
-            //  cp1 is one-finalised and hence justified
-            // oneFinalisedImpliesJustified(cp1, store);
-            oneFinalisedImpliesJustifiedFromRoot(bh1, cp1.epoch, store, store.rcvdAttestations);
+            oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
             //  Apply lemma 4.
-            // assume(isJustifiedEpochFromRoot(bh1, cp1.epoch, store, store.rcvdAttestations));
-            // assume(isJustifiedEpochFromRoot(bh2, cp2.epoch, store, store.rcvdAttestations));
-            // assume(bh1 != bh2);
-            lemma4_11_a(bh1, bh2, store, cp1.epoch);
-            // assert(|i1 * i2| >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1);            
+            lemma4_11v2(bh1, bh2, cp1, cp2, store);
         } else {
+            //  cp2.epoch > cp1.epoch
 
         }
 
@@ -611,6 +592,13 @@ module GasperProofs {
             && a1.aggregation_bits[v] && a2.aggregation_bits[v]
         // forall a1, a2 :: PendingAttestation ==> 
         //     aep(LE(a1)) != aep(LE(a2))
+    }
+
+    lemma foo101(a1: PendingAttestation, a2: PendingAttestation, links: ListOfAttestations, v: ValidatorIndex) 
+        requires validatorViolatesRuleIv2(a1, a2, links, v)
+        ensures validatorViolatesRuleI(links, v)
+    {
+
     }
 
     predicate validatorViolatesRuleII(a1: PendingAttestation, a2: PendingAttestation, store: Store, links: ListOfAttestations, v: ValidatorIndex) 
