@@ -224,6 +224,34 @@ module GasperHelpers {
         assume(isJustifiedEpochFromRoot(bh, j, store, links));
     }
 
+    lemma liftFromRootCP(bh: Root, cp: CheckPoint, store: Store, links: seq<PendingAttestation>)
+
+        requires bh in store.blocks.Keys 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        requires cp.epoch > 0 
+        requires cp.root in store.blocks.Keys
+
+        requires isJustifiedCheckPointFromRoot(bh, cp, store, links)
+
+        // requires j < cp1.epoch && isJustifiedEpoch(
+        //        computeAllEBBsFromRoot(bh, e1, store), j, store, store.rcvdAttestations)
+        ensures  
+            exists cp2 : CheckPoint :: 
+                cp2.epoch < cp.epoch &&
+                cp2.root in store.blocks.Keys &&
+                cp2.root in chainRoots(cp.root, store) &&
+                isJustifiedCheckPointFromRoot(bh, cp2, store, links)
+    {
+        assume(exists cp2 : CheckPoint :: cp2.epoch < cp.epoch &&
+            cp2.root in store.blocks.Keys &&
+            cp2.root in chainRoots(cp.root, store) &&
+            isJustifiedCheckPointFromRoot(bh, cp2, store, links));
+    }
+
     /**
      *  @param  br      A block root.
      *  @param  e       An epoch.
@@ -610,6 +638,45 @@ module GasperHelpers {
             assert(|collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
         }
     }
+
+ /**
+     *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
+     *  ingoing votes.
+     *  
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @param  links   A list of attestations.
+     *
+     *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
+     *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
+     *
+     */
+    lemma {:induction false} justifiedCheckPointMustHaveTwoThirdIncoming(br: Root, cp: CheckPoint, store: Store, links : seq<PendingAttestation>)
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+
+        requires cp.root in store.blocks.Keys
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        /** Checkpoint at epoch e is justified. */
+        requires cp.epoch > 0 && isJustifiedCheckPointFromRoot(br, cp, store, links)
+
+        /** Checkpoint at epoch e has more than 2/3 incoming votes. */
+        ensures |collectValidatorsIndicesAttestatingForTarget(links, cp)| 
+                >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    {
+        var cr := computeAllEBBsFromRoot(br, cp.epoch, store);
+        assert(|cr| == cp.epoch as nat + 1);
+        assert(cp.root == cr[0]);
+        justifiedMustHaveTwoThirdIncoming(br, cp.epoch, store, links);
+    }
+
+
 
     /** 
      *  A 1-finalised checkpoint is justified.
