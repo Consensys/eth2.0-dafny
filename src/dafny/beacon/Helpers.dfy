@@ -319,6 +319,26 @@ module BeaconHelpers {
     // start = (len(indices) * index) // count
     // end = (len(indices) * uint64(index + 1)) // count
     // return [indices[compute_shuffled_index(uint64(i), uint64(len(indices)), seed)] for i in range(start, end)]
+    
+    // DEEP DIVE notes:
+    // function method compute_committee(indices: seq<ValidatorIndex>, seed: Bytes32, index: uint64, count: uint64) : seq<ValidatorIndex>
+    //     requires count > 0
+    //     requires index < count
+    //     requires 0 < |indices| < 0x10000000000000000
+    //     requires |indices|  * index as nat / count as nat  < 0x10000000000000000
+    //     requires |indices| * (index as nat +1) / count as nat < 0x10000000000000000
+         
+    //     ensures 0 < |compute_committee(indices, seed, index, count)| == (|indices| * (index as nat +1)) / count as nat - (|indices| * index as nat) / count as nat <= MAX_VALIDATORS_PER_COMMITTEE as nat
+    //     ensures forall e :: e in compute_committee(indices, seed, index, count) ==> e in indices
+    // {
+    //     var start := (|indices| * index as nat) / count as nat;
+    //     var end := (|indices| * (index as nat +1)) / count as nat;
+    //     var range := uint64Range(start as uint64, end as uint64);
+
+    //     compute_committee_helper(indices, seed, range)
+
+    // }
+    
     function method compute_committee(indices: seq<ValidatorIndex>, seed: Bytes32, index: uint64, count: uint64) : seq<ValidatorIndex>
         requires count > 0
         requires index < count
@@ -445,13 +465,31 @@ module BeaconHelpers {
     //     count=committees_per_slot * SLOTS_PER_EPOCH,
     // )
 
+    // DEEP DIVE notes: starting code
+    // function method get_beacon_committee(s: BeaconState, slot: Slot, index: CommitteeIndex) : seq<ValidatorIndex>
+    //     requires index < TWO_UP_6 // this comes from the assert on attestations in process_attestations
+    //     requires index < get_committee_count_per_slot(s, compute_epoch_at_slot(slot)) // at most 64 committees per slot 
+        
+    //     ensures 0 < |get_beacon_committee(s,slot,index)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
+    //     ensures forall e :: e in get_beacon_committee(s,slot,index) ==> e as nat < |s.validators|
+    // {
+    //     var epoch := compute_epoch_at_slot(slot);
+    //     var committees_per_slot := get_committee_count_per_slot(s, epoch);
+    
+    //     compute_committee(
+    //         get_active_validator_indices(s.validators, epoch),
+    //         get_seed(s, epoch, DOMAIN_BEACON_ATTESTER),
+    //         (slot % SLOTS_PER_EPOCH) * committees_per_slot + index,
+    //         committees_per_slot * SLOTS_PER_EPOCH
+    //     )
+    // } 
+
+
     function method get_beacon_committee(s: BeaconState, slot: Slot, index: CommitteeIndex) : seq<ValidatorIndex>
         requires TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
         requires index < TWO_UP_6 // this comes from the assert on attestations in process_attestations
-        requires index < get_committee_count_per_slot(s, compute_epoch_at_slot(slot))
-        // i.e. not sure how MAX_VALIDATORS_PER_COMMITTEE relates ???
-        // or to MAX_COMMITTEES_PER_SLOT  ???
-        // should index < get_committee_count_per_slot(s, epoch) ???
+        requires index < get_committee_count_per_slot(s, compute_epoch_at_slot(slot)) // at most 64 committees per slot 
+        
         ensures 0 < |get_beacon_committee(s,slot,index)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
         ensures forall e :: e in get_beacon_committee(s,slot,index) ==> e as nat < |s.validators|
     {
@@ -487,7 +525,7 @@ module BeaconHelpers {
         assert TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat;
         //assert 0 <= slot % SLOTS_PER_EPOCH < SLOTS_PER_EPOCH;
         confirmBoundBreach3(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
-        confirmBoundBreach2(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
+        proveActiveValidatorsSatisfyBounds(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
         //assert len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) > len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
 
         compute_committee(
@@ -498,76 +536,72 @@ module BeaconHelpers {
         )
     } 
 
-    lemma temp(len_indices: nat, CPS: nat)
+    lemma proveAtLeastOneCommitteeFormedBreachsBound(len_indices: nat, CPS: nat)
         requires TWO_UP_11 as nat * TWO_UP_11 as nat < len_indices 
         requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
         //requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
         //requires 0 <= cIndex < CPS
 
-        //ensures len_indices > (TWO_UP_11 * TWO_UP_11) as nat ==> 
-        //   !(len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) - len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat)
-        ensures exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: // exists slot | 0 <= slot < SLOTS_PER_EPOCH as nat :: //
-            //len_indices > (TWO_UP_11 * TWO_UP_11) as nat ==>
+        ensures 
+            exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: 
             ((len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat)
     {
         assert CPS == 64;
-        //assert 0 <= cIndex < 64;
-
-        //var 
-        //assert len_indices > (TWO_UP_11 * TWO_UP_11) as nat && slot == 31  && cIndex == 63 ==> 
-        //    (len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        assert  exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: // exists slot | 0 <= slot < SLOTS_PER_EPOCH as nat :: //
-            //len_indices > (TWO_UP_11 * TWO_UP_11) as nat ==>
-            ((len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat)
-            by
-             {
-                 assert //var slot := 31  && var cIndex := 63 ==>
-              (len_indices * ((31 * CPS + 63) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (31 * CPS + 63)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-
-             }
-
-
-
         
+        assert exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: // exists slot | 0 <= slot < SLOTS_PER_EPOCH as nat :: //
+               ((len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat)
+               by
+               {
+                    assert //var slot := 31  && var cIndex := 63 ==>
+                    (len_indices * ((31 * CPS + 63) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (31 * CPS + 63)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat;
+               }
     }
 
-    lemma confirmBoundBreach1(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
+    lemma proveAllCommitteesFormedBreachBound(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
         requires TWO_UP_5 as nat <= len_indices 
         requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
         requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
         requires 0 <= cIndex < CPS
 
-        ensures len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> 
-            len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) - len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat) > MAX_VALIDATORS_PER_COMMITTEE as nat
-        
-    {
-        assert len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> 
-            len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) - len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat) > MAX_VALIDATORS_PER_COMMITTEE as nat;
+        ensures var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
+                var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
 
+                len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> end - start > MAX_VALIDATORS_PER_COMMITTEE as nat
+                // at this point all committees formed will breach the maximum size bound
+    {
+        var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
+        var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
+
+        assert len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> end - start > MAX_VALIDATORS_PER_COMMITTEE as nat;
     }
 
-    lemma confirmBoundBreach2(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
-        requires TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+    // len_indices is the number of active validators, 
+    // CPS = committees per slot, 
+    // cIndex is the Committee Index from get_beacon_committee
+    lemma proveActiveValidatorsSatisfyBounds(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
+
+        requires TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat // valid range for the number of active validators
+
         requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
         requires 0 <= slot < SLOTS_PER_EPOCH as nat;
         requires 0 <= cIndex < CPS;
-        ensures 0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat
+
+        ensures var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
+                var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
+        
+                0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat
          
     {
+        var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
+        var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
 
         //assert 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < 64 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == 63;
         //assert TWO_UP_18 as nat - TWO_UP_12 as nat <= len_indices < TWO_UP_18 as nat ==> CPS == 63;
 
         assert  TWO_UP_18 as nat <= len_indices ==> CPS == 64;
+        assert TWO_UP_18 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == 64 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
-
-        assert TWO_UP_18 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == 64 ==> 
-            0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        assert 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < TWO_UP_18 as nat && CPS == 63 ==> 
-            0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
+        assert 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < TWO_UP_18 as nat && CPS == 63 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
         //assert 62 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 62 ==> 
         //    0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
@@ -576,18 +610,17 @@ module BeaconHelpers {
         //    0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
         assert forall i :: 2 <= i <= 63 && (i-1) * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < i * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == i-1 ;
+        
         assert forall i :: 2 <= i <= 63 && (i-1) * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < i * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == i-1 ==> 
-            0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
+            0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
 
         assert len_indices < 2 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == 1;
-        assert TWO_UP_5 as nat <= len_indices < 2 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 1 ==>
-            0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
+        assert TWO_UP_5 as nat <= len_indices < 2 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 1 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
-        assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat ==>
-            0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-    //
-                 //assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat) 
+        assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
+    
+        //assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat) 
         // ==> 
          //   0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
 
