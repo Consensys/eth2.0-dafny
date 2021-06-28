@@ -120,7 +120,7 @@ module Constants {
   const  HISTORICAL_ROOTS_LIMIT := TWO_UP_24; // 2 ^ 24       
 
   /**
-   *  Maximum size of the state.validstors list.
+   *  Maximum size of the state.validators list.
    */             
   const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40                  
 
