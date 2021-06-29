@@ -106,15 +106,19 @@ module GasperJustification {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
 
+        /** Epoch e1 is justified. */
         requires isJustifiedEpochFromRoot(bh, e1, store, links)
+        /** There is an epoch before e1 that is justified. */
         requires j < e1 && isJustifiedEpoch(
                computeAllEBBsFromRoot(bh, e1, store), j, store, store.rcvdAttestations)
+        /** Then epoch j is also justified from bh. */
         ensures  
             isJustifiedEpochFromRoot(bh, j, store, links)
     {
         assume(isJustifiedEpochFromRoot(bh, j, store, links));
     }
 
+    /**  */
     lemma liftFromRootCP(bh: Root, cp: CheckPoint, store: Store, links: seq<PendingAttestation>)
 
         requires bh in store.blocks.Keys 
@@ -123,13 +127,14 @@ module GasperJustification {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
 
+        /** cp is justified. */
         requires cp.epoch > 0 
         requires cp.root in store.blocks.Keys
-
         requires isJustifiedCheckPointFromRoot(bh, cp, store, links)
 
         // requires j < cp1.epoch && isJustifiedEpoch(
         //        computeAllEBBsFromRoot(bh, e1, store), j, store, store.rcvdAttestations)
+        /** There is a checkpoint before cp that is justified. */
         ensures  
             exists cp2 : CheckPoint :: 
                 cp2.epoch < cp.epoch &&
@@ -143,6 +148,7 @@ module GasperJustification {
             isJustifiedCheckPointFromRoot(bh, cp2, store, links));
     }
 
+    
     /**
      *  @param  br      A block root.
      *  @param  e       An epoch.
