@@ -15,6 +15,7 @@
 include "../../ssz/Constants.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../../utils/NativeTypes.dfy"
+include "../validators/Validators.dfy"
 include "AttestationsTypes.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../BeaconChainTypes.dfy"
@@ -37,7 +38,7 @@ module AttestationsHelpers {
     import opened AttestationsTypes
     import opened BeaconChainTypes
     import opened BeaconHelpers
-
+    import opened Validators
 
     /**
      *  The number of attestations for a pair of checkpoints.
@@ -70,7 +71,7 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (src. tgt) in `xa`. 
      */
-     function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
+     function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<ValidatorIndex>
         ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
@@ -101,7 +102,7 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (_. tgt) in `xa`. 
      */
-    function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
+    function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<ValidatorIndex>
         ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
@@ -121,6 +122,22 @@ module AttestationsHelpers {
             else 
                 {}
             ) + collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt)
+    }
+
+    /**
+     *  If a validator index attests for a CP, it must have made an
+     *  attestation with the tgt CP.  
+     */
+    lemma foo202(xa : seq<PendingAttestation>, tgt: CheckPoint, v: nat) returns (a: PendingAttestation)
+        requires v in collectValidatorsIndicesAttestatingForTarget(xa, tgt)
+        ensures a in xa 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v]  
+    {
+        a :| a in xa 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v] ;
+        return a;
     }
 
     /**

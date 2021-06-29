@@ -16,7 +16,7 @@ include "../../utils/Eth2Types.dfy"
 include "../../ssz/Constants.dfy"
 include "../../utils/Helpers.dfy"
 include "../../utils/SetHelpers.dfy"
-
+include "../validators/Validators.dfy"
 /**
  *  Provide datatype for fork choice rule (and LMD-GHOST)
  */
@@ -26,6 +26,7 @@ module AttestationsTypes {
     import opened Eth2Types
     import opened Constants
     import opened SetHelpers
+    import opened Validators
 
     // Containers
 

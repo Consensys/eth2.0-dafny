@@ -289,9 +289,6 @@ module Eth2Types {
     /** An epoch is unsigned int over 64 bits. */
     type Epoch = uint64
 
-    /* Validator registry index. */
-    type ValidatorIndex = uint64
-
     /** The default zeroed Bytes32.  */
     const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 
