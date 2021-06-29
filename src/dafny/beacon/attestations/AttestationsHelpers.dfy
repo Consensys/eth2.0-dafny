@@ -125,8 +125,8 @@ module AttestationsHelpers {
     }
 
     /**
-     *  If a validator index attests for a CP, it must have made an
-     *  attestation with the tgt CP.  
+     *  If a validator index attests for a CheckPoint, it must have made an
+     *  attestation with the tgt Check point.  
      */
     lemma foo202(xa : seq<PendingAttestation>, tgt: CheckPoint, v: nat) returns (a: PendingAttestation)
         requires v in collectValidatorsIndicesAttestatingForTarget(xa, tgt)
@@ -314,5 +314,6 @@ module AttestationsHelpers {
             (if xl[0].data.target.root == br then [xl[0]] else [])
                 + filterAttestations(xl[1..], br)
     }
+   
    
 }
