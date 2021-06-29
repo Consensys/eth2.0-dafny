@@ -26,6 +26,9 @@ module Validators {
     import opened Eth2Types
     // import opened Attestations
    
+    /* Validator registry index. */
+    type ValidatorIndex = i:nat | 0 <= i < MAX_VALIDATORS_PER_COMMITTEE 
+
     /**
      *  A Validator.
      *
