@@ -197,6 +197,41 @@ module GasperProofs {
         }
     }
 
+    lemma lemma4_11_v3(cp1: CheckPoint, cp2: CheckPoint, store: Store) 
+        /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
+        requires cp1.root in store.blocks.Keys
+        requires cp2.root in store.blocks.Keys
+        
+        /** The checkpoints are distinct but have same epoch. */
+        requires cp1.epoch == cp2.epoch > 0 
+        requires cp1.root != cp2.root 
+
+        /** The store is well-formed. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        requires isJustified2(cp1, store)
+        requires isJustified2(cp2, store)
+
+        ensures 
+            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
+            forall i :: i in i1 * i2 ==> 
+                validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+    {
+        //  Attestations for tgt1 ands tgt2
+        var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
+        var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
+
+        //  Proof that each validator that attested for cp1 and cp2 violates rule I
+        forall (i | i in attForTgt1 * attForTgt2) 
+            ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+        {
+            //  Thanks Dafny
+        }
+    }
+        
+
     // lemma {:induction false} lemma4_11v2notExist(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store, i: ValidatorIndex) 
     //     /** The block roots must be from accepted blocks, i.e. in the store. */
     //     requires bh1 in store.blocks.Keys
@@ -550,8 +585,12 @@ module GasperProofs {
         /** Checkpoint at epoch f == cp1.epoch is 1-finalised. */
         requires isOneFinalisedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations) 
 
+        requires isOneFinalised2(cp1, store)
+
         /** Checkpoint at epoch j is justified. */
         requires isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
+
+        requires isJustified2(cp2, store) 
 
         //  Case 1: cp1.epoch == cp2.epoch (covered by lemma 4 in the proof)
         ensures cp1.epoch == cp2.epoch ==> 
@@ -564,38 +603,50 @@ module GasperProofs {
             &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
     {
-        if (cp1.epoch == cp2.epoch) {
+        if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
-            oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
+            // oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
+            oneFinalisedImpliesJustified(cp1, store);
+            assert(isJustified2(cp1, store));
             //  Apply lemma 4.
-            lemma4_11v2(bh1, bh2, cp1, cp2, store);
+            // lemma4_11v2(bh1, bh2, cp1, cp2, store);
+            lemma4_11_v3(cp1, cp2, store);
             //  Collect the votes for cp1 and cp2
-            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
+            var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+            var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
             //  As cp1 and cp2 are justified they a minimu number of votes
-            justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
-            justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2, store, store.rcvdAttestations);
-            assert(|i1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            assert(|i2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            justifiedMustHaveTwoThirdIncoming2(cp1, store);
+            justifiedMustHaveTwoThirdIncoming2(cp2, store);
+            // justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
+            // justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2, store, store.rcvdAttestations);
+            assert(|v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
+            assert(|v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
             //  And by definition i1 and i2 violate ruleI
-            assert(validatorSetsViolateRuleI(i1, i2, store.rcvdAttestations));
+            assert(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
         } else {
             /** All the attestations are valid in the store. */
             assume(allAttestationsValidInStore(store));
 
             //  cp2.epoch > cp1.epoch >= 0
             //  As cp2.epoch > 0, cp2 is justified from LJ (attestations are valid).
-            liftFromRootCP(bh2, cp2, store, store.rcvdAttestations);
+            // liftFromRootCP(bh2, cp2, store, store.rcvdAttestations);
             // var cpl : CheckPoint :| 
             //     cpl.epoch < cp2.epoch &&
             //     cpl.root in store.blocks.Keys &&
             //     cpl.root in chainRoots(cp2.root, store) &&
             //     isJustifiedCheckPointFromRoot(bh2, cpl, store, store.rcvdAttestations);
             // assert(isJustifiedCheckPointFromRoot(bh2, cpl, store, store.rcvdAttestations));
+            //  Get the last justified checkpoint before cp2 that justifies cp2.
             var cpl := validAttestationsAreFromLJ(bh2, cp2, store, store.rcvdAttestations);
+            assert(cpl == lastJustified(bh2, cpl.epoch, store, store.rcvdAttestations));
+
             //  Finalised implies justified for cp1
             oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
-            
+            //  As cp1 is finalised, there must be attestations from it to justify cp1.epoch + 1
+
+            //  Collect attestations for cp1 and origin of those
+            // var cp1 := validAttestationsAreFromLJ(bh1, cp1, store, store.rcvdAttestations);
+
             //  also do the special case where cpl.epoch == 0
             assume(0 < cpl.epoch <= cp1.epoch);
 
@@ -615,8 +666,6 @@ module GasperProofs {
                 //  And the two sets violate ruleI
                 assert(validatorSetsViolateRuleI(i1, i2, store.rcvdAttestations));
             } else {
-
-               
 
                 //  cpl.epoch < cpl.epoch < cp1.epoch + 1 < cp2.epoch
                 assert(cpl.epoch < cp1.epoch);
@@ -640,38 +689,25 @@ module GasperProofs {
                 forall (v | v in i1 * i2) 
                     ensures true 
                 {
-                    // calc ==> {
-                    //     v in i1;
-                    //     calc == {
-                    //         i1;
-                    //         collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
-                    //     }
-                    //     v in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
-                    // }
-                    // assert(v in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
+                    //  We have to show that every v in i1 * i2 has made
+                    //  nested attestations.
+
+                    //  Get an attestation from cpl to cp1 + 1
                     var a1 := foo202(store.rcvdAttestations, cp1, v);
                     //  a1 is valid 
                     assume(a1.data.beacon_block_root in store.blocks.Keys);
                     assume(a1.data.beacon_block_root in store.block_states.Keys);
                     assert(isValidPendingAttestation(a1, store, store.rcvdAttestations));
                     assume(a1.data.source == cp1);
-                    // assert(a1.data.target == cp@epoch + 1);
-                    // calc ==> {
-                    //     v in i2;
-                    //     calc == {
-                    //         i2;
-                    //         collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cpl);
-                    //     }
-                    //     v in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cpl);
-                    // }
-                    // assert(v in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cpl));
-                    //  Attesting to cp2 implies 
+                    
+                    //  Get an attestation from cpl to cp2
                     var a2 := foo202(store.rcvdAttestations, cp2, v);
                     assert(isValidPendingAttestation(a2, store, store.rcvdAttestations));
                     assert(a2.data.beacon_block_root in store.blocks.Keys);
                     assert(a2.data.beacon_block_root in store.block_states.Keys);
-                    // assert(a2.data.source == cpl);
-                    // assert(a2.data.target == cp2);
+                    //  The source mjust be cpl for valid attestations.
+                    // assert(a2.data.source == cpl);   
+                    assert(a2.data.target == cp2);
 
 
                 }
@@ -963,7 +999,7 @@ module GasperProofs {
      *  
      *  @param  bh      A block root.
      *  @param  cp      A checkpoint.
-     *  @param  store   A valid and clsoed store. 
+     *  @param  store   A valid and closed store. 
      *  @param  links   The votes.
      *  @returns        The last justified checkpoint.
      */
@@ -1001,6 +1037,9 @@ module GasperProofs {
                 cp2 == lastJustified(bh, cp2.epoch, store, links));
     }
 
+    /**
+     *  @todo: write proper lemma.
+     */
      lemma validAttestationsAreToLEBB(bh: Root, cp: CheckPoint, store: Store, links: seq<PendingAttestation>) returns (cp2: CheckPoint)
 
         requires bh in store.blocks.Keys 
@@ -1035,4 +1074,21 @@ module GasperProofs {
                 cp2 == lastJustified(bh, cp2.epoch, store, links));
     }
 
+    // lemma getAttestationsForFinalised(cp: CheckPoint, store: Store) returns (xa: set<PendingAttestation>)
+    // /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)  
+
+    //     /** The block root must in the store.  */
+    //     requires cp.root in store.blocks.Keys      
+    //     requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
+
+    //     requires isOneFinalised(cp, store)
+    //     ensures v == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp)
+    //     ensures for i :: i in v ==> 
+
+    //     ensures |xa| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1     
+    //     // forall i:: i in v ==> 
+    //     //     i in 
 }

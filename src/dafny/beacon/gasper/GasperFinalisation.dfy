@@ -117,7 +117,7 @@ module GasperFinalisation {
     }
     
     predicate isOneFinalised(cp: CheckPoint, store: Store) 
-         /** The block root must in the store.  */
+        /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys      
         requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
    
@@ -132,6 +132,27 @@ module GasperFinalisation {
             // && cp == CheckPoint(cp.epoch, computeAllEBBsFromRoot(br, cp.epoch, store)[0])
             && cp.root == computeAllEBBsFromRoot(br, cp.epoch, store)[0]
             && isOneFinalisedFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
+    }
+
+    predicate isOneFinalised2(cp: CheckPoint, store: Store) 
+        /** The block root must in the store.  */
+        requires cp.root in store.blocks.Keys      
+        requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
+   
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+    {
+        //  cp is justified
+        isJustified2(cp, store)
+        //  it justifies a checkpoint at epoch cp.epoch + 1
+        && exists cp2 : CheckPoint ::
+            cp2.epoch == cp.epoch + 1
+            && cp2.root in store.blocks.Keys 
+            && cp.root in chainRoots(cp2.root, store)
+            && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1   
     }
 
     /**
@@ -254,4 +275,22 @@ module GasperFinalisation {
     //     //  Apply version of this lemma from root.
     //     oneFinalisedImpliesJustifiedFromRoot(br, cp.epoch, store, store.rcvdAttestations);
     // }
+
+    lemma oneFinalisedImpliesJustified(cp: CheckPoint, store: Store)
+        // requires br in store.blocks.Keys 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+        /** f is an epoch in ebbs, and each index represents an epoch so must be uint64.
+         *  f + 1 must be an epoch
+         */
+        requires cp.root in store.blocks.Keys
+        requires 0 < cp.epoch as nat + 1 <= MAX_UINT64 
+        /** Checkpoint at Epoch f is 1-finalised. */
+        requires isOneFinalised2(cp, store)
+        ensures isJustified2(cp, store)
+    {
+        //  Thanks Dafny
+    }
 }

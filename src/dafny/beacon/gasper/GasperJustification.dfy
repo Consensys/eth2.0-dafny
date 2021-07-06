@@ -221,6 +221,48 @@ module GasperJustification {
             && isJustifiedEpochFromRoot(br, cp.epoch, store, store.rcvdAttestations) 
     }
 
+    predicate isJustified2(cp: CheckPoint, store: Store)
+        /** The block root must in the store.  */
+        requires cp.root in store.blocks.Keys         
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        decreases cp.epoch 
+    {
+        if cp.epoch == 0 then // should be a the genesis block
+        // @todo
+            true
+        else 
+            exists cp2 : CheckPoint ::
+                cp2.epoch < cp.epoch 
+                && cp2.root in chainRoots(cp.root, store)
+                && isJustified2(cp2, store)
+                && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1   
+    }
+
+    lemma justifiedMustHaveTwoThirdIncoming2(cp: CheckPoint, store: Store)
+        /** The block root must in the store.  */
+        requires cp.root in store.blocks.Keys         
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** Checkpoint at epoch e is justified. */
+        requires cp.epoch > 0 && isJustified2(cp, store)
+        /** Checkpoint at epoch e has more than 2/3 incoming votes. */
+        ensures 
+            //  The total number of attestations to EBB at epoch e is a supermajority.
+            |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp)| 
+                >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+    {
+        var cpsrc : CheckPoint :| cpsrc.epoch < cp.epoch && cpsrc.root in chainRoots(cp.root, store)
+            && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cpsrc, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+        attForTgtLargerThanLinks(store.rcvdAttestations, cpsrc, cp);
+    }
+
     /**
      *  The most recent justified EBB before epoch.
      */
@@ -293,6 +335,8 @@ module GasperJustification {
             assert(|collectValidatorsIndicesAttestatingForTarget(links, CheckPoint(e, cr[0]))| >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
         }
     }
+
+     
 
     /**
      *  A checkpoint (B, j > 0) that is justified must have more then 2/3 of
