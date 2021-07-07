@@ -704,34 +704,67 @@ module GasperProofs {
             // &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             // &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
 
+            } else if cp2.epoch == cp1.epoch + 1 {
+                var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+                var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
+                assume(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
+                assume exists v1, v2: set<ValidatorIndex> :: 
+                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+                &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+                &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
             } else {
-
+                assert(isOneFinalised2(cp1, store));
                 //  cpl.epoch < cpl.epoch < cp1.epoch + 1 < cp2.epoch
-                assume(cp2_l.epoch < cp1.epoch);
+                assert(cp2_l.epoch < cp1.epoch);
 
                 // we need a lemma that shows that cp at epoch cp1.epoch + 1 is justified too!
-                assume(cp2.epoch != cp1.epoch + 1);     //  otherwise lemma applies
-                assume(cp2.epoch > cp1.epoch + 1);
+                assert(cp2.epoch != cp1.epoch + 1);     //  otherwise lemma applies
+                assert(cp2.epoch > cp1.epoch + 1);
+
+                //  Get the checkpoint at cp1.epoch + 1 that is justified
+                var cp1PlusOne : CheckPoint :|
+                    cp1PlusOne.epoch == cp1.epoch + 1 
+                    && cp1PlusOne.root in store.blocks.Keys
+                    && cp1.root in chainRoots(cp1PlusOne.root, store)
+                    && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
                 //  Collect validators attesting for cp1 + 1  and cp2
-                var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-                var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
+                var v1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne); 
+                var v2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2);
                 //  They must have enough votes to be justified 
                 // justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
                 // justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2, store, store.rcvdAttestations);
                 // assert(|i1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
                 // assert(|i2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
 
-                
+                //  var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+                // var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
+
                 //  The epochs are nested
-                assume(cp2_l.epoch < cp1.epoch < cp1.epoch + 1 < cp2.epoch);
+                assert(cp2_l.epoch < cp1.epoch + 1 == cp1PlusOne.epoch  < cp2.epoch);
+                
+                assume(allAttestationsValidInStore(store));
 
                 forall (v | v in v1 * v2) 
                     ensures true 
-                // {
+                {
+                    var a1 := foo303(store.rcvdAttestations, cp1, cp1PlusOne, v);
+                    //  Get an attestation made by v from cp2_l to cp2
+                    // var a1 : PendingAttestation :| 
+                    //     a1 in store.rcvdAttestations 
+                    //     && a1.data.source == cp1 
+                    //     && a1.data.target == cp1PlusOne 
+                    //     && a1.aggregation_bits[v];
+                    //  Get an attestation made by v from cp1 to cp1 + 1
+
+                    assert(a1 in store.rcvdAttestations);
+                    //  If a1 is valid it m,iust be the case that cp1 is LJ and cp1 + 1 is 
+                    //  LEBB
+
                     //  We have to show that every v in i1 * i2 has made
                     //  nested attestations.
-
+                    var a2 := foo303(store.rcvdAttestations, cp2_l, cp2, v);
+                    assert(a2 in store.rcvdAttestations);
                     //  Get an attestation from cpl to cp1 + 1
                     // var a1 := foo202(store.rcvdAttestations, cp1, v);
                     // //  a1 is valid 
@@ -750,7 +783,7 @@ module GasperProofs {
                     // assert(a2.data.target == cp2);
 
 
-                // }
+                }
 
                 // }
                 //  Now we use the fact that each validator in i1 /\ i2 made an
