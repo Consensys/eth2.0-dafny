@@ -110,9 +110,7 @@ module GasperProofs {
     }
         
     /**
-     *  Two checkpoints with the same epoch.
-     *  Assume they both have A1 and A2 attestations more than 2/3 of total incoming attestations. 
-     *  Then the set of validators attesting for both of them has more than 1/3 total.
+     *  There is only one block with slot == 0.
      *
      *  @param  xa      A list of attestations.
      *  @param  tgt1    A checkpoint.
