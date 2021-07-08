@@ -741,7 +741,7 @@ module GasperProofs {
                 // var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
 
                 //  The epochs are nested
-                assert(cp2_l.epoch < cp1.epoch + 1 == cp1PlusOne.epoch  < cp2.epoch);
+                assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
                 
                 assume(allAttestationsValidInStore(store));
 
@@ -749,6 +749,7 @@ module GasperProofs {
                     ensures true 
                 {
                     var a1 := foo303(store.rcvdAttestations, cp1, cp1PlusOne, v);
+                    assert(isValidPendingAttestation(a1, store, store.rcvdAttestations));
                     //  Get an attestation made by v from cp2_l to cp2
                     // var a1 : PendingAttestation :| 
                     //     a1 in store.rcvdAttestations 
@@ -757,14 +758,25 @@ module GasperProofs {
                     //     && a1.aggregation_bits[v];
                     //  Get an attestation made by v from cp1 to cp1 + 1
 
-                    assert(a1 in store.rcvdAttestations);
+                    assert(a1.data.target == cp1PlusOne);
+                    assert(a1.data.source.epoch == cp1.epoch);
+                    calc ==> {
+                        true;
+                        { assert(isValidPendingAttestation(a1, store, store.rcvdAttestations)); }
+                        a1.data.target == cp1PlusOne && a1.data.source == cp1;
+                    }
+                    assert(a1.data.source == lastJustified(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store, store.rcvdAttestations ));
+                    assert(a1.data.target == lastEBB(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store));
                     //  If a1 is valid it m,iust be the case that cp1 is LJ and cp1 + 1 is 
                     //  LEBB
 
                     //  We have to show that every v in i1 * i2 has made
                     //  nested attestations.
                     var a2 := foo303(store.rcvdAttestations, cp2_l, cp2, v);
-                    assert(a2 in store.rcvdAttestations);
+                    assert(a2.data.source.epoch == cp2_l.epoch);
+                    assert(isValidPendingAttestation(a2, store, store.rcvdAttestations));
+                    assert(a2.data.source == lastJustified(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store, store.rcvdAttestations ));
+                    assert(a2.data.target == lastEBB(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store));
                     //  Get an attestation from cpl to cp1 + 1
                     // var a1 := foo202(store.rcvdAttestations, cp1, v);
                     // //  a1 is valid 
@@ -781,8 +793,18 @@ module GasperProofs {
                     // //  The source mjust be cpl for valid attestations.
                     // // assert(a2.data.source == cpl);   
                     // assert(a2.data.target == cp2);
+                    assert(a1 in store.rcvdAttestations);
+                    assert(a2 in store.rcvdAttestations);
 
+                    assert(a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, store.rcvdAttestations));
+                    assert(a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, store.rcvdAttestations));
+                    assert( a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store));
+                    assert( a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store));
+                    assert(validatorViolatesRuleII(a2, a1, store, store.rcvdAttestations, v));
+                    // assert(a1.data.source.epoch < a2.data.source.epoch);
+                    //  < a2.data.target.epoch < a1.data.target.epoch );
 
+                    // assert(validatorViolatesRuleII());
                 }
 
                 // }
@@ -912,20 +934,26 @@ module GasperProofs {
         //  Last justified (LJ) in a1.block head
         //  Using the epoch of the source should be OK as a valid attestation must 
         //  originate from LJ
-        var lj1 := lastJustified(a1.data.beacon_block_root, a1.data.source.epoch, store, links);
+        // var lj1 := 
+        a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, links)
         //  Last justified in a2.block head
-        var lj2 := lastJustified(a2.data.beacon_block_root, a2.data.source.epoch, store, links);
+        // var lj2 := 
+        && a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, links)
 
         //  last EBB (LE)
         //  Using the target epoch should be OK as a valid attestation must target the
         //  most recent EBB.
-        var ebbs1 := computeAllEBBsFromRoot(a1.data.beacon_block_root, a1.data.target.epoch, store);
-        var le1 := CheckPoint(a1.data.target.epoch, ebbs1[0]);
-        var ebbs2 := computeAllEBBsFromRoot(a2.data.beacon_block_root, a2.data.target.epoch, store);
-        var le2 := CheckPoint(a2.data.target.epoch, ebbs2[0]);
+        // var ebbs1 := computeAllEBBsFromRoot(a1.data.beacon_block_root, a1.data.target.epoch, store);
+        // var le1 := 
+        && a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store)
+        // CheckPoint(a1.data.target.epoch, ebbs1[0]);
+        // var ebbs2 := computeAllEBBsFromRoot(a2.data.beacon_block_root, a2.data.target.epoch, store);
+        // var le2 := 
+        && a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store)
+        // CheckPoint(a2.data.target.epoch, ebbs2[0]);
 
         //  Validator v has made nested votes.
-        lj1.epoch < lj2.epoch < le2.epoch < le1.epoch 
+        && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
 
     /**
@@ -993,10 +1021,12 @@ module GasperProofs {
 
         //  The target root must be the last epoch boundary pair in chain(a.beacon_block_root)
         //  xc[indexOfLEBB] is the block root for epoch ep in chain(a.beacon_block_root)
-        a.target == CheckPoint(ep, cr[0])
+        a.target == lastEBB(a.beacon_block_root, ep, store)
+        // CheckPoint(ep, cr[0])
         &&
         //  The source must be the last justified pair in chain(a.beacon_block_root)
-        a.source == CheckPoint(epochOfLJ, cr[|cr| - 1 - epochOfLJ as nat])
+        a.source == lastJustified(a.beacon_block_root, ep, store, store.rcvdAttestations)
+        // CheckPoint(epochOfLJ, cr[|cr| - 1 - epochOfLJ as nat])
         // &&
         // //  the index of the validator who made the atteatation must be
         // //  in the validstors state of the state pointed to.
