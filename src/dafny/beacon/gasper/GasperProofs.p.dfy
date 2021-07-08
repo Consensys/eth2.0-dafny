@@ -47,110 +47,20 @@ module GasperProofs {
     import opened GasperFinalisation
 
     /**
-     *  Assume two chains from br1 and br2.
-     *  There cannot be two justified checkpoints in the two chains
-     *  at the same epoch without breaking 1/3-slashability.
-     *
-     *  @param  br1     A block root.
-     *  @param  br2     A block root.
-     *  @param  store   A store.
-     *  @param  j       An epoch.
-     *  @note           Change the MAX_VALIDATORS_PER_COMMITTEE to another constant
-     *                  which is the size of the set of validators. uint64 for validator
-     *                  indices. should be the VALIDATOR_SET.
-     *                  Define the validator set size. 
-     */
-    lemma {:induction false} lemma4_11_a(br1: Root, br2: Root, store: Store, j: Epoch)
-        /** The block roots must be from accepted blocks, i.e. in the store. */
-        requires br1 in store.blocks.Keys
-        requires br2 in store.blocks.Keys
-        /** Two distinct block roots.  */
-        // requires br1 != br2 
-        /** Epoch is not zero. */
-        requires j > 0 
-        /** The store is well-formed, each block with slot != 0 has a parent
-            which is itself in the store. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store)  
-
-        /** In br1/2 ancestors, checkpoints at epoch j are both justified. */
-        requires 
-            isJustifiedEpochFromRoot(br1, j, store, store.rcvdAttestations) 
-            && isJustifiedEpochFromRoot(br2, j, store, store.rcvdAttestations)
-
-        ensures     //  PostC 1
-            var k1 := computeAllEBBsFromRoot(br1, j, store);
-            //  EBB(br1, j) is k1[0]
-            var k2 := computeAllEBBsFromRoot(br2, j, store);
-            //  EBB(br2, j) is k2[0]
-            var tgt1 := CheckPoint(j as Epoch, k1[0]);
-            var tgt2 := CheckPoint(j as Epoch, k2[0]); 
-            //  Set of indices of validators attesting for tgt1 and tgt2 is bounded
-            //  from below
-            |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1) * collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2)|
-            >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
-
-        //  every validator in the intersection violates ruleI
-        ensures     //  PostC 2
-            var k1 := computeAllEBBsFromRoot(br1, j, store);
-            //  EBB(br1, j) is k1[0]
-            var k2 := computeAllEBBsFromRoot(br2, j, store);
-            //  EBB(br2, j) is k2[0]
-            var tgt1 := CheckPoint(j as Epoch, k1[0]);
-            var tgt2 := CheckPoint(j as Epoch, k2[0]); 
-            //  Every validator in i1 * i2 violates ruleI
-            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1); 
-            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2); 
-            tgt1 != tgt2 ==> 
-                forall i :: i in i1 * i2 ==> validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-    {
-        //  chain of roots from br1 and br2
-        var cr1 := computeAllEBBsFromRoot(br1, j, store);
-        var cr2 := computeAllEBBsFromRoot(br2, j, store);
-
-        //  Checkpoints at epoch j
-        var tgt1 :=  CheckPoint(j, cr1[0]);
-        var tgt2 := CheckPoint(j, cr2[0]);
-
-        //  Attestations for tgt1 ands tgt2
-        var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt1);
-        var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, tgt2);
-
-        //  PostC 1: Lower bound for attestations to a justified checkpoint
-        justifiedMustHaveTwoThirdIncoming(br1, j, store, store.rcvdAttestations);
-        justifiedMustHaveTwoThirdIncoming(br2, j, store, store.rcvdAttestations);
-        assert(|attForTgt1| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-        assert(|attForTgt2| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-
-        //  Lower bound for intersection of set of attesters
-        superMajorityForSameEpoch(store.rcvdAttestations, tgt1, tgt2);
-
-        //  PostC 2
-        if tgt1 != tgt2 {
-            forall (i | i in attForTgt1 * attForTgt2) 
-                ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-                {
-                    var a1 : PendingAttestation :| a1.data.target == tgt1 && a1.aggregation_bits[i];
-                    var a2 : PendingAttestation :| a2.data.target == tgt2 && a2.aggregation_bits[i];
-                    // assert(a1 in store.rcvdAttestations && a2 in store.rcvdAttestations);
-                    // assert(validatorViolatesRuleIv2(a1, a2, store.rcvdAttestations, i as ValidatorIndex));
-                    assert(validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex));
-                }
-        }
-    }
-
-    /**
-     *  
      *  Lemma 4.11. In a view G, for every epoch j, there is at most 1 pair (B, j) in J(G), 
      *  or the blockchain is (1/3)-slashable. In particular, the latter case means there 
      *  must exist 2 subsets V1, V2 of V, each with total weight at least 2N/3, such that 
      *  their intersection violates slashing condition (S1).
      *
-     *  @param  bh1     A block root.
-     *  @param  bh2     A block root.
      *  @param  cp1     A check point.
      *  @param  cp2     A check point.
      *  @param  store   A store.
+     *  @param  v1      A set of validators.
+     *  @param  v2      A set of validators.
+     *  @returns        If the two checkpoints are justified at the same epoch and
+     *                  are different, then there are two large sets v1 and v2 voting for them
+     *                  such that each validator in the intersection violates rule I (slashing
+     *                  condition 1)).
      *
      *  @note           Change the MAX_VALIDATORS_PER_COMMITTEE to another constant
      *                  which is the size of the set of validators. uint64 for validator
@@ -167,42 +77,6 @@ module GasperProofs {
         requires cp2.root in store.blocks.Keys
         
         /** The checkpoints are distinct but have same epoch. */
-        requires cp1.epoch == cp2.epoch 
-        requires cp1.root != cp2.root 
-
-        /** The store is well-formed. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store)  
-
-        /** The checkpoints are both justified wrt their block root heads. */
-        requires 
-            && isJustifiedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations)
-            && isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
-    
-        /** Each validator that attested for cp1 and cp2 violates rule I. */
-        ensures 
-            var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-            var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-            forall i :: i in i1 * i2 ==> validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-    {
-        //  Attestations for tgt1 ands tgt2
-        var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
-        var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
-
-        //  Proof that each validator that attested for cp1 and cp2 violates rule I
-        forall (i | i in attForTgt1 * attForTgt2) 
-            ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-        {
-            //  Thanks Dafny
-        }
-    }
-
-    lemma lemma4_11_v3(cp1: CheckPoint, cp2: CheckPoint, store: Store, v1: set<ValidatorIndex>, v2: set<ValidatorIndex>) 
-        /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
-        requires cp1.root in store.blocks.Keys
-        requires cp2.root in store.blocks.Keys
-        
-        /** The checkpoints are distinct but have same epoch. */
         requires cp1.epoch == cp2.epoch > 0 
         requires cp1.root != cp2.root 
 
@@ -210,20 +84,16 @@ module GasperProofs {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
 
+        /** The checkpoints are justified. */
         requires isJustified2(cp1, store)
         requires isJustified2(cp2, store)
 
+        /** the validators in v1 and v2 voted for cp1 and cp2. */
         requires v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1)
         requires v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2)
-        ensures 
-            // var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-            // var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-            forall i :: i in v1 * v2 ==> 
-                validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-        ensures 
-            // var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-            // var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-            validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
+
+        /**  v1 /\ v2 vkiolates slashing condition 1. */
+        ensures validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
     {
         //  Attestations for tgt1 ands tgt2
         var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
