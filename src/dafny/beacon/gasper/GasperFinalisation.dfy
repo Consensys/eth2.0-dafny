@@ -143,7 +143,6 @@ module GasperFinalisation {
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)  
-
     {
         //  cp is justified
         isJustified2(cp, store)
