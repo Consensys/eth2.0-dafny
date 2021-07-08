@@ -229,6 +229,22 @@ module GasperEBBs {
         succEBBs(cr, e, store);
     }
 
+
+    function lastEBB(br: Root, e: Epoch, store: Store): CheckPoint
+        /** The block root must in the store.  */
+        requires br in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        /** Not epoch 0 */
+        // requires e > 0 
+    {
+        var xb := computeAllEBBsFromRoot(br, e, store);
+        CheckPoint(e, xb[0])
+    }
+
+
     /**
      *  The height of a block is one less than the length of 
      *  the chain of ancestors. [page 8, 3.1 of GasperFFG paper].
