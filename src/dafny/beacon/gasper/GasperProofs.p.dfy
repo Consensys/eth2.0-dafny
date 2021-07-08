@@ -168,7 +168,7 @@ module GasperProofs {
      *  
      *   
      */
-    lemma {:induction false} lemma5v2(cp1: CheckPoint, cp2: CheckPoint, store: Store)
+    lemma {:induction false} lemma5(cp1: CheckPoint, cp2: CheckPoint, store: Store)
 
         /** The store is well-formed, each block with slot != 0 
         has a parent which is itself in the store. */
