@@ -108,6 +108,27 @@ module GasperEBBs {
             computeEBBsForAllEpochs(xb[1..], e, store)
     }
 
+    /** 
+     *  @param  xb      A sequence of block roots which is a chain. First element
+     *                  is the block with highest slot.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *
+     *  @returns        The slot of the block of a checkpoint at epoch 0 has slot 0.
+     */
+    lemma checkPointAtEpochZeroHasSlotZero(xb: seq<Root>, e: Epoch, store: Store)
+        requires |xb| >= 1
+        /** A (slot decreasing) chain of roots. */
+        requires isChain(xb, store)
+
+        ensures 
+            var cp0 := computeEBBsForAllEpochs(xb, e, store)[e];
+            store.blocks[cp0].slot == 0      
+
+    {   //  Thanks Dafny
+    }
+
+    
     /**
      *  Compute all the EBBs in a chain starting at a given block root.
      *
