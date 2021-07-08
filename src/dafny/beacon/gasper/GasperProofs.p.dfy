@@ -109,39 +109,6 @@ module GasperProofs {
         }
     }
         
-
-    // lemma {:induction false} lemma4_11v2notExist(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store, i: ValidatorIndex) 
-    //     /** The block roots must be from accepted blocks, i.e. in the store. */
-    //     requires bh1 in store.blocks.Keys
-    //     requires bh2 in store.blocks.Keys
-
-    //     /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
-    //     requires cp1.root in store.blocks.Keys
-    //     requires cp2.root in store.blocks.Keys
-        
-    //     /** The checkpoints are distinct but have same epoch. */
-    //     requires cp1.epoch == cp2.epoch 
-    //     requires cp1.root != cp2.root 
-
-    //     /** The store is well-formed. */
-    //     requires isClosedUnderParent(store)
-    //     requires isSlotDecreasing(store)  
-
-    //     /** The checkpoints are both justified wrt their block root heads. */
-    //     requires 
-    //         && isJustifiedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations)
-    //         && isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
-    
-    //     /** The validator index attestred for cp1 and cp2.  */
-    //     requires i as nat in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-    //     requires i as nat in collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-
-    //     /** Validator index i  violates rule I. */
-    //     ensures validatorViolatesRuleI(store.rcvdAttestations, i)
-
-    // {   //  Thanks Dafny
-    // }
-
     /**
      *  Two checkpoints with the same epoch.
      *  Assume they both have A1 and A2 attestations more than 2/3 of total incoming attestations. 
