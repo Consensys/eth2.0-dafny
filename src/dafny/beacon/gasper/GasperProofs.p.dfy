@@ -519,6 +519,17 @@ module GasperProofs {
         }
     }
 
+    predicate uniqueBlockAtSlotZero(store: Store) 
+    {
+        forall b1, b2 :: 
+            && b1 in store.blocks.Keys 
+            && b2 in store.blocks.Keys 
+            && store.blocks[b1].slot == 0 
+            && store.blocks[b2].slot == 0
+            ==> b1 == b2 
+    }
+
+
     /**
      *  In a view G, if (Bf, f) in F(G) and (Bj, j) in J(G) with j > f, then Bf
      *  must be an ancestor of Bj , or the blockchain is (1/3)-slashable – 
@@ -569,7 +580,12 @@ module GasperProofs {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
+        requires uniqueBlockAtSlotZero(store)
+
+        // requires 
+        /** The attestations received are valid.  */
         requires allAttestationsValidInStore(store) 
+
         /** The block roots must be from accepted blocks, i.e. blocks in the store. */
         requires cp1.root in store.blocks.Keys
         requires cp2.root in store.blocks.Keys
@@ -581,16 +597,13 @@ module GasperProofs {
         requires cp1.root !in chainRoots(cp2.root, store)
 
         /** Epoch of cp2 is larger than epoch of cp1 and is not zero */
-        requires cp2.epoch >= cp1.epoch > 0 
+        requires cp2.epoch == cp1.epoch > 0 
 
         /** Checkpoint at epoch f == cp1.epoch is 1-finalised. */
         requires isOneFinalised2(cp1, store)
 
         /** Checkpoint at epoch j is justified. */
         requires isJustified2(cp2, store) 
-
-        // requires forall a :: a in store.rcvdAttestations ==>
-        //     isValidPendingAttestation(a, store, store.rcvdAttestations)
 
         /** cp2.epoch is the first epoch >= cp1.epoch that is justified in 
             the ancestors of cp2.root. */
@@ -609,7 +622,14 @@ module GasperProofs {
                 validatorSetsViolateRuleII(v1, v2, store, store.rcvdAttestations)
             )
     {
-        if (cp1.epoch == cp2.epoch > 0 ) {
+        if (cp1.epoch == cp2.epoch == 0) {
+            //  Both must be genesis block root.
+            //  Hence cp1 == cp2 which is not possible
+            oneFinalisedImpliesJustified(cp1, store); 
+            // assert(store.blocks[cp1.root].slot == store.blocks[cp2.root].slot == 0);
+            // assume(cp1 == cp2);
+            assume(cp1.root in chainRoots(cp2.root, store));
+        } else if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
             calc ==> {
                 true;
@@ -639,13 +659,53 @@ module GasperProofs {
                 validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
             }
         } else if cp2.epoch == cp1.epoch + 1 {
-                var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
+                //  Get the next checkpoint justified by cp1
+                var cp1PlusOne : CheckPoint :|
+                    cp1PlusOne.epoch == cp1.epoch + 1 
+                    && cp1PlusOne.root in store.blocks.Keys
+                    && cp1.root in chainRoots(cp1PlusOne.root, store)
+                    && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+
+                assert(cp2.epoch > 0);
+                assert(isJustified2(cp1PlusOne, store));
+                assume(cp1PlusOne.root != cp2.root);
+                var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne); 
+                //  The following has a weird effect to speed up verification time
+                if ( v1 != collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne)) {
+                    assert(false);
+                } else {
+                    assert(true);
+                }
+                assert(v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne));
+                
                 var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
-                assume(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
-                assume exists v1, v2: set<ValidatorIndex> :: 
-                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-                &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-                &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
+                //  The following has a weird effect to speed up verification time
+                if ( v2 != collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2)) {
+                    assert(false);
+                } else {
+                    assert(true);
+                }
+                assert(v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
+                //  cp1PlusOne root cannot be cp2.root (need to apply lemma 4).
+                assert(cp1PlusOne.root != cp2.root);
+                // cp1PlusOne is justified
+                assert(isJustified2(cp1PlusOne,store));
+                //  Cardinal of sets v1 and v2
+                calc ==> {
+                    true;
+                    { justifiedMustHaveTwoThirdIncoming2(cp1PlusOne, store); }
+                    |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+                }
+                calc ==> {
+                    true;
+                    { justifiedMustHaveTwoThirdIncoming2(cp2, store); }
+                    |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+                }
+                calc ==> {
+                    true;
+                    { lemma4_11_v3(cp1PlusOne, cp2, store, v1, v2); }
+                    validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
+                }
         } else {
             assert(cp2.epoch > cp1.epoch + 1);
             //  Get a checkpoint cp2_l that is justified and justifies cp2
@@ -660,7 +720,6 @@ module GasperProofs {
 
             //  cp2.epoch is the first justified checkpoint after cp1.epoch 
             assert(cp2_l.epoch < cp1.epoch);
-
 
             if cp2_l.epoch < cp1.epoch {
                 //  Get the checkpoint at cp1.epoch + 1 that is justified
