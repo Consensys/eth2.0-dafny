@@ -140,6 +140,20 @@ module AttestationsHelpers {
         return a;
     }
 
+     lemma foo303(xa : seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint, v: nat) returns (a: PendingAttestation)
+        requires v in collectValidatorsAttestatingForLink(xa, src, tgt)
+        ensures a in xa 
+                && a.data.source == src 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v]
+    {
+        a :| a in xa 
+                && a.data.source == src 
+                && a.data.target == tgt 
+                && a.aggregation_bits[v];
+        return a;
+    }
+
     /**
      *  Collect the set of indices for which xb[i] is true.
      *  
