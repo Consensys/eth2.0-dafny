@@ -521,7 +521,7 @@ module GasperProofs {
 
     predicate uniqueBlockAtSlotZero(store: Store) 
     {
-        forall b1, b2 :: 
+        forall  b1, b2 {:triggers store.blocks[b1].slot} :: 
             && b1 in store.blocks.Keys 
             && b2 in store.blocks.Keys 
             && store.blocks[b1].slot == 0 
@@ -597,7 +597,7 @@ module GasperProofs {
         requires cp1.root !in chainRoots(cp2.root, store)
 
         /** Epoch of cp2 is larger than epoch of cp1 and is not zero */
-        requires cp2.epoch == cp1.epoch > 0 
+        requires cp2.epoch >= cp1.epoch >= 0 
 
         /** Checkpoint at epoch f == cp1.epoch is 1-finalised. */
         requires isOneFinalised2(cp1, store)
@@ -626,10 +626,12 @@ module GasperProofs {
             //  Both must be genesis block root.
             //  Hence cp1 == cp2 which is not possible
             oneFinalisedImpliesJustified(cp1, store); 
-            // assert(store.blocks[cp1.root].slot == store.blocks[cp2.root].slot == 0);
-            // assume(cp1 == cp2);
-            assume(cp1.root in chainRoots(cp2.root, store));
-        } else if (cp1.epoch == cp2.epoch > 0 ) {
+            assert(store.blocks[cp1.root].slot == 0);
+            assert(store.blocks[cp2.root].slot == 0);
+            assert(cp1.root == cp2.root);
+            assert(cp1.root in chainRoots(cp2.root, store));
+        } else 
+        if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
             calc ==> {
                 true;

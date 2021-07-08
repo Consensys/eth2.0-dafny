@@ -233,7 +233,8 @@ module GasperJustification {
     {
         if cp.epoch == 0 then // should be a the genesis block
         // @todo
-            true
+            // true
+            store.blocks[cp.root].slot == 0 
         else 
             exists cp2 : CheckPoint ::
                 cp2.epoch < cp.epoch 
@@ -241,6 +242,23 @@ module GasperJustification {
                 && isJustified2(cp2, store)
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1   
     }
+
+    // lemma foo404Zero(cp: CheckPoint, store: Store) 
+    //     /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)
+
+    //     /** The block root must in the store.  */
+    //     requires cp.root in store.blocks.Keys    
+
+    //     requires isJustified2(cp, store)
+    //     requires cp.epoch == 0
+
+    //     ensures store.blocks[cp.root].slot == 0
+    // {
+
+    // }
 
     lemma justifiedMustHaveTwoThirdIncoming2(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
