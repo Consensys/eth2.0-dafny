@@ -513,29 +513,6 @@ module GasperProofs {
     }
 
     /**
-     *  A list of links is valid if all the attestations in links
-     *  are valid.
-     *  
-     *  @param  store   A store.
-     *  @param  links   The list of attestations received, from most recent
-     *                  first. 
-     */
-    predicate isValidListOfAttestations(store: Store, links: ListOfAttestations) 
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store)
-
-        decreases links
-    {
-        if |links| == 0 then
-            true
-        else  
-            isValidPendingAttestation(links[0], store, links[1..]) 
-            &&
-            isValidListOfAttestations(store, links[1..])
-    }
-
-    /**
      *  All the attestations in the store received so far are valid.
      *  @param  store   A store.
      */
