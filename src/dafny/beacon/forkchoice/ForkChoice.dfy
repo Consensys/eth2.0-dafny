@@ -140,6 +140,14 @@ module ForkChoice {
         const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENESIS_STATE)
 
         /**
+         *  Genesis block root
+         *
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+         *  All fields initialised to default values except the state_root.
+         */
+        const GENESIS_BLOCK_ROOT := hash_tree_root(GENESIS_BLOCK)
+        
+        /**
          *  The genesis store.
          *
          *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#get_forkchoice_store}
