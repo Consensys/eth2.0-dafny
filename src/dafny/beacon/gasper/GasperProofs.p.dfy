@@ -331,27 +331,7 @@ module GasperProofs {
                 //  The epochs of the checkpoints are nested like so:
                 assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
                 
-                //  Now show that for each v in v1 /\ v2 they violate rule II
-                forall (v | v in v1 * v2) 
-                {
-                    //  Get a witness attestation by v from cp1 to cp1PlusOne
-                    var a1 := foo303(store.rcvdAttestations, cp1, cp1PlusOne, v);
-                    //  a1 is valid 
-                    assert(a1.data.source == lastJustified(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store, store.rcvdAttestations ));
-                    assert(a1.data.target == lastEBB(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store));
-                    assert(a1 in store.rcvdAttestations);
-
-                    //  get a witness attestation by v from cp2_l to cp2
-                    var a2 := foo303(store.rcvdAttestations, cp2_l, cp2, v);
-                    //  a2 is valid
-                    assert(a2.data.source == lastJustified(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store, store.rcvdAttestations ));
-                    assert(a2.data.target == lastEBB(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store));
-                    assert(a2 in store.rcvdAttestations);
-
-                    //  a2 and a1 are nested attestations by v and v violates ruleII
-                    assert(validatorViolatesRuleII(a2, a1, store, store.rcvdAttestations, v));
-                }
-                assert(validatorSetsViolateRuleII(v1, v2, store, store.rcvdAttestations));
+                assert(validatorSetsViolateRuleII(v1, v2, store));
             } else {
                 //  cannot happen
             }
