@@ -364,6 +364,9 @@ module GasperProofs {
     /**
      *  Violation of Rule I (Gasper slashing conditions).
      *
+     *  @param  links   A list of attestations.
+     *  @param  v       A validator index.   
+     *
      *  (S1) No validator makes two distinct attestations a1 a2 
      *  with ep(a1) == ep(a2). Note this
      *  condition is equivalent to aep(LE(a1)) = aep(LE(a2)).
@@ -394,7 +397,16 @@ module GasperProofs {
         //     aep(LE(a1)) != aep(LE(a2))
     }
 
-    predicate validatorSetsViolateRuleI(v1: set<ValidatorIndex>, v2: set<ValidatorIndex>, 
+    /**
+     *  Whether two validator sets violate rule I.
+     *  
+     *  @param  v1      A set of validtor indices.
+     *  @param  v2      A set of validtor indices.
+     *  @param  links   A list of attestations.
+     */
+    predicate validatorSetsViolateRuleI(
+        v1: set<ValidatorIndex>, 
+        v2: set<ValidatorIndex>, 
         links: ListOfAttestations) 
     {
         forall v :: v in v1 * v2 ==>
