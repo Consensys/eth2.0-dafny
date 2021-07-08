@@ -562,165 +562,107 @@ module GasperProofs {
      *  
      *   
      */
-    lemma {:induction false} lemma5v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store)
+    lemma {:induction false} lemma5v2(cp1: CheckPoint, cp2: CheckPoint, store: Store)
 
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
 
-        /** The block roots must be from accepted blocks, i.e. in the store. */
-        requires bh1 in store.blocks.Keys
-        requires bh2 in store.blocks.Keys
-
+        requires allAttestationsValidInStore(store) 
         /** The block roots must be from accepted blocks, i.e. blocks in the store. */
         requires cp1.root in store.blocks.Keys
         requires cp2.root in store.blocks.Keys
 
         /** cp1 is one-finalised so its epoch + 1 is less than MAX int 64. */
-        requires cp2.epoch as nat + 1 <= MAX_UINT64
+        requires cp1.epoch as nat + 1 <= MAX_UINT64
 
-        /** The two checkpoints are different. */  
-        requires cp1 != cp2 
-        // cp1.root  is not an ancestor of cp2.root 
+        /** cp1.root  is not an ancestor of cp2.root */
         requires cp1.root !in chainRoots(cp2.root, store)
 
-        /** Epoch is not zero */
+        /** Epoch of cp2 is larger than epoch of cp1 and is not zero */
         requires cp2.epoch >= cp1.epoch > 0 
 
         /** Checkpoint at epoch f == cp1.epoch is 1-finalised. */
-        requires isOneFinalisedCheckPointFromRoot(bh1, cp1, store, store.rcvdAttestations) 
-
         requires isOneFinalised2(cp1, store)
 
         /** Checkpoint at epoch j is justified. */
-        requires isJustifiedCheckPointFromRoot(bh2, cp2, store, store.rcvdAttestations)
-
         requires isJustified2(cp2, store) 
 
-        //  Case 1: cp1.epoch == cp2.epoch (covered by lemma 4 in the proof)
-        // ensures cp1.epoch == cp2.epoch ==> 
-        //     var i1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-        //     var i2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2); 
-        //     validatorSetsViolateRuleI(i1, i2, store.rcvdAttestations)
-            
+        // requires forall a :: a in store.rcvdAttestations ==>
+        //     isValidPendingAttestation(a, store, store.rcvdAttestations)
+
+        /** cp2.epoch is the first epoch >= cp1.epoch that is justified in 
+            the ancestors of cp2.root. */
+        requires forall c : CheckPoint :: 
+            (c.root in chainRoots(cp2.root, store) && c.epoch < cp2.epoch) ==> 
+                c.epoch < cp1.epoch
+
+        /** There are two large enough validator sets such that
+            thweir intersdection is slashable. */
         ensures exists v1, v2: set<ValidatorIndex> :: 
-                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+            &&  |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
+            &&  (
+                validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
+                ||
+                validatorSetsViolateRuleII(v1, v2, store, store.rcvdAttestations)
+            )
     {
         if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
-            // oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
-            oneFinalisedImpliesJustified(cp1, store);
-            assert(isJustified2(cp1, store));
-            //  Apply lemma 4.
-           
-            //  Collect the votes for cp1 and cp2
+            calc ==> {
+                true;
+                { oneFinalisedImpliesJustified(cp1, store); }
+                isJustified2(cp1, store);
+            }
+            //  Collect the votes for cp1 and cp2.
             var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
             var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
 
-             // lemma4_11v2(bh1, bh2, cp1, cp2, store);
-            lemma4_11_v3(cp1, cp2, store, v1, v2); 
-            //  As cp1 and cp2 are justified they a minimu number of votes
-            justifiedMustHaveTwoThirdIncoming2(cp1, store);
-            justifiedMustHaveTwoThirdIncoming2(cp2, store);
-            // justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
-            // justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2, store, store.rcvdAttestations);
-            assert(|v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            assert(|v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-            //  And by definition i1 and i2 violate ruleI
-            assert(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
-            // assert exists v1, v2: set<ValidatorIndex> :: 
-            //     |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            // &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            // &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
+            //  As cp1 and cp2 are justified they have a minimum number of votes.
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming2(cp1, store); }
+                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming2(cp2, store); }
+                |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
 
-        } else {
-            /** All the attestations are valid in the store. */
-            // assume(allAttestationsValidInStore(store));
-
-            //  cp2.epoch > cp1.epoch >= 0
-            //  As cp2.epoch > 0, cp2 is justified from LJ (attestations are valid).
-            // liftFromRootCP(bh2, cp2, store, store.rcvdAttestations);
-            // var cpl : CheckPoint :| 
-            //     cpl.epoch < cp2.epoch &&
-            //     cpl.root in store.blocks.Keys &&
-            //     cpl.root in chainRoots(cp2.root, store) &&
-            //     isJustifiedCheckPointFromRoot(bh2, cpl, store, store.rcvdAttestations);
-            // assert(isJustifiedCheckPointFromRoot(bh2, cpl, store, store.rcvdAttestations));
-
-            //  Get the last justified checkpoint before cp2 that justifies cp2.
-            // var cpl := validAttestationsAreFromLJ(bh2, cp2, store, store.rcvdAttestations);
-            // assert(cpl == lastJustified(bh2, cpl.epoch, store, store.rcvdAttestations));
-
-            var cp2_l : CheckPoint :|
-                cp2_l.epoch < cp2.epoch 
-                && cp2_l.root in chainRoots(cp2.root, store)
-                && isJustified2(cp2_l, store)
-                && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
-
-            //  Finalised implies justified for cp1
-            // oneFinalisedImpliesJustifiedFromRootCP(bh1, cp1, store, store.rcvdAttestations);
-            //  As cp1 is finalised, there must be attestations from it to justify cp1.epoch + 1
-            oneFinalisedImpliesJustified(cp1, store);
-
-            //  Collect attestations for cp1 and origin of those
-            // var cp1 := validAttestationsAreFromLJ(bh1, cp1, store, store.rcvdAttestations);
-
-            //  also do the special case where cpl.epoch == 0
-            assume(0 < cp2_l.epoch <= cp1.epoch);
-
-            if cp2_l.epoch == cp1.epoch {
-                //  cpl.root is an ancestor of cp2.root so cpl.root != cp1.root
-                assert(cp2_l.root != cp1.root);
-                //  In this case lemma 4 applies again for cp1 and cpl
-                // lemma4_11v2(bh1, bh2, cp1, cp2_l, store);
-                //  Collect votes for cp1 and cpl
+            //  Apply lemma 4.
+            calc ==> {
+                true;
+                { lemma4_11_v3(cp1, cp2, store, v1, v2); }
+                validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
+            }
+        } else if cp2.epoch == cp1.epoch + 1 {
                 var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-                var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
-                //  They must have enough votes to be justified 
-                // justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
-                // justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2_l, store, store.rcvdAttestations);
-                //  As cp1 and cp2 are justified they a minimu number of votes
-                justifiedMustHaveTwoThirdIncoming2(cp1, store);
-                justifiedMustHaveTwoThirdIncoming2(cp2_l, store);
-                assert(|v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-                assert(|v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-
-                // forall (v | v in v1 * v2) 
-                //     ensures true
-                // {
-                //     var a1 := foo202(store,rcvdAttestations, cp1, v);
-                //     var a2 := foo202(store,rcvdAttestations, cp2_l, v);
-                //     assert(validatorViolatesRuleI());
-                // }
-                lemma4_11_v3(cp1, cp2_l, store, v1, v2);
-
-                //  And the two sets violate ruleI
-                // assert(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
-            //     assert exists v1, v2: set<ValidatorIndex> :: 
-            //     |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            // &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            // &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
-
-            } else if cp2.epoch == cp1.epoch + 1 {
-                var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-                var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
+                var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
                 assume(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
                 assume exists v1, v2: set<ValidatorIndex> :: 
                 |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
                 &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
                 &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
-            } else {
-                assert(isOneFinalised2(cp1, store));
-                //  cpl.epoch < cpl.epoch < cp1.epoch + 1 < cp2.epoch
-                assert(cp2_l.epoch < cp1.epoch);
+        } else {
+            assert(cp2.epoch > cp1.epoch + 1);
+            //  Get a checkpoint cp2_l that is justified and justifies cp2
+            var cp2_l : CheckPoint :|
+                && cp2_l.epoch < cp2.epoch 
+                && cp2_l.root in chainRoots(cp2.root, store)
+                && isJustified2(cp2_l, store)
+                && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
-                // we need a lemma that shows that cp at epoch cp1.epoch + 1 is justified too!
-                assert(cp2.epoch != cp1.epoch + 1);     //  otherwise lemma applies
-                assert(cp2.epoch > cp1.epoch + 1);
+            //  Finalised implies justified for cp1
+            oneFinalisedImpliesJustified(cp1, store);
 
+            //  cp2.epoch is the first justified checkpoint after cp1.epoch 
+            assert(cp2_l.epoch < cp1.epoch);
+
+
+            if cp2_l.epoch < cp1.epoch {
                 //  Get the checkpoint at cp1.epoch + 1 that is justified
                 var cp1PlusOne : CheckPoint :|
                     cp1PlusOne.epoch == cp1.epoch + 1 
@@ -728,100 +670,38 @@ module GasperProofs {
                     && cp1.root in chainRoots(cp1PlusOne.root, store)
                     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
-                //  Collect validators attesting for cp1 + 1  and cp2
+                //  Collect validators attesting for cp1PlusOne 
                 var v1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne); 
                 var v2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2);
-                //  They must have enough votes to be justified 
-                // justifiedCheckPointMustHaveTwoThirdIncoming(bh1, cp1, store, store.rcvdAttestations);
-                // justifiedCheckPointMustHaveTwoThirdIncoming(bh2, cp2, store, store.rcvdAttestations);
-                // assert(|i1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-                // assert(|i2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
 
-                //  var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
-                // var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2_l);
-
-                //  The epochs are nested
+                //  The epochs of the checkpoints are nested like so:
                 assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
                 
-                assume(allAttestationsValidInStore(store));
-
+                //  Now show that for each v in v1 /\ v2 they violate rule II
                 forall (v | v in v1 * v2) 
-                    ensures true 
                 {
+                    //  Get a witness attestation by v from cp1 to cp1PlusOne
                     var a1 := foo303(store.rcvdAttestations, cp1, cp1PlusOne, v);
-                    assert(isValidPendingAttestation(a1, store, store.rcvdAttestations));
-                    //  Get an attestation made by v from cp2_l to cp2
-                    // var a1 : PendingAttestation :| 
-                    //     a1 in store.rcvdAttestations 
-                    //     && a1.data.source == cp1 
-                    //     && a1.data.target == cp1PlusOne 
-                    //     && a1.aggregation_bits[v];
-                    //  Get an attestation made by v from cp1 to cp1 + 1
-
-                    assert(a1.data.target == cp1PlusOne);
-                    assert(a1.data.source.epoch == cp1.epoch);
-                    calc ==> {
-                        true;
-                        { assert(isValidPendingAttestation(a1, store, store.rcvdAttestations)); }
-                        a1.data.target == cp1PlusOne && a1.data.source == cp1;
-                    }
+                    //  a1 is valid 
                     assert(a1.data.source == lastJustified(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store, store.rcvdAttestations ));
                     assert(a1.data.target == lastEBB(a1.data.beacon_block_root,  compute_epoch_at_slot(a1.data.slot), store));
-                    //  If a1 is valid it m,iust be the case that cp1 is LJ and cp1 + 1 is 
-                    //  LEBB
+                    assert(a1 in store.rcvdAttestations);
 
-                    //  We have to show that every v in i1 * i2 has made
-                    //  nested attestations.
+                    //  get a witness attestation by v from cp2_l to cp2
                     var a2 := foo303(store.rcvdAttestations, cp2_l, cp2, v);
-                    assert(a2.data.source.epoch == cp2_l.epoch);
-                    assert(isValidPendingAttestation(a2, store, store.rcvdAttestations));
+                    //  a2 is valid
                     assert(a2.data.source == lastJustified(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store, store.rcvdAttestations ));
                     assert(a2.data.target == lastEBB(a2.data.beacon_block_root,  compute_epoch_at_slot(a2.data.slot), store));
-                    //  Get an attestation from cpl to cp1 + 1
-                    // var a1 := foo202(store.rcvdAttestations, cp1, v);
-                    // //  a1 is valid 
-                    // assume(a1.data.beacon_block_root in store.blocks.Keys);
-                    // assume(a1.data.beacon_block_root in store.block_states.Keys);
-                    // assert(isValidPendingAttestation(a1, store, store.rcvdAttestations));
-                    // assume(a1.data.source == cp1);
-                    
-                    // //  Get an attestation from cpl to cp2
-                    // var a2 := foo202(store.rcvdAttestations, cp2, v);
-                    // assert(isValidPendingAttestation(a2, store, store.rcvdAttestations));
-                    // assert(a2.data.beacon_block_root in store.blocks.Keys);
-                    // assert(a2.data.beacon_block_root in store.block_states.Keys);
-                    // //  The source mjust be cpl for valid attestations.
-                    // // assert(a2.data.source == cpl);   
-                    // assert(a2.data.target == cp2);
-                    assert(a1 in store.rcvdAttestations);
                     assert(a2 in store.rcvdAttestations);
 
-                    assert(a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, store.rcvdAttestations));
-                    assert(a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, store.rcvdAttestations));
-                    assert( a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store));
-                    assert( a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store));
+                    //  a2 and a1 are nested attestations by v and v violates ruleII
                     assert(validatorViolatesRuleII(a2, a1, store, store.rcvdAttestations, v));
-                    // assert(a1.data.source.epoch < a2.data.source.epoch);
-                    //  < a2.data.target.epoch < a1.data.target.epoch );
-
-                    // assert(validatorViolatesRuleII());
                 }
-
-                // }
-                //  Now we use the fact that each validator in i1 /\ i2 made an
-                //  attestation cpl to cp2 and cp1 to cp1 + 1 and violates ruleII
-                //  Validator violates ruleII
-                // assert(|i1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-                // &&  |i2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1);
-                assume(validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations));
-                assume exists v1, v2: set<ValidatorIndex> :: 
-                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
-            &&  validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
-                
+                assert(validatorSetsViolateRuleII(v1, v2, store, store.rcvdAttestations));
+            } else {
+                //  cannot happen
             }
         }
-
     }
 
     /**
@@ -930,26 +810,27 @@ module GasperProofs {
     {
         a1 in links
         && a2 in links
-        && 
+        && isValidPendingAttestation(a1, store, store.rcvdAttestations)
+        && isValidPendingAttestation(a2, store, store.rcvdAttestations) 
         //  Last justified (LJ) in a1.block head
         //  Using the epoch of the source should be OK as a valid attestation must 
         //  originate from LJ
         // var lj1 := 
-        a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, links)
+        // a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, links)
         //  Last justified in a2.block head
         // var lj2 := 
-        && a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, links)
+        // && a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, links)
 
         //  last EBB (LE)
         //  Using the target epoch should be OK as a valid attestation must target the
         //  most recent EBB.
         // var ebbs1 := computeAllEBBsFromRoot(a1.data.beacon_block_root, a1.data.target.epoch, store);
         // var le1 := 
-        && a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store)
+        // && a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store)
         // CheckPoint(a1.data.target.epoch, ebbs1[0]);
         // var ebbs2 := computeAllEBBsFromRoot(a2.data.beacon_block_root, a2.data.target.epoch, store);
         // var le2 := 
-        && a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store)
+        // && a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store)
         // CheckPoint(a2.data.target.epoch, ebbs2[0]);
 
         //  Validator v has made nested votes.
@@ -967,11 +848,12 @@ module GasperProofs {
         requires isSlotDecreasing(store)    
     {
          forall v :: v in v1 * v2 ==>
-            exists a1, a2 :: a1 in links && a2 in links && 
+            exists a1 : PendingAttestation,  a2 : PendingAttestation :: 
+            // a1 in links && a2 in links && 
             //  Note: the following may be assumed or enforced by a constraint on
             //  valid attestations.
-            a1.data.beacon_block_root in store.blocks.Keys &&
-            a2.data.beacon_block_root in store.blocks.Keys &&
+            // a1.data.beacon_block_root in store.blocks.Keys &&
+            // a2.data.beacon_block_root in store.blocks.Keys &&
             validatorViolatesRuleII(a1, a2, store, links, v as ValidatorIndex)
     }
 
@@ -1005,17 +887,17 @@ module GasperProofs {
         && a.beacon_block_root in store.block_states.Keys
         &&
         //  The chain from the block a.beacon_block_root pointed to by a.
-        var xc := chainRoots(a.beacon_block_root, store);
-        var br := a.beacon_block_root;
+        // var xc := chainRoots(a.beacon_block_root, store);
+        // var br := a.beacon_block_root;
         //  The epoch of a, ep(a)
         var ep :=  compute_epoch_at_slot(a.slot);
         //  Compute the EBBs before ep
-        var cr := computeAllEBBsFromRoot(br, ep, store);
-        assert(|cr| == ep as nat + 1);
+        // var cr := computeAllEBBsFromRoot(br, ep, store);
+        // assert(|cr| == ep as nat + 1);
         //  EBBS
         // var ebbs := computeAllEBBsIndices(xc, ep, store);
         //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
-        var epochOfLJ := lastJustified(br, ep, store, links).epoch;
+        // var epochOfLJ := lastJustified(a.beacon_block_root, ep, store, links).epoch;
         // assert(0 <= indexOfLJ <= ep); 
         // true
 
@@ -1098,7 +980,7 @@ module GasperProofs {
         // requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.block_states.Keys
     {
         // isValidListOfAttestations(store, store.rcvdAttestations)
-        forall a :: a in store.rcvdAttestations ==> isValidPendingAttestation(a, store, store.rcvdAttestations)
+        forall a {:triggers a in store.rcvdAttestations} :: a in store.rcvdAttestations ==> isValidPendingAttestation(a, store, store.rcvdAttestations)
     }
 
     /**
