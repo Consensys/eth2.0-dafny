@@ -104,8 +104,7 @@ module GasperProofs {
         //  Proof that each validator that attested for cp1 and cp2 violates rule I
         forall (i | i in attForTgt1 * attForTgt2) 
             ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
-        {
-            //  Thanks Dafny
+        {   //  Thanks Dafny
         }
     }
 
@@ -122,7 +121,7 @@ module GasperProofs {
             && b2 in store.blocks.Keys 
             && store.blocks[b1].slot == 0 
             && store.blocks[b2].slot == 0
-            ==> b1 == b2 
+                ==> b1 == b2 
     }
 
     /**
@@ -225,8 +224,7 @@ module GasperProofs {
             assert(cp1.root == cp2.root);
             //  Contradiction
             assert(cp1.root in chainRoots(cp2.root, store));
-        } else 
-        if (cp1.epoch == cp2.epoch > 0 ) {
+        } else if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
             calc ==> {
                 true;
@@ -381,8 +379,6 @@ module GasperProofs {
             a1.data.target.root != a2.data.target.root 
             && a1.data.target.epoch == a2.data.target.epoch
             && a1.aggregation_bits[v] && a2.aggregation_bits[v]
-        // forall a1, a2 :: PendingAttestation ==> 
-        //     aep(LE(a1)) != aep(LE(a2))
     }
 
     /**
@@ -416,10 +412,11 @@ module GasperProofs {
         store: Store, 
         links: ListOfAttestations, 
         v: ValidatorIndex) 
+        
         requires a1.data.beacon_block_root in store.blocks.Keys
         requires a2.data.beacon_block_root in store.blocks.Keys
 
-         /** Store is well-formed. */
+        /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)    
@@ -520,7 +517,6 @@ module GasperProofs {
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
-        
     {
         forall a {:triggers a in store.rcvdAttestations} :: 
         a in store.rcvdAttestations ==> 
