@@ -214,7 +214,7 @@ module GasperProofs {
             &&  (
                 validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
                 ||
-                validatorSetsViolateRuleII(v1, v2, store, store.rcvdAttestations)
+                validatorSetsViolateRuleII(v1, v2, store)
             )
     {
         if (cp1.epoch == cp2.epoch == 0) {
@@ -383,16 +383,14 @@ module GasperProofs {
      *  @param  a1      An attestation.
      *  @param  a2      An attestation.
      *  @param  store   A store,
-     *  @param  links   A list fo attestations.
      *  @param  v       A validator index.
      */
     predicate validatorViolatesRuleII(
         a1: PendingAttestation, 
         a2: PendingAttestation, 
         store: Store, 
-        links: ListOfAttestations, 
         v: ValidatorIndex) 
-        
+
         requires a1.data.beacon_block_root in store.blocks.Keys
         requires a2.data.beacon_block_root in store.blocks.Keys
 
@@ -401,10 +399,10 @@ module GasperProofs {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)    
     {
-        a1 in links
-        && a2 in links
-        && isValidPendingAttestation(a1, store, store.rcvdAttestations)
-        && isValidPendingAttestation(a2, store, store.rcvdAttestations) 
+        a1 in store.rcvdAttestations
+        && a2 in store.rcvdAttestations
+        && isValidPendingAttestation(a1, store)
+        && isValidPendingAttestation(a2, store) 
         //  Validator v has made nested votes.
         && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
@@ -421,8 +419,8 @@ module GasperProofs {
     predicate validatorSetsViolateRuleII(
         v1: set<ValidatorIndex>, 
         v2: set<ValidatorIndex>, 
-        store: Store,
-        links: ListOfAttestations)  
+        store: Store
+        )  
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
@@ -432,7 +430,7 @@ module GasperProofs {
             exists a1: PendingAttestation,  a2: PendingAttestation :: 
             a1.data.beacon_block_root in store.blocks.Keys &&
             a2.data.beacon_block_root in store.blocks.Keys &&
-            validatorViolatesRuleII(a1, a2, store, links, v as ValidatorIndex)
+            validatorViolatesRuleII(a1, a2, store, v as ValidatorIndex)
     }
 
     /**
@@ -453,7 +451,7 @@ module GasperProofs {
      *                      the epoch that corresponds to a.slot)
      *                  2. its source is the last justified pair in the view of a. 
      */
-    predicate isValidAttestationData(a : AttestationData, store: Store, links: seq<PendingAttestation>) 
+    predicate isValidAttestationData(a : AttestationData, store: Store) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
@@ -475,12 +473,12 @@ module GasperProofs {
      *  @param  store   A store.
      *  @param  links   A sequence of votes.  
      */
-    predicate isValidPendingAttestation(a: PendingAttestation, store: Store, links: seq<PendingAttestation>) 
+    predicate isValidPendingAttestation(a: PendingAttestation, store: Store) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
     {
-        isValidAttestationData(a.data, store, links)
+        isValidAttestationData(a.data, store)
         &&
         //  The index of the validator who made the attestation must be
         //  in the validators' set of the state that corresponds
@@ -500,7 +498,7 @@ module GasperProofs {
     {
         forall a {:triggers a in store.rcvdAttestations} :: 
         a in store.rcvdAttestations ==> 
-            isValidPendingAttestation(a, store, store.rcvdAttestations)
+            isValidPendingAttestation(a, store)
     }
 
 }
