@@ -108,7 +108,7 @@ module GasperProofs {
             //  Thanks Dafny
         }
     }
-    
+
     /**
      *  There is only one block with slot == 0.
      *
@@ -401,7 +401,21 @@ module GasperProofs {
             validatorViolatesRuleI(links, v as ValidatorIndex)
     }
 
-    predicate validatorViolatesRuleII(a1: PendingAttestation, a2: PendingAttestation, store: Store, links: ListOfAttestations, v: ValidatorIndex) 
+    /**
+     *  Whether a validator violates slashing condition 2.
+     *  
+     *  @param  a1      An attestation.
+     *  @param  a2      An attestation.
+     *  @param  store   A store,
+     *  @param  links   A list fo attestations.
+     *  @param  v       A validator index.
+     */
+    predicate validatorViolatesRuleII(
+        a1: PendingAttestation, 
+        a2: PendingAttestation, 
+        store: Store, 
+        links: ListOfAttestations, 
+        v: ValidatorIndex) 
         requires a1.data.beacon_block_root in store.blocks.Keys
         requires a2.data.beacon_block_root in store.blocks.Keys
 
@@ -414,35 +428,23 @@ module GasperProofs {
         && a2 in links
         && isValidPendingAttestation(a1, store, store.rcvdAttestations)
         && isValidPendingAttestation(a2, store, store.rcvdAttestations) 
-        //  Last justified (LJ) in a1.block head
-        //  Using the epoch of the source should be OK as a valid attestation must 
-        //  originate from LJ
-        // var lj1 := 
-        // a1.data.source == lastJustified(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store, links)
-        //  Last justified in a2.block head
-        // var lj2 := 
-        // && a2.data.source == lastJustified(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store, links)
-
-        //  last EBB (LE)
-        //  Using the target epoch should be OK as a valid attestation must target the
-        //  most recent EBB.
-        // var ebbs1 := computeAllEBBsFromRoot(a1.data.beacon_block_root, a1.data.target.epoch, store);
-        // var le1 := 
-        // && a1.data.target == lastEBB(a1.data.beacon_block_root, compute_epoch_at_slot(a1.data.slot), store)
-        // CheckPoint(a1.data.target.epoch, ebbs1[0]);
-        // var ebbs2 := computeAllEBBsFromRoot(a2.data.beacon_block_root, a2.data.target.epoch, store);
-        // var le2 := 
-        // && a2.data.target == lastEBB(a2.data.beacon_block_root, compute_epoch_at_slot(a2.data.slot), store)
-        // CheckPoint(a2.data.target.epoch, ebbs2[0]);
-
         //  Validator v has made nested votes.
         && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
 
     /**
-     *  Rule II (Gasper slashing conditions).
+     *  Whether the intersection of 
+     *   two sets of validastor violate slashing condition 2.
+     *  
+     *  @param  v1      A set of validators..
+     *  @param  v2      A set of validators..
+     *  @param  store   A store,
+     *  @param  links   A list fo attestations.
      */
-    predicate validatorSetsViolateRuleII(v1: set<ValidatorIndex>, v2: set<ValidatorIndex>, store: Store,
+    predicate validatorSetsViolateRuleII(
+        v1: set<ValidatorIndex>, 
+        v2: set<ValidatorIndex>, 
+        store: Store,
         links: ListOfAttestations)  
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
@@ -450,15 +452,11 @@ module GasperProofs {
         requires isSlotDecreasing(store)    
     {
          forall v :: v in v1 * v2 ==>
-            exists a1 : PendingAttestation,  a2 : PendingAttestation :: 
-            // a1 in links && a2 in links && 
-            //  Note: the following may be assumed or enforced by a constraint on
-            //  valid attestations.
+            exists a1: PendingAttestation,  a2: PendingAttestation :: 
             a1.data.beacon_block_root in store.blocks.Keys &&
             a2.data.beacon_block_root in store.blocks.Keys &&
             validatorViolatesRuleII(a1, a2, store, links, v as ValidatorIndex)
     }
-
 
     /**
      *  Whether an attestation is well-formed.
@@ -482,56 +480,28 @@ module GasperProofs {
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
-        /** The head block in `a` is in the store. */
-        // requires a.beacon_block_root in store.blocks.Keys
     {
         a.beacon_block_root in store.blocks.Keys
         && a.beacon_block_root in store.block_states.Keys
-        &&
-        //  The chain from the block a.beacon_block_root pointed to by a.
-        // var xc := chainRoots(a.beacon_block_root, store);
-        // var br := a.beacon_block_root;
-        //  The epoch of a, ep(a)
-        var ep :=  compute_epoch_at_slot(a.slot);
-        //  Compute the EBBs before ep
-        // var cr := computeAllEBBsFromRoot(br, ep, store);
-        // assert(|cr| == ep as nat + 1);
-        //  EBBS
-        // var ebbs := computeAllEBBsIndices(xc, ep, store);
-        //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
-        // var epochOfLJ := lastJustified(a.beacon_block_root, ep, store, links).epoch;
-        // assert(0 <= indexOfLJ <= ep); 
-        // true
-
-        //  The target root must be the last epoch boundary pair in chain(a.beacon_block_root)
-        //  xc[indexOfLEBB] is the block root for epoch ep in chain(a.beacon_block_root)
-        a.target == lastEBB(a.beacon_block_root, ep, store)
-        // CheckPoint(ep, cr[0])
-        &&
+        //  Target is the LEBB
+        && var ep :=  compute_epoch_at_slot(a.slot);
+           a.target == lastEBB(a.beacon_block_root, ep, store)
         //  The source must be the last justified pair in chain(a.beacon_block_root)
-        a.source == lastJustified(a.beacon_block_root, ep, store, store.rcvdAttestations)
-        // CheckPoint(epochOfLJ, cr[|cr| - 1 - epochOfLJ as nat])
-        // &&
-        // //  the index of the validator who made the atteatation must be
-        // //  in the validstors state of the state pointed to.
-        // a.proposer_index in store.blocks.Keys[a.beacon_block_root].validators
+        && a.source == lastJustified(a.beacon_block_root, ep, store, store.rcvdAttestations)
     }
 
     /**
-     *  A valid pending attestation. 
+     *  Whether a pending attestation is valid. 
      *
      *  @param  a       A pending attestation.
      *
      *  @param  store   A store.
      *  @param  links   A sequence of votes.  
      */
-    predicate isValidPendingAttestation(a : PendingAttestation, store: Store, links: seq<PendingAttestation>) 
+    predicate isValidPendingAttestation(a: PendingAttestation, store: Store, links: seq<PendingAttestation>) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
-        /** The head block in `a` is in the store. */
-        // requires a.data.beacon_block_root in store.blocks.Keys
-        // requires a.data.beacon_block_root in store.block_states.Keys
     {
         isValidAttestationData(a.data, store, links)
         &&
@@ -554,9 +524,6 @@ module GasperProofs {
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
-        /** The head block in `a` is in the store. */
-        // requires forall k :: k in links ==> k.data.beacon_block_root in store.blocks.Keys
-        // requires forall k :: k in links ==> k.data.beacon_block_root in store.block_states.Keys
 
         decreases links
     {
@@ -577,12 +544,10 @@ module GasperProofs {
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)
         
-        /** The head block in each `a` is in the store. */
-        // requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.blocks.Keys
-        // requires forall k :: k in store.rcvdAttestations ==> k.data.beacon_block_root in store.block_states.Keys
     {
-        // isValidListOfAttestations(store, store.rcvdAttestations)
-        forall a {:triggers a in store.rcvdAttestations} :: a in store.rcvdAttestations ==> isValidPendingAttestation(a, store, store.rcvdAttestations)
+        forall a {:triggers a in store.rcvdAttestations} :: 
+        a in store.rcvdAttestations ==> 
+            isValidPendingAttestation(a, store, store.rcvdAttestations)
     }
 
 }
