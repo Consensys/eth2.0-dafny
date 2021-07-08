@@ -67,10 +67,12 @@ module GasperProofs {
      *                  indices. should be the VALIDATOR_SET.
      *                  Define the validator set size. 
      */
-    lemma {:induction false} lemma4_11v2(bh1: Root, bh2: Root, cp1: CheckPoint, cp2: CheckPoint, store: Store) 
-        /** The block roots must be from accepted blocks, i.e. in the store. */
-        requires bh1 in store.blocks.Keys
-        requires bh2 in store.blocks.Keys
+    lemma {:induction false} lemma4_11(
+        cp1: CheckPoint, 
+        cp2: CheckPoint, 
+        store: Store, 
+        v1: set<ValidatorIndex>, 
+        v2: set<ValidatorIndex>) 
 
         /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
         requires cp1.root in store.blocks.Keys
