@@ -12,6 +12,9 @@
  * under the License.
  */
 
+ // @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:8  /verifySeparately
+
+
 include "../../utils/Eth2Types.dfy"
 include "../../utils/NativeTypes.dfy"
 include "../../utils/SetHelpers.dfy"
@@ -218,7 +221,7 @@ module GasperProofs {
             )
     {
         if (cp1.epoch == cp2.epoch == 0) {
-            oneFinalisedImpliesJustified(cp1, store); 
+            // oneFinalisedImpliesJustified(cp1, store); 
             assert(store.blocks[cp1.root].slot == 0);
             assert(store.blocks[cp2.root].slot == 0);
             assert(cp1.root == cp2.root);
@@ -226,11 +229,11 @@ module GasperProofs {
             assert(cp1.root in chainRoots(cp2.root, store));
         } else if (cp1.epoch == cp2.epoch > 0 ) {
             //  finalised implies justified so cp1 is justified.
-            calc ==> {
-                true;
-                { oneFinalisedImpliesJustified(cp1, store); }
-                isJustified2(cp1, store);
-            }
+            // calc ==> {
+            //     true;
+            //     { oneFinalisedImpliesJustified(cp1, store); }
+            //     isJustified2(cp1, store);
+            // }
             //  Collect the votes for cp1 and cp2.
             var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
             var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
@@ -311,7 +314,7 @@ module GasperProofs {
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
             //  Finalised implies justified for cp1
-            oneFinalisedImpliesJustified(cp1, store);
+            // oneFinalisedImpliesJustified(cp1, store);
 
             //  cp2.epoch is the first justified checkpoint after cp1.epoch 
             assert(cp2_l.epoch < cp1.epoch);
@@ -462,7 +465,7 @@ module GasperProofs {
         && var ep :=  compute_epoch_at_slot(a.slot);
            a.target == lastEBB(a.beacon_block_root, ep, store)
         //  The source must be the last justified pair in chain(a.beacon_block_root)
-        && a.source == lastJustified(a.beacon_block_root, ep, store, store.rcvdAttestations)
+        && a.source == lastJustified(a.beacon_block_root, ep, store)
     }
 
     /**
