@@ -41,7 +41,14 @@ module GasperFinalisation {
 
     //  Finalisation definition.   
             
-    predicate isOneFinalised2(cp: CheckPoint, store: Store) 
+    /**
+     *  One finalisation.
+     *
+     *  @param  cp      A check point.
+     *  @param  store   A store.
+     *  @returns        True iff the cp is finalised in the store.
+     */
+    predicate isOneFinalised(cp: CheckPoint, store: Store) 
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys      
         requires 0 <= cp.epoch as nat + 1 <= MAX_UINT64 
@@ -52,7 +59,7 @@ module GasperFinalisation {
         requires isSlotDecreasing(store)  
     {
         //  cp is justified
-        isJustified2(cp, store)
+        isJustified(cp, store)
         //  it justifies a checkpoint at epoch cp.epoch + 1
         && exists cp2 : CheckPoint ::
             cp2.epoch == cp.epoch + 1
