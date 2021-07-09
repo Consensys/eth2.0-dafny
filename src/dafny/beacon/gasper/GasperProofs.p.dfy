@@ -241,12 +241,12 @@ module GasperProofs {
             //  As cp1 and cp2 are justified they have a minimum number of votes.
             calc ==> {
                 true;
-                { justifiedMustHaveTwoThirdIncoming2(cp1, store); }
+                { justifiedMustHaveTwoThirdIncoming(cp1, store); }
                 |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
             }
             calc ==> {
                 true;
-                { justifiedMustHaveTwoThirdIncoming2(cp2, store); }
+                { justifiedMustHaveTwoThirdIncoming(cp2, store); }
                 |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
             }
 
@@ -291,12 +291,12 @@ module GasperProofs {
                 //  Cardinal of sets v1 and v2
                 calc ==> {
                     true;
-                    { justifiedMustHaveTwoThirdIncoming2(cp1PlusOne, store); }
+                    { justifiedMustHaveTwoThirdIncoming(cp1PlusOne, store); }
                     |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
                 }
                 calc ==> {
                     true;
-                    { justifiedMustHaveTwoThirdIncoming2(cp2, store); }
+                    { justifiedMustHaveTwoThirdIncoming(cp2, store); }
                     |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
                 }
                 calc ==> {
