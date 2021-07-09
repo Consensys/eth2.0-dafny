@@ -125,36 +125,6 @@ module AttestationsHelpers {
     }
 
     /**
-     *  If a validator index attests for a CheckPoint, it must have made an
-     *  attestation with the tgt Check point.  
-     */
-    lemma foo202(xa : seq<PendingAttestation>, tgt: CheckPoint, v: nat) returns (a: PendingAttestation)
-        requires v in collectValidatorsIndicesAttestatingForTarget(xa, tgt)
-        ensures a in xa 
-                && a.data.target == tgt 
-                && a.aggregation_bits[v]  
-    {
-        a :| a in xa 
-                && a.data.target == tgt 
-                && a.aggregation_bits[v] ;
-        return a;
-    }
-
-     lemma foo303(xa : seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint, v: nat) returns (a: PendingAttestation)
-        requires v in collectValidatorsAttestatingForLink(xa, src, tgt)
-        ensures a in xa 
-                && a.data.source == src 
-                && a.data.target == tgt 
-                && a.aggregation_bits[v]
-    {
-        a :| a in xa 
-                && a.data.source == src 
-                && a.data.target == tgt 
-                && a.aggregation_bits[v];
-        return a;
-    }
-
-    /**
      *  Collect the set of indices for which xb[i] is true.
      *  
      *  @param  xb  A sequence of bools.
