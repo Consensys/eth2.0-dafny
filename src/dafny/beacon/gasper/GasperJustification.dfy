@@ -87,7 +87,6 @@ module GasperJustification {
      *  @param  br      A block root.
      *  @param  e       An epoch.
      *  @param  store   A store.
-     *  @param  links   A list of attestations.
      *
      *  @returns        Whether the EBB at epoch e is justified according to the votes in *                  `links`.         
      *  @note           ebbs should be such that ebbs[|ebbs| - 1] has slot 0. 
@@ -116,6 +115,12 @@ module GasperJustification {
         isJustifiedEpoch(cr, e, store)
     }
 
+    /**
+     *  Whether a check point is justified.
+     *  
+     *  @param  cp      A check point.
+     *  @param  store   A store,
+     */
     predicate isJustified(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys         
@@ -136,7 +141,13 @@ module GasperJustification {
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1   
     }
 
-
+    /**
+     *  A simple lemma for justified check points.
+     *
+     *  
+     *  @param  cp      A check point.
+     *  @param  store   A store,
+     */
     lemma justifiedMustHaveTwoThirdIncoming2(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys         
@@ -160,6 +171,12 @@ module GasperJustification {
 
     /**
      *  The most recent justified EBB before epoch.
+     *
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     *  @returns        The last justified checkpoint before epoch e.
+     *  
      */
     function lastJustified(br: Root, e: Epoch, store: Store): (c :  CheckPoint)
         /** The block root must in the store.  */
