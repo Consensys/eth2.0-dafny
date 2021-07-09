@@ -17,8 +17,16 @@ include "../../ssz/Constants.dfy"
 include "../../utils/Helpers.dfy"
 include "../../utils/SetHelpers.dfy"
 include "../validators/Validators.dfy"
+
 /**
- *  Provide datatype for fork choice rule (and LMD-GHOST)
+ *  Provide datatype attestations.
+ *
+ *  Checkpoints,
+ *  AttestationData,
+ *  PendingAttestation,
+ *  Attestation,
+ *  IndexAttestation
+ *  
  */
 module AttestationsTypes {
 
@@ -59,6 +67,8 @@ module AttestationsTypes {
 
     /** Default value for CheckPoint. */
     const DEFAULT_CHECKPOINT := CheckPoint(0 as Epoch, DEFAULT_BYTES32)
+
+    //  Attestations 
 
     /** 
      *  An AttestationData is (a vote for) a link/checkpoint edge  
@@ -117,7 +127,9 @@ module AttestationsTypes {
     /**
      *  A Pending attestation (including a delay slot).
      *  
-     *  @param  data    The actual data i.e. vote of the attestation.
+     *  @param  aggregation_bits    The indices of the validastors attesting this.
+     *  @param  data                The actual data i.e. vote of the attestation.
+     *  @param  proposer_index      The validator index that proposed the attestation.
      *  @todo:  enable other fileds.
      */
     datatype PendingAttestation = PendingAttestation(
@@ -126,14 +138,6 @@ module AttestationsTypes {
         // inclusion_delay: Slot
         proposer_index: ValidatorIndex  //  uint64
     )
-
-    /*
-    If we omit the signature we can use AttestationData in place of Attestation.
-    class Attestation(Container):
-    aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
-    data: AttestationData
-    signature: BLSSignature
-    */
 
     /**
      *  Default value for PendingAttestation.
@@ -147,5 +151,58 @@ module AttestationsTypes {
      *  Default list of attestations is the empty list.
      */
     const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
+
+    /**
+     *  An attestation.
+     *  
+     *  @param  aggregation_bits    The indices of the validastors attesting this.
+     *  @param  data                The actual data i.e. vote of the attestation.
+     *  @param  signature           A BLS signature. (not used)
+     *
+     *  @note:                      If we omit the signature we can use AttestationData 
+     *                              in place of Attestation
+     */
+    datatype Attestation = Attestation(
+        aggregation_bits: AggregationBits,
+        data: AttestationData // ,
+        // signature: BLSSignature
+    )
+
+    /**
+     *  Default value for Attestation.
+     */
+    const DEFAULT_ATTESTATION := 
+        Attestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
+
+
+    /**
+     *  List of validators indices.
+     */
+    type ListOfValidatorIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE 
+
+    const DEFAULT_LIST_VALIDATORS_INDEX : ListOfValidatorIndices := []
+
+    /**
+     *  An indexed attestation.
+     *  
+     *  @param  attesting_indices   The indices of the validastors in the current committee
+     *                              attesting for this..
+     *  @param  data                The actual data i.e. vote of the attestation.
+     *  @param  signature           A BLS signature. (not used)
+     *
+     *  @note:                      If we omit the signature we can use AttestationData 
+     *                              in place of Attestation
+     */
+    datatype IndexedAttestation = IndexedAttestation(
+        attesting_indices: AggregationBits,
+        data: AttestationData // ,
+        // signature: BLSSignature
+    )
+
+    /**
+     *  Default value for InxexedAttestation.
+     */
+    const DEFAULT_INDEXED_ATTESTATION := 
+        IndexedAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
 
 }
