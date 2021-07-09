@@ -23,6 +23,7 @@ include "ForkChoiceTypes.dfy"
 include "../statetransition/StateTransition.dfy"
 include "../Helpers.dfy"
 include "../attestations/AttestationsHelpers.dfy"
+include "../validators/Validators.dfy"
   
 /**
  * Fork choice rule for the Beacon Chain.
@@ -36,6 +37,7 @@ module ForkChoice {
     import opened ForkChoiceTypes
     import opened StateTransition
     import opened BeaconHelpers
+    import opened Validators
     import opened AttestationsTypes
     import opened AttestationsHelpers
 
@@ -146,7 +148,7 @@ module ForkChoice {
          *  All fields initialised to default values except the state_root.
          */
         const GENESIS_BLOCK_ROOT := hash_tree_root(GENESIS_BLOCK)
-        
+
         /**
          *  The genesis store.
          *
