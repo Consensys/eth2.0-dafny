@@ -24,7 +24,9 @@ include "./GasperEBBs.dfy"
 include "./GasperJustification.dfy"
 
 /**
- *  Provide definitions of chain, well-formed store, EBB, justified.
+ *  Provide definitions finalisation for check poits.
+ *  
+ *  More precisely 1-finalisation and 2-finalisation.
  */
 module GasperFinalisation {
     

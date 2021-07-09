@@ -22,7 +22,7 @@ include "../Helpers.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 
 /**
- *  Provide definitions of chain, well-formed store, EBB, justified.
+ *  Provide definitions of Epoch Boundaty Blocks (check points).
  */
 module GasperEBBs {
     

@@ -161,7 +161,9 @@ module AttestationsTypes {
      *  @param  signature           A BLS signature. (not used)
      *
      *  @note:                      If we omit the signature we can use AttestationData 
-     *                              in place of Attestation
+     *                              in place of Attestation. 
+     *  @note                       PendingAttestation are used instead of Attestation in 
+     *                              this version of the specs.
      */
     datatype Attestation = Attestation(
         aggregation_bits: AggregationBits,

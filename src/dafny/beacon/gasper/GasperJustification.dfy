@@ -23,7 +23,7 @@ include "../forkchoice/ForkChoiceTypes.dfy"
 include "./GasperEBBs.dfy"
   
 /**
- *  Provide definitions of chain, well-formed store, EBB, justified.
+ *  Provide definitions of of justification for check points.
  */
 module GasperJustification {
     
