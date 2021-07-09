@@ -90,14 +90,14 @@ module GasperProofs {
         requires isSlotDecreasing(store)  
 
         /** The checkpoints are justified. */
-        requires isJustified2(cp1, store)
-        requires isJustified2(cp2, store)
+        requires isJustified(cp1, store)
+        requires isJustified(cp2, store)
 
         /** the validators in v1 and v2 voted for cp1 and cp2. */
         requires v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1)
         requires v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2)
 
-        /**  v1 /\ v2 vkiolates slashing condition 1. */
+        /**  v1 /\ v2 violates slashing condition 1. */
         ensures validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
     {
         //  Attestations for tgt1 ands tgt2
@@ -188,12 +188,12 @@ module GasperProofs {
         requires cp1.root in store.blocks.Keys
         /** cp1 is one-finalised so its epoch + 1 is less than MAX int 64. */
         requires cp1.epoch as nat + 1 <= MAX_UINT64
-        requires isOneFinalised2(cp1, store)
+        requires isOneFinalised(cp1, store)
 
         /** Checkpoint 2. Justified. */
         requires cp2.root in store.blocks.Keys
         /** cp2 is justified. */
-        requires isJustified2(cp2, store) 
+        requires isJustified(cp2, store) 
 
         //  Lemma 5 other assumptions.
 
@@ -232,7 +232,7 @@ module GasperProofs {
             // calc ==> {
             //     true;
             //     { oneFinalisedImpliesJustified(cp1, store); }
-            //     isJustified2(cp1, store);
+            //     isJustified(cp1, store);
             // }
             //  Collect the votes for cp1 and cp2.
             var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
@@ -265,7 +265,7 @@ module GasperProofs {
                     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
                 assert(cp2.epoch > 0);
-                assert(isJustified2(cp1PlusOne, store));
+                assert(isJustified(cp1PlusOne, store));
                 assume(cp1PlusOne.root != cp2.root);
                 var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne); 
                 //  The following has a weird effect to speed up verification time
@@ -287,7 +287,7 @@ module GasperProofs {
                 //  cp1PlusOne root cannot be cp2.root (need to apply lemma 4).
                 assert(cp1PlusOne.root != cp2.root);
                 // cp1PlusOne is justified
-                assert(isJustified2(cp1PlusOne,store));
+                assert(isJustified(cp1PlusOne,store));
                 //  Cardinal of sets v1 and v2
                 calc ==> {
                     true;
@@ -310,7 +310,7 @@ module GasperProofs {
             var cp2_l : CheckPoint :|
                 && cp2_l.epoch < cp2.epoch 
                 && cp2_l.root in chainRoots(cp2.root, store)
-                && isJustified2(cp2_l, store)
+                && isJustified(cp2_l, store)
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
             //  Finalised implies justified for cp1

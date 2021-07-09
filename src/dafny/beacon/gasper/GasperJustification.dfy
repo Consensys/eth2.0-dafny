@@ -116,7 +116,7 @@ module GasperJustification {
         isJustifiedEpoch(cr, e, store)
     }
 
-    predicate isJustified2(cp: CheckPoint, store: Store)
+    predicate isJustified(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys         
         /** The store is well-formed, each block with slot != 0 has a parent
@@ -127,14 +127,12 @@ module GasperJustification {
         decreases cp.epoch 
     {
         if cp.epoch == 0 then // should be a the genesis block
-        // @todo
-            // true
             store.blocks[cp.root].slot == 0 
         else 
             exists cp2 : CheckPoint ::
                 cp2.epoch < cp.epoch 
                 && cp2.root in chainRoots(cp.root, store)
-                && isJustified2(cp2, store)
+                && isJustified(cp2, store)
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1   
     }
 
@@ -148,7 +146,7 @@ module GasperJustification {
         requires isSlotDecreasing(store)  
 
         /** Checkpoint at epoch e is justified. */
-        requires cp.epoch > 0 && isJustified2(cp, store)
+        requires cp.epoch > 0 && isJustified(cp, store)
         /** Checkpoint at epoch e has more than 2/3 incoming votes. */
         ensures 
             //  The total number of attestations to EBB at epoch e is a supermajority.
@@ -177,5 +175,4 @@ module GasperJustification {
             isJustifiedEpochFromRoot(br, c.epoch, store) &&
             c.root == cr[e - c.epoch]
             && forall k :: c.epoch < k <= e ==> !isJustifiedEpochFromRoot(br, k, store)
-
 }
