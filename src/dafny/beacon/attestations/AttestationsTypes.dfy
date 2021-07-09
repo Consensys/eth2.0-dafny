@@ -194,7 +194,7 @@ module AttestationsTypes {
      *                              in place of Attestation
      */
     datatype IndexedAttestation = IndexedAttestation(
-        attesting_indices: AggregationBits,
+        attesting_indices: ListOfValidatorIndices,
         data: AttestationData // ,
         // signature: BLSSignature
     )
@@ -203,6 +203,6 @@ module AttestationsTypes {
      *  Default value for InxexedAttestation.
      */
     const DEFAULT_INDEXED_ATTESTATION := 
-        IndexedAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
+        IndexedAttestation(DEFAULT_LIST_VALIDATORS_INDEX, DEFAULT_ATTESTATION_DATA)
 
 }
