@@ -99,9 +99,10 @@ module AttestationsTypes {
      *                              pair in view(beacon_block_root).
      *  @note                       As a consequence We must have this.target.epoch == epoch(slot).
      *
-     *  @note   As (source, target) forms a pair, they should probably be grouped together
-     *          say as a Link rather than provided separately. 
-     *          The pair stands for a `vote` for a link between source and target.
+     *  @note                       As (source, target) forms a pair, they should probably be 
+     *                              grouped together say as a Link rather than provided separately.
+     *                              The pair stands for a `vote` for a link between source and 
+     *                              target.
      */
     datatype AttestationData = AttestationData(
         slot: Slot,                 //  ep(alpha) in the Gasper paper
@@ -173,7 +174,6 @@ module AttestationsTypes {
      */
     const DEFAULT_ATTESTATION := 
         Attestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA)
-
 
     /**
      *  List of validators indices.
