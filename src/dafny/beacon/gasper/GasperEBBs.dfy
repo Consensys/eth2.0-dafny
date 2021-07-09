@@ -167,6 +167,13 @@ module GasperEBBs {
         computeEBBsForAllEpochs(cr, e, store)
     }
 
+    /**
+     *  The last Epoch Boudary Block.
+     *  
+     *  @param  br      A block root.
+     *  @param  e       An epoch.
+     *  @param  store   A store.
+     */
     function lastEBB(br: Root, e: Epoch, store: Store): CheckPoint
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
@@ -174,8 +181,6 @@ module GasperEBBs {
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
-        /** Not epoch 0 */
-        // requires e > 0 
     {
         var xb := computeAllEBBsFromRoot(br, e, store);
         CheckPoint(e, xb[0])
