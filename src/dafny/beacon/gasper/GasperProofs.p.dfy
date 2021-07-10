@@ -30,7 +30,7 @@ include "./GasperFinalisation.dfy"
 include "../validators/Validators.dfy"
  
 /**
- *  Proofs for the ForkChoice properties.  
+ *  Proofs for the safety properties of Gasper.  
  */
 module GasperProofs {
     
@@ -406,6 +406,8 @@ module GasperProofs {
         && a2 in store.rcvdAttestations
         && isValidPendingAttestation(a1, store)
         && isValidPendingAttestation(a2, store) 
+        //  
+        && a1.aggregation_bits[v] && a2.aggregation_bits[v]
         //  Validator v has made nested votes.
         && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
