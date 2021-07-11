@@ -220,7 +220,9 @@ module AttestationsTypes {
      *  @param  signature           A BLS signature. (not used)
      *
      *  @note:                      If we omit the signature we can use AttestationData 
-     *                              in place of Attestation
+     *                              in place of Attestation.
+     *
+     *  @note                       Not used in this version.
      */
     datatype IndexedAttestation = IndexedAttestation(
         attesting_indices: CommitteeListOfValidatorIndices,

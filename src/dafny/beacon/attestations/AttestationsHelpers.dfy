@@ -41,13 +41,6 @@ module AttestationsHelpers {
     import opened Validators
 
     /**
-     *  Non deterministic conversion of aggregation bits to validator indices.
-     */
-    // function aggregationBitsToValidatorIndices(xb: AggregationBits): (s: set<ValidatorIndex>) 
-    //     ensures  |trueBitsCount(xb)| == |s|
-
-
-    /**
      *  The number of attestations for a pair of checkpoints.
      *  
      *  @param  xa  The known list of attestations (votes).
@@ -103,37 +96,6 @@ module AttestationsHelpers {
             ) + collectValidatorsAttestatingForLink(xa[1..], src, tgt)
     }
 
-    // function collectValidatorsAttestatingForLink2(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<ValidatorIndex>
-    //     //  the next ensure is redundant as the ValidatorIndex type captures it.
-    //     ensures forall e :: e in collectValidatorsAttestatingForLink2(xa, src, tgt) ==>
-    //         e < VALIDATOR_REGISTRY_LIMIT as nat
-    //     ensures |collectValidatorsAttestatingForLink2(xa, src, tgt)| <= VALIDATOR_REGISTRY_LIMIT as nat
-    //     ensures forall v :: 
-    //         v in collectValidatorsAttestatingForLink2(xa, src, tgt) <==>
-    //         exists a, i : ValidatorInCommitteeIndex :: a in xa 
-    //             && a.data.source == src 
-    //             && a.data.target == tgt 
-    //             && a.aggregation_bits[i]
-    //             && a.aggregation_validators[i] == v 
-
-    //     decreases xa
-    // {
-    //     if |xa| == 0 then 
-    //         { }
-    //     else 
-    //         //
-    //         unionCardBound(
-    //             trueBitsCollect(xa[0].aggregation_bits, xa[0].aggregation_validators),
-    //             collectValidatorsAttestatingForLink2(xa[1..], src, tgt), 
-    //             VALIDATOR_REGISTRY_LIMIT as nat);
-    //         (if xa[0].data.source == src && xa[0].data.target == tgt then 
-    //             trueBitsCollect(xa[0].aggregation_bits, xa[0].aggregation_validators)
-    //             // trueBitsCount(xa[0].aggregation_bits)
-    //         else 
-    //             {}
-    //         ) + collectValidatorsAttestatingForLink2(xa[1..], src, tgt)
-    // }
-
     /**
      *  Collect set of indices of validators attesting a link to a given target.
      *
@@ -166,31 +128,6 @@ module AttestationsHelpers {
             ) + collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt)
     }
 
-    // function collectValidatorsIndicesAttestatingForTarget2(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<ValidatorIndex>
-    //     ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget2(xa, tgt) ==>
-    //         e < VALIDATOR_REGISTRY_LIMIT as nat 
-    //     ensures |collectValidatorsIndicesAttestatingForTarget2(xa, tgt)| <= VALIDATOR_REGISTRY_LIMIT as nat 
-    //     ensures forall v :: 
-    //         v in collectValidatorsIndicesAttestatingForTarget2(xa, tgt) <==>
-    //         exists a, i : ValidatorInCommitteeIndex :: a in xa 
-    //             && a.data.target == tgt 
-    //             && a.aggregation_bits[i]
-    //             && a.aggregation_validators[i] == v 
-        // decreases xa
-    // {
-    //     if |xa| == 0 then 
-    //         { }
-    //     else 
-    //         unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-    //             collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE);
-    //         (if xa[0].data.target == tgt then 
-    //             //  Set of indices that are true in xa[0].aggregation_bits
-    //             trueBitsCount(xa[0].aggregation_bits)
-    //         else 
-    //             {}
-    //         ) + collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt)
-    // }
-
     /**
      *  Collect the set of indices for which xb[i] is true.
      *  
@@ -207,23 +144,7 @@ module AttestationsHelpers {
         else 
             (if xb[|xb| - 1] then { |xb| - 1 } else {}) + trueBitsCount(xb[..|xb| - 1])
     }
-
-    //  function trueBitsCollect(xb : seq<bool>, xv: seq<ValidatorIndex>) : set<ValidatorIndex> 
-    //     requires |xb| == |xv|
-    //     ensures |trueBitsCollect(xb, xv)| <= |xb| == MAX_VALIDATORS_PER_COMMITTEE
-    //     ensures forall v :: v in trueBitsCollect(xb, xv) <==> 
-    //         exists k ::  0 <= k < |xb| 
-    //             && xb[k]
-    //             && xv[k] == v 
-        // decreases xb
-    // {
-    //     if |xb| == 0 then 
-    //         {}
-    //     else 
-    //         (if xb[|xb| - 1] then { |xb| - 1 } else {}) 
-    //         + trueBitsCollect(xb[..|xb| - 1])
-    // }
-
+    
     /**
      *  The set of validators attesting to a target is larger than the set 
      *  of validators attesting to a link with that target. 
