@@ -128,7 +128,6 @@ module GasperEBBs {
     {   //  Thanks Dafny
     }
 
-    
     /**
      *  Compute all the EBBs in a chain starting at a given block root.
      *
