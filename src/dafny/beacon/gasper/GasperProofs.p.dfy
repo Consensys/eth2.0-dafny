@@ -33,6 +33,9 @@ include "../validators/Validators.dfy"
  *  Proofs for the safety properties of Gasper.  
  */
 module GasperProofs {
+
+    //  Equivalent of #define
+    const FIXED_VAL_SET := true
     
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
@@ -99,13 +102,30 @@ module GasperProofs {
 
         /**  v1 /\ v2 violates slashing condition 1. */
         ensures validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
+        ensures FIXED_VAL_SET ==> 
+            |v1 * v2| >=  MAX_VALIDATORS_PER_COMMITTEE / 3 + 1
+
     {
-        //  Attestations for tgt1 ands tgt2
-        var attForTgt1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1);
-        var attForTgt2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
+        // If set of validators is fixed, v1 /\ v2 has more than 1/3
+        if (FIXED_VAL_SET) {
+            //  cp1 is justified and must have a super majority
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming(cp1, store); }
+                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            //  cp2 same.
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming(cp2, store); }
+                |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            //  By the pigeon principle v1 /\ v2 has more than 1/3 elements
+            pigeonHolePrincipleNat(v1, v2, MAX_VALIDATORS_PER_COMMITTEE);
+        }
 
         //  Proof that each validator that attested for cp1 and cp2 violates rule I
-        forall (i | i in attForTgt1 * attForTgt2) 
+        forall (i | i in v1 * v2) 
             ensures validatorViolatesRuleI(store.rcvdAttestations, i)
         {   //  Thanks Dafny
         }
@@ -118,7 +138,7 @@ module GasperProofs {
      */
     predicate uniqueBlockAtSlotZero(store: Store) 
     {
-        //  If two blocks have slot ==0 then they are identical
+        //  If two blocks have slot == 0 then they are identical
         forall  b1, b2 {:triggers store.blocks[b1].slot} :: 
             && b1 in store.blocks.Keys 
             && b2 in store.blocks.Keys 
@@ -214,6 +234,7 @@ module GasperProofs {
         ensures exists v1, v2: set<ValidatorInCommitteeIndex> :: 
             &&  |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+            &&  (FIXED_VAL_SET ==> |v1 * v2| >= MAX_VALIDATORS_PER_COMMITTEE / 3 + 1)
             &&  (
                 validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations)
                 ||
@@ -231,13 +252,9 @@ module GasperProofs {
             //  Collect the votes for cp1 and cp2.
             var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
             var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
-            //  Strangely enough Dafny cannot establish v1 == ... and seems to need <= and >=
-            assert(v1 <= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
-            assert(v1 >= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
+        
             assert(v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
 
-            assert(v2 <= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
-            assert(v2 >= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
             assert(v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
 
             //  As cp1 and cp2 are justified they have a minimum number of votes.
@@ -250,6 +267,11 @@ module GasperProofs {
                 true;
                 { justifiedMustHaveTwoThirdIncoming(cp2, store); }
                 |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            //  If fixed set of validators
+            if (FIXED_VAL_SET) {
+                //  By the pigeon principle v1 /\ v2 has more than 1/3 elements
+                pigeonHolePrincipleNat(v1, v2, MAX_VALIDATORS_PER_COMMITTEE);
             }
             //  Apply lemma 4.
             calc ==> {
@@ -269,21 +291,9 @@ module GasperProofs {
                 assert(isJustified(cp1PlusOne, store));
                 assume(cp1PlusOne.root != cp2.root);
                 var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne); 
-                //  The following has a weird effect to speed up verification time
-                if ( v1 != collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne)) {
-                    assert(false);
-                } else {
-                    assert(true);
-                }
                 assert(v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1PlusOne));
                 
                 var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
-                //  The following has a weird effect to speed up verification time
-                if ( v2 != collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2)) {
-                    assert(false);
-                } else {
-                    assert(true);
-                }
                 assert(v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
                 //  cp1PlusOne root cannot be cp2.root (need to apply lemma 4).
                 assert(cp1PlusOne.root != cp2.root);
@@ -299,6 +309,11 @@ module GasperProofs {
                     true;
                     { justifiedMustHaveTwoThirdIncoming(cp2, store); }
                     |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+                }
+                //  If fixed set of validators
+                if (FIXED_VAL_SET) {
+                    //  By the pigeon principle v1 /\ v2 has more than 1/3 elements
+                    pigeonHolePrincipleNat(v1, v2, MAX_VALIDATORS_PER_COMMITTEE);
                 }
                 calc ==> {
                     true;
@@ -317,32 +332,44 @@ module GasperProofs {
             //  cp2.epoch is the first justified checkpoint after cp1.epoch 
             assert(cp2_l.epoch < cp1.epoch);
 
-            // if cp2_l.epoch < cp1.epoch {
-                //  Get the checkpoint at cp1.epoch + 1 that is justified
-                var cp1PlusOne : CheckPoint :|
-                    cp1PlusOne.epoch == cp1.epoch + 1 
-                    && cp1PlusOne.root in store.blocks.Keys
-                    && cp1.root in chainRoots(cp1PlusOne.root, store)
-                    && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            //  Get the checkpoint at cp1.epoch + 1 that is justified
+            var cp1PlusOne : CheckPoint :|
+                cp1PlusOne.epoch == cp1.epoch + 1 
+                && cp1PlusOne.root in store.blocks.Keys
+                && cp1.root in chainRoots(cp1PlusOne.root, store)
+                && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
-                //  Collect validators attesting for cp1PlusOne 
-                var v1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne); 
-                var v2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2);
+            //  Collect validators attesting for cp1PlusOne 
+            var v1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne); 
+            var v2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2);
 
-                assert(v1 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
-                assert(v1 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
-                assert(v1 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
-                assert(v2 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
-                assert(v2 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
-                assert(v2 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
-
-                //  The epochs of the checkpoints are nested like so:
-                assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
-                
-                assert(validatorSetsViolateRuleII(v1, v2, store));
-            // } else {
-            //     //  cannot happen
-            // }
+            assert(v1 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+            assert(v1 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+            assert(v1 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+            assert(v2 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+            assert(v2 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+            assert(v2 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+            //  Cardinal of sets v1 and v2
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming(cp1PlusOne, store); }
+                |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            calc ==> {
+                true;
+                { justifiedMustHaveTwoThirdIncoming(cp2, store); }
+                |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
+            }
+            //  If fixed set of validators
+            if (FIXED_VAL_SET) {
+                //  By the pigeon principle v1 /\ v2 has more than 1/3 elements
+                pigeonHolePrincipleNat(v1, v2, MAX_VALIDATORS_PER_COMMITTEE);
+            }
+            //  The epochs of the checkpoints are nested like so:
+            assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
+            //  And as a consequence every v in v1 /\ v2 violates rule II
+            assert(validatorSetsViolateRuleII(v1, v2, store));
+            
         }
     }
 
