@@ -26,8 +26,12 @@ module Validators {
     import opened Eth2Types
     // import opened Attestations
    
-    /* Validator registry index. */
-    type ValidatorIndex = i:nat | 0 <= i < MAX_VALIDATORS_PER_COMMITTEE 
+    /** Validator registry index. */
+    type ValidatorIndex = i:nat | 0 <= i < VALIDATOR_REGISTRY_LIMIT as nat
+        // MAX_VALIDATORS_PER_COMMITTEE 
+
+    /** A validator index within a committee. */
+    type ValidatorInCommitteeIndex = i:nat | 0 <= i < MAX_VALIDATORS_PER_COMMITTEE as nat 
 
     /**
      *  A Validator.
@@ -38,7 +42,7 @@ module Validators {
      *  @param  slashed                         Status epochs.    
      *  @param  activation_eligibility_epoch    When criteria for activation were met.
      *  @param  activation_epoch
-     *  @param  exit_epoch: Epoch
+     *  @param  exit_epoch                      Epoch
      *  @param  withdrawable_epoch              When validator can withdraw funds.
      */
     datatype Validator = Validator(

@@ -1,4 +1,20 @@
 
+
+- proof for two finalisation
+ - def of two finalisation
+ - new version of lemma 5 for two finalisation
+
+- use IndecxAttestations and remove the REGISTRY_LIMIT constraint.
+
+Monday:
+- finish proof of lemma5 for one finalisation
+- [HARD] add ruleI and ruleII, and show 1-finalisation OK except breaking ruleI or ruleII
+- start 2-finalise
+
+Tuesday:
+- finish 2-finalise
+- prove that state_transitions functions maintain properties of canonical chain. 
+
 to check:
 
 - epoch processing defs of EBBs, justified

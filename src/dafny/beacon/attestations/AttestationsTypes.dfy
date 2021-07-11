@@ -116,26 +116,49 @@ module AttestationsTypes {
      *  Default value for AttestationData.
      */
     const DEFAULT_ATTESTATION_DATA := 
-        AttestationData(0 as Slot,  DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
+        AttestationData(0 as Slot, DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
 
     /**
      *  Aggregations bits.
      */
     type AggregationBits = x : seq<bool> | |x| == MAX_VALIDATORS_PER_COMMITTEE witness DEFAULT_AGGREGATION_BITS
 
+   
     const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE)
+
+
+    /**
+     *  A list of validator indices that are all pair-wise different.
+     */
+    type AggregationValidators = x : seq<ValidatorIndex> | 
+        |x| == MAX_VALIDATORS_PER_COMMITTEE 
+        && forall i, j :: 0 <= i < j < |x| ==> x[i] != x[j]
+    witness DEFAULT_AGGREGATION__VALIDATORS
+
+    /** 
+     *  Build a default witness value for AggregationValidators
+     */
+    function method makeDefaultAggrVal(): (a: seq<ValidatorIndex>)
+        ensures |a| == MAX_VALIDATORS_PER_COMMITTEE
+        ensures forall i :: 0 <= i < |a| ==> a[i] == i 
+
+
+    const DEFAULT_AGGREGATION__VALIDATORS := makeDefaultAggrVal()
 
     /**
      *  A Pending attestation (including a delay slot).
      *  
-     *  @param  aggregation_bits    The indices of the validastors attesting this.
-     *  @param  data                The actual data i.e. vote of the attestation.
-     *  @param  proposer_index      The validator index that proposed the attestation.
+     *  @param  aggregation_bits        The indices of the validastors attesting this.
+     *  @param  data                    The actual data i.e. vote of the attestation.
+     *  @param  aggregation_validators  The i-th value is the validator index of the 
+     *                                  i-th validator in (the committee) of aggregation_bits.  
+     *  @param  proposer_index          The validator index that proposed the attestation.
      *  @todo:  enable other fileds.
      */
     datatype PendingAttestation = PendingAttestation(
         aggregation_bits: AggregationBits,
         data: AttestationData,
+        ghost aggregation_validators: AggregationValidators, 
         // inclusion_delay: Slot
         proposer_index: ValidatorIndex  //  uint64
     )
@@ -144,7 +167,10 @@ module AttestationsTypes {
      *  Default value for PendingAttestation.
      */
     const DEFAULT_PENDING_ATTESTATION := 
-        PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA, 0)
+        PendingAttestation( DEFAULT_AGGREGATION_BITS, 
+                            DEFAULT_ATTESTATION_DATA, 
+                            DEFAULT_AGGREGATION__VALIDATORS,
+                            0)
 
     type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int witness DEFAULT_LIST_ATTESTATIONS
 
@@ -156,7 +182,8 @@ module AttestationsTypes {
     /**
      *  An attestation.
      *  
-     *  @param  aggregation_bits    The indices of the validastors attesting this.
+     *  @param  aggregation_bits    The indices of the validators in the committee 
+     *                              attesting this.
      *  @param  data                The actual data i.e. vote of the attestation.
      *  @param  signature           A BLS signature. (not used)
      *
@@ -180,15 +207,15 @@ module AttestationsTypes {
     /**
      *  List of validators indices.
      */
-    type ListOfValidatorIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE 
+    type CommitteeListOfValidatorIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE 
 
-    const DEFAULT_LIST_VALIDATORS_INDEX : ListOfValidatorIndices := []
+    const DEFAULT_COMMITTEE_LIST_VALIDATORS_INDEX : CommitteeListOfValidatorIndices := []
 
     /**
      *  An indexed attestation.
      *  
-     *  @param  attesting_indices   The indices of the validastors in the current committee
-     *                              attesting for this..
+     *  @param  attesting_indices   The validators indices in the current committee
+     *                              attesting for this.
      *  @param  data                The actual data i.e. vote of the attestation.
      *  @param  signature           A BLS signature. (not used)
      *
@@ -196,7 +223,7 @@ module AttestationsTypes {
      *                              in place of Attestation
      */
     datatype IndexedAttestation = IndexedAttestation(
-        attesting_indices: ListOfValidatorIndices,
+        attesting_indices: CommitteeListOfValidatorIndices,
         data: AttestationData // ,
         // signature: BLSSignature
     )
@@ -205,6 +232,6 @@ module AttestationsTypes {
      *  Default value for InxexedAttestation.
      */
     const DEFAULT_INDEXED_ATTESTATION := 
-        IndexedAttestation(DEFAULT_LIST_VALIDATORS_INDEX, DEFAULT_ATTESTATION_DATA)
+        IndexedAttestation(DEFAULT_COMMITTEE_LIST_VALIDATORS_INDEX, DEFAULT_ATTESTATION_DATA)
 
 }

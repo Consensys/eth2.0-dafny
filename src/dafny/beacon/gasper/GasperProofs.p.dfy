@@ -74,8 +74,8 @@ module GasperProofs {
         cp1: CheckPoint, 
         cp2: CheckPoint, 
         store: Store, 
-        v1: set<ValidatorIndex>, 
-        v2: set<ValidatorIndex>) 
+        v1: set<ValidatorInCommitteeIndex>, 
+        v2: set<ValidatorInCommitteeIndex>) 
 
         /** The block roots of the checkpoints must be from accepted blocks, i.e. in the store. */
         requires cp1.root in store.blocks.Keys
@@ -106,7 +106,7 @@ module GasperProofs {
 
         //  Proof that each validator that attested for cp1 and cp2 violates rule I
         forall (i | i in attForTgt1 * attForTgt2) 
-            ensures validatorViolatesRuleI(store.rcvdAttestations, i as ValidatorIndex)
+            ensures validatorViolatesRuleI(store.rcvdAttestations, i)
         {   //  Thanks Dafny
         }
     }
@@ -211,7 +211,7 @@ module GasperProofs {
 
         /** There are two large enough validator sets such that
             their intersdection is slashable. */
-        ensures exists v1, v2: set<ValidatorIndex> :: 
+        ensures exists v1, v2: set<ValidatorInCommitteeIndex> :: 
             &&  |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  (
@@ -228,15 +228,17 @@ module GasperProofs {
             //  Contradiction
             assert(cp1.root in chainRoots(cp2.root, store));
         } else if (cp1.epoch == cp2.epoch > 0 ) {
-            //  finalised implies justified so cp1 is justified.
-            // calc ==> {
-            //     true;
-            //     { oneFinalisedImpliesJustified(cp1, store); }
-            //     isJustified(cp1, store);
-            // }
             //  Collect the votes for cp1 and cp2.
             var v1 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1); 
             var v2 := collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2);
+            //  Strangely enough Dafny cannot establish v1 == ... and seems to need <= and >=
+            assert(v1 <= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
+            assert(v1 >= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
+            assert(v1 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp1));
+
+            assert(v2 <= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
+            assert(v2 >= collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
+            assert(v2 == collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp2));
 
             //  As cp1 and cp2 are justified they have a minimum number of votes.
             calc ==> {
@@ -249,7 +251,6 @@ module GasperProofs {
                 { justifiedMustHaveTwoThirdIncoming(cp2, store); }
                 |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
             }
-
             //  Apply lemma 4.
             calc ==> {
                 true;
@@ -313,13 +314,10 @@ module GasperProofs {
                 && isJustified(cp2_l, store)
                 && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
 
-            //  Finalised implies justified for cp1
-            // oneFinalisedImpliesJustified(cp1, store);
-
             //  cp2.epoch is the first justified checkpoint after cp1.epoch 
             assert(cp2_l.epoch < cp1.epoch);
 
-            if cp2_l.epoch < cp1.epoch {
+            // if cp2_l.epoch < cp1.epoch {
                 //  Get the checkpoint at cp1.epoch + 1 that is justified
                 var cp1PlusOne : CheckPoint :|
                     cp1PlusOne.epoch == cp1.epoch + 1 
@@ -331,13 +329,20 @@ module GasperProofs {
                 var v1 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne); 
                 var v2 := collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2);
 
+                assert(v1 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+                assert(v1 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+                assert(v1 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp1, cp1PlusOne));
+                assert(v2 <= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+                assert(v2 >= collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+                assert(v2 == collectValidatorsAttestatingForLink(store.rcvdAttestations, cp2_l, cp2));
+
                 //  The epochs of the checkpoints are nested like so:
                 assert(cp2_l.epoch < cp1.epoch < cp1PlusOne.epoch  < cp2.epoch);
                 
                 assert(validatorSetsViolateRuleII(v1, v2, store));
-            } else {
-                //  cannot happen
-            }
+            // } else {
+            //     //  cannot happen
+            // }
         }
     }
 
@@ -354,14 +359,15 @@ module GasperProofs {
      *  and LE(a) is the last epoch boundary pair (checkpoint) 
      *  of a i.e. (B, ep(slot(a))).
      */
-    predicate validatorViolatesRuleI(links: ListOfAttestations, v: ValidatorIndex) 
+    predicate validatorViolatesRuleI(links: ListOfAttestations, v: ValidatorInCommitteeIndex) 
     {
         // true
-        exists a1, a2 : PendingAttestation ::
+        exists a1, a2 ::
             a1 in links && a2 in links &&
             a1.data.target.root != a2.data.target.root 
             && a1.data.target.epoch == a2.data.target.epoch
             && a1.aggregation_bits[v] && a2.aggregation_bits[v]
+            // && (a1.aggregation_validators[v1] == a2.aggregation_validators[v2] == v)
     }
 
     /**
@@ -372,12 +378,12 @@ module GasperProofs {
      *  @param  links   A list of attestations.
      */
     predicate validatorSetsViolateRuleI(
-        v1: set<ValidatorIndex>, 
-        v2: set<ValidatorIndex>, 
+        v1: set<ValidatorInCommitteeIndex>, 
+        v2: set<ValidatorInCommitteeIndex>, 
         links: ListOfAttestations) 
     {
         forall v :: v in v1 * v2 ==>
-            validatorViolatesRuleI(links, v as ValidatorIndex)
+            validatorViolatesRuleI(links, v as ValidatorInCommitteeIndex)
     }
 
     /**
@@ -392,7 +398,7 @@ module GasperProofs {
         a1: PendingAttestation, 
         a2: PendingAttestation, 
         store: Store, 
-        v: ValidatorIndex) 
+        v: ValidatorInCommitteeIndex) 
 
         requires a1.data.beacon_block_root in store.blocks.Keys
         requires a2.data.beacon_block_root in store.blocks.Keys
@@ -406,8 +412,13 @@ module GasperProofs {
         && a2 in store.rcvdAttestations
         && isValidPendingAttestation(a1, store)
         && isValidPendingAttestation(a2, store) 
-        //  
+        //  a1 and a2 are made by same validator
         && a1.aggregation_bits[v] && a2.aggregation_bits[v]
+
+        //     exists v1 : ValidatorInCommitteeIndex, v2 : ValidatorInCommitteeIndex :: 
+        //     (a1.aggregation_bits[v1] && a2.aggregation_bits[v2]
+        //     && (a1.aggregation_validators[v1] == a2.aggregation_validators[v2] == v)
+        // )
         //  Validator v has made nested votes.
         && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
@@ -419,11 +430,11 @@ module GasperProofs {
      *  @param  v1      A set of validators..
      *  @param  v2      A set of validators..
      *  @param  store   A store,
-     *  @param  links   A list fo attestations.
+     *  @param  links   A list of attestations.
      */
     predicate validatorSetsViolateRuleII(
-        v1: set<ValidatorIndex>, 
-        v2: set<ValidatorIndex>, 
+        v1: set<ValidatorInCommitteeIndex>, 
+        v2: set<ValidatorInCommitteeIndex>, 
         store: Store
         )  
         /** Store is well-formed. */
@@ -435,7 +446,7 @@ module GasperProofs {
             exists a1: PendingAttestation,  a2: PendingAttestation :: 
             a1.data.beacon_block_root in store.blocks.Keys &&
             a2.data.beacon_block_root in store.blocks.Keys &&
-            validatorViolatesRuleII(a1, a2, store, v as ValidatorIndex)
+            validatorViolatesRuleII(a1, a2, store, v as ValidatorInCommitteeIndex)
     }
 
     /**
@@ -456,7 +467,7 @@ module GasperProofs {
      *                      the epoch that corresponds to a.slot)
      *                  2. its source is the last justified pair in the view of a. 
      */
-    predicate isValidAttestationData(a : AttestationData, store: Store) 
+    predicate isValidAttestationData(a: AttestationData, store: Store) 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         requires isSlotDecreasing(store)

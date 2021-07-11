@@ -122,9 +122,9 @@ module Constants {
   /**
    *  Maximum size of the state.validators list.
    */             
-  // const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40  
+  const  VALIDATOR_REGISTRY_LIMIT : uint64 := TWO_UP_40 as uint64; // 2 ^ 40  
 
-  const  VALIDATOR_REGISTRY_LIMIT : uint64 := MAX_VALIDATORS_PER_COMMITTEE as uint64; // 2 ^ 40                 
+  // const  VALIDATOR_REGISTRY_LIMIT : uint64 := MAX_VALIDATORS_PER_COMMITTEE as uint64; // 2 ^ 40                 
 
   // Configuration -- Rewards and penalties
   const BASE_REWARD_FACTOR := TWO_UP_6; // 2 ^ 6                         
