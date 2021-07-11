@@ -162,7 +162,7 @@ module Constants {
   const MIN_GENESIS_ACTIVE_VALIDATOR_COUNT : uint64 := TWO_UP_16; // 2^16     
   const MIN_GENESIS_TIME : uint64 := 1578009600;  // Dec 1, 2020, 12pm UTC
 
-  const  GENESIS_FORK_VERSION := Bytes([0,0,0,0]); // TODO: change type to 'Version'
+  const GENESIS_FORK_VERSION : Version := Bytes([0,0,0,0]); 
 
   const GENESIS_DELAY : uint64 := 604800; // 7 days
 
