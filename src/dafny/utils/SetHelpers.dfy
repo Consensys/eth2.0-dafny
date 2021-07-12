@@ -123,7 +123,7 @@ module SetHelpers {
 
     /**
      *  If two sets x and y have elements within [0, u[ and
-     *  cadinality >= 2 * u / 3 + 1, then their intersection has more
+     *  cardinality >= 2 * u / 3 + 1, then their intersection has more
      *  than u / 3 + 1 elements.
      *
      */
