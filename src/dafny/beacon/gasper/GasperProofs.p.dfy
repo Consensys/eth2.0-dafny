@@ -230,7 +230,7 @@ module GasperProofs {
         requires cp1.root !in chainRoots(cp2.root, store)
 
         /** There are two large enough validator sets such that
-            their intersdection is slashable. */
+            their intersection is slashable. */
         ensures exists v1, v2: set<ValidatorInCommitteeIndex> :: 
             &&  |v1| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
             &&  |v2| >=  (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
