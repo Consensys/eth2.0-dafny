@@ -43,11 +43,10 @@ module EpochProcessing {
 
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,
-     *  resgistry, slashing, and final updates.
+     *  registry, slashing, and final updates.
      *
      *  @param  s   A beacon state.
      *  @returns    
-     *  @todo       To be specified and implemented. currently returns s.
      */
     method process_epoch(s: BeaconState) returns (s' : BeaconState) 
         //  Make sure s.slot does not overflow
@@ -142,7 +141,8 @@ module EpochProcessing {
             s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
 
             //  Right-Shift of justification bits and initialise first to false
-            s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
+            s' := s'.(justification_bits := 
+                [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
             //  Determine whether ??
             assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
             assert(s'.slot == s.slot);
@@ -157,7 +157,8 @@ module EpochProcessing {
             //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
             //  of the previous epoch. (retrieve in the historical roots).
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
-            //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ;  
+            //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ; 
+             
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
                                 get_total_active_balance(s') as uint128 * 2 {
