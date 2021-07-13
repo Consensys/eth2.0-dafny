@@ -44,53 +44,6 @@ module EpochProcessingProofs {
     import opened EpochProcessingHelpers
 
     /**
-     *  RuleI for slashing. 
-     *  A validator cannot vote more than once for a given epoch.
-     */
-    // predicate ruleI(xa : seq<PendingAttestation>) 
-    // {
-    //     forall a1, a2 :: a1 in xa && a2 in xa ==>
-
-    // }
-    /**
-     *  The last justified checkpoint in view(s).
-     */
-
-    // function lastJustifiedCheckPoint(s: BeaconState, store: Store) : CheckPoint 
-    //     requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-    //     requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
-    //     requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-    //     requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-    //     requires isClosedUnderParent(store)
-    // {
-    //     var r := get_block_root(s, get_current_epoch(s));
-    //     var roots := chainRoots(r, store); 
-    //     //  |ebbsIndices| ==  get_current_epoch(s) + 1
-    //     var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-    //     var lastJustified := lastJustified(roots, ebbsIndices, store.attestations);
-    //     CheckPoint((|ebbsIndices| - 1 - lastJustified) as Epoch, roots[ebbsIndices[lastJustified]])
-    // }
-
-
-    /**
-     *  Whether a checkpoint is justified in the view that corresponds to a state.
-     */
-    // predicate isJustifiedCheckPoint(cp : CheckPoint, s: BeaconState, store: Store) 
-    //     requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-    //     requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
-    //     requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-    //     requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-    //     requires isClosedUnderParent(store)
-
-    // {
-    //     var r := get_block_root(s, get_current_epoch(s));
-    //     var roots := chainRoots(r, store); 
-    //     var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-    //     exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.attestations)
-    //         && cp == CheckPoint((|ebbsIndices| - i) as Epoch, roots[ebbsIndices[i]])
-    // }
-
-    /**
      *  If a checkpoint is justified and there is a supermajority link from it to 
      *  a more recent one, the more recent one is justified too.
      */
@@ -114,26 +67,6 @@ module EpochProcessingProofs {
     {
 
     }
-
-
-    /**
-     *  Whether a checkpoint is the most recent justified in the view from s.
-     */
-    // predicate isMostRecentJustifiedCheckPoint(cp : CheckPoint, s: BeaconState, store: Store) 
-    //     requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-    //     requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
-    //     requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-    //     requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-    //     requires isClosedUnderParent(store)
-
-    // {
-    //     var r := get_block_root(s, get_current_epoch(s));
-    //     var roots := chainRoots(r, store); 
-    //     var ebbsIndices := computeAllEBBsIndices(roots, get_current_epoch(s), store);
-    //     // exists i :: 0 <= i < |ebbsIndices| && isJustified(i, roots, ebbsIndices, store.
-    //     var lastJustified := lastJustified(roots, ebbsIndices, store.attestations);
-    //     cp == CheckPoint((|ebbsIndices| - lastJustified) as Epoch, roots[ebbsIndices[lastJustified]])
-    // }
 
     /**
      *  Given a state `s`, and the attestations in s.current_epoch_attestations,
@@ -188,38 +121,6 @@ module EpochProcessingProofs {
             assume(a.data.source == lastJustifiedCheckPoint(s, store));
         }
     }
-
-    /**
-     *  Candidate lemma.
-     */
-    // lemma foo101(s : BeaconState, store:  Store, a : PendingAttestation)
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-
-    //     requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-    //     requires get_current_epoch(s) > GENESIS_EPOCH + 1
-    //     requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
-    //     requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-    //     requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-    //     requires isClosedUnderParent(store)
-    //     requires isSlotDecreasing(store)
-
-    //     requires a in get_matching_target_attestations(s, get_current_epoch(s))
-    //     ensures a.data.beacon_block_root in store.blocks.Keys && isValidAttestation(a.data, store, store.attestations)
-    // {
-    //     //  The chain from a.beacon_block_root
-    //         var xc := chainRoots(a.data.beacon_block_root, store);
-    //         //  ep(a)
-    //         var ep :=  compute_epoch_at_slot(a.data.slot);
-    //         //  LEBB(a), LE(a) in the attestation
-    //         var indexOfLEBB := computeEBB(xc, ep, store);
-    //         //  EBBS
-    //         var ebbs := computeAllEBBsIndices(xc, ep, store);
-    //         //  Index of Last justified checkpoint in ebbs, LJ(a). in [0..ep]
-    //         var indexOfLJ := lastJustified(xc, ebbs, store.attestations) as Epoch;
-    //         // assert(a.data.target);
-
-    // }
-
 
     /**
      *  Attestations for current epoch have source the current justified checkpoint.
