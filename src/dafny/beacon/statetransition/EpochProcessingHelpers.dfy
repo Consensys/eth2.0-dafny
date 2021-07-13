@@ -40,16 +40,6 @@ module EpochProcessingHelpers {
     import opened EpochProcessingSpec
 
     /**
-     *  RuleI for slashing. 
-     *  A validator cannot vote more than once for a given epoch.
-     */
-    // predicate ruleI(xa : seq<PendingAttestation>) 
-    // {
-    //     forall a1, a2 :: a1 in xa && a2 in xa ==>
-
-    // }
-
-    /**
      *  The last justified checkpoint in view(s).
      *  @param  s       A state
      *  @param  store   A store.
@@ -144,7 +134,6 @@ module EpochProcessingHelpers {
     {
 
     }
-
 
     /**
      *  Whether a checkpoint is the most recent justified in the view from s.
