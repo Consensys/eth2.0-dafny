@@ -99,7 +99,7 @@ module StateTransition {
      *  @returns        The state obtained after adding `b` to the current state.
      *                  
      */
-     method stateTransition(s: BeaconState, b: BeaconBlock) returns (s' : BeaconState)
+     method stateTransition(s: BeaconState, b: BeaconBlock, ghost store: Store) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
         requires isValidBlock(s, b)
 
@@ -367,8 +367,6 @@ module StateTransition {
             //state.eth1_data = body.eth1_data
             s' := s'.(eth1_data := b.eth1_data);
         }
-            
-
     }
     
     /**
