@@ -19,7 +19,6 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 
-
 /**
  *  Provide a functional specification of Epoch processing.
  */
@@ -32,7 +31,6 @@ module EpochProcessingSpec {
     import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened ForkChoiceTypes
-
 
     //  Specifications of justification and finalisation of a state and forward to future slot.
 
@@ -124,13 +122,6 @@ module EpochProcessingSpec {
             )
     }
 
-    // lemma updateJustificationPrevEpochIsNotDepOnStore(s: BeaconState, store1: Store, store2: Store)
-    //     /** State's slot is just before an Epoch boundary. */
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-    //     ensures updateJustificationPrevEpoch(s, store1) == updateJustificationPrevEpoch(s, store2)
-    // {   //  Thanks Dafny
-    // }
-
     /**
      *  Determine justification for current epoch in next state.
      *
@@ -215,16 +206,6 @@ module EpochProcessingSpec {
             )
     }
 
-    // lemma updateJustificationCurrentEpochIsNotDepOnStore(s: BeaconState, store1: Store, store2: Store)
-    //     /** State's slot is just before an Epoch boundary. */
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-
-    //     requires s.justification_bits[0] == false 
-
-    //     ensures updateJustificationCurrentEpoch(s, store1) == updateJustificationCurrentEpoch(s, store2)
-    // {   //  Thanks Dafny
-    // }
-
     /**
      *  Update justification is the result of the composition of 
      *  updating previous epoch justification status and current epoch justification status.
@@ -247,13 +228,6 @@ module EpochProcessingSpec {
         else 
             s
     }
-
-    // lemma updateJustificationIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-    //     ensures updateJustification(s, store1) == updateJustification(s, store2)
-    // {
-    //     //  Thanks Dafny
-    // }
 
     /**
      *  Compute the finalised checkpoint of the first state at a new epoch.
@@ -434,15 +408,6 @@ module EpochProcessingSpec {
                 s' 
     } 
 
-    // lemma updateFinalisedCheckpointIsNotStoreDependent(s': BeaconState, s: BeaconState, store1: Store, store2: Store) 
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-    //     requires s' == updateJustification(s, store1)
-    //     ensures s' ==   updateJustification(s, store2)
-    //     ensures updateFinalisedCheckpoint(s', s, store1) == updateFinalisedCheckpoint(s', s, store2) 
-    // {   
-    //     //  Thanks Dafny
-    // }
-
     /**
      *  Combined effect of updating justification and finalisation statuses.
      *
@@ -455,13 +420,6 @@ module EpochProcessingSpec {
     {
         updateFinalisedCheckpoint(updateJustification(s, store), s, store)
     }
-
-    // lemma updateJustificationAndFinalisationIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
-    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-    //     ensures updateJustificationAndFinalisation(s, store1) == updateJustificationAndFinalisation(s, store2)
-    // {
-
-    // }
 
     /**
      *  Final section of process_final_updates where attestations are rotated.
@@ -477,11 +435,5 @@ module EpochProcessingSpec {
             current_epoch_attestations := []
         )
     }
-
-    // lemma finalUpdatesIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
-    //     ensures finalUpdates(s, store1) == finalUpdates(s, store2)
-    // {
-    //     //  Thanks Dafny
-    // }
 
 }
