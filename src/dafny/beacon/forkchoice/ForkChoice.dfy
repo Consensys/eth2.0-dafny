@@ -12,7 +12,8 @@
  * under the License.
  */
 
-// @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1
+// @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1  
+
 
 include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -430,7 +431,7 @@ module ForkChoice {
 
             //  isValid : requires that `b` can be added to pre_state i.e. state_transition's
             //  pre-conditions are satisfied.
-            requires isValidBlock(pre_state, b)
+            requires isValidBlock(pre_state, b, store)
 
             //  Record block in the observer (ghost var) block list.
             ensures acceptedBlocks == old(acceptedBlocks) + { b };
@@ -460,18 +461,22 @@ module ForkChoice {
             // Add new block to the store
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
-
+            assert(storeInvariant1(store));
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
 
+            // Whether b is valid block does not depend on store but only on pre_state
+            assert(isValidBlock(pre_state, b, old(store)));
+            isValidBlockIsNotStoreDependent(pre_state, b, old(store), store);
+            assert(isValidBlock(pre_state, b, store));
             // Check the block is valid and compute the post-state
-            var new_state := stateTransition(pre_state, b);
-           
+            var new_state := stateTransition(pre_state, b, store);
+
             // Add new state for this block to the store
-            store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
+            store := store.(block_states := store.block_states[hash_tree_root(b) := new_state]);
 
             //  Update justified checkpoint
             //  We assume that store.best_justified is the same as store.current_justified for now.
@@ -522,30 +527,6 @@ module ForkChoice {
             return false;
 
         }
-
-        /**
-         *  Goal 1: canonical chain 
-         */
-        // lemma atMostOneCanonicalChain(store: Store)
-        // {
-
-        // }
-
-        /**
-         *  Canonical chain property.
-         *  Assume fixed set of validators.
-         *  
-         *  If two blocks are finalized and neither is an ancestor of the other, 
-         *  then validators having at least 1/3 of the total stake must have violated 
-         *  one of the the slashing conditions: 
-         *  
-         */
-        // lemma atMostOneCanonicalChain(store: Store) 
-        //     ensures forall r :: r in store.blocks.Keys && 
-
-        // {
-        //     assume(forall r :: r in store.blocks.Keys ==> true);
-        // }
 
     }
 }

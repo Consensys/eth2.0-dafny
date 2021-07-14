@@ -238,18 +238,18 @@ module EpochProcessingProofs {
         requires isJustifiedCheckPoint(s.current_justified_checkpoint, s, store)
 
         /** New previous checkpoint in next state is justified. P1 */
-        ensures var s' := updateJustification(s);
+        ensures var s' := updateJustification(s, store);
             isJustifiedCheckPoint(s'.previous_justified_checkpoint, s', store)
         /**  New current checkpoint in next state is justified. P2 */
-        ensures var s' := updateJustificationPrevEpoch(s);
+        ensures var s' := updateJustificationPrevEpoch(s, store);
             isJustifiedCheckPoint(s'.current_justified_checkpoint, s', store)
     {
-        var s':= updateJustification(s);
+        var s':= updateJustification(s, store);
         //  P1 follows from definition 
         assert(s'.previous_justified_checkpoint == s.current_justified_checkpoint);
 
         //  Proof of second ensures
-        var s'' :=  updateJustificationPrevEpoch(s);
+        var s'' :=  updateJustificationPrevEpoch(s, store);
         //  get attestations in state for previous epoch.
         var matching_target_attestations_prev_epoch := 
                 get_matching_target_attestations(s, get_previous_epoch(s));

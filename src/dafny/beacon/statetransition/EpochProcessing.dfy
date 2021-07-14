@@ -17,6 +17,7 @@ include "../../ssz/Constants.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../attestations/AttestationsHelpers.dfy"
+include "../forkchoice/ForkChoiceTypes.dfy"
 include "EpochProcessing.s.dfy"
 /**
  * State transition function for the Beacon Chain.
@@ -31,6 +32,8 @@ module EpochProcessing {
     import opened BeaconHelpers
     import opened AttestationsHelpers
     import opened EpochProcessingSpec
+    import opened ForkChoiceTypes
+
 
 // # Attestations
 //     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
@@ -48,7 +51,7 @@ module EpochProcessing {
      *  @param  s   A beacon state.
      *  @returns    
      */
-    method process_epoch(s: BeaconState) returns (s' : BeaconState) 
+    method process_epoch(s: BeaconState, ghost store: Store) returns (s' : BeaconState) 
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
@@ -57,7 +60,7 @@ module EpochProcessing {
         requires |s.validators| == |s.balances|
 
         /** Update justification and finalisation accodring to functional spec. */
-        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s), s))
+        ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s, store), s, store), store)
 
         /** Leaves some fields unchanged. */
         ensures s'.slot == s.slot
@@ -67,11 +70,11 @@ module EpochProcessing {
         ensures |s'.validators| == |s'.balances|
     {
         assert(s.slot as nat + 1 < 0x10000000000000000 as nat);
-        s' := process_justification_and_finalization(s);
+        s' := process_justification_and_finalization(s, store);
         // process_rewards_and_penalties(state)
         // process_registry_updates(state)
         // process_slashings(state)
-        s' := process_final_updates(s');
+        s' := process_final_updates(s', store);
         // assert(s' == finalUpdates(s2));
         // assume(s' == forwardStateToSlot(s, s.slot));
         // assume(s' == resolveStateRoot(s));
@@ -86,8 +89,8 @@ module EpochProcessing {
      *  @todo       This is a partial implementation capturing only
      *              the attestations updates.
      */
-    method process_final_updates(s: BeaconState)  returns (s' : BeaconState)
-        ensures s' == finalUpdates(s)
+    method process_final_updates(s: BeaconState, ghost store: Store)  returns (s' : BeaconState)
+        ensures s' == finalUpdates(s, store)
     {
         s' := s.(
             previous_epoch_attestations := s.current_epoch_attestations,
@@ -104,13 +107,13 @@ module EpochProcessing {
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
-    method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
+    method process_justification_and_finalization(s : BeaconState, ghost store: Store) returns (s' : BeaconState) 
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         requires |s.validators| == |s.balances|
 
         /** Computes the next state according to the functional specification. */
-        ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
+        ensures s' == updateFinalisedCheckpoint(updateJustification(s, store), s, store)
         
         /** Some components of the state are left unchanged. */
         ensures s'.slot == s.slot
@@ -158,7 +161,7 @@ module EpochProcessing {
             //  of the previous epoch. (retrieve in the historical roots).
             var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
             //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ; 
-             
+
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
                                 get_total_active_balance(s') as uint128 * 2 {
@@ -168,10 +171,10 @@ module EpochProcessing {
                                         get_block_root(s', previous_epoch)));
                 s' := s'.(justification_bits := s'.justification_bits[1 := true]);
             }
-            assert(s'.slot == updateJustificationPrevEpoch(s).slot);
-            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s).current_justified_checkpoint);
-            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s).previous_justified_checkpoint);
-            assert(s' == updateJustificationPrevEpoch(s)); 
+            assert(s'.slot == updateJustificationPrevEpoch(s, store).slot);
+            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s, store).current_justified_checkpoint);
+            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s, store).previous_justified_checkpoint);
+            assert(s' == updateJustificationPrevEpoch(s, store)); 
 
             ghost var s2 := s';
             //  Current epoch
@@ -185,7 +188,7 @@ module EpochProcessing {
                             CheckPoint(current_epoch,
                                         get_block_root(s', current_epoch)));
             }
-            assert(s' == updateJustificationCurrentEpoch(s2));
+            assert(s' == updateJustificationCurrentEpoch(s2, store));
 
             //  Process finalizations
             /*
@@ -224,7 +227,7 @@ module EpochProcessing {
             if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) {
                 s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
             }
-            assert(s' == updateFinalisedCheckpoint(s3, s));
+            assert(s' == updateFinalisedCheckpoint(s3, s, store));
             return s';
         }
 

@@ -17,6 +17,8 @@ include "../BeaconChainTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
+include "../forkchoice/ForkChoiceTypes.dfy"
+
 
 /**
  *  Provide a functional specification of Epoch processing.
@@ -29,6 +31,8 @@ module EpochProcessingSpec {
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
+    import opened ForkChoiceTypes
+
 
     //  Specifications of justification and finalisation of a state and forward to future slot.
 
@@ -71,16 +75,26 @@ module EpochProcessingSpec {
      *  left to its previous value.
      *  
      */
-    function updateJustificationPrevEpoch(s: BeaconState) : BeaconState 
-        /** State's slot is not an Epoch boundary. */
+    function updateJustificationPrevEpoch(s: BeaconState, store: Store): BeaconState 
+        /** State's slot is just before an Epoch boundary. */
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+        // requires isJustified(s.previous_justfified_checkpoint, s.store)
+        // requires isJustified(s.current_justfified_checkpoint, s.store)
+
         /** Justification bit are right-shifted and last two are not modified.
-            Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
+            Bit0 (new checkpoint) is set to false, and Bit1 (previous checkpoint) 
+            may be updated.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustificationPrevEpoch(s).justification_bits[2..] == 
+            updateJustificationPrevEpoch(s, store).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
-            && updateJustificationPrevEpoch(s).justification_bits[0] == false
+            && updateJustificationPrevEpoch(s, store).justification_bits[0] == false
+        /** Update of bit1. */
+
+        // ensures isJustified(s'.previous_justified_checkpoint, s'.store) 
+
+        // ensures s'.current_justified_checkpoint
         // ensures get_current_epoch(s) == get_current_epoch(updateJustificationPrevEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -106,12 +120,18 @@ module EpochProcessingSpec {
                         s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
                 justification_bits := 
-                    if b1 then newJustBits[1 := true] 
-                    else newJustBits
+                    if b1 then newJustBits[1 := true] else newJustBits
             )
     }
 
-   /**
+    // lemma updateJustificationPrevEpochIsNotDepOnStore(s: BeaconState, store1: Store, store2: Store)
+    //     /** State's slot is just before an Epoch boundary. */
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+    //     ensures updateJustificationPrevEpoch(s, store1) == updateJustificationPrevEpoch(s, store2)
+    // {   //  Thanks Dafny
+    // }
+
+    /**
      *  Determine justification for current epoch in next state.
      *
      *  @param  s   A beacon state the slot of which is just before an Epoch boundary. 
@@ -161,7 +181,7 @@ module EpochProcessingSpec {
      *          s.previous_justified_checkpoint.
      *  
      */
-    function updateJustificationCurrentEpoch(s: BeaconState) : BeaconState 
+    function updateJustificationCurrentEpoch(s: BeaconState, store: Store) : BeaconState 
         /** State's slot is just before an Epoch boundary. */
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
@@ -170,7 +190,7 @@ module EpochProcessingSpec {
         /** Only bit 0 can be modified, and it should be false initially.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustificationCurrentEpoch(s).justification_bits[1..] == 
+            updateJustificationCurrentEpoch(s, store).justification_bits[1..] == 
                 (s.justification_bits)[1..|s.justification_bits|]
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -195,6 +215,16 @@ module EpochProcessingSpec {
             )
     }
 
+    // lemma updateJustificationCurrentEpochIsNotDepOnStore(s: BeaconState, store1: Store, store2: Store)
+    //     /** State's slot is just before an Epoch boundary. */
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+    //     requires s.justification_bits[0] == false 
+
+    //     ensures updateJustificationCurrentEpoch(s, store1) == updateJustificationCurrentEpoch(s, store2)
+    // {   //  Thanks Dafny
+    // }
+
     /**
      *  Update justification is the result of the composition of 
      *  updating previous epoch justification status and current epoch justification status.
@@ -203,21 +233,27 @@ module EpochProcessingSpec {
      *  @returns    The state s with the checkpoints statuses updated and justification
      *              bits set accordingly. 
      */
-
-    function updateJustification(s: BeaconState) : BeaconState
+    function updateJustification(s: BeaconState, store: Store) : BeaconState
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustification(s).justification_bits[2..] == 
+            updateJustification(s, store).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
-            var k := updateJustificationPrevEpoch(s);
-            updateJustificationCurrentEpoch(k)
+            var k := updateJustificationPrevEpoch(s, store);
+            updateJustificationCurrentEpoch(k, store)
         else 
             s
     }
+
+    // lemma updateJustificationIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+    //     ensures updateJustification(s, store1) == updateJustification(s, store2)
+    // {
+    //     //  Thanks Dafny
+    // }
 
     /**
      *  Compute the finalised checkpoint of the first state at a new epoch.
@@ -363,11 +399,11 @@ module EpochProcessingSpec {
      *
      *  @note   Python array slice a[k:l] means elements from k to l - 1 [a[k] ... a[l -1]]
      */
-    function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState) : BeaconState
+    function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState, store: Store) : BeaconState
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-        requires s' == updateJustification(s)
+        requires s' == updateJustification(s, store)
 
-        ensures updateFinalisedCheckpoint(s', s).slot == s.slot == s'.slot
+        ensures updateFinalisedCheckpoint(s', s, store).slot == s.slot == s'.slot
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s
@@ -398,6 +434,15 @@ module EpochProcessingSpec {
                 s' 
     } 
 
+    // lemma updateFinalisedCheckpointIsNotStoreDependent(s': BeaconState, s: BeaconState, store1: Store, store2: Store) 
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+    //     requires s' == updateJustification(s, store1)
+    //     ensures s' ==   updateJustification(s, store2)
+    //     ensures updateFinalisedCheckpoint(s', s, store1) == updateFinalisedCheckpoint(s', s, store2) 
+    // {   
+    //     //  Thanks Dafny
+    // }
+
     /**
      *  Combined effect of updating justification and finalisation statuses.
      *
@@ -405,11 +450,18 @@ module EpochProcessingSpec {
      *  @returns    The state obtained after updating the justification statuses, bits
      *              and finalisation statuses.
      */
-    function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
+    function updateJustificationAndFinalisation(s: BeaconState, store: Store) : BeaconState
             requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
     {
-        updateFinalisedCheckpoint(updateJustification(s), s)
+        updateFinalisedCheckpoint(updateJustification(s, store), s, store)
     }
+
+    // lemma updateJustificationAndFinalisationIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
+    //     requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+    //     ensures updateJustificationAndFinalisation(s, store1) == updateJustificationAndFinalisation(s, store2)
+    // {
+
+    // }
 
     /**
      *  Final section of process_final_updates where attestations are rotated.
@@ -417,7 +469,7 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    `s` with the attestations rotated.
      */
-    function finalUpdates(s: BeaconState) : BeaconState
+    function finalUpdates(s: BeaconState, store: Store) : BeaconState
     {
         //  rotate the attestations.
         s.(
@@ -425,5 +477,11 @@ module EpochProcessingSpec {
             current_epoch_attestations := []
         )
     }
+
+    // lemma finalUpdatesIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
+    //     ensures finalUpdates(s, store1) == finalUpdates(s, store2)
+    // {
+    //     //  Thanks Dafny
+    // }
 
 }

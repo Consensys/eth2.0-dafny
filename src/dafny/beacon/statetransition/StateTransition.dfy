@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 
 
 include "../../utils/NativeTypes.dfy"
 include "../../utils/NonNativeTypes.dfy"
@@ -58,7 +58,7 @@ module StateTransition {
      *
      *  @returns    true iff `b` can be successfully added to the state `s`.
      */
-    predicate isValidBlock(s : BeaconState, b : BeaconBlock) 
+    predicate isValidBlock(s : BeaconState, b : BeaconBlock, store: Store) 
     {
         //  The block slot should be in the future.
         s.slot < b.slot 
@@ -74,21 +74,33 @@ module StateTransition {
         && |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         && b.parent_root == 
             hash_tree_root(
-                forwardStateToSlot(nextSlot(s), 
-                b.slot
+                forwardStateToSlot(nextSlot(s, store), 
+                b.slot,
+                store
             ).latest_block_header) 
         //  Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
                 updateDeposits(
                     updateEth1Data(
                         addBlockToState(
-                            forwardStateToSlot(nextSlot(s), b.slot), 
+                            forwardStateToSlot(nextSlot(s, store), b.slot, store), 
                             b
                         ),
                         b.body),
                     b.body.deposits
                 )
             )
+    }
+
+    /**
+     *  THe validity of a block does solely depends on the reference state.
+     */
+    lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
+        requires isValidBlock(s, b, store1)
+        ensures isValidBlock(s, b, store2)
+    {
+        assert(nextSlot(s, store1) == nextSlot(s, store2));
+        forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
     }
 
     /**
@@ -101,7 +113,7 @@ module StateTransition {
      */
      method stateTransition(s: BeaconState, b: BeaconBlock, ghost store: Store) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
-        requires isValidBlock(s, b)
+        requires isValidBlock(s, b, store)
 
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000 
         requires |s.validators| == |s.balances| 
@@ -114,18 +126,20 @@ module StateTransition {
             the slot of b.  */
         ensures s'.latest_block_header.parent_root  == 
             hash_tree_root(
-                forwardStateToSlot(nextSlot(s), b.slot)
+                forwardStateToSlot(nextSlot(s, store), b.slot, store)
                 .latest_block_header
             )
         ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
-        ensures s'.validators == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b), b.body),b.body.deposits).validators
-        ensures s'.balances == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot),b), b.body),b.body.deposits).balances
+        ensures s'.validators == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).validators
+        ensures s'.balances == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).balances
         ensures |s'.validators| == |s'.balances|
+
+        // ensures store == old(store)
     {
         //  finalise slots before b.slot.
-        var s1 := processSlots(s, b.slot);
+        var s1 := processSlots(s, b.slot, store);
 
-        assert (s1.slot == forwardStateToSlot(nextSlot(s), b.slot).slot );
+        assert (s1.slot == forwardStateToSlot(nextSlot(s,store), b.slot, store).slot );
         assert (s1.slot == b.slot);
         assert (s1.balances == s.balances);
 
@@ -166,11 +180,11 @@ module StateTransition {
      *                  is the same as resolveStateRoot(s).
      *
      */
-    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
+    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot, ghost store: Store) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
         requires |s.validators| == |s.balances|
         
-        ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
+        ensures s' == forwardStateToSlot(nextSlot(s,store), slot, store)   //  I1
         // The next one is a direct consequence of I1
         ensures s'.slot == slot
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
@@ -185,10 +199,10 @@ module StateTransition {
         //  This is the first iteration of the loop in process_slots (Eth2-specs)
         s' := processSlot(s);
         if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-            s' := process_epoch(s');
+            s' := process_epoch(s', store);
         } 
         s':= s'.(slot := s'.slot + 1) ;
-        assert(s' == nextSlot(s));
+        assert(s' == nextSlot(s, store));
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
 
@@ -196,7 +210,7 @@ module StateTransition {
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot(nextSlot(s), s'.slot) 
+            invariant s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store) 
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             invariant s'.validators == s.validators
             invariant s'.balances == s.balances
@@ -207,7 +221,7 @@ module StateTransition {
             //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
                 var k := s'; 
-                s' := process_epoch(s');
+                s' := process_epoch(s', store);
             }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
