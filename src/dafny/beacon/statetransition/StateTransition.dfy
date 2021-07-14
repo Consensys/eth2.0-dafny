@@ -133,8 +133,6 @@ module StateTransition {
         ensures s'.validators == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).validators
         ensures s'.balances == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).balances
         ensures |s'.validators| == |s'.balances|
-
-        // ensures store == old(store)
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot, store);
@@ -297,7 +295,6 @@ module StateTransition {
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
 
-
         ensures s' == updateDeposits(updateEth1Data(addBlockToState(s, b), b.body), b.body.deposits)
         ensures s'.slot == b.slot
         ensures s'.latest_block_header == BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
@@ -331,7 +328,6 @@ module StateTransition {
         requires |s.validators| == |s.balances|
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         
-
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000 
 
         ensures s' == addBlockToState(s, b)
@@ -456,7 +452,6 @@ module StateTransition {
 
         }
         assert bb.deposits[..i] == bb.deposits;
-
     }
 
     /**
@@ -508,14 +503,13 @@ module StateTransition {
      *              input parameter `xa`.The difference is in the signature field which 
      *              we omit in this foirst-cut.
      */
-     method process_attestations(s: BeaconState, xa: ListOfAttestations)  returns (s' : BeaconState)
+    method process_attestations(s: BeaconState, xa: ListOfAttestations)  returns (s' : BeaconState)
         // requires 
         ensures s' == s  
-     {
-         return s;
-     }
+    {
+        return s;
+    }
      
-
     // predicate isValidAttestationInState(s: BeaconState, a: PendingAttestation)
     // {
     //     && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)
