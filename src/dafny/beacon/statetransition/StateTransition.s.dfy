@@ -23,6 +23,7 @@ include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "EpochProcessing.s.dfy"
+include "ProcessOperations.s.dfy"
 
 /**
  * State transition functional specification for the Beacon Chain.
@@ -40,6 +41,8 @@ module StateTransitionSpec {
     import opened BeaconHelpers
     import opened MathHelpers
     import opened EpochProcessingSpec
+    import opened ProcessOperationsSpec
+    
 
     /**
      *  Collect pubkey in a list of validators.
@@ -56,8 +59,7 @@ module StateTransitionSpec {
             { xv[0].pubkey } + keysInValidators(xv[1..])
     }
 
-   
-
+    
     //  Specifications of finalisation of a state and forward to future slot.
 
     /**
@@ -127,15 +129,21 @@ module StateTransitionSpec {
     function resolveStateRoot(s: BeaconState): BeaconState 
         //  Make sure s.slot does not  overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        requires minimumActiveValidators(s)
+
         //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
         //  eth1_deposit_index is left unchanged
         ensures s.eth1_deposit_index == resolveStateRoot(s).eth1_deposit_index
         //  eth1_data_votes unchanged
         ensures s.eth1_data_votes == resolveStateRoot(s).eth1_data_votes
+        //  previous_epoch_attestations unchanged
+        ensures s.previous_epoch_attestations == resolveStateRoot(s).previous_epoch_attestations
 
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             resolveStateRoot(s) == advanceSlot(s)
+        
+        ensures minimumActiveValidators(resolveStateRoot(s))
     {
         var new_latest_block_header := 
             if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
@@ -144,13 +152,24 @@ module StateTransitionSpec {
                 s.latest_block_header
             ;
         //  new state
-        s.(
-            slot := s.slot + 1,
-            latest_block_header := new_latest_block_header,
-            block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
-            state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
-        )
+        var s' := s.(
+                slot := s.slot + 1,
+                latest_block_header := new_latest_block_header,
+                block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
+                state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
+            );
+        SetMinimumNumberOfValidators(s');
+        s'
     }
+
+    // Property of s.previous_epoch_attestations that must be maintained
+    // Need to create a proof that shows PendingAttestations must always follow these rules
+    lemma PreviousEpochAttestationsProperties(s: BeaconState)
+        requires |s.validators| == |s.balances|
+        ensures forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
+        ensures forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        ensures forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+    //{} 
 
     /**
      *  Finalise a state and forward to slot in the future.
@@ -163,13 +182,15 @@ module StateTransitionSpec {
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
         requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
 
         ensures forwardStateToSlot(s, slot).slot == slot
         ensures forwardStateToSlot(s, slot).eth1_deposit_index == s.eth1_deposit_index
         ensures |forwardStateToSlot(s, slot).validators| == |forwardStateToSlot(s, slot).balances|
-        ensures forwardStateToSlot(s, slot).validators == s.validators
-        ensures forwardStateToSlot(s, slot).balances == s.balances
-        ensures forwardStateToSlot(s, slot).eth1_data_votes == s.eth1_data_votes
+        ensures minimumActiveValidators(forwardStateToSlot(s, slot))
+        //ensures forwardStateToSlot(s, slot).validators == s.validators
+        //ensures forwardStateToSlot(s, slot).balances == s.balances
+        //ensures forwardStateToSlot(s, slot).eth1_data_votes == s.eth1_data_votes
         
         //  termination ranking function
         decreases slot - s.slot
@@ -177,7 +198,11 @@ module StateTransitionSpec {
         if (s.slot == slot) then 
             s
         else
-            nextSlot(forwardStateToSlot(s, slot - 1))
+            var s1 := forwardStateToSlot(s, slot - 1);
+            assert |s1.validators| == |s1.balances|;
+
+            PreviousEpochAttestationsProperties(s1);
+            nextSlot(s1)
     }
 
     /**
@@ -212,7 +237,15 @@ module StateTransitionSpec {
     function nextSlot(s: BeaconState) : BeaconState 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+
+        requires forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
+        requires forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+       
         ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
+        ensures minimumActiveValidators(nextSlot(s))
+        
         /** If s.slot is not at the boundary of an epoch, the 
             attestation/finality fields are unchanged. */
         ensures  (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat != 0  ==>
@@ -226,6 +259,7 @@ module StateTransitionSpec {
             && |nextSlot(s).validators| == |nextSlot(s).balances| 
             && nextSlot(s).eth1_data_votes ==  s.eth1_data_votes
             &&  nextSlot(s).eth1_deposit_index  == s.eth1_deposit_index
+            // add remainging fields that are unchanged
 
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
@@ -233,14 +267,31 @@ module StateTransitionSpec {
                 assert(s.slot % SLOTS_PER_EPOCH != 0);
                 // updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
                 var s1 := resolveStateRoot(s).(slot := s.slot);
-                var s2 := updateJustificationAndFinalisation(s1);
-                var s3 := finalUpdates(s2);
-                var s4 := s3.(slot := s.slot + 1);
-                s4
+                assert s1.latest_block_header.state_root != DEFAULT_BYTES32;
+
+                assert |s1.validators| == |s1.balances|;
+
+                assert forall a :: a in s1.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 ;
+                assert forall a :: a in s1.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+                assert forall a :: a in s1.previous_epoch_attestations ==> 0 < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+       
+                var s2 := updateEpoch(s1);
+                assert s2.latest_block_header.state_root != DEFAULT_BYTES32;
+                //var s3 := finalUpdates(s2);
+                //var s4 := s3.(slot := s.slot + 1);
+                var s3 := s2.(slot := s.slot + 1);
+                SetMinimumNumberOfValidators(s3);
+                s3
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
     }
+
+    lemma SetMinimumNumberOfValidators(s: BeaconState)
+        ensures minimumActiveValidators(s)
+    // It is assumed that there will always be at least one active validator
+    // An alternative to this assumption lemma would be to add preconditions to assert that the number of
+    // active validators cannot drop to zero.
 
     
 

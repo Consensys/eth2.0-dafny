@@ -64,7 +64,7 @@ module SeqHelpers {
      *  Split init and last at index.
      */
     lemma seqInitLast<T>(s: seq<T>, i : nat)
-        requires 0 <= i < |s| - 1
+        requires 0 <= i <= |s| - 1
         requires |s| >= 1
         ensures s[..i] + [s[i]] == s[..i + 1]
     {   //  Thanks Dafny.
@@ -108,6 +108,13 @@ module SeqHelpers {
         requires 0 <= k <= i < |s|
         ensures s[k..i] == s[k..][..i - k]
     {   //  Thanks Dafny.
+    }
+
+    lemma fullSeq<T>(s : seq<T>, i: nat)
+        requires |s| == i
+        ensures s[..i] == s
+    {
+        // Thanks Dafny
     }
     
 }

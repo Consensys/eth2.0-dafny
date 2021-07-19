@@ -300,6 +300,23 @@ module AttestationsHelpers {
     // }
 
 
+    function method get_total_balance_seq(s: BeaconState, indices: seq<ValidatorIndex>) : Gwei
+        requires forall i :: 0 <= i < |indices| ==> indices[i] as nat < |s.validators|
+        ensures EFFECTIVE_BALANCE_INCREMENT <= get_total_balance_seq(s, indices)
+
+    {
+        max(EFFECTIVE_BALANCE_INCREMENT as nat, get_total_balance_seq_helper(s, indices) as nat) as Gwei
+    }
+
+    function method get_total_balance_seq_helper(s: BeaconState, indices: seq<ValidatorIndex>) : Gwei
+        requires forall i :: 0 <= i < |indices| ==> indices[i] as nat < |s.validators|
+    {
+        if |indices| == 0 then 0 as Gwei
+        else
+            assume s.validators[indices[0]].effective_balance as nat + get_total_balance_seq_helper(s, indices[1..]) as nat < 0x10000000000000000;
+            s.validators[indices[0]].effective_balance + get_total_balance_seq_helper(s, indices[1..]) 
+    }
+
     function method get_total_balance(s: BeaconState, indices: set<ValidatorIndex>) : Gwei
         requires forall i : ValidatorIndex :: i in indices ==> i as nat < |s.validators|
 
@@ -313,8 +330,8 @@ module AttestationsHelpers {
         if |indices| == 0 then 0 as Gwei
         else
             var y := PickIndex(indices);
-            assume s.validators[y].effectiveBalance as nat + get_total_balance_helper(s, indices - {y}) as nat < 0x10000000000000000;
-            s.validators[y].effectiveBalance + get_total_balance_helper(s, indices - {y}) 
+            assume s.validators[y].effective_balance as nat + get_total_balance_helper(s, indices - {y}) as nat < 0x10000000000000000;
+            s.validators[y].effective_balance + get_total_balance_helper(s, indices - {y}) 
     }
 
     function method PickIndex(s: set<ValidatorIndex>): ValidatorIndex
@@ -364,6 +381,17 @@ module AttestationsHelpers {
         // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
         assert(|state.validators| < 0x10000000000000000);
         |state.validators| as uint64
+    }
+
+    function method get_total_active_balance_full(s: BeaconState) : Gwei
+        // requires |state.validators| < 0x10000000000000000
+        ensures EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s) 
+    // """
+    // Return the combined effective balance of the active validators.
+    // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // """
+    {
+        get_total_balance_seq(s, get_active_validator_indices(s.validators, get_current_epoch(s)))
     }
 
     // def get_attesting_indices(state: BeaconState,

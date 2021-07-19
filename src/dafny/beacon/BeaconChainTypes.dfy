@@ -47,12 +47,19 @@ module BeaconChainTypes {
         ensures hash(t) != DEFAULT_BYTES32
 
 
-    /** The historical roots type.  */
+    /** The vector of historical roots type.  */
     type VectorOfHistRoots = x : seq<Root> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
         witness DEFAULT_HIST_ROOTS
 
     /** Empty vector of historical roots. */
     const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
+
+    /** The list of historical roots type.  */
+    type ListOfHistRoots = x : seq<Root> |  |x| <= HISTORICAL_ROOTS_LIMIT as int
+        witness DEFAULT_LIST_OF_HIST_ROOTS
+
+    /** Empty list of historical roots. */
+    const DEFAULT_LIST_OF_HIST_ROOTS : seq<Root> := []
 
 
     /** The randao mixes type.  */
@@ -110,12 +117,12 @@ module BeaconChainTypes {
      *  @param  voluntary_exits
      */
     datatype BeaconBlockBody = BeaconBlockBody(
-        // randao_reveal: BLSSignature,
+        randao_reveal: Bytes32, // In spec: BLSSignature
         eth1_data: Eth1Data,
         // graffiti: uint32,                          //  In K: Bytes32
         proposer_slashings: seq<ProposerSlashing>,
         attester_slashings: seq<AttesterSlashing>,
-        attestations: ListOfAttestations,
+        attestations: seq<PendingAttestation>,
         deposits: seq<Deposit>,
         voluntary_exits: seq<VoluntaryExit>
     )
@@ -123,7 +130,7 @@ module BeaconChainTypes {
     /**
      *  The zeroed (default) block body.
      */
-    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_ETH1DATA, [], [], [], [], [])
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_BYTES32, DEFAULT_ETH1DATA, [], [], [], [], [])
 
     /**
      *  Beacon block.
@@ -311,6 +318,7 @@ module BeaconChainTypes {
         latest_block_header: BeaconBlockHeader,
         block_roots: VectorOfHistRoots,
         state_roots: VectorOfHistRoots,
+        historical_roots: ListOfHistRoots,
         //  Eth1
         eth1_data: Eth1Data,
         eth1_data_votes:  ListOfEth1Data, //List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
@@ -341,6 +349,7 @@ module BeaconChainTypes {
             DEFAULT_BLOCK_HEADER, 
             DEFAULT_HIST_ROOTS, 
             DEFAULT_HIST_ROOTS, 
+            DEFAULT_LIST_OF_HIST_ROOTS,
             DEFAULT_ETH1DATA,
             DEFAULT_LIST_ETH1DATA,
             0,
@@ -400,8 +409,8 @@ module BeaconChainTypes {
      *  @paran      state_roots
      */
     datatype HistoricalBatch = HistoricalBatch(
-        block_roots: array<Hash>,
-        state_roots: array<Hash>
+        block_roots: VectorOfHistRoots,
+        state_roots: VectorOfHistRoots
     )
 
  }

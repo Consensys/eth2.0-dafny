@@ -48,6 +48,79 @@ module EpochProcessingSpec {
     import opened MathHelpers
     //import opened Validators
     
+    function updateEpoch(s: BeaconState): BeaconState
+    //  Make sure s.slot does not overflow
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        //  And we should only execute this method when:
+        requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+
+        requires |s.validators| == |s.balances|
+
+        requires forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
+        requires forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        
+        ensures 
+            var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
+            assert forall a :: a in s1.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6;
+            assert forall a :: a in s1.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+            assert forall a :: a in s1.previous_epoch_attestations ==> 0 < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+            assert s1 == updateJustificationAndFinalisation(s);
+            //assert updateEpoch(s) == updateRAndP(s1);
+            //updateEpoch(s) == updateRAndP(updateFinalisedCheckpoint(updateJustification(s), s))
+            updateEpoch(s) == updateParticipationRecords(updateHistoricalRoots(updateRandaoMixes(updateSlashingsReset(updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s)))))))))
+        ensures updateEpoch(s).latest_block_header == s.latest_block_header
+    {
+        var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
+        assert s1 == updateJustificationAndFinalisation(s);
+        assert s1 == updateJustification(s).(finalised_checkpoint := updateFinalisedCheckpoint(updateJustification(s), s).finalised_checkpoint);
+        assert s1.previous_epoch_attestations == s.previous_epoch_attestations;
+        assert s1.validators == s.validators;
+
+        assert s.slot == s1.slot;
+        assert s.balances == s1.balances;
+        assert |s1.validators| == |s1.balances|;
+
+        assert get_current_epoch(s1) == get_current_epoch(s1);
+            
+        //assert forall a :: a in s1.previous_epoch_attestations ==> get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) == get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot));
+        //assert forall a :: a in s1.previous_epoch_attestations ==> |get_beacon_committee(s1, a.data.slot, a.data.index)| == |get_beacon_committee(s, a.data.slot, a.data.index)| ;
+        
+        assert forall a :: a in s1.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6;
+        assert forall a :: a in s1.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+        assert forall a :: a in s1.previous_epoch_attestations ==> 0 < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+
+        var s2 := updateRAndP(s1);
+        assert s2 == updateRAndP(updateJustificationAndFinalisation(s));
+
+        // process_registry_updates(state)
+        var s3 := s2;
+
+        assert |s3.validators| == |s3.balances| == |s.validators|;
+        var s4 := updateSlashings(s3);
+        assert s4 == updateSlashings(updateRAndP(updateJustificationAndFinalisation(s)));
+
+        var s5 := updateEth1DataReset(s4);
+        assert s5 == updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s))));
+
+        assert |s5.validators| == |s5.balances| == |s.validators|;
+        var s6 := updateEffectiveBalance(s5);
+        assert s6 == updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s)))));
+
+        var s7 := updateSlashingsReset(s6);
+        assert s7 == updateSlashingsReset(updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s))))));
+
+        var s8 := updateRandaoMixes(s7);
+        assert s8 == updateRandaoMixes(updateSlashingsReset(updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s)))))));
+
+        var s9 := updateHistoricalRoots(s8);
+        assert s9 == updateHistoricalRoots(updateRandaoMixes(updateSlashingsReset(updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s))))))));
+
+        var s10 := updateParticipationRecords(s9);
+        assert s10 == updateParticipationRecords(updateHistoricalRoots(updateRandaoMixes(updateSlashingsReset(updateEffectiveBalance(updateEth1DataReset(updateSlashings(updateRAndP(updateJustificationAndFinalisation(s)))))))));
+        
+        s10
+    }
 
 
     //  Specifications of justification and finalisation of a state and forward to future slot.
@@ -225,12 +298,19 @@ module EpochProcessingSpec {
      */
 
     function updateJustification(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             updateJustification(s).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
+
+        ensures updateJustification(s).slot == s.slot
+        ensures updateJustification(s).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateJustification(s).validators == s.validators
+        ensures updateJustification(s).balances == s.balances
+        ensures |updateJustification(s).validators| == |updateJustification(s).balances|
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
             var k := updateJustificationPrevEpoch(s);
@@ -385,9 +465,18 @@ module EpochProcessingSpec {
      */
     function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState) : BeaconState
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        requires |s.validators| == |s.balances|
         requires s' == updateJustification(s)
 
         ensures updateFinalisedCheckpoint(s', s).slot == s.slot == s'.slot
+        //ensures updateFinalisedCheckpoint(s', s).slot == s.slot
+        ensures updateFinalisedCheckpoint(s', s).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateFinalisedCheckpoint(s', s).validators == s.validators == s'.validators
+        ensures updateFinalisedCheckpoint(s', s).balances == s.balances == s'.balances
+        ensures |updateFinalisedCheckpoint(s', s).validators| == |updateFinalisedCheckpoint(s', s).balances|
+        ensures updateFinalisedCheckpoint(s', s).previous_epoch_attestations == s.previous_epoch_attestations == s'.previous_epoch_attestations
+        //ensures get_previous_epoch(updateFinalisedCheckpoint(s', s)) == get_previous_epoch(s)
+        ensures updateFinalisedCheckpoint(s', s) == s'.(finalised_checkpoint := updateFinalisedCheckpoint(s', s).finalised_checkpoint)
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s
@@ -427,8 +516,301 @@ module EpochProcessingSpec {
      */
     function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
             requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+            requires |s.validators| == |s.balances|
     {
         updateFinalisedCheckpoint(updateJustification(s), s)
+    }
+
+    function updateRAndP(s: BeaconState): BeaconState
+        requires |s.validators| == |s.balances|
+        //requires if get_current_epoch(s) > GENESIS_EPOCH + 1 then  get_previous_epoch(s) >= s.finalised_checkpoint.epoch else true
+        //requires if get_current_epoch(s) > GENESIS_EPOCH + 1 then  EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s) else true
+        //requires if get_current_epoch(s) > GENESIS_EPOCH + 1 then  1 <= get_previous_epoch(s) else true // <= get_current_epoch(s)
+        
+        requires forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
+        requires forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat
+        
+        ensures     if get_current_epoch(s) <= GENESIS_EPOCH + 1 then updateRAndP(s) == s
+                    else 
+                        updateRAndP(s) == updateRewardsAndPenalties(s, get_attestation_deltas(s).0, get_attestation_deltas(s).1)
+    {
+        if get_current_epoch(s) <= GENESIS_EPOCH + 1 then s
+        else
+            RAndPHelperLemma(s);
+            assert EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s);
+            assert 1 <= get_previous_epoch(s);
+            var (rewards, penalties) := get_attestation_deltas(s);
+            updateRewardsAndPenalties(s, rewards, penalties)
+
+    }
+
+    lemma RAndPHelperLemma(s: BeaconState)
+        ensures get_previous_epoch(s) >= s.finalised_checkpoint.epoch
+
+
+    function updateRewardsAndPenalties(s: BeaconState, rewards: seq<Gwei>, penalties: seq<Gwei>): BeaconState
+        requires |rewards| == |penalties| <= |s.validators| == |s.balances|
+        //requires forall i :: 0 <= i < |rewards| ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000
+        
+        ensures |s.balances| == |updateRewardsAndPenalties(s, rewards, penalties).balances|
+        ensures |s.validators| == |updateRewardsAndPenalties(s, rewards, penalties).validators|
+        ensures forall i :: |rewards| <= i < |s.balances| ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] == s.balances[i]
+        ensures 
+             assume forall i :: 0 <= i < |rewards| ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
+             forall i :: 0 <= i < |rewards| ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] == if s.balances[i] + rewards[i] > penalties[i] then 
+                                                        s.balances[i] + rewards[i] - penalties[i]
+                                                    else    
+                                                        0 as Gwei
+        ensures forall i :: 0 <= i < |s.validators| ==> updateRewardsAndPenalties(s, rewards, penalties).validators[i] == s.validators[i]
+        ensures updateRewardsAndPenalties(s, rewards, penalties) == s.(balances := updateRewardsAndPenalties(s, rewards, penalties).balances)
+
+        decreases |rewards|, |penalties|
+    {
+        if |rewards| == 0 then s
+        else
+            assume forall i :: 0 <= i < |rewards| ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
+            var index := |rewards| - 1;
+            // var s' := if rewards[|rewards|-1] > penalties[|penalties|-1] then 
+            //                 //assume s.balances[index] as nat + rewards[|rewards|-1] as nat - penalties[|penalties|-1] as nat < 0x10000000000000000;
+            //                 increase_balance(s, index as ValidatorIndex, rewards[|rewards|-1] - penalties[|penalties|-1])
+            //             else 
+            //                 //assume s.balances[index] as nat + penalties[|penalties|-1] as nat - rewards[|rewards|-1] as nat < 0x10000000000000000;
+            //                 decrease_balance(s, index as ValidatorIndex, penalties[|penalties|-1] - rewards[|rewards|-1]);
+            var s1 := increase_balance(s, index as ValidatorIndex, rewards[index]);
+            assert s1.balances[index] == s.balances[index] + rewards[index];
+
+            var s2 := decrease_balance(s1, index as ValidatorIndex, penalties[index]);
+            assert s2.balances[index] == if s1.balances[index] > penalties[index] then s1.balances[index] - penalties[index] else 0 as Gwei;
+            assert if s.balances[index] + rewards[index] > penalties[index] then s2.balances[index] == s.balances[index] + rewards[index] - penalties[index] 
+                                                                         else s2.balances[index] == 0 as Gwei;
+
+            //updateRewardsAndPenaltiesLemma(s, rewards, penalties);
+            updateRewardsAndPenalties(s2, rewards[..index], penalties[..index])
+            //s.(balances := increase_balance(s,get_validator_index(pk, d.data.pubkey),d.data.amount).balances)
+    }
+
+
+
+    function method get_total_slashings(slashings: seq<Gwei>): Gwei
+    {
+        if |slashings| == 0 then 0 as Gwei
+        else 
+            assume slashings[0] as nat + get_total_slashings(slashings[1..]) as nat < 0x10000000000000000;
+            slashings[0] + get_total_slashings(slashings[1..])
+    }
+
+    function updateSlashings(s: BeaconState) : BeaconState
+        requires |s.balances| == |s.validators|
+        ensures 
+            var epoch := get_current_epoch(s);
+            var total_balance := get_total_active_balance_full(s);
+            var sumSlashings := get_total_slashings(s.slashings);
+            var adjusted_total_slashing_balance := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat, total_balance as nat) as Gwei;
+            var increment := EFFECTIVE_BALANCE_INCREMENT; 
+            assert total_balance > 0 as Gwei;
+            assert increment > 0 as Gwei;
+            assume forall v :: 0 <= v < |s.validators| ==> 0 <= s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat < 0x10000000000000000;
+            assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+            updateSlashings(s) == updateSlashingsHelper(s, |s.validators|, epoch, total_balance, adjusted_total_slashing_balance, increment)
+    {
+        var epoch := get_current_epoch(s);
+        var total_balance := get_total_active_balance_full(s);
+        var sumSlashings := get_total_slashings(s.slashings);
+        var adjusted_total_slashing_balance := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat, total_balance as nat) as Gwei;
+        var increment := EFFECTIVE_BALANCE_INCREMENT; 
+        
+        assert total_balance > 0 as Gwei;
+        assert increment > 0 as Gwei;
+        assume forall v :: 0 <= v < |s.validators| ==> 0 <= s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat < 0x10000000000000000;
+        assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+         
+        updateSlashingsHelper(s, |s.validators|, epoch, total_balance, adjusted_total_slashing_balance, increment)
+        
+    }
+
+    function updateSlashingsHelper(s: BeaconState, len: nat, epoch: Epoch, total_balance: Gwei, adjusted_total_slashing_balance: Gwei, increment: Gwei) : BeaconState
+        requires len <= |s.balances| == |s.validators| 
+        requires total_balance > 0 as Gwei
+        requires increment > 0 as Gwei
+        requires forall v :: 0 <= v < |s.validators| ==> 0 <= s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat < 0x10000000000000000
+        requires epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+            
+
+        ensures |updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).validators| == |s.validators| 
+        ensures |updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).balances| == |s.balances| 
+        
+        ensures forall v :: 0 <= v < |s.validators| ==> updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).validators[v]  == s.validators[v]
+        //ensures forall v :: 0 <= v < |s.validators| ==> updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).validators[v].effective_balance  == s.validators[v].effective_balance
+        ensures updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment) == s.(balances := updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).balances)
+        ensures forall v :: len <= v < |s.balances| ==> updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).balances[v]  == s.balances[v]
+
+        ensures forall v :: 0 <= v < len ==> 
+        
+            // var penalty_numerator := s.validators[v].effective_balance as nat / increment as nat * adjusted_total_slashing_balance as nat;
+            // var penalty := penalty_numerator / total_balance  as nat * increment as nat;
+            //var penalty := s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat;
+            
+            //assume 0 <= s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat < 0x10000000000000000;
+            //assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+            assert v < |s.balances|;
+
+            var new_bal := if (s.validators[v].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s.validators[v].withdrawable_epoch)
+                                    // then if s.balances[v] > penalty as Gwei then s.balances[v] - penalty as Gwei
+                                    //                                                 else 0 as Gwei
+                                    then decrease_balance(s, v as ValidatorIndex, (s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat) as Gwei).balances[v]
+                                    else s.balances[v];
+            updateSlashingsHelper(s, len, epoch, total_balance, adjusted_total_slashing_balance, increment).balances[v] == new_bal
+       
+        
+        decreases len
+    {
+        if len == 0 then s
+        else
+            var i := len - 1;
+
+            assert i < |s.balances|;
+            
+            //var penalty_numerator := s.validators[i].effective_balance as nat / increment as nat * adjusted_total_slashing_balance as nat;
+            //var penalty := penalty_numerator  / total_balance  as nat * increment as nat;
+            //var penalty := s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat;
+            
+            //assume 0 <= penalty < 0x10000000000000000;
+            //assume 0 <= s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat < 0x10000000000000000;
+            
+            //assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+            
+            var s1 := if (s.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s.validators[i].withdrawable_epoch) 
+                    then decrease_balance(s, i as ValidatorIndex, (s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat) as Gwei)
+                    else s;
+
+            // var new_bal := if (s.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s.validators[i].withdrawable_epoch)
+            //                             // then if s.balances[i] > penalty as Gwei then s.balances[i] - penalty as Gwei
+            //                             //                                                 else 0 as Gwei
+            //                             then decrease_balance(s, i as ValidatorIndex, penalty as Gwei).balances[i]
+            //                             else s.balances[i];
+                                        
+            assert s1.balances[i] == if (s.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s.validators[i].withdrawable_epoch)
+                                        // then if s.balances[i] > penalty as Gwei then s.balances[i] - penalty as Gwei
+                                        //                                                 else 0 as Gwei
+                                        then decrease_balance(s, i as ValidatorIndex, (s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat) as Gwei).balances[i]
+                                        else s.balances[i];
+            assert forall v :: 0 <= v < i ==> s1.balances[v] == s.balances[v];
+            assert forall v :: i < v < |s.balances| ==> s1.balances[v] == s.balances[v];
+            //assert forall v :: i < v < |s.validators| ==> s1.validators[v] == s.validators[v];
+            assert forall v :: 0 <= v < |s.validators| ==> s1.validators[v]  == s.validators[v];
+            assert |s1.balances| == |s1.validators|; 
+            updateSlashingsHelper(s1, len-1, epoch, total_balance, adjusted_total_slashing_balance, increment)
+
+    }
+
+
+    
+    function updateEth1DataReset(s: BeaconState) : BeaconState
+    {
+        var next_epoch := get_current_epoch(s) + 1;
+        // Reset eth1 data votes
+        if (next_epoch % EPOCHS_PER_ETH1_VOTING_PERIOD) == 0 then
+            s.(eth1_data_votes := [])
+        else s
+    }
+    
+    function updateEffectiveBalance(s: BeaconState) : BeaconState
+        requires |s.balances| == |s.validators|
+        ensures updateEffectiveBalance(s) == updateEffectiveBalanceHelper(s, |s.validators|)
+    {
+        updateEffectiveBalanceHelper(s, |s.validators|)
+    }
+
+    
+    function updateEffectiveBalanceHelper(s: BeaconState, len: nat) : BeaconState
+        requires len <= |s.balances| == |s.validators| 
+        ensures |updateEffectiveBalanceHelper(s, len).validators| == |s.validators| 
+        ensures |updateEffectiveBalanceHelper(s, len).balances| == |s.balances| 
+        //ensures updateEffectiveBalanceHelper(s, len).balances == s.balances
+
+        // ensures forall v :: len <= v < |s.validators| ==> updateEffectiveBalanceHelper(s, len).validators[v].effective_balance  == s.validators[v].effective_balance
+        ensures forall v :: 0 <= v < |s.balances| ==> updateEffectiveBalanceHelper(s, len).balances[v]  == s.balances[v]
+        ensures updateEffectiveBalanceHelper(s, len) == s.(validators := updateEffectiveBalanceHelper(s, len).validators)
+        ensures forall v :: len <= v < |s.validators| ==> updateEffectiveBalanceHelper(s, len).validators[v]  == s.validators[v]
+        
+        ensures forall v :: 0 <= v < len ==> 
+            var balance := s.balances[v];
+            var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
+            var DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
+            var UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
+
+            assume s.balances[v] as nat + DOWNWARD_THRESHOLD as nat  < 0x10000000000000000;
+            assume s.validators[v].effective_balance as nat + UPWARD_THRESHOLD as nat  < 0x10000000000000000;
+            assert 0 <= (balance % EFFECTIVE_BALANCE_INCREMENT) < EFFECTIVE_BALANCE_INCREMENT;
+            //assert balance >= (balance % EFFECTIVE_BALANCE_INCREMENT);
+
+            //updateEffectiveBalanceHelper(s, len).validators[v].effective_balance == 
+            var new_bal := if (s.balances[v] + DOWNWARD_THRESHOLD < s.validators[v].effective_balance || s.validators[v].effective_balance + UPWARD_THRESHOLD < s.balances[v]) 
+                                    then min((s.balances[v] - (s.balances[v] % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei 
+                                    else s.validators[v].effective_balance;
+            updateEffectiveBalanceHelper(s, len).validators[v] == s.validators[v].(effective_balance := new_bal)
+
+        decreases len
+    {
+        if len == 0 then s
+        else
+            var index := len - 1;
+
+            // Update effective balances with hysteresis
+            assert index < |s.balances|;
+            var balance := s.balances[index];
+            var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
+            var DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
+            var UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
+
+            assume balance as nat + DOWNWARD_THRESHOLD as nat  < 0x10000000000000000;
+            assume s.validators[index].effective_balance as nat + UPWARD_THRESHOLD as nat  < 0x10000000000000000;
+            assert 0 <= (balance % EFFECTIVE_BALANCE_INCREMENT) < EFFECTIVE_BALANCE_INCREMENT;
+            //assert balance >= (balance % EFFECTIVE_BALANCE_INCREMENT);
+
+            var s1 := if (balance + DOWNWARD_THRESHOLD < s.validators[index].effective_balance || s.validators[index].effective_balance + UPWARD_THRESHOLD < balance) 
+                    then s.(validators := s.validators[index := s.validators[index].(effective_balance := min((balance - (balance % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei)])
+                    else s;
+
+            assert s1.validators[index].effective_balance == if (balance + DOWNWARD_THRESHOLD < s.validators[index].effective_balance || s.validators[index].effective_balance + UPWARD_THRESHOLD < balance) 
+                                                         then min((balance - (balance % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei 
+                                                         else s.validators[index].effective_balance;
+            updateEffectiveBalanceHelper(s1, len-1) 
+
+    }
+    
+    function updateSlashingsReset(s: BeaconState) : BeaconState
+    {
+        var next_epoch := get_current_epoch(s) + 1;
+        // Reset slashings
+        s.(
+            slashings := s.slashings[(next_epoch % EPOCHS_PER_SLASHINGS_VECTOR) as nat := 0 as Gwei]
+        )
+
+    }
+
+    function updateRandaoMixes(s: BeaconState) : BeaconState
+    {
+        var current_epoch := get_current_epoch(s);
+        var next_epoch := current_epoch + 1;
+        // Set randao mix
+        // state.randao_mixes[next_epoch % EPOCHS_PER_HISTORICAL_VECTOR] = get_randao_mix(s, current_epoch)
+        s.(
+            randao_mixes := s.randao_mixes[(next_epoch % EPOCHS_PER_HISTORICAL_VECTOR) as nat := get_randao_mix(s, current_epoch)]
+        )
+    }
+    
+    function updateHistoricalRoots(s: BeaconState) : BeaconState
+    {
+       var next_epoch := (get_current_epoch(s) + 1) as Epoch;
+       if next_epoch % (SLOTS_PER_HISTORICAL_ROOT / SLOTS_PER_EPOCH) == 0 then
+            var historical_batch := HistoricalBatch(s.block_roots, s.state_roots);
+            s.(
+                historical_roots := s.historical_roots + [hash(historical_batch)]
+            )
+        
+        else s
     }
 
     /**
@@ -437,7 +819,7 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    `s` with the attestations rotated.
      */
-    function finalUpdates(s: BeaconState) : BeaconState
+    function updateParticipationRecords(s: BeaconState) : BeaconState
     {
         //  rotate the attestations.
         s.(
@@ -445,6 +827,8 @@ module EpochProcessingSpec {
             current_epoch_attestations := []
         )
     }
+
+    
 
     
     // Helpers - Rewards and penalties
@@ -456,19 +840,21 @@ module EpochProcessingSpec {
     
     function method get_base_reward(s: BeaconState, index: ValidatorIndex) : Gwei
         requires index as int < |s.validators|
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires s.validators[index].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires s.validators[index].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
     {
-        var total_balance : Gwei := get_total_active_balance(s);
-        var effective_balance : Gwei := s.validators[index].effectiveBalance;
+        var total_balance : Gwei := get_total_active_balance_full(s);
+        var effective_balance : Gwei := s.validators[index].effective_balance;
 
         (EFFECTIVE_BALANCE_INCREMENT as int * BASE_REWARD_FACTOR as int / integer_square_root(total_balance) as int) as Gwei 
     }
 
     function method get_proposer_reward(state: BeaconState, attesting_index: ValidatorIndex): Gwei
         requires attesting_index as int < |state.validators|
-        requires integer_square_root(get_total_active_balance(state)) > 1
-        requires state.validators[attesting_index].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(state)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
+        requires get_total_active_balance_full(state) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(state)) > 1
+        requires state.validators[attesting_index].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(state)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
     {
         (get_base_reward(state, attesting_index) / PROPOSER_REWARD_QUOTIENT) as Gwei  
     }
@@ -503,7 +889,7 @@ module EpochProcessingSpec {
     {
         if |v| == 0 then []
         else 
-            if is_active_validator(v[|v|-1], previous_epoch) || (v[|v|-1].slashed && (previous_epoch as int + 1 < v[|v|-1].withdrawableEpoch as int)) then
+            if is_active_validator(v[|v|-1], previous_epoch) || (v[|v|-1].slashed && (previous_epoch as int + 1 < v[|v|-1].withdrawable_epoch as int)) then
                 get_eligible_validator_indices_helper(v[..|v|-1], previous_epoch) + [(|v|-1) as ValidatorIndex]
             else 
                 get_eligible_validator_indices_helper(v[..|v|-1], previous_epoch)
@@ -518,8 +904,9 @@ module EpochProcessingSpec {
     // Return attester micro-rewards/penalties for source-vote for each validator.
     function method get_source_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
         requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s)
 
         requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
         requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
@@ -538,8 +925,9 @@ module EpochProcessingSpec {
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         //requires s.slot - get_previous_epoch(s) *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT  // equivalent to above requires
 
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s)
         requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
 
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
@@ -564,9 +952,9 @@ module EpochProcessingSpec {
         requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         //requires s.slot - get_previous_epoch(s) *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT  // equivalent to above requires
-
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s)
         requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
 
         requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
@@ -600,7 +988,8 @@ module EpochProcessingSpec {
     // return rewards, penalties
 
     function method get_inclusion_delay_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
-        requires integer_square_root(get_total_active_balance(s)) > 1
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
 
         requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
         requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
@@ -615,7 +1004,7 @@ module EpochProcessingSpec {
         var unslashed_attesting_indices := get_unslashed_attesting_indices(s, matching_source_attestations);
 
         // resolve the following assume at a later date i.e. look at the bound for effectBalance as part of the proof required
-        assume forall i :: i in unslashed_attesting_indices ==> s.validators[i].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
+        assume forall i :: i in unslashed_attesting_indices ==> s.validators[i].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
   
         get_inclusion_delay_deltas_helper(s, unslashed_attesting_indices, matching_source_attestations, rewards, penalties)
 
@@ -624,9 +1013,10 @@ module EpochProcessingSpec {
     function method get_inclusion_delay_deltas_helper(s: BeaconState, unslashed_attesting_indices: set<ValidatorIndex>, matching_source_attestations: seq<PendingAttestation>, rewards: seq<Gwei>, penalties: seq<Gwei>) : (seq<Gwei>,seq<Gwei>)
         requires |rewards| == |penalties| == |s.validators|
         requires forall i :: i in unslashed_attesting_indices ==> i as int < |s.validators|
-        requires integer_square_root(get_total_active_balance(s)) > 1
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
         requires forall i :: i in unslashed_attesting_indices ==> 
-                s.validators[i as nat].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
+                s.validators[i as nat].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
 
         ensures |get_inclusion_delay_deltas_helper(s, unslashed_attesting_indices, matching_source_attestations, rewards, penalties).0| == |rewards| == |s.validators|
         ensures |get_inclusion_delay_deltas_helper(s, unslashed_attesting_indices, matching_source_attestations, rewards, penalties).1| == |penalties| == |s.validators|
@@ -683,7 +1073,8 @@ module EpochProcessingSpec {
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         requires s.slot - get_previous_epoch(s) *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
-        requires integer_square_root(get_total_active_balance(s)) > 1
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
 
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
         requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
@@ -700,7 +1091,7 @@ module EpochProcessingSpec {
             var eligible_validator_indices := get_eligible_validator_indices(s);
             assert forall i :: 0 <= i < |eligible_validator_indices| ==> eligible_validator_indices[i] as nat < |s.validators|;
         
-            assume forall i :: 0 <= i < |eligible_validator_indices| ==> s.validators[eligible_validator_indices[i] as nat].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
+            assume forall i :: 0 <= i < |eligible_validator_indices| ==> s.validators[eligible_validator_indices[i] as nat].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
    
             get_inactivity_penalty_deltas_helper(s, eligible_validator_indices, matching_target_attesting_indices, rewards, penalties)
         else    
@@ -716,8 +1107,9 @@ module EpochProcessingSpec {
                                                 : (seq<Gwei>,seq<Gwei>)
         requires |rewards| == |penalties| == |s.validators|
         requires forall i :: 0 <= i < |eligible_indices| ==> eligible_indices[i] as nat < |s.validators|
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires forall i :: 0 <= i < |eligible_indices| ==> s.validators[eligible_indices[i] as nat].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires forall i :: 0 <= i < |eligible_indices| ==> s.validators[eligible_indices[i] as nat].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
         requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
 
          ensures |get_inactivity_penalty_deltas_helper(s, eligible_indices, target_indices, rewards, penalties).0| == |rewards| == |s.validators|
@@ -733,7 +1125,7 @@ module EpochProcessingSpec {
             
 
             if eligible_indices[0] !in target_indices then
-                var effective_balance := s.validators[eligible_indices[0] as nat].effectiveBalance;
+                var effective_balance := s.validators[eligible_indices[0] as nat].effective_balance;
                 assume INACTIVITY_PENALTY_QUOTIENT as nat > 0;
                 assume (effective_balance as nat * get_finality_delay(s) as nat / INACTIVITY_PENALTY_QUOTIENT as nat) < 0x10000000000000000;
                 var second_part_of_penalty := (effective_balance as nat * get_finality_delay(s) as nat / INACTIVITY_PENALTY_QUOTIENT as nat) as Gwei;
@@ -756,8 +1148,9 @@ module EpochProcessingSpec {
     // Helper with shared logic for use by get source, target, and head deltas functions
     function method get_attestation_component_deltas(s: BeaconState, attestations: seq<PendingAttestation>) : (seq<Gwei>,seq<Gwei>)
         requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s) 
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s) 
 
         requires forall a :: a in attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
         requires forall a :: a in attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
@@ -768,7 +1161,7 @@ module EpochProcessingSpec {
     {
         var rewards : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
         var penalties : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
-        var total_balance := get_total_active_balance(s);
+        var total_balance := get_total_active_balance_full(s);
         var unslashed_attesting_indices := get_unslashed_attesting_indices(s, attestations);
         var attesting_balance := get_total_balance(s, unslashed_attesting_indices);
         var indices := get_eligible_validator_indices(s);
@@ -776,7 +1169,7 @@ module EpochProcessingSpec {
         assert forall i :: 0 <= i < |indices| ==> indices[i] as nat < |s.validators|;
 
         // resolve the following assume at a later date i.e. look at the bound for effectBalance as part of the proof required
-        assume forall i :: 0 <= i < |indices| ==> s.validators[indices[i]].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
+        assume forall i :: 0 <= i < |indices| ==> s.validators[indices[i]].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
   
         
         get_attestation_component_deltas_helper(s, indices, total_balance, unslashed_attesting_indices, attesting_balance, rewards, penalties)
@@ -795,8 +1188,9 @@ module EpochProcessingSpec {
         requires EFFECTIVE_BALANCE_INCREMENT <= total_balance 
         requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
         requires forall i :: 0 <= i < |indices| ==> indices[i] as nat < |s.validators|
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires forall i :: 0 <= i < |indices| ==> s.validators[indices[i]].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
+        requires get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF 
+        requires integer_square_root(get_total_active_balance_full(s)) > 1
+        requires forall i :: 0 <= i < |indices| ==> s.validators[indices[i]].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000
      
         ensures |get_attestation_component_deltas_helper(s, indices, total_balance, unslashed_attesting_indices, attesting_balance, rewards, penalties).0| == |rewards| == |s.validators|
         ensures |get_attestation_component_deltas_helper(s, indices, total_balance, unslashed_attesting_indices, attesting_balance, rewards, penalties).1| == |penalties| == |s.validators|
@@ -805,8 +1199,8 @@ module EpochProcessingSpec {
         else
             var index := indices[0];
             assert index as nat < |s.validators|;
-            assert integer_square_root(get_total_active_balance(s)) > 1;
-            assert s.validators[index].effectiveBalance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
+            assert integer_square_root(get_total_active_balance_full(s)) > 1;
+            assert s.validators[index].effective_balance as int * BASE_REWARD_FACTOR as int / integer_square_root(get_total_active_balance_full(s)) as int / BASE_REWARDS_PER_EPOCH as int < 0x10000000000000000;
 
             if index in unslashed_attesting_indices then
                 var increment := EFFECTIVE_BALANCE_INCREMENT;
@@ -857,27 +1251,59 @@ module EpochProcessingSpec {
 
     // return rewards, penalties
     function method get_attestation_deltas(s: BeaconState) : (seq<Gwei>, seq<Gwei>)
-        requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
-        requires integer_square_root(get_total_active_balance(s)) > 1
-        requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance(s)
+        //requires get_previous_epoch(s) >= s.finalised_checkpoint.epoch
+        //requires integer_square_root(get_total_active_balance_full(s)) > 1
+        //requires get_total_active_balance_full(s) > 1
+        //requires EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s)
 
-        requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
-        requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
+        //requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
+        requires 1 <= get_previous_epoch(s) //<= get_current_epoch(s)
+        // i.e. this means it isn't applicable to the GENESIS_EPOCH
 
-        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
-        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        requires forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        requires forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        requires forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+
+
+        // requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        // requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        // requires forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
     
-        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
-        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        // requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        // requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        // requires forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
     
-        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
-        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        // requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6
+        // requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        // requires forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
     
         ensures |get_attestation_deltas(s).0| == |get_attestation_deltas(s).1| == |s.validators|
     {
+        //assert forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a in s.previous_epoch_attestations;
+        // assert forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6;
+        // assert forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat; 
+        // assert forall a :: a in get_matching_source_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+    
+        // assert forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6;
+        // assert forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+        // assert forall a :: a in get_matching_target_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat; 
+    
+        // assert forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6;
+        // assert forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+        // assert forall a :: a in get_matching_head_attestations(s, get_previous_epoch(s)) ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+    
+        
+        var rewards : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
+        var penalties : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
+        
+        RAndPHelperLemma(s);
+        assert get_previous_epoch(s) >= s.finalised_checkpoint.epoch;
+        assert EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s);
+
+        assume get_total_active_balance_full(s) < 0xFFFFFFFFFFFFFFFF;
+        assume integer_square_root(get_total_active_balance_full(s)) > 1; // ie as EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s)
+        assert get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat;
+        
         var (sr, sp) := get_source_deltas(s);
         var (tr, tp) := get_target_deltas(s);
         var (hr, hp) := get_head_deltas(s);
@@ -887,9 +1313,6 @@ module EpochProcessingSpec {
         assert |sr| == |tr| == |hr| == |ddr| == |pdr| == |s.validators|;
         assert |sp| == |tp| == |hp| == |ddp| == |pdp| == |s.validators|;
 
-        var rewards : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
-        var penalties : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
-        
         (get_attestation_deltas_helper_sum_rewards(sr, tr, hr, ddr, pdr, rewards),
          get_attestation_deltas_helper_sum_penalties(sp, tp, hp, ddp, pdp, penalties))
 

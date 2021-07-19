@@ -74,6 +74,10 @@ module ProcessOperationsSpec {
             [ xd[0].data.pubkey ] + seqKeysInDeposits(xd[1..])
     }
 
+    
+   
+
+
     function total_deposits(deposits: seq<Deposit>): nat
     {
         if |deposits| == 0 then 0
@@ -97,12 +101,12 @@ module ProcessOperationsSpec {
      *                  to set this field is included as a comment for future reference.
      */
     function method get_validator_from_deposit(d: Deposit): Validator
-        ensures get_validator_from_deposit(d).effectiveBalance <= MAX_EFFECTIVE_BALANCE as Gwei
+        ensures get_validator_from_deposit(d).effective_balance <= MAX_EFFECTIVE_BALANCE as Gwei
     {
         var amount := d.data.amount; 
         var effective_balance := min((amount as nat- amount as nat % EFFECTIVE_BALANCE_INCREMENT as nat) as nat, MAX_EFFECTIVE_BALANCE as nat);
 
-        Validator(d.data.pubkey, effective_balance as Gwei, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH)
+        Validator(d.data.pubkey, effective_balance as Gwei, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH)
     }
 
     /**
@@ -143,6 +147,25 @@ module ProcessOperationsSpec {
 
     }
 
+    /** */
+    function updateRandao(s: BeaconState, b: BeaconBlockBody) : BeaconState
+        requires |s.validators| == |s.balances|
+        ensures |updateRandao(s,b).validators| == |updateRandao(s,b).balances|
+        ensures updateRandao(s,b) == s.(randao_mixes := updateRandao(s,b).randao_mixes)
+        ensures updateRandao(s,b).latest_block_header == s.latest_block_header
+    {
+        var epoch := get_current_epoch(s);
+
+        // Verify RANDAO reveal not implemented
+        //var proposer := s.validators[get_beacon_proposer_index(s)];
+        // signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
+        // assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
+
+        // # Mix in RANDAO reveal (use simplified mix value)
+        var mix := DEFAULT_BYTES32; //var mix := xor(get_randao_mix(s, epoch), hash(b.randao_reveal));
+        s.(randao_mixes := s.randao_mixes[(epoch % EPOCHS_PER_HISTORICAL_VECTOR) as nat := mix])
+    }
+
 /**
      *  Take into account deposits in a block.
      *
@@ -151,6 +174,7 @@ module ProcessOperationsSpec {
      *  @returns            The state obtained after taking account the deposits in `body` from state `s` 
      */
     function updateDeposits(s: BeaconState, deposits: seq<Deposit>) : BeaconState 
+        requires minimumActiveValidators(s)
         requires s.eth1_deposit_index as int +  |deposits| < 0x10000000000000000 
         requires |s.validators| == |s.balances|
         requires |s.validators| + |deposits| <= VALIDATOR_REGISTRY_LIMIT as int
@@ -172,6 +196,8 @@ module ProcessOperationsSpec {
         //ensures |s.balances| <= |updateDeposits(s,deposits).balances| <= |s.balances| + |deposits| 
 
         ensures total_balances(updateDeposits(s,deposits).balances) == total_balances(s.balances) + total_deposits(deposits)
+        ensures get_current_epoch(updateDeposits(s, deposits)) == get_current_epoch(s)
+        ensures minimumActiveValidators(updateDeposits(s, deposits))
         
          decreases |deposits|
     {
@@ -265,7 +291,7 @@ module ProcessOperationsSpec {
      *                  to set this field is included as a comment for future reference.
      */
     // function method get_validator_from_deposit(d: Deposit): Validator
-    //     ensures get_validator_from_deposit(d).effectiveBalance <= MAX_EFFECTIVE_BALANCE as Gwei
+    //     ensures get_validator_from_deposit(d).effective_balance <= MAX_EFFECTIVE_BALANCE as Gwei
     // {
     //     var amount := d.data.amount; 
     //     var effective_balance := min((amount as int- amount as int % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat);
@@ -337,6 +363,7 @@ module ProcessOperationsSpec {
         ensures |s.balances| == |decrease_balance(s,index,delta).balances|
         ensures if s.balances[index] > delta then decrease_balance(s,index,delta).balances[index] == s.balances[index] - delta
                 else decrease_balance(s,index,delta).balances[index] == 0
+        ensures s.validators == decrease_balance(s,index,delta).validators
     {
         if s.balances[index] > delta then
             s.(
@@ -349,18 +376,175 @@ module ProcessOperationsSpec {
     }
 
     ///////////////////////
+    predicate attestationIsWellFormed(s: BeaconState, a: PendingAttestation)
+    {
+        get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)  
+        /** Epoch of target matches epoch of the slot the attestation is made. */
+        && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
+        /** Attestation is not too old and not too recent. */
+        && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat
+        
+        && a.data.index < get_committee_count_per_slot(s, a.data.target.epoch)
+        // Preconditions for get_beacon_committee
+        && TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        && a.data.index < TWO_UP_6 // this comes from the assert on attestations in process_attestations
+        // same as above
+        //&& a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) // at most 64 committees per slot 
+    
+        && |a.aggregation_bits| == |get_beacon_committee(s, a.data.slot, a.data.index)|
+        
+        && (if a.data.target.epoch == get_current_epoch(s) then  
+            a.data.source == s.current_justified_checkpoint
+           else 
+            a.data.source == s.previous_justified_checkpoint)
+
+    }
+
+    function updateAttestation(s: BeaconState, a: PendingAttestation) : BeaconState
+        requires attestationIsWellFormed(s, a)
+        requires |s.current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires minimumActiveValidators(s)
+        ensures minimumActiveValidators(updateAttestation(s, a))
+        ensures |updateAttestation(s, a).current_epoch_attestations| + |updateAttestation(s, a).previous_epoch_attestations| ==
+                |s.current_epoch_attestations| + |s.previous_epoch_attestations| + 1
+        ensures |s.current_epoch_attestations| <= |updateAttestation(s, a).current_epoch_attestations| <= |s.current_epoch_attestations| + 1
+        ensures |s.previous_epoch_attestations| <=|updateAttestation(s, a).previous_epoch_attestations| <= |s.previous_epoch_attestations| + 1
+
+        ensures updateAttestation(s, a) == s.(current_epoch_attestations := updateAttestation(s, a).current_epoch_attestations) ||
+                 updateAttestation(s, a) == s.(previous_epoch_attestations := updateAttestation(s, a).previous_epoch_attestations)
+        ensures updateAttestation(s, a).validators == s.validators
+        ensures updateAttestation(s, a).balances == s.balances
+        ensures updateAttestation(s, a).slot == s.slot
+        ensures updateAttestation(s, a).current_justified_checkpoint == s.current_justified_checkpoint
+        ensures updateAttestation(s, a).previous_justified_checkpoint == s.previous_justified_checkpoint
+        ensures updateAttestation(s, a).eth1_deposit_index == s.eth1_deposit_index
+
+    {
+        // data = attestation.data
+        assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
+        assert a.data.target.epoch == compute_epoch_at_slot(a.data.slot);
+        assert a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat;
+        assert a.data.index < get_committee_count_per_slot(s, a.data.target.epoch);
+
+        var committee := get_beacon_committee(s, a.data.slot, a.data.index);
+        assert |a.aggregation_bits| == |committee|;
+
+        var pending_attestation := PendingAttestation(
+            a.aggregation_bits, 
+            a.data, 
+            (s.slot - a.data.slot), 
+            get_beacon_proposer_index(s) 
+        );
+
+        if a.data.target.epoch == get_current_epoch(s) then
+            //  Add a to current attestations
+            assert a.data.source == s.current_justified_checkpoint;
+            s.(
+                current_epoch_attestations := s.current_epoch_attestations + [pending_attestation]
+            )
+            // s.current_epoch_attestations.append(pending_attestation)
+        
+        else 
+            assert a.data.source == s.previous_justified_checkpoint;
+            s.(
+                previous_epoch_attestations := s.previous_epoch_attestations + [pending_attestation]
+            )
+        
+            // s.previous_epoch_attestations.append(pending_attestation)
+            
+        // # Verify signature
+        // Not implemented as part of the simplificiation
+        //assert is_valid_indexed_attestation(s', get_indexed_attestation(s', a));
+    }
+
+    function updateAttestations(s: BeaconState, a: ListOfAttestations) : BeaconState
+        requires |s.validators| == |s.balances|
+        requires |a| as nat <= MAX_ATTESTATIONS as nat
+        requires forall i:: 0 <= i < |a| ==> attestationIsWellFormed(s, a[i])
+        requires |s.current_epoch_attestations| as nat + |a| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires |s.previous_epoch_attestations| as nat + |a| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires minimumActiveValidators(s)
+        
+        ensures |updateAttestations(s,a).validators| == |updateAttestations(s,a).balances|
+        ensures |updateAttestations(s,a).current_epoch_attestations| + |updateAttestations(s,a).previous_epoch_attestations| ==
+                |s.current_epoch_attestations| + |s.previous_epoch_attestations| + |a|
+        ensures |updateAttestations(s,a).current_epoch_attestations| <= |s.current_epoch_attestations| + |a|;
+        ensures |updateAttestations(s,a).previous_epoch_attestations| <= |s.previous_epoch_attestations| + |a|;
+
+        ensures minimumActiveValidators(updateAttestations(s, a))
+        ensures updateAttestations(s, a).validators == s.validators
+        ensures updateAttestations(s, a).slot == s.slot
+        ensures updateAttestations(s, a).current_justified_checkpoint == s.current_justified_checkpoint
+        ensures updateAttestations(s, a).previous_justified_checkpoint == s.previous_justified_checkpoint
+        // could add an ensures to demonstrate the fields changed i.e. current_epoch_attestations etc
+        ensures updateAttestations(s, a).eth1_deposit_index == s.eth1_deposit_index
+    {
+        if |a| == 0 then s
+        else 
+
+            // data = attestation.data
+            var index := |a| -1;
+            // these should allow follow from the original preconditions
+            // assert |a[..index]| as nat <= MAX_ATTESTATIONS as nat;
+            // assert forall i:: 0 <= i < |a[..index]| ==> attestationIsWellFormed(s, a[i]);
+            // assert |s.current_epoch_attestations| as nat + |a[..index]| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ;
+            // assert |s.previous_epoch_attestations| as nat + |a[..index]| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ;
+            // assert minimumActiveValidators(s);
+
+            var s1 := updateAttestations(s,a[..index]);
+
+            // these relate to the nested state == updateAttestations(s,a[..index])
+            // assert s1.validators == s.validators;
+            // assert s1.slot == s.slot;
+            // assert s1.current_justified_checkpoint == s.current_justified_checkpoint;
+            // assert s1.previous_justified_checkpoint == s.previous_justified_checkpoint;
+            AttestationHelperLemma(s, s1, a[index]);
+
+            //assert attestationIsWellFormed(s1, a[index]);
+
+            assert |s1.current_epoch_attestations| + |s1.previous_epoch_attestations| ==
+                |s.current_epoch_attestations| + |s.previous_epoch_attestations| + |a[..index]|;
+            assert |s1.current_epoch_attestations| <= |s.current_epoch_attestations| + |a[..index]|;
+            assert |s1.previous_epoch_attestations| <= |s.previous_epoch_attestations| + |a[..index]|;
+
+            assert |a[..index]| < |a|;
+            assert |updateAttestations(s,a[..index]).current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ;
+            assert |updateAttestations(s,a[..index]).previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ;
+            assert minimumActiveValidators(updateAttestations(s,a[..index]));
+
+            updateAttestation(s1, a[index])
+    }
+
+    lemma AttestationHelperLemma(s: BeaconState, s1: BeaconState, a: PendingAttestation)
+        requires attestationIsWellFormed(s, a);
+        requires s1.validators == s.validators
+        requires s1.slot == s.slot
+        requires s1.current_justified_checkpoint == s.current_justified_checkpoint
+        requires s1.previous_justified_checkpoint == s.previous_justified_checkpoint
+        ensures attestationIsWellFormed(s1, a);
+    {
+        
+    }
+
+        
+
+
+
+
 
     function updateVoluntaryExit(s: BeaconState, voluntary_exit: VoluntaryExit) : BeaconState
         requires |s.validators| == |s.balances|
         requires voluntary_exit.validator_index as int < |s.validators| 
+        //requires minimumActiveValidators(s)
         // requires is_active_validator(s.validators[voluntary_exit.validator_index], get_current_epoch(s))
-        // (!v.slashed) && (v.activationEpoch <= epoch < v.withdrawableEpoch)
+        // (!v.slashed) && (v.activation_epoch <= epoch < v.withdrawable_epoch)
         requires !s.validators[voluntary_exit.validator_index].slashed
-        requires s.validators[voluntary_exit.validator_index].activationEpoch <= get_current_epoch(s) < s.validators[voluntary_exit.validator_index].withdrawableEpoch
+        requires s.validators[voluntary_exit.validator_index].activation_epoch <= get_current_epoch(s) < s.validators[voluntary_exit.validator_index].withdrawable_epoch
 
         requires s.validators[voluntary_exit.validator_index].exitEpoch == FAR_FUTURE_EPOCH
         requires get_current_epoch(s) >= voluntary_exit.epoch
-        requires get_current_epoch(s) >= s.validators[voluntary_exit.validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        requires get_current_epoch(s) >= s.validators[voluntary_exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
         
         // the next requires is to prevent overflow
         //requires max_epoch(get_exit_epochs(s.validators) + [compute_activation_exit_epoch(get_current_epoch(s))]) as int + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY < 0x10000000000000000
@@ -372,52 +556,97 @@ module ProcessOperationsSpec {
         
         ensures updateVoluntaryExit(s, voluntary_exit) == initiate_validator_exit(s, voluntary_exit.validator_index)
         ensures get_current_epoch(updateVoluntaryExit(s, voluntary_exit)) == get_current_epoch(s)
-        ensures get_current_epoch(s) >= updateVoluntaryExit(s, voluntary_exit).validators[voluntary_exit.validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
-        ensures forall i :: 0 <= i < |s.validators| ==> updateVoluntaryExit(s, voluntary_exit).validators[i].activationEpoch == s.validators[i].activationEpoch
-
+        ensures get_current_epoch(s) >= updateVoluntaryExit(s, voluntary_exit).validators[voluntary_exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
+        ensures forall i :: 0 <= i < |s.validators| ==> updateVoluntaryExit(s, voluntary_exit).validators[i].activation_epoch == s.validators[i].activation_epoch
+        ensures minimumActiveValidators(updateVoluntaryExit(s, voluntary_exit))
         // ensures active validators haven't changed??
     {
         
         var exit_epochs := get_exit_epochs(s.validators);
+        
         var exit_queue_epoch := max_epoch(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]);
+
+        assert compute_activation_exit_epoch(get_current_epoch(s)) > get_current_epoch(s);
+        assert compute_activation_exit_epoch(get_current_epoch(s)) in (exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]);
+        assert max_epoch(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]) >= compute_activation_exit_epoch(get_current_epoch(s)); 
+        assert max_epoch(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]) > get_current_epoch(s);
+        assert exit_queue_epoch > get_current_epoch(s);
+
         var exit_queue_churn := |get_queue_churn(s.validators, exit_queue_epoch)|;
         var validator_churn_limit := get_validator_churn_limit(s);
         var index := voluntary_exit.validator_index;
         
         assume exit_queue_epoch as int + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat < 0x10000000000000000; 
+        assert minimumActiveValidators(s);
+        assert exists v :: 0 <= v < |s.validators| && s.validators[v].activation_epoch <= get_current_epoch(s) < s.validators[v].exitEpoch;
         
-        if exit_queue_churn  >= get_validator_churn_limit(s) as nat then 
-            s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch + 1 as Epoch,
-                                                                    withdrawableEpoch := (exit_queue_epoch as nat + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
-        else
-            s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch,
-                                                                    withdrawableEpoch := (exit_queue_epoch as nat + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
+        var s1 := if exit_queue_churn  >= get_validator_churn_limit(s) as nat then 
+                s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch + 1 as Epoch,
+                                                                    withdrawable_epoch := (exit_queue_epoch as nat + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
+                else
+                s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch,
+                                                                    withdrawable_epoch := (exit_queue_epoch as nat + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)]);
+        
+        assert forall v :: 0 <= v < |s1.validators| ==>  s1.validators[v].activation_epoch ==  s.validators[v].activation_epoch;
+        assert forall v :: 0 <= v < |s1.validators| ==>  s1.validators[v].exitEpoch > get_current_epoch(s1) || s1.validators[v].exitEpoch == s1.validators[v].exitEpoch;
+        assert exists v :: 0 <= v < |s1.validators| && s1.validators[v].activation_epoch <= get_current_epoch(s1) < s1.validators[v].exitEpoch;
+        assert minimumActiveValidators(s1);
+        s1
 
     }
+
+    lemma VolExitLemma1(s: BeaconState, voluntary_exit: VoluntaryExit)
+        requires |s.validators| == |s.balances|
+        requires voluntary_exit.validator_index as int < |s.validators| 
+        requires minimumActiveValidators(s)
+        
+        requires !s.validators[voluntary_exit.validator_index].slashed
+        requires s.validators[voluntary_exit.validator_index].activation_epoch <= get_current_epoch(s) < s.validators[voluntary_exit.validator_index].withdrawable_epoch
+
+        requires s.validators[voluntary_exit.validator_index].exitEpoch == FAR_FUTURE_EPOCH
+        requires get_current_epoch(s) >= voluntary_exit.epoch
+        requires get_current_epoch(s) >= s.validators[voluntary_exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
+
+        ensures minimumActiveValidators(updateVoluntaryExit(s, voluntary_exit))
+    {
+        // var s1 := updateVoluntaryExit(s, voluntary_exit);
+        // assert get_current_epoch(s) == get_current_epoch(s1);
+        // assert exists v :: 0 <= v < |s.validators| && s.validators[v].activation_epoch <= get_current_epoch(s) < s.validators[v].exitEpoch;
+        // assert forall v :: 0 <= v < |s.validators| ==> s.validators[v].activation_epoch <= get_current_epoch(s) < s.validators[v].exitEpoch
+        //                                             ==> s1.validators[v].activation_epoch <= get_current_epoch(s1) < s1.validators[v].exitEpoch;
+        // assert exists v :: 0 <= v < |s1.validators| && s1.validators[v].activation_epoch <= get_current_epoch(s1) < s1.validators[v].exitEpoch;
+        // assert exists v :: 0 <= v < |s1.validators| && is_active_validator(s1.validators[v], get_current_epoch(s1));
+        // assert |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0 ==> 
+        //     (exists v :: 0 <= v < |s1.validators| && is_active_validator(s1.validators[v], get_current_epoch(s1)));
+        // assert  minimumActiveValidators(s1);
+    }
+
+    
 
     lemma helperVoluntaryExitLemma3(s: BeaconState, ve: seq<VoluntaryExit>)
         requires forall i :: 0 <= i < |ve| ==> ve[i].validator_index as int < |s.validators| 
         //requires forall i :: 0 <= i < |ve| ==> is_active_validator(s.validators[ve[i].validator_index], get_current_epoch(s))
         requires forall i :: 0 <= i < |ve| ==> !s.validators[ve[i].validator_index].slashed
-        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activationEpoch <= get_current_epoch(s) < s.validators[ve[i].validator_index].withdrawableEpoch
+        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activation_epoch <= get_current_epoch(s) < s.validators[ve[i].validator_index].withdrawable_epoch
 
         requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].exitEpoch == FAR_FUTURE_EPOCH
-        requires forall i :: 0 <= i < |ve| ==> get_current_epoch(s) >= s.validators[ve[i].validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        requires forall i :: 0 <= i < |ve| ==> get_current_epoch(s) >= s.validators[ve[i].validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
 
         ensures forall i :: i in get_VolExit_validator_indices(ve) ==> 0 <= i < |s.validators| 
         
         //ensures forall i :: i in get_VolExit_validator_indices(ve) ==> is_active_validator(s.validators[i], get_current_epoch(s))
         ensures forall i :: i in get_VolExit_validator_indices(ve) ==> !s.validators[i].slashed
-        ensures forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        ensures forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
 
         ensures forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH
-        ensures forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        ensures forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD 
     {
         // Thanks Dafny
     }
 
     
     function {:timeLimitMultiplier 1} updateVoluntaryExits(s: BeaconState, ve: seq<VoluntaryExit>) : BeaconState
+        requires minimumActiveValidators(s)
         requires forall i,j :: 0 <= i < j < |ve| && i != j ==> ve[i].validator_index != ve[j].validator_index // ve indices are unique
         requires |s.validators| == |s.balances|
         requires forall i :: 0 <= i < |ve| ==> get_current_epoch(s) >= ve[i].epoch
@@ -425,32 +654,34 @@ module ProcessOperationsSpec {
         requires forall i :: 0 <= i < |ve| ==> ve[i].validator_index as int < |s.validators| 
         //requires forall i :: 0 <= i < |ve| ==> is_active_validator(s.validators[ve[i].validator_index], get_current_epoch(s))
         requires forall i :: 0 <= i < |ve| ==> !s.validators[ve[i].validator_index].slashed
-        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activationEpoch <= get_current_epoch(s) < s.validators[ve[i].validator_index].withdrawableEpoch
+        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activation_epoch <= get_current_epoch(s) < s.validators[ve[i].validator_index].withdrawable_epoch
 
         requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].exitEpoch == FAR_FUTURE_EPOCH
-        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activationEpoch as nat + SHARD_COMMITTEE_PERIOD as nat <= get_current_epoch(s) as nat < 0x10000000000000000 
+        requires forall i :: 0 <= i < |ve| ==> s.validators[ve[i].validator_index].activation_epoch as nat + SHARD_COMMITTEE_PERIOD as nat <= get_current_epoch(s) as nat < 0x10000000000000000 
 
         //requires forall i :: i in get_VolExit_validator_indices(ve) ==> 0 <= i < |s.validators| 
         
         // //requires forall i :: i in get_VolExit_validator_indices(ve) ==> is_active_validator(s.validators[i], get_current_epoch(s))
         //requires forall i :: i in get_VolExit_validator_indices(ve) ==> !s.validators[i].slashed
-        //requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        //requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
 
         //requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH
-        //requires forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        //requires forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD 
     
         ensures |updateVoluntaryExits(s, ve).validators| == |s.validators|
+        ensures |updateVoluntaryExits(s, ve).validators| == |updateVoluntaryExits(s, ve).balances|
         ensures updateVoluntaryExits(s, ve).slot == s.slot
         ensures get_current_epoch(updateVoluntaryExits(s, ve)) == get_current_epoch(s)
-        ensures forall i :: 0 <= i < |s.validators| ==> updateVoluntaryExits(s, ve).validators[i].activationEpoch == s.validators[i].activationEpoch
+        ensures forall i :: 0 <= i < |s.validators| ==> updateVoluntaryExits(s, ve).validators[i].activation_epoch == s.validators[i].activation_epoch
 
         ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) ==> updateVoluntaryExits(s, ve).validators[i] == s.validators[i]
+        ensures minimumActiveValidators(updateVoluntaryExits(s, ve))
         //ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) ==> updateVoluntaryExits(s, ve).validators[i].exitEpoch == s.validators[i].exitEpoch
         //ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) ==> updateVoluntaryExits(s, ve).validators[i].slashed == s.validators[i].slashed
-        //ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) ==> updateVoluntaryExits(s, ve).validators[i].withdrawableEpoch == s.validators[i].withdrawableEpoch
+        //ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) ==> updateVoluntaryExits(s, ve).validators[i].withdrawable_epoch == s.validators[i].withdrawable_epoch
         //ensures forall i :: 0 <= i < |s.validators| ==> forall j :: 0 <= j < |ve| && i != ve[j].validator_index as int ==> updateVoluntaryExits(s, ve).validators[i].exitEpoch == s.validators[i].exitEpoch
 
-        //ensures forall i :: 0 <= i < |ve| ==> get_current_epoch(s) >= updateVoluntaryExits(s, ve).validators[ve[i].validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD
+        //ensures forall i :: 0 <= i < |ve| ==> get_current_epoch(s) >= updateVoluntaryExits(s, ve).validators[ve[i].validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD
         //ensures forall i :: 0 <= i < |ve| ==> is_active_validator(updateVoluntaryExits(s,ve).validators[ve[i].validator_index], get_current_epoch(s))
         decreases |ve|
     {
@@ -470,9 +701,9 @@ module ProcessOperationsSpec {
             assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> 0 <= i < |s.validators|; 
 
             assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> !s.validators[i].slashed;
-            assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch;
+            assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch;
             assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH;
-            assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD;
+            assert forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD;
             //assert forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve[..|ve|-1]) ==> 
             //    updateVoluntaryExits(s,ve[..|ve|-1]).validators[i].exitEpoch == s.validators[i].exitEpoch;
 
@@ -505,16 +736,16 @@ module ProcessOperationsSpec {
         requires  |get_VolExit_validator_indices(ve)| > 0
         requires forall i :: i in get_VolExit_validator_indices(ve) ==> 0 <= i < |s.validators| 
         requires forall i :: i in get_VolExit_validator_indices(ve) ==> !s.validators[i].slashed
-        requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
         requires forall i :: i in get_VolExit_validator_indices(ve) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH
-        requires forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        requires forall i :: i in get_VolExit_validator_indices(ve) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD 
     
 
         ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> 0 <= i < |s.validators|
         ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> !s.validators[i].slashed
-        ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
         ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH
-        ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD
+        ensures forall i :: i in get_VolExit_validator_indices(ve[..|ve|-1]) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD
     {
         mappingVolExitIndices(ve);
         assert forall i :: 0 <= i < |ve| ==> get_VolExit_validator_indices(ve)[i] == ve[i].validator_index as int;
@@ -532,17 +763,17 @@ module ProcessOperationsSpec {
         requires |s.validators| == |s.balances|
         requires exit.validator_index as int < |s.validators| 
         // requires is_active_validator(s.validators[voluntary_exit.validator_index], get_current_epoch(s))
-        // (!v.slashed) && (v.activationEpoch <= epoch < v.withdrawableEpoch)
+        // (!v.slashed) && (v.activation_epoch <= epoch < v.withdrawable_epoch)
         requires !s.validators[exit.validator_index].slashed
-        requires s.validators[exit.validator_index].activationEpoch <= get_current_epoch(s) < s.validators[exit.validator_index].withdrawableEpoch
+        requires s.validators[exit.validator_index].activation_epoch <= get_current_epoch(s) < s.validators[exit.validator_index].withdrawable_epoch
 
         requires s.validators[exit.validator_index].exitEpoch == FAR_FUTURE_EPOCH
         requires get_current_epoch(s) >= exit.epoch
-        requires get_current_epoch(s) >= s.validators[exit.validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        requires get_current_epoch(s) >= s.validators[exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
         
         ensures forall i :: 0 <= i < |s.validators| && i != exit.validator_index as int ==> updateVoluntaryExit(s, exit).validators[i].exitEpoch == s.validators[i].exitEpoch
         ensures forall i :: 0 <= i < |s.validators| && i != exit.validator_index as int ==> updateVoluntaryExit(s, exit).validators[i].slashed == s.validators[i].slashed
-        ensures forall i :: 0 <= i < |s.validators| && i != exit.validator_index as int ==> updateVoluntaryExit(s, exit).validators[i].withdrawableEpoch == s.validators[i].withdrawableEpoch
+        ensures forall i :: 0 <= i < |s.validators| && i != exit.validator_index as int ==> updateVoluntaryExit(s, exit).validators[i].withdrawable_epoch == s.validators[i].withdrawable_epoch
     {
         // Thanks Dafny
     }
@@ -624,16 +855,16 @@ module ProcessOperationsSpec {
         requires ps.header_1 == ps.header_2
         requires ps.header_1.proposer_index as int < |s.validators| 
 
-        // requires is_active_validator: (!v.slashed) && (v.activationEpoch <= epoch < v.withdrawableEpoch)
+        // requires is_active_validator: (!v.slashed) && (v.activation_epoch <= epoch < v.withdrawable_epoch)
         requires !s.validators[ps.header_1.proposer_index].slashed
-        requires s.validators[ps.header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawableEpoch
+        requires s.validators[ps.header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawable_epoch
  
         requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
         requires |s.validators| == |s.balances|
         
         ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].exitEpoch == s.validators[i].exitEpoch
         ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].slashed == s.validators[i].slashed
-        ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].withdrawableEpoch == s.validators[i].withdrawableEpoch
+        ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].withdrawable_epoch == s.validators[i].withdrawable_epoch
     {
         // Thanks Dafny
     }
@@ -642,12 +873,12 @@ module ProcessOperationsSpec {
         requires  |get_PS_validator_indices(ps)| > 0
         requires forall i :: i in get_PS_validator_indices(ps) ==> 0 <= i < |s.validators| 
         requires forall i :: i in get_PS_validator_indices(ps) ==> !s.validators[i].slashed
-        requires forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        requires forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
         
 
         ensures forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> 0 <= i < |s.validators|
         ensures forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> !s.validators[i].slashed
-        ensures forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        ensures forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
     {
         mappingPSIndices(ps);
         assert forall i :: 0 <= i < |ps| ==> get_PS_validator_indices(ps)[i] == ps[i].header_1.proposer_index as int;
@@ -670,9 +901,9 @@ module ProcessOperationsSpec {
         requires ps.header_1 == ps.header_2
         requires ps.header_1.proposer_index as int < |s.validators| 
         //requires is_slashable_validator(s.validators[ps.header_1.proposer_index], get_current_epoch(s));
-        //(!v.slashed) && (v.activationEpoch <= epoch < v.withdrawableEpoch)
+        //(!v.slashed) && (v.activation_epoch <= epoch < v.withdrawable_epoch)
         requires !s.validators[ps.header_1.proposer_index].slashed
-        requires s.validators[ps.header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawableEpoch
+        requires s.validators[ps.header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawable_epoch
         
         requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
         requires |s.validators| == |s.balances|
@@ -697,7 +928,7 @@ module ProcessOperationsSpec {
         requires ps.header_1.proposer_index as int < |s.validators| 
         //requires is_slashable_validator(s.validators[ps.header_1.proposer_index], get_current_epoch(s));
         requires !s.validators[ps.header_1.proposer_index].slashed
-        requires s.validators[ps.header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawableEpoch
+        requires s.validators[ps.header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawable_epoch
 
         requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
         requires |s.validators| == |s.balances|
@@ -707,19 +938,19 @@ module ProcessOperationsSpec {
         
         ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i] == s.validators[i]
         //ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].exitEpoch == s.validators[i].exitEpoch
-        //ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].withdrawableEpoch == s.validators[i].withdrawableEpoch
+        //ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].withdrawable_epoch == s.validators[i].withdrawable_epoch
         //ensures forall i :: 0 <= i < |s.validators| && i != ps.header_1.proposer_index as int ==> updateProposerSlashing(s, ps).validators[i].slashed == s.validators[i].slashed
 
 
         ensures updateProposerSlashing(s, ps) == slash_validator(s, ps.header_1.proposer_index, get_beacon_proposer_index(s))
         ensures get_current_epoch(updateProposerSlashing(s, ps)) == get_current_epoch(s)
-        ensures forall i :: 0 <= i < |s.validators| ==> updateProposerSlashing(s, ps).validators[i].activationEpoch == s.validators[i].activationEpoch
+        ensures forall i :: 0 <= i < |s.validators| ==> updateProposerSlashing(s, ps).validators[i].activation_epoch == s.validators[i].activation_epoch
        
         ensures updateProposerSlashing(s, ps).slot == s.slot
         ensures updateProposerSlashing(s, ps).eth1_deposit_index == s.eth1_deposit_index
         ensures updateProposerSlashing(s, ps).latest_block_header == s.latest_block_header
         
-        //ensures get_current_epoch(s) >= updateVoluntaryExit(s, voluntary_exit).validators[voluntary_exit.validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        //ensures get_current_epoch(s) >= updateVoluntaryExit(s, voluntary_exit).validators[voluntary_exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
     {
         slash_validator(s, ps.header_1.proposer_index, get_beacon_proposer_index(s))
         // maybe expand???
@@ -728,11 +959,11 @@ module ProcessOperationsSpec {
     lemma helperPSLemma3(s: BeaconState, ps : seq<ProposerSlashing>)
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1.proposer_index as int < |s.validators| 
         requires forall i :: 0 <= i < |ps| ==> !s.validators[ps[i].header_1.proposer_index].slashed 
-        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch
+        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch
 
         ensures forall i :: i in get_PS_validator_indices(ps) ==> 0 <= i < |s.validators|
         ensures forall i :: i in get_PS_validator_indices(ps) ==> !s.validators[i].slashed
-        ensures forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        ensures forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
     {
         // Thanks Dafny
     }
@@ -754,7 +985,7 @@ module ProcessOperationsSpec {
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1 == ps[i].header_2
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1.proposer_index as int < |s.validators| 
         requires forall i :: 0 <= i < |ps| ==> !s.validators[ps[i].header_1.proposer_index].slashed 
-        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch
+        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch
 
         ensures forall i,j :: 0 <= i < j < |ps[..|ps|-1]| && i != j ==> ps[i].header_1.proposer_index!= ps[j].header_1.proposer_index
         ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> ps[i].header_1.slot == ps[i].header_2.slot;
@@ -762,7 +993,7 @@ module ProcessOperationsSpec {
         ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> ps[i].header_1 == ps[i].header_2;
         ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> ps[i].header_1.proposer_index as int < |s.validators| ;
         ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> !s.validators[ps[i].header_1.proposer_index].slashed ;
-        ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch;
+        ensures forall i :: 0 <= i < |ps[..|ps|-1]| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch;
            
     {
     }
@@ -779,6 +1010,7 @@ module ProcessOperationsSpec {
 
 
     function updateProposerSlashings(s: BeaconState, ps : seq<ProposerSlashing>) : BeaconState
+        requires minimumActiveValidators(s)
         requires forall i,j :: 0 <= i < j < |ps| && i != j ==> ps[i].header_1.proposer_index!= ps[j].header_1.proposer_index // ve indices are unique
         
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1.slot == ps[i].header_2.slot
@@ -786,17 +1018,17 @@ module ProcessOperationsSpec {
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1 == ps[i].header_2
         requires forall i :: 0 <= i < |ps| ==> ps[i].header_1.proposer_index as int < |s.validators| 
         requires forall i :: 0 <= i < |ps| ==> !s.validators[ps[i].header_1.proposer_index].slashed 
-        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch
+        requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch
 
         
         //requires forall i :: 0 <= i < |ps| ==> is_slashable_validator(s.validators[ps[i].header_1.proposer_index], get_current_epoch(s));
         //requires forall i :: i in get_PS_validator_indices(ps) ==> 0 <= i < |s.validators| //this should be the same as the previous requires!
         //requires forall i :: i in get_PS_validator_indices(ps) ==> !s.validators[i].slashed
-        //requires forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
+        //requires forall i :: i in get_PS_validator_indices(ps) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch
         
         
         //requires forall i :: 0 <= i < |ps| ==> !s.validators[ps[i].header_1.proposer_index].slashed
-        //requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch
+        //requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch
 
 
         //requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].exitEpoch == FAR_FUTURE_EPOCH
@@ -808,9 +1040,9 @@ module ProcessOperationsSpec {
         ensures |updateProposerSlashings(s, ps).validators| == |updateProposerSlashings(s, ps).balances|
 
         ensures get_current_epoch(updateProposerSlashings(s, ps)) == get_current_epoch(s)
-        ensures forall i :: 0 <= i < |s.validators| ==> updateProposerSlashings(s, ps).validators[i].activationEpoch == s.validators[i].activationEpoch
+        ensures forall i :: 0 <= i < |s.validators| ==> updateProposerSlashings(s, ps).validators[i].activation_epoch == s.validators[i].activation_epoch
         //ensures forall i :: 0 <= i < |s.validators| ==> forall j :: 0 <= j < |ps| && i != ps[j].header_1.proposer_index as int ==> updateProposerSlashings(s, ps).validators[i].exitEpoch == s.validators[i].exitEpoch
-        //ensures forall i :: 0 <= i < |s.validators| ==> forall j :: 0 <= j < |ps| && i != ps[j].header_1.proposer_index as int ==> updateProposerSlashings(s, ps).validators[i].withdrawableEpoch == s.validators[i].withdrawableEpoch
+        //ensures forall i :: 0 <= i < |s.validators| ==> forall j :: 0 <= j < |ps| && i != ps[j].header_1.proposer_index as int ==> updateProposerSlashings(s, ps).validators[i].withdrawable_epoch == s.validators[i].withdrawable_epoch
         //ensures forall i :: 0 <= i < |s.validators| ==> forall j :: 0 <= j < |ps| && i != ps[j].header_1.proposer_index as int ==> updateProposerSlashings(s, ps).validators[i].slashed == s.validators[i].slashed
 
         ensures |get_active_validator_indices(updateProposerSlashings(s, ps).validators, get_current_epoch(s))| > 0
@@ -820,6 +1052,7 @@ module ProcessOperationsSpec {
         ensures updateProposerSlashings(s, ps).slot == s.slot
         ensures updateProposerSlashings(s, ps).eth1_deposit_index == s.eth1_deposit_index
         ensures updateProposerSlashings(s, ps).latest_block_header == s.latest_block_header
+        ensures minimumActiveValidators(updateProposerSlashings(s, ps))
 
         decreases |ps|
 
@@ -830,8 +1063,8 @@ module ProcessOperationsSpec {
             helperPSLemma2(s, ps);
             assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> 0 <= i < |s.validators|; 
             assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> !s.validators[i].slashed;
-            assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch;
-            //assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD;
+            assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> s.validators[i].activation_epoch <= get_current_epoch(s) < s.validators[i].withdrawable_epoch;
+            //assert forall i :: i in get_PS_validator_indices(ps[..|ps|-1]) ==> get_current_epoch(s) >= s.validators[i].activation_epoch + SHARD_COMMITTEE_PERIOD;
             assert |updateProposerSlashings(s,ps[..|ps|-1]).validators| == |s.validators|;
             mappingPSIndices(ps);
             subsetMappingPSIndices(ps, |ps|-1);
@@ -861,7 +1094,7 @@ module ProcessOperationsSpec {
     //     requires forall i :: 0 <= i < |ps| ==> ps[i].header_1 == ps[i].header_2
     //     requires forall i :: 0 <= i < |ps| ==> ps[i].header_1.proposer_index as int < |s.validators| 
     //     requires forall i :: 0 <= i < |ps| ==> !s.validators[ps[i].header_1.proposer_index].slashed 
-    //     requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawableEpoch
+    //     requires forall i :: 0 <= i < |ps| ==> s.validators[ps[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps[i].header_1.proposer_index].withdrawable_epoch
 
     //     ensures forall i :: 0 <= i < |s.validators| && i !in get_PS_validator_indices(ps) ==> updateProposerSlashings(s, ps).validators[i] == s.validators[i]
         
@@ -941,7 +1174,8 @@ module ProcessOperationsSpec {
         requires forall i :: 0 <= i < |a| ==> is_valid_indexed_attestation(s, a[i].attestation_2)
         requires forall i :: 0 <= i < |a| ==> forall j :: 0 <= j < |a[i].attestation_1.attesting_indices| ==> a[i].attestation_1.attesting_indices[j] as int < |s.validators|
         requires forall i :: 0 <= i < |a| ==> forall j :: 0 <= j < |a[i].attestation_2.attesting_indices| ==> a[i].attestation_2.attesting_indices[j] as int < |s.validators|
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
 
         // explicitly show we only slash those n the intersection
@@ -952,7 +1186,8 @@ module ProcessOperationsSpec {
         ensures updateAttesterSlashings(s, a).eth1_deposit_index == s.eth1_deposit_index
         ensures updateAttesterSlashings(s, a).latest_block_header == s.latest_block_header
        
-        ensures |get_active_validator_indices(updateAttesterSlashings(s, a).validators, get_current_epoch(updateAttesterSlashings(s, a)))| > 0
+        //ensures |get_active_validator_indices(updateAttesterSlashings(s, a).validators, get_current_epoch(updateAttesterSlashings(s, a)))| > 0
+        ensures minimumActiveValidators(updateAttesterSlashings(s, a))
         //decreases indices
     {
         if |a| == 0 then 
@@ -1156,10 +1391,10 @@ module ProcessOperationsSpec {
 
         if exit_queue_churn  >= get_validator_churn_limit(s) as nat then 
             s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch + 1 as Epoch,
-                                                            withdrawableEpoch := (exit_queue_epoch as nat + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
+                                                            withdrawable_epoch := (exit_queue_epoch as nat + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
         else
             s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch,
-                                                            withdrawableEpoch := (exit_queue_epoch as nat + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
+                                                            withdrawable_epoch := (exit_queue_epoch as nat + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
     }
 
 
@@ -1179,7 +1414,7 @@ module ProcessOperationsSpec {
         var epoch : Epoch := get_current_epoch(s);
         var proposer_index := get_beacon_proposer_index(s);
 
-        var s' := initiate_validator_exit(s, slashed_index); // only validator exitEpoch & withdrawableEpoch fields possibly changed
+        var s' := initiate_validator_exit(s, slashed_index); // only validator exitEpoch & withdrawable_epoch fields possibly changed
 
         assert |s.balances| == |s'.balances|;
         assert |s'.balances| == |s'.validators|;
@@ -1214,9 +1449,9 @@ module ProcessOperationsSpec {
         // though it makes sense that a validator wouldn't proposer to slash itself!
         // assert slashed_index != whistleblower_index;
 
-        var whistleblower_reward : Gwei := (s'.validators[slashed_index].effectiveBalance as int / WHISTLEBLOWER_REWARD_QUOTIENT as nat) as Gwei;
+        var whistleblower_reward : Gwei := (s'.validators[slashed_index].effective_balance as int / WHISTLEBLOWER_REWARD_QUOTIENT as nat) as Gwei;
         var proposer_reward := (whistleblower_reward as int / PROPOSER_REWARD_QUOTIENT as int) as Gwei;
-        var validator_penalty := (s'.validators[slashed_index].effectiveBalance as int / MIN_SLASHING_PENALTY_QUOTIENT as nat) as Gwei;
+        var validator_penalty := (s'.validators[slashed_index].effective_balance as int / MIN_SLASHING_PENALTY_QUOTIENT as nat) as Gwei;
 
         //s' := increase_balance(s', proposer_index, proposer_reward);
         //s' := increase_balance(s', whistleblower_index, Gwei(whistleblower_reward - proposer_reward));
@@ -1226,7 +1461,7 @@ module ProcessOperationsSpec {
         // validator.withdrawable_epoch = max(validator.withdrawable_epoch, Epoch(epoch + EPOCHS_PER_SLASHINGS_VECTOR))
         // state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
 
-        assume (s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] as int + s'.validators[slashed_index].effectiveBalance as int) < 0x10000000000000000;
+        assume (s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] as int + s'.validators[slashed_index].effective_balance as int) < 0x10000000000000000;
         assert slashed_index as int < |s'.balances|; 
         assert proposer_index as int < |s'.balances|; 
         assert whistleblower_index as int < |s'.balances|; 
@@ -1238,8 +1473,8 @@ module ProcessOperationsSpec {
         assume s'.balances[whistleblower_index] as int + whistleblower_reward  as int < 0x10000000000000000;
 
         s'.(validators := s'.validators[slashed_index := s'.validators[slashed_index].(slashed := true,
-                                                            withdrawableEpoch := max(s'.validators[slashed_index].withdrawableEpoch as nat,(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat)) as Epoch)],
-            slashings := s'.slashings[(epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat) := s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] + s'.validators[slashed_index].effectiveBalance],
+                                                            withdrawable_epoch := max(s'.validators[slashed_index].withdrawable_epoch as nat,(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat)) as Epoch)],
+            slashings := s'.slashings[(epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat) := s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] + s'.validators[slashed_index].effective_balance],
             balances := increase_balance(
                             increase_balance(
                                 decrease_balance(s', slashed_index, validator_penalty), 
@@ -1280,7 +1515,7 @@ module ProcessOperationsSpec {
         
         var epoch : Epoch := get_current_epoch(s);
         var proposer_index := get_beacon_proposer_index(s);
-        var s' := initiate_validator_exit(s, slashed_index); // only validator exitEpoch & withdrawableEpoch fields possibly changed
+        var s' := initiate_validator_exit(s, slashed_index); // only validator exitEpoch & withdrawable_epoch fields possibly changed
 
         // show initiate validator exit doesn't change the set of active validator indices
         
@@ -1304,11 +1539,11 @@ module ProcessOperationsSpec {
         assert |get_active_validator_indices(s'.validators, epoch)| > 0;
 
         // show update to s', including rewards/penalties, doesn't change the set of active validator indices
-        var whistleblower_reward : Gwei := (s'.validators[slashed_index].effectiveBalance as int / WHISTLEBLOWER_REWARD_QUOTIENT as nat) as Gwei;
+        var whistleblower_reward : Gwei := (s'.validators[slashed_index].effective_balance as int / WHISTLEBLOWER_REWARD_QUOTIENT as nat) as Gwei;
         var proposer_reward := (whistleblower_reward as int / PROPOSER_REWARD_QUOTIENT as int) as Gwei;
-        var validator_penalty := (s'.validators[slashed_index].effectiveBalance as int / MIN_SLASHING_PENALTY_QUOTIENT as nat) as Gwei;
+        var validator_penalty := (s'.validators[slashed_index].effective_balance as int / MIN_SLASHING_PENALTY_QUOTIENT as nat) as Gwei;
 
-        assume (s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] as int + s'.validators[slashed_index].effectiveBalance as int) < 0x10000000000000000;
+        assume (s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] as int + s'.validators[slashed_index].effective_balance as int) < 0x10000000000000000;
         assert slashed_index as int < |s'.balances|; 
         assert proposer_index as int < |s'.balances|; 
         assert whistleblower_index as int < |s'.balances|; 
@@ -1318,8 +1553,8 @@ module ProcessOperationsSpec {
 
 
         s' := s'.(  validators := s'.validators[slashed_index := s'.validators[slashed_index].(slashed := true,
-                                                            withdrawableEpoch := max(s'.validators[slashed_index].withdrawableEpoch as nat,(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat)) as Epoch)],
-                    slashings := s'.slashings[(epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat) := s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] + s'.validators[slashed_index].effectiveBalance],
+                                                            withdrawable_epoch := max(s'.validators[slashed_index].withdrawable_epoch as nat,(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat)) as Epoch)],
+                    slashings := s'.slashings[(epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat) := s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] + s'.validators[slashed_index].effective_balance],
                     balances := increase_balance(
                                     increase_balance(
                                         decrease_balance(s', slashed_index, validator_penalty), 
@@ -1367,7 +1602,7 @@ module ProcessOperationsSpec {
     // // Check if ``validator`` is active.
     // predicate method is_active_validator(validator: Validator, epoch: Epoch)
     // {
-    //     validator.activationEpoch <= epoch < validator.exitEpoch
+    //     validator.activation_epoch <= epoch < validator.exitEpoch
     // }
 
     // // Return the sequence of active validator indices at ``epoch``.
@@ -1409,6 +1644,7 @@ module ProcessOperationsSpec {
     // Return the epoch during which validator activations and exits initiated in ``epoch`` take effect.
     function method compute_activation_exit_epoch(epoch: Epoch) : Epoch
         requires epoch as int + 1 + MAX_SEED_LOOKAHEAD as int < 0x10000000000000000 
+        ensures compute_activation_exit_epoch(epoch) > epoch
     {
         epoch + 1 as Epoch + MAX_SEED_LOOKAHEAD as Epoch
     }

@@ -17,6 +17,7 @@ include "../../utils/NonNativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 include "../../utils/Helpers.dfy"
+include "../../utils/SeqHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
@@ -41,11 +42,200 @@ module ProcessOperations {
     import opened Validators
     import opened AttestationsTypes
     import opened Helpers
+    import opened SeqHelpers
     import opened BeaconHelpers
     import opened StateTransitionSpec
     import opened AttestationsHelpers
     import opened ProcessOperationsSpec
     
+    predicate isValidProposerSlashings(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+    {
+        // proposer slashing preconditions
+        (forall i,j :: 0 <= i < j < |bb.proposer_slashings| && i != j ==> bb.proposer_slashings[i].header_1.proposer_index!= bb.proposer_slashings[j].header_1.proposer_index) // ve indices are unique
+        &&
+        (forall i :: 0 <= i < |bb.proposer_slashings| ==> 
+            bb.proposer_slashings[i].header_1.slot == bb.proposer_slashings[i].header_2.slot
+            && bb.proposer_slashings[i].header_1.proposer_index == bb.proposer_slashings[i].header_2.proposer_index
+            && bb.proposer_slashings[i].header_1 == bb.proposer_slashings[i].header_2
+            && bb.proposer_slashings[i].header_1.proposer_index as int < |s.validators| 
+            && !s.validators[bb.proposer_slashings[i].header_1.proposer_index].slashed 
+            && s.validators[bb.proposer_slashings[i].header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[bb.proposer_slashings[i].header_1.proposer_index].withdrawable_epoch)
+    }
+
+    predicate isValidAttesterSlashings(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+    {
+        // attester slashing preconditions
+        (forall i :: 0 <= i < |bb.attester_slashings| ==> 
+            forall j :: 0 <= j < |bb.attester_slashings[i].attestation_1.attesting_indices| ==> bb.attester_slashings[i].attestation_1.attesting_indices[j] as int < |s.validators| )
+
+        && (forall i :: 0 <= i < |bb.attester_slashings| ==> 
+            forall j :: 0 <= j < |bb.attester_slashings[i].attestation_2.attesting_indices| ==> bb.attester_slashings[i].attestation_2.attesting_indices[j] as int < |s.validators|)
+            
+        && (forall i :: 0 <= i < |bb.attester_slashings| ==> 
+            && is_valid_indexed_attestation(s, bb.attester_slashings[i].attestation_1)
+            && is_valid_indexed_attestation(s, bb.attester_slashings[i].attestation_2)
+            && |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)| > 0
+            && is_slashable_attestation_data(bb.attester_slashings[i].attestation_1.data, bb.attester_slashings[i].attestation_2.data)
+            && is_valid_indexed_attestation(s, bb.attester_slashings[i].attestation_1)
+            && is_valid_indexed_attestation(s, bb.attester_slashings[i].attestation_2)
+            && |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)| > 0
+        )
+    }
+
+    predicate isValidAttestations(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+    {
+        // process attestation preconditions
+        |bb.attestations| as nat <= MAX_ATTESTATIONS as nat
+        && (forall i:: 0 <= i < |bb.attestations| ==> attestationIsWellFormed(s, bb.attestations[i]))
+        && |s.current_epoch_attestations| as nat + |bb.attestations| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        && |s.previous_epoch_attestations| as nat + |bb.attestations| as nat <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+    }
+
+    predicate isValidDeposits(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+    {
+        // process deposit preconditions
+        (s.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000 )
+        && (|s.validators| + |bb.deposits| <= VALIDATOR_REGISTRY_LIMIT as int)
+        && (total_balances(s.balances) + total_deposits(bb.deposits) < 0x10000000000000000 )
+    }
+
+    predicate isValidVoluntaryExits(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+    {
+        // voluntary exit preconditions
+        (forall i,j :: 0 <= i < j < |bb.voluntary_exits| && i != j ==> bb.voluntary_exits[i].validator_index != bb.voluntary_exits[j].validator_index )// ve indices are unique
+        && (forall i :: 0 <= i < |bb.voluntary_exits| ==> 
+             bb.voluntary_exits[i].validator_index as int < |s.validators| 
+             && get_current_epoch(s) >= bb.voluntary_exits[i].epoch
+             && !s.validators[bb.voluntary_exits[i].validator_index].slashed
+             && s.validators[bb.voluntary_exits[i].validator_index].activation_epoch <= get_current_epoch(s) < s.validators[bb.voluntary_exits[i].validator_index].withdrawable_epoch
+             && s.validators[bb.voluntary_exits[i].validator_index].exitEpoch == FAR_FUTURE_EPOCH
+             && (get_current_epoch(s) as nat >= s.validators[bb.voluntary_exits[i].validator_index].activation_epoch as nat + SHARD_COMMITTEE_PERIOD as nat)
+            )
+    }
+
+    predicate isValidBeaconBlockBody(s: BeaconState, bb: BeaconBlockBody)
+        requires minimumActiveValidators(s)
+        requires  |s.validators| == |s.balances|
+        // Note: A proof could be constructed to show that the intermediate states apply for s as well.
+        //      i.e. try to show the preconditions based on state s
+    {
+        isValidProposerSlashings(s, bb)
+        && isValidAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb)
+        && isValidAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb)
+        && isValidDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations),bb)
+        && isValidVoluntaryExits(updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations),bb.deposits),bb)
+    }
+
+    function updateOperations(s: BeaconState, bb: BeaconBlockBody): BeaconState
+        requires  |s.validators| == |s.balances|
+        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires isValidBeaconBlockBody(s, bb)
+
+        ensures updateOperations(s, bb) == updateVoluntaryExits(updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations), bb.deposits), bb.voluntary_exits)
+    {
+        //assert isValidProposerSlashings(s, bb);
+        var s1 := updateProposerSlashings(s, bb.proposer_slashings);
+        assert s1 == updateProposerSlashings(s, bb.proposer_slashings);
+        //assert get_current_epoch(s1) == get_current_epoch(s);
+        
+        var s2 := updateAttesterSlashings(s1, bb.attester_slashings);
+        assert s2 == updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings);
+        
+        var s3 := updateAttestations(s2, bb.attestations);
+        assert s3 == updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations);
+        
+        var s4 := updateDeposits(s3, bb.deposits);
+        assert s4 == updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations), bb.deposits);
+
+         var s5 := updateVoluntaryExits(s4, bb.voluntary_exits);
+        assert s5 == updateVoluntaryExits(updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations), bb.deposits), bb.voluntary_exits);
+        
+        s5
+    }
+
+    /**
+     *
+     *  Example.
+     *  epoch   0             1                 k               k + 1       
+     *          |............|....         .....|.................|.....................
+     *  state                                                      s
+     *  slot    0                                                  s.slot 
+     *                                            <-SLOTS_PER_EPOCH->
+     *  slot         s.slot - SLOTS_PER_EPOCH = x1                x2 = s.slot - 1
+     *  slot(a)                                   *****************     
+     *                          =======a======>tgt1
+     *                                            =======a======>tgt2
+     *     
+     * 
+     *  epoch(s) = k + 1, and previous epoch is k.
+     *  source and target are checkpoints.
+     *  Target must have an epoch which is k (tgt1, case1) or k + 1 (tgt2, case2).
+     *  a.data.slot (slot(a))is the slot in which ther validator makes the attestation.
+     *  x1 <= slot(a) <= x2.
+     *  Two cases arise: 
+     *      1. compute_epoch_at_slot(a.data.slot) is previous_epoch k 
+     *          in this case the target's epoch must be  previous-epoch k
+     *      2. compute_epoch_at_slot(a.data.slot) is current_epoch k + 1 
+     *          in this case the target's epoch must be  current-epoch k + 1
+     *
+     *  MIN_ATTESTATION_INCLUSION_DELAY is 1.
+     *
+     *  Question: what is the invariant for the attestations in a state?
+     */
+    method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
+        requires attestationIsWellFormed(s, a)
+        requires |s.current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        requires minimumActiveValidators(s)
+        ensures s' == updateAttestation(s,a)
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index;
+
+    {
+        // data = attestation.data
+        assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
+        assert a.data.target.epoch == compute_epoch_at_slot(a.data.slot);
+        assert a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat;
+        assert a.data.index < get_committee_count_per_slot(s, a.data.target.epoch);
+
+        var committee := get_beacon_committee(s, a.data.slot, a.data.index);
+        assert |a.aggregation_bits| == |committee|;
+
+        var pending_attestation := PendingAttestation(
+            a.aggregation_bits, 
+            a.data, 
+            (s.slot - a.data.slot), 
+            get_beacon_proposer_index(s) 
+        );
+
+        if a.data.target.epoch == get_current_epoch(s) {
+            //  Add a to current attestations
+            assert a.data.source == s.current_justified_checkpoint;
+            s' := s.(
+                current_epoch_attestations := s.current_epoch_attestations + [pending_attestation]
+            );
+            // s.current_epoch_attestations.append(pending_attestation)
+        }
+        else {
+            assert a.data.source == s.previous_justified_checkpoint;
+            s' := s.(
+                previous_epoch_attestations := s.previous_epoch_attestations + [pending_attestation]
+            );
+        }
+             
+        // # Verify signature
+        // Not implemented as part of the simplificiation
+        //assert is_valid_indexed_attestation(s', get_indexed_attestation(s', a));
+    }
 
     /**
      *  Process the operations defined by a block body.
@@ -55,99 +245,31 @@ module ProcessOperations {
      *  @returns    The state obtained after applying the operations of `bb` to `s`.
      */
     method process_operations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState) 
-        // proposer slashing preconditions
-        requires forall i,j :: 0 <= i < j < |bb.proposer_slashings| && i != j ==> bb.proposer_slashings[i].header_1.proposer_index!= bb.proposer_slashings[j].header_1.proposer_index // ve indices are unique
+        requires  |s.validators| == |s.balances|
+        requires minimumActiveValidators(s) //|get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires isValidBeaconBlockBody(s, bb)
         
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> bb.proposer_slashings[i].header_1.slot == bb.proposer_slashings[i].header_2.slot
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> bb.proposer_slashings[i].header_1.proposer_index == bb.proposer_slashings[i].header_2.proposer_index 
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> bb.proposer_slashings[i].header_1 == bb.proposer_slashings[i].header_2
-
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> bb.proposer_slashings[i].header_1.proposer_index as int < |s.validators|
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> !s.validators[bb.proposer_slashings[i].header_1.proposer_index].slashed 
-        requires forall i :: 0 <= i < |bb.proposer_slashings| ==> s.validators[bb.proposer_slashings[i].header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[bb.proposer_slashings[i].header_1.proposer_index].withdrawableEpoch
-
-        
-        //requires forall i :: i in get_PS_validator_indices(bb.proposer_slashings) ==> 0 <= i < |s.validators| 
-        //requires forall i :: i in get_PS_validator_indices(bb.proposer_slashings) ==> !s.validators[i].slashed
-        //requires forall i :: i in get_PS_validator_indices(bb.proposer_slashings) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
-
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-        requires |s.validators| == |s.balances|
-        
-        //ensures |s.validators| == |updateProposerSlashings(s, bb.proposer_slashings).validators|
-        
-        // attester slashing preconditions
-        // note, with the current is_valid_indexed_attetsation predicate, the state isn't used to determine the result at this time
-        // as such it doesn't matter whether the state is s or updateProposerSlashings(s, bb.proposer_slashings) is used in the following preconditions
-        // since they are equivalent
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> is_valid_indexed_attestation(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings[i].attestation_1)
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> is_valid_indexed_attestation(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings[i].attestation_2)
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> forall j :: 0 <= j < |bb.attester_slashings[i].attestation_1.attesting_indices| ==> bb.attester_slashings[i].attestation_1.attesting_indices[j] as int < |s.validators|
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> forall j :: 0 <= j < |bb.attester_slashings[i].attestation_2.attesting_indices| ==> bb.attester_slashings[i].attestation_2.attesting_indices[j] as int < |s.validators|
-        
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)| > 0
-        //requires forall i :: 0 <= i < |bb.attester_slashings| ==> 
-        //    exists j :: 0 <= j < |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)| &&
-        //    is_slashable_validator(updateProposerSlashings(s, bb.proposer_slashings).validators[sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)[j]], get_current_epoch(s))
-
-        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-        //requires |s.validators| == |s.balances|
-
-        requires forall i :: 0 <= i < |bb.attester_slashings| ==> is_slashable_attestation_data(bb.attester_slashings[i].attestation_1.data, bb.attester_slashings[i].attestation_2.data)
-
-        // process deposit preconditions
-        requires s.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000 
-        requires |s.validators| + |bb.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
-        //requires |s.validators| == |s.balances|
-        requires total_balances(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings).balances) + total_deposits(bb.deposits) < 0x10000000000000000 
-
-        // voluntary exit preconditions
-        requires forall i,j :: 0 <= i < j < |bb.voluntary_exits| && i != j ==> bb.voluntary_exits[i].validator_index != bb.voluntary_exits[j].validator_index // ve indices are unique
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> bb.voluntary_exits[i].validator_index as int < |s.validators| 
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> get_current_epoch(s) >= bb.voluntary_exits[i].epoch
-
-        //requires forall i :: 0 <= i < |bb.voluntary_exits| ==> is_active_validator(s.validators[bb.voluntary_exits[i].validator_index], get_current_epoch(s))
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> !updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits).validators[bb.voluntary_exits[i].validator_index].slashed
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits).validators[bb.voluntary_exits[i].validator_index].activationEpoch <= get_current_epoch(s) < updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits).validators[bb.voluntary_exits[i].validator_index].withdrawableEpoch
-
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits).validators[bb.voluntary_exits[i].validator_index].exitEpoch == FAR_FUTURE_EPOCH
-        requires forall i :: 0 <= i < |bb.voluntary_exits| ==> get_current_epoch(s) >= updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits).validators[bb.voluntary_exits[i].validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
-
-        //requires forall i :: i in get_VolExit_validator_indices(bb.voluntary_exits) ==> 0 <= i < |s.validators| 
-        //requires forall i :: i in get_VolExit_validator_indices(bb.voluntary_exits) ==> !s.validators[i].slashed
-        //requires forall i :: i in get_VolExit_validator_indices(bb.voluntary_exits) ==> s.validators[i].activationEpoch <= get_current_epoch(s) < s.validators[i].withdrawableEpoch
-        //requires forall i :: i in get_VolExit_validator_indices(bb.voluntary_exits) ==> s.validators[i].exitEpoch == FAR_FUTURE_EPOCH
-        //requires forall i :: i in get_VolExit_validator_indices(bb.voluntary_exits) ==> get_current_epoch(s) >= s.validators[i].activationEpoch + SHARD_COMMITTEE_PERIOD 
-    
-        
-        
-        // post conditions
+        ensures s' == updateOperations(s,bb)
         ensures |s'.validators| == |s'.balances|
-        //ensures s' == updateDeposits(s, bb.deposits)
-        //ensures s' == updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits)
-        //ensures s' == updateVoluntaryExits(updateDeposits(updateProposerSlashings(s, bb.proposer_slashings), bb.deposits), bb.voluntary_exits)
         ensures s'.slot == s.slot
         ensures s'.latest_block_header == s.latest_block_header
-        //ensures s'.validators == s.validators + get_new_validators(s, [], bb.deposits)
-        //ensures false
     {
+
         s':= s;
         var slashed_any := false;
 
         // process the proposer slashings
         var i := 0;
+        assert isValidProposerSlashings(s, bb);
         assert s' == updateProposerSlashings(s, bb.proposer_slashings[..i]);
+        assert |s'.validators| == |s'.balances|;
         assert s'.slot == s.slot;
         assert s'.latest_block_header == s.latest_block_header;
-
-        assert |s'.validators| == |s'.balances|;
-        
-        
 
         while i < |bb.proposer_slashings| 
             decreases |bb.proposer_slashings| - i
 
-            invariant 0 <= i <= |bb.proposer_slashings|
+            invariant 0 <= i <= |bb.proposer_slashings| 
             
             invariant |s'.validators| ==  |s.validators| 
             invariant s' == updateProposerSlashings(s, bb.proposer_slashings[..i])
@@ -156,6 +278,10 @@ module ProcessOperations {
             invariant s'.latest_block_header == s.latest_block_header
             
         {
+            //requires 0 <= i < |s| - 1
+            assert 1 <= |bb.proposer_slashings|; 
+            //assert 0 <= i < |bb.proposer_slashings| - 1;
+            seqInitLast<ProposerSlashing>(bb.proposer_slashings, i);
             assert bb.proposer_slashings[..i+1] == bb.proposer_slashings[..i] + [bb.proposer_slashings[i]];
 
             //assert forall j :: i <= j < |bb.proposer_slashings| ==> s'.validators[bb.proposer_slashings[j].header_1.proposer_index] == s.validators[bb.proposer_slashings[j].header_1.proposer_index];
@@ -178,36 +304,40 @@ module ProcessOperations {
             
         }
         assert bb.proposer_slashings[..i] == bb.proposer_slashings;
-        assert s' == updateProposerSlashings(s, bb.proposer_slashings);
+        ghost var s1 := updateProposerSlashings(s, bb.proposer_slashings);
+        assert s' == s1;
 
         // process attester slashings
         i := 0;
-        assert s' == updateProposerSlashings(s, bb.proposer_slashings);
-        assert s'.slot == s.slot;
-        assert s'.latest_block_header == s.latest_block_header;
+        assert isValidAttesterSlashings(s1, bb);
+        assert s' == updateAttesterSlashings(s1, bb.attester_slashings[..i]);
 
         assert |s'.validators| == |s'.balances|;
-        
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
 
         while i < |bb.attester_slashings| 
             decreases |bb.attester_slashings| - i
 
-            invariant 0 <= i <= |bb.attester_slashings|
+            invariant 0 <= i <= |bb.attester_slashings| 
 
             invariant |s'.validators| ==  |s.validators| 
 
             //invariant forall j :: 0 <= j < |bb.attester_slashings[..i]| ==> is_valid_indexed_attestation(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings[j].attestation_1)
             //invariant forall j :: 0 <= j < |bb.attester_slashings[..i]| ==> is_valid_indexed_attestation(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings[j].attestation_2)
-            invariant s' == updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings[..i])
+            invariant s' == updateAttesterSlashings(s1, bb.attester_slashings[..i])
 
             invariant s'.slot == s.slot
             invariant s'.latest_block_header == s.latest_block_header //updateProposerSlashings(s, bb.proposer_slashings).latest_block_header == 
         {
+            assert 1 <= |bb.attester_slashings|; 
+            //assert 0 <= i < |bb.attester_slashings| - 1;
+            seqInitLast<AttesterSlashing>(bb.attester_slashings, i);
             assert bb.attester_slashings[..i+1] == bb.attester_slashings[..i] + [bb.attester_slashings[i]];
             
-            valid_indexed_attestation_lemma(updateProposerSlashings(s, bb.proposer_slashings), s', bb.attester_slashings[i].attestation_1);
+            valid_indexed_attestation_lemma(s1, s', bb.attester_slashings[i].attestation_1);
             assert is_valid_indexed_attestation(s', bb.attester_slashings[i].attestation_1);
-            valid_indexed_attestation_lemma(updateProposerSlashings(s, bb.proposer_slashings), s', bb.attester_slashings[i].attestation_2);
+            valid_indexed_attestation_lemma(s1, s', bb.attester_slashings[i].attestation_2);
             assert is_valid_indexed_attestation(s', bb.attester_slashings[i].attestation_2);
             
             assert |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, bb.attester_slashings[i].attestation_2.attesting_indices)| > 0;
@@ -221,18 +351,57 @@ module ProcessOperations {
 
         }
         assert bb.attester_slashings[..i] == bb.attester_slashings;
-        assert s' == updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings);
+        ghost var s2 := updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings);
+        assert s' == s2;
+
+        // process attestations
+        i := 0;
+        assert isValidAttestations(s2, bb);
+        assert s' == updateAttestations(s2, bb.attestations[..i]);
+        assert |s'.validators| == |s'.balances|;
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+
+        while i < |bb.attestations| 
+            decreases |bb.attestations| - i
+
+            invariant 0 <= i <= |bb.attestations|
+            //invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
+            
+            invariant s' == updateAttestations(s2, bb.attestations[..i])
+            invariant |s'.validators| ==  |s.validators| 
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+        {
+            assert 1 <= |bb.attestations|; 
+            //assert 0 <= i < |bb.attestations| - 1;
+            seqInitLast<PendingAttestation>(bb.attestations, i);
+            assert bb.attestations[..i+1] == bb.attestations[..i] + [bb.attestations[i]];
+            s':= process_attestation(s', bb.attestations[i]); 
+            i := i+1;
+
+        }
+
+        assert bb.attestations[..i] == bb.attestations;
+        ghost var s3 := updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations);
+        assert s3 == s';
 
         
+        //  process deposits in the beacon block body.
+        i := 0;
         // check process deposit preconditions
         assert s'.eth1_deposit_index == s.eth1_deposit_index;
-        assert s'.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000;
-        assert total_balances(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings).balances) + total_deposits(bb.deposits) < 0x10000000000000000; 
+        // assume s'.eth1_deposit_index as int +  |bb.deposits| < 0x10000000000000000;
+        // assume total_balances(s3.balances) as nat + total_deposits(bb.deposits) as nat < 0x10000000000000000; 
 
-        //  process deposits in the beacon block body.
-        
-        i := 0;
-        assert s' == updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits[..i]);
+        assert isValidDeposits(s3, bb);
+        assert s' == updateDeposits(s3, bb.deposits[..i]);
+
+        assert |s'.validators| == |s'.balances|;
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+
+        assert s' == updateDeposits(s3, bb.deposits[..i]);
         assert total_balances(s'.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 ;
         
         while i < |bb.deposits| 
@@ -241,7 +410,7 @@ module ProcessOperations {
             invariant 0 <= i <= |bb.deposits|
             invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
             
-            invariant total_balances(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings).balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 
+            invariant total_balances(s3.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 
             //invariant s'.validators == updateDeposits(s, bb.deposits[..i]).validators
             //invariant s'.balances == updateDeposits(s, bb.deposits[..i]).balances
             
@@ -252,16 +421,19 @@ module ProcessOperations {
             //invariant s'.block_roots == s.block_roots
             //invariant s'.state_roots == s.state_roots
 
-            //invariant |s'.validators| == |s'.balances| 
+            invariant |s'.validators| == |s'.balances| 
             //invariant |s'.validators| <= |s.validators| + i
             //invariant |s.validators| + i <= VALIDATOR_REGISTRY_LIMIT as int
-            invariant s' == updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits[..i])
+            invariant s' == updateDeposits(s3, bb.deposits[..i])
             invariant s'.slot == s.slot
             invariant s'.latest_block_header == s.latest_block_header
             //invariant |bb.deposits[..i]| == i
 
             //invariant |s'.validators| <= |updateDeposits(s,bb.deposits[..i]).validators| <= |s'.validators| + i 
         {
+            assert 1 <= |bb.deposits|; 
+            //assert 0 <= i < |bb.deposits| - 1;
+            seqInitLast<Deposit>(bb.deposits, i);
             assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
             //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
             //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
@@ -277,27 +449,35 @@ module ProcessOperations {
             i := i+1;
 
         }
+        assert i == |bb.deposits|;
+        fullSeq<Deposit>(bb.deposits, i);
         assert bb.deposits[..i] == bb.deposits;
-        assert s' == updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits);
+        ghost var s4 := updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations), bb.deposits);
+        assert s4 == s';
 
         // process voluntary exits
         i := 0;
-        assert s' == updateVoluntaryExits(updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits), bb.voluntary_exits[..i]);
+        assert isValidVoluntaryExits(s4, bb);
+        assert s' == updateVoluntaryExits(s4, bb.voluntary_exits[..i]);
+
         assert s'.slot == s.slot;
         assert s'.latest_block_header == s.latest_block_header;
-
         assert |s'.validators| == |s'.balances|;
+        assert s'.eth1_deposit_index == s.eth1_deposit_index + |bb.deposits| as uint64;
         
 
         while i < |bb.voluntary_exits| 
             decreases |bb.voluntary_exits| - i
 
             invariant 0 <= i <= |bb.voluntary_exits|
-            invariant s' == updateVoluntaryExits(updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits), bb.voluntary_exits[..i])
+            invariant s' == updateVoluntaryExits(s4, bb.voluntary_exits[..i])
             invariant s'.slot == s.slot
             invariant s'.latest_block_header == s.latest_block_header
         {
             helperVolExitLemma4(bb.voluntary_exits[..i+1]);
+             assert 1 <= |bb.voluntary_exits|; 
+             //assert 0 <= i < |bb.voluntary_exits| - 1;
+            seqInitLast<VoluntaryExit>(bb.voluntary_exits, i);
             assert bb.voluntary_exits[..i+1] == bb.voluntary_exits[..i] + [bb.voluntary_exits[i]];
             //assert bb.voluntary_exits[i].validator_index as int < |s.validators| <= |s'.validators|;
             //assert !s'.validators[bb.voluntary_exits[i].validator_index].slashed;
@@ -311,9 +491,12 @@ module ProcessOperations {
             i := i + 1;
 
         }
+        assert i == |bb.voluntary_exits|;
+        fullSeq<VoluntaryExit>(bb.voluntary_exits, i);
         assert bb.voluntary_exits[..i] == bb.voluntary_exits;
-        assert s' == updateVoluntaryExits(updateDeposits(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.deposits), bb.voluntary_exits);
-        
+        ghost var s5 := updateVoluntaryExits(updateDeposits(updateAttestations(updateAttesterSlashings(updateProposerSlashings(s, bb.proposer_slashings), bb.attester_slashings), bb.attestations), bb.deposits), bb.voluntary_exits);
+        assert s5 == s';
+        assert s' == updateOperations(s,bb);
 
     }
 
@@ -377,7 +560,7 @@ module ProcessOperations {
         requires ps.header_1.proposer_index as int < |s.validators| 
         //requires is_slashable_validator(s.validators[ps.header_1.proposer_index], get_current_epoch(s));
         requires !s.validators[ps.header_1.proposer_index].slashed
-        requires s.validators[ps.header_1.proposer_index].activationEpoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawableEpoch
+        requires s.validators[ps.header_1.proposer_index].activation_epoch <= get_current_epoch(s) < s.validators[ps.header_1.proposer_index].withdrawable_epoch
 
         
         //requires s.validators[ps.header_1.proposer_index].exitEpoch == FAR_FUTURE_EPOCH
@@ -681,7 +864,7 @@ module ProcessOperations {
             //     flag := true;
             // }
             if (is_slashable_validator(origState.validators[ts[i]], get_current_epoch(origState))) {
-                assert (!origState.validators[ts[i]].slashed) && (origState.validators[ts[i]].activationEpoch <= get_current_epoch(origState) < origState.validators[ts[i]].withdrawableEpoch);
+                assert (!origState.validators[ts[i]].slashed) && (origState.validators[ts[i]].activation_epoch <= get_current_epoch(origState) < origState.validators[ts[i]].withdrawable_epoch);
                 slashValidatorPreservesActivateValidators(origState, ts[i], get_beacon_proposer_index(origState));
                 s' := slash_validator(origState, ts[i], get_beacon_proposer_index(origState));
                 flag := true;
@@ -897,11 +1080,11 @@ module ProcessOperations {
         requires voluntary_exit.validator_index as int < |s.validators|
         //requires is_active_validator(s.validators[voluntary_exit.validator_index], get_current_epoch(s))
         requires !s.validators[voluntary_exit.validator_index].slashed
-        requires s.validators[voluntary_exit.validator_index].activationEpoch <= get_current_epoch(s) < s.validators[voluntary_exit.validator_index].withdrawableEpoch
+        requires s.validators[voluntary_exit.validator_index].activation_epoch <= get_current_epoch(s) < s.validators[voluntary_exit.validator_index].withdrawable_epoch
 
         requires s.validators[voluntary_exit.validator_index].exitEpoch == FAR_FUTURE_EPOCH
         requires get_current_epoch(s) >= voluntary_exit.epoch
-        requires get_current_epoch(s) >= s.validators[voluntary_exit.validator_index].activationEpoch + SHARD_COMMITTEE_PERIOD 
+        requires get_current_epoch(s) >= s.validators[voluntary_exit.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
         
         ensures s' == updateVoluntaryExit(s, voluntary_exit)
     {
@@ -923,7 +1106,7 @@ module ProcessOperations {
 
         // # Verify the validator has been active long enough
         // assert get_current_epoch(state) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD; 
-        assert get_current_epoch(s) >= validator.activationEpoch + SHARD_COMMITTEE_PERIOD;
+        assert get_current_epoch(s) >= validator.activation_epoch + SHARD_COMMITTEE_PERIOD;
 
         // # Verify signature
         // Note: Not implemented as this stage
@@ -936,7 +1119,7 @@ module ProcessOperations {
     }
 
 
-       
+    
 
 
 

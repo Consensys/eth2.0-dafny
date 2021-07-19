@@ -109,13 +109,13 @@ module Constants {
   const  SHUFFLE_ROUND_COUNT : uint64 := 90;  
 
   const HYSTERESIS_QUOTIENT : uint64 := 4;
-  const HYSTERESIS_DOWNLOAD_MULTIPLIER : uint64 := 1;
+  const HYSTERESIS_DOWNWARD_MULTIPLIER : uint64 := 1;
   const HYSTERESIS_UPWARD_MULTIPLIER : uint64 := 5;
 
   // Preset -- Gwei values
   const MIN_DEPOSIT_AMOUNT : Gwei := (TWO_UP_0 * TEN_UP_9) as Gwei; // 2^0 * 10 ^ 9         
   const MAX_EFFECTIVE_BALANCE : Gwei := (TWO_UP_5 * TEN_UP_9) as Gwei; // 2 ^ 5 * 10 ^ 9      
-  const EFFECTIVE_BALANCE_INCREMENT : Gwei := (TWO_UP_0 * TEN_UP_9) as Gwei; //2 ^ 0 * 10 ^ 9
+  const EFFECTIVE_BALANCE_INCREMENT : Gwei := TEN_UP_9;//(TWO_UP_0 * TEN_UP_9) as Gwei; //2 ^ 0 * 10 ^ 9
 
   // Preset -- Time parameters            
   const  MIN_ATTESTATION_INCLUSION_DELAY : uint64 := TWO_UP_0 as uint64 ; // 2 ^ 0       

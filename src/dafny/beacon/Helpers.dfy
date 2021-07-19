@@ -98,6 +98,11 @@ module BeaconHelpers {
         (slot / SLOTS_PER_EPOCH) as Epoch
     }
 
+    predicate minimumActiveValidators(s: BeaconState)
+    {
+        |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+    }
+
     /**
      *  Slot number at start of an epoch.
      *  
@@ -142,7 +147,7 @@ module BeaconHelpers {
             to the previous epoch is within the range of the history 
             a block roots stored in the state.block_roots. */
         ensures state.slot - get_previous_epoch(state) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT
-
+        ensures get_current_epoch(state) > 0 ==> get_previous_epoch(state) * SLOTS_PER_EPOCH < state.slot
     {
         var e := get_current_epoch(state);
         //  max(0, e - 1)
@@ -205,8 +210,42 @@ module BeaconHelpers {
      */
     predicate method is_slashable_validator(v: Validator, epoch: Epoch)
     {
-        (!v.slashed) && (v.activationEpoch <= epoch < v.withdrawableEpoch)
+        (!v.slashed) && (v.activation_epoch <= epoch < v.withdrawable_epoch)
     }
+
+    /**
+     *  Check if ``validator`` is eligible to be placed into the activation queue.
+     */
+    predicate method is_eligible_for_activation_queue(v: Validator)
+    {
+        v.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+        && v.effective_balance == MAX_EFFECTIVE_BALANCE
+    }
+
+    /**
+     *   Check if ``validator`` is eligible for activation.
+     */
+    predicate method is_eligible_for_activation(s: BeaconState, v: Validator)
+    {
+        // Placement in queue is finalized
+        v.activation_eligibility_epoch <= s.finalised_checkpoint.epoch
+        // Has not yet been activated
+        && v.activation_epoch == FAR_FUTURE_EPOCH
+    }
+
+    function method get_activation_queue(s: BeaconState, i: nat): seq<ValidatorIndex>
+        decreases |s.validators| - i
+    {
+        if i < |s.validators| then
+            if is_eligible_for_activation(s, s.validators[i]) then
+                [i as ValidatorIndex] + get_activation_queue(s, i+1)
+            else 
+                get_activation_queue(s, i+1)
+        else
+            []
+    }
+
+    
 
     /** max(a,b) returns a if a > b, else b */
     function method max(a: nat, b: nat): nat
@@ -233,7 +272,7 @@ module BeaconHelpers {
     // Check if ``validator`` is active.
     predicate method is_active_validator(validator: Validator, epoch: Epoch)
     {
-        validator.activationEpoch <= epoch < validator.exitEpoch
+        validator.activation_epoch <= epoch < validator.exitEpoch
     }
 
     // Return the sequence of active validator indices at ``epoch``.
@@ -243,6 +282,12 @@ module BeaconHelpers {
     function method get_active_validator_indices(sv: ListOfValidators, epoch: Epoch) : seq<ValidatorIndex>
         ensures |get_active_validator_indices(sv,epoch)| <= |sv|
         ensures forall i :: 0 <= i < |get_active_validator_indices(sv, epoch)| ==> get_active_validator_indices(sv, epoch)[i] as nat < |sv|
+        ensures forall i :: 0 <= i < |get_active_validator_indices(sv, epoch)| ==> 
+                sv[get_active_validator_indices(sv, epoch)[i] ].activation_epoch <= epoch < sv[get_active_validator_indices(sv, epoch)[i]].exitEpoch
+        ensures (exists i :: 0 <= i < |sv| && sv[i].activation_epoch <= epoch < sv[i].exitEpoch)
+                ==> |get_active_validator_indices(sv, epoch)| > 0
+                
+
     {
         //[ValidatorIndex(i) for i, v in enumerate(state.validators) if is_active_validator(v, epoch)]
         if |sv| == 0 then []
