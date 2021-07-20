@@ -12,6 +12,9 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:8  /verifySeparately 
+
+
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
@@ -22,7 +25,7 @@ include "../gasper/GasperJustification.dfy"
 include "../../utils/SetHelpers.dfy"
 
 /**
- *  Provide a functional specification of Epoch processing.
+ *  Provide a functional specification for Epoch processing.
  */
 module EpochProcessingSpec {
     
@@ -121,6 +124,15 @@ module EpochProcessingSpec {
         /** The updated justified checkpoints values are indeed justified. */
         ensures isJustified(s'.previous_justified_checkpoint, store) 
         ensures isJustified(s'.current_justified_checkpoint, store) 
+
+        ensures s'.slot == s.slot 
+        ensures s'.current_epoch_attestations == s.current_epoch_attestations
+        ensures s'.previous_epoch_attestations == s.previous_epoch_attestations
+
+        ensures s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_current_epoch(s')), store) 
+        // ensures s'.current_justified_checkpoint == s.current_justified_checkpoint
+        // ensures s'.blocks == s.blocks 
+
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
@@ -212,13 +224,6 @@ module EpochProcessingSpec {
             a.data.source == s.previous_justified_checkpoint
             && a.data.target == cp);
 
-        // calc == {
-        //     collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp);
-        //     { sameSrcSameTgtEquiv(
-        //         matching_target_attestations, s.previous_justified_checkpoint, cp);}
-        //     collectValidatorsIndices(matching_target_attestations);
-        // }
-
         //  as attestations have same source and target
         calc == {
             |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
@@ -247,32 +252,7 @@ module EpochProcessingSpec {
             <= collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)
         );
 
-        // calc >= {
-        //     |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
-        //     { 
-        //         assume(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
-
-        //         collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
-        // s.previous_justified_checkpoint, cp);}
-        //     |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
-        // }
-
-        // assume(
-        //      |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >=
-        //         |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|
-        // );
-//             >=  get_attesting_balance(s, matching_target_attestations) as nat );
-//  collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
-//         s.previous_justified_checkpoint, cp);
-
-        // calc >= {
-        //     |collectValidatorsAttestatingForLink(
-        //         store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
-        //     { assert(); }
-        //     |collectValidatorsAttestatingForLink(
-        //         matching_target_attestations, s.previous_justified_checkpoint, cp)|
-        // }
-        
+        //  Monotonicity
         cardIsMonotonic(collectValidatorsAttestatingForLink(
                 matching_target_attestations, s.previous_justified_checkpoint, cp),
                 collectValidatorsAttestatingForLink(
@@ -286,11 +266,7 @@ module EpochProcessingSpec {
             |collectValidatorsAttestatingForLink(
                 store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >= 
                 (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 );
-        // var cp' : CheckPoint :| cp' == cp  
-        //     && s.previous_justified_checkpoint.epoch < cp'.epoch 
-        //     && s.previous_justified_checkpoint.root in chainRoots(cp.root, store)
-        //     && isJustified(s.previous_justified_checkpoint, store)
-        //     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp')| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 ;
+        //  The conditions for justification of cp are met 
         assert(isJustified(cp, store));
     }
 
@@ -366,8 +342,7 @@ module EpochProcessingSpec {
         /** First justification bit must not be already set. */
         requires s.justification_bits[0] == false 
 
-        /** Only bit 0 can be modified, and it should be false initially.
-         */
+        /** Only bit 0 can be modified, and it should be false initially. */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             s'.justification_bits[1..] == 
                 (s.justification_bits)[1..|s.justification_bits|]
@@ -449,13 +424,6 @@ module EpochProcessingSpec {
             a.data.source == s.current_justified_checkpoint
             && a.data.target == cp);
 
-        // calc == {
-        //     collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp);
-        //     { sameSrcSameTgtEquiv(
-        //         matching_target_attestations, s.previous_justified_checkpoint, cp);}
-        //     collectValidatorsIndices(matching_target_attestations);
-        // }
-
         //  as attestations have same source and target
         calc == {
             |collectValidatorsAttestatingForLink(matching_target_attestations, s.current_justified_checkpoint, cp)|;
@@ -484,32 +452,6 @@ module EpochProcessingSpec {
             <= collectValidatorsAttestatingForLink(store.rcvdAttestations, s.current_justified_checkpoint, cp)
         );
 
-        // calc >= {
-        //     |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
-        //     { 
-        //         assume(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
-
-        //         collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
-        // s.previous_justified_checkpoint, cp);}
-        //     |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
-        // }
-
-        // assume(
-        //      |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >=
-        //         |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|
-        // );
-//             >=  get_attesting_balance(s, matching_target_attestations) as nat );
-//  collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
-//         s.previous_justified_checkpoint, cp);
-
-        // calc >= {
-        //     |collectValidatorsAttestatingForLink(
-        //         store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
-        //     { assert(); }
-        //     |collectValidatorsAttestatingForLink(
-        //         matching_target_attestations, s.previous_justified_checkpoint, cp)|
-        // }
-        
         cardIsMonotonic(collectValidatorsAttestatingForLink(
                 matching_target_attestations, s.current_justified_checkpoint, cp),
                 collectValidatorsAttestatingForLink(
@@ -523,11 +465,7 @@ module EpochProcessingSpec {
             |collectValidatorsAttestatingForLink(
                 store.rcvdAttestations, s.current_justified_checkpoint, cp)| >= 
                 (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 );
-        // var cp' : CheckPoint :| cp' == cp  
-        //     && s.previous_justified_checkpoint.epoch < cp'.epoch 
-        //     && s.previous_justified_checkpoint.root in chainRoots(cp.root, store)
-        //     && isJustified(s.previous_justified_checkpoint, store)
-        //     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp')| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 ;
+        //
         assert(isJustified(cp, store));
     }
 
@@ -552,7 +490,7 @@ module EpochProcessingSpec {
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
 
         /** Slot of s is larger than slot at previous epoch. */
-        requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
 
         /** Current justified checkpoint is justified and root in store. */ 
         requires s.current_justified_checkpoint.root in store.blocks.Keys 
@@ -581,21 +519,46 @@ module EpochProcessingSpec {
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             s'.justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
-        // ensures isJustified(s'.previous_justified_checkpoint, store)
-        // ensures isJustified(s'.current_justified_checkpoint, store)
+        
+        ensures s'.previous_justified_checkpoint.root in store.blocks.Keys
+        ensures s'.current_justified_checkpoint.root in store.blocks.Keys
+        ensures isJustified(s'.previous_justified_checkpoint, store)
+        ensures isJustified(s'.current_justified_checkpoint, store)
+        ensures 
+            && s'.genesis_time == s.genesis_time
+            && s'.slot == s.slot
+            && s'.latest_block_header == s.latest_block_header
+            && s'.block_roots == s.block_roots
+            && s'.state_roots == s.state_roots
+            && s'.eth1_data == s.eth1_data
+            && s'.eth1_data_votes == s.eth1_data_votes
+            && s'.eth1_deposit_index == s.eth1_deposit_index
+            && s'.validators == s.validators
+            && s'.previous_epoch_attestations == s.previous_epoch_attestations
+            && s.current_epoch_attestations == s.current_epoch_attestations
+
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
             var k := updateJustificationPrevEpoch(s, store);
-            assume((k.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0);
-            assume(get_block_root(k, get_current_epoch(k)) in store.blocks.Keys);
-            assume k.current_justified_checkpoint.root in store.blocks.Keys  ;
-            assume isJustified(k.current_justified_checkpoint, store) ;
-            assume k.current_justified_checkpoint.epoch < get_current_epoch(k) ;
+            assert(k.slot == s.slot);
+            assert((k.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0);
+            // assume(get_block_root(k, get_current_epoch(k)) in store.blocks.Keys);
+            assert k.current_justified_checkpoint.root in store.blocks.Keys  ;
+            // assert isJustified(k.current_justified_checkpoint, store) ;
+            assert isJustified(k.previous_justified_checkpoint, store) ;
+            // assert k.current_justified_checkpoint.epoch < get_current_epoch(k) ;
+            // assume(k.current_justified_checkpoint == s.current_justified_checkpoint);
+            // assume(k.current_justified_checkpoint == CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s))));
             assume k.current_justified_checkpoint.root in chainRoots(get_block_root(k, get_current_epoch(k)), store) ;
-            assume validCurrentAttestations(k, store);
-            assume k.justification_bits[0] == false ;
+            assert(k.current_epoch_attestations == s.current_epoch_attestations);
+            // assume(get_current_epoch(k) == get_current_epoch(s));
+            // assert()
+            // assume(get_block_root(s, get_current_epoch(s)) == get_block_root(k, get_current_epoch(k)));
+            assert validCurrentAttestations(k, store);
+            assert k.justification_bits[0] == false ;
             var k' := updateJustificationCurrentEpoch(k, store);
-            assume(isJustified(k'.current_justified_checkpoint, store));
+            assert(k.previous_justified_checkpoint == k'.previous_justified_checkpoint);
+            assert(isJustified(k'.current_justified_checkpoint, store));
             k'
         else 
             s
