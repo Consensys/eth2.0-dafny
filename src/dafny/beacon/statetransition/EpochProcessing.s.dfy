@@ -18,6 +18,8 @@ include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
+include "../gasper/GasperJustification.dfy"
+include "../../utils/SetHelpers.dfy"
 
 /**
  *  Provide a functional specification of Epoch processing.
@@ -31,6 +33,8 @@ module EpochProcessingSpec {
     import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened ForkChoiceTypes
+    import opened GasperJustification
+    import opened SetHelpers
 
     //  Specifications of justification and finalisation of a state and forward to future slot.
 
@@ -73,53 +77,221 @@ module EpochProcessingSpec {
      *  left to its previous value.
      *  
      */
-    function updateJustificationPrevEpoch(s: BeaconState, store: Store): BeaconState 
+    function updateJustificationPrevEpoch(s: BeaconState, store: Store): (s': BeaconState) 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** Slot of s is larger than slot at previous epoch. */
+        requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+
+        /** The block root at previous epoch is in the store. */
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        /**  The previous checkpoint root is an ancestor of the root at previous epoch. */
+        requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        /** The attestations at previous epoch are valid. */
+        requires validPrevAttestations(s, store)
+
         /** State's slot is just before an Epoch boundary. */
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
-        // requires isJustified(s.previous_justfified_checkpoint, s.store)
-        // requires isJustified(s.current_justfified_checkpoint, s.store)
+        /** The justified checkpoints in s are indeed justified ands the root is in store. */
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        requires isJustified(s.previous_justified_checkpoint, store)
+        requires isJustified(s.current_justified_checkpoint, store)
 
         /** Justification bit are right-shifted and last two are not modified.
             Bit0 (new checkpoint) is set to false, and Bit1 (previous checkpoint) 
             may be updated.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustificationPrevEpoch(s, store).justification_bits[2..] == 
+            s'.justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
-            && updateJustificationPrevEpoch(s, store).justification_bits[0] == false
-        /** Update of bit1. */
+            && s'.justification_bits[0] == false
 
-        // ensures isJustified(s'.previous_justified_checkpoint, s'.store) 
+        /** The updated justified checkpoints roots are in the store.   */
+        ensures s'.previous_justified_checkpoint.root in store.blocks.Keys 
+        ensures s'.current_justified_checkpoint.root in store.blocks.Keys  
 
-        // ensures s'.current_justified_checkpoint
-        // ensures get_current_epoch(s) == get_current_epoch(updateJustificationPrevEpoch(s))
+        /** The updated justified checkpoints values are indeed justified. */
+        ensures isJustified(s'.previous_justified_checkpoint, store) 
+        ensures isJustified(s'.current_justified_checkpoint, store) 
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
         else 
+            assert get_previous_epoch(s) >= 1 ; 
             //  Right shift justification_bits and prepend false
             var newJustBits:= [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1];
-
             //  Previous epoch checkpoint status update
-            //  get attestations from previous justified to previous epoch CP
+            //  get attestations from previous justified to previous epoch checkpoint
             var matching_target_attestations := 
-                get_matching_target_attestations(s, get_previous_epoch(s));
+                get_matching_target_attestations(s, get_previous_epoch(s), store);
             //  Supermajority status
             var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
-                        >= get_total_active_balance(s) as nat * 2;
+                        > get_total_active_balance(s) as nat * 2;
             s.(
                 current_justified_checkpoint := 
                     if b1 then 
-                        //  supermajority link to previous_epoch CP: use as current_justified
-                        //  in next state.
-                        CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)))
+                        //  Checkpoint at previous epoch
+                        var cp := CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)));
+                        //  Use lemma to prove cp is justified.
+                        prevEpochJustificationProof(s, store);
+                        assert(isJustified(cp, store));
+                        cp 
                     else 
                         s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
                 justification_bits := 
                     if b1 then newJustBits[1 := true] else newJustBits
             )
+    }
+
+    /**
+     *  Collecting attesting validators in momnotomnic wrt attestations. 
+     */
+    lemma collectAttestingValidatorsMonotonic(xa: seq<PendingAttestation>, xb : seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
+        /** xa included (as list) in xb. */
+        requires forall a :: a in xa ==> a in xb 
+        ensures collectValidatorsAttestatingForLink(xa, src, tgt) <= 
+            collectValidatorsAttestatingForLink(xb, src, tgt)
+        ensures collectValidatorsIndicesAttestatingForTarget(xa, tgt) <= 
+            collectValidatorsIndicesAttestatingForTarget(xb, tgt)
+    {   //  Thanks Dafny
+    }
+
+    lemma prevEpochJustificationProof(s: BeaconState, store: Store)
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** The previous checkpoint must be valid. */
+        requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        requires get_previous_epoch(s) >= 1
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        requires isJustified(s.previous_justified_checkpoint, store)
+
+        /** The previous attestations must be valid. */
+        requires validPrevAttestations(s, store)
+
+        /** There must enough votes fopr the target. */
+        requires 
+            var matching_target_attestations := 
+                get_matching_target_attestations(s, get_previous_epoch(s), store);
+            get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        > get_total_active_balance(s) as nat * 2;
+
+        /** In that case the EBB at previous epoch is justified. */
+        ensures
+            var cp := CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)));
+            isJustified(cp, store);
+    {
+        var cp := CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)));
+        //  Sanity check that a fixed set of validators is used
+        assert(get_total_active_balance(s) as nat == MAX_VALIDATORS_PER_COMMITTEE);
+         
+        //  To prove that cp is justified from the previous justified
+        //  checkpoint we must establish the following facts:
+        assert(s.previous_justified_checkpoint.epoch < get_previous_epoch(s));
+        assert(s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store));
+        assert(isJustified(s.previous_justified_checkpoint, store));
+        var matching_target_attestations := 
+                get_matching_target_attestations(s, get_previous_epoch(s), store);
+
+        assert(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
+        assert(forall a :: a in matching_target_attestations ==> 
+            a.data.source == s.previous_justified_checkpoint
+            && a.data.target == cp);
+
+        // calc == {
+        //     collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp);
+        //     { sameSrcSameTgtEquiv(
+        //         matching_target_attestations, s.previous_justified_checkpoint, cp);}
+        //     collectValidatorsIndices(matching_target_attestations);
+        // }
+
+        //  as attestations have same source and target
+        calc == {
+            |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
+            calc == {
+                collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp);
+                { sameSrcSameTgtEquiv(
+                    matching_target_attestations, s.previous_justified_checkpoint, cp);}
+                collectValidatorsIndices(matching_target_attestations);
+            }
+            |collectValidatorsIndices(matching_target_attestations)|;
+            get_attesting_balance(s, matching_target_attestations) as nat;
+        }
+    
+        // Arithmetic lemma
+        assert(
+                get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        > get_total_active_balance(s) as nat * 2 ==>
+                get_attesting_balance(s, matching_target_attestations) as nat 
+                        >= (get_total_active_balance(s) as nat * 2) / 3 + 1
+        );
+
+        collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+        s.previous_justified_checkpoint, cp);
+        assert(
+           collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)
+            <= collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)
+        );
+
+        // calc >= {
+        //     |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
+        //     { 
+        //         assume(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
+
+        //         collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+        // s.previous_justified_checkpoint, cp);}
+        //     |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
+        // }
+
+        // assume(
+        //      |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >=
+        //         |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|
+        // );
+//             >=  get_attesting_balance(s, matching_target_attestations) as nat );
+//  collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+//         s.previous_justified_checkpoint, cp);
+
+        // calc >= {
+        //     |collectValidatorsAttestatingForLink(
+        //         store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
+        //     { assert(); }
+        //     |collectValidatorsAttestatingForLink(
+        //         matching_target_attestations, s.previous_justified_checkpoint, cp)|
+        // }
+        
+        cardIsMonotonic(collectValidatorsAttestatingForLink(
+                matching_target_attestations, s.previous_justified_checkpoint, cp),
+                collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.previous_justified_checkpoint, cp));
+        assert( |collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.previous_justified_checkpoint, cp)|
+                >= |collectValidatorsAttestatingForLink(
+                matching_target_attestations, s.previous_justified_checkpoint, cp)|);
+
+        assert(
+            |collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >= 
+                (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 );
+        // var cp' : CheckPoint :| cp' == cp  
+        //     && s.previous_justified_checkpoint.epoch < cp'.epoch 
+        //     && s.previous_justified_checkpoint.root in chainRoots(cp.root, store)
+        //     && isJustified(s.previous_justified_checkpoint, store)
+        //     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp')| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 ;
+        assert(isJustified(cp, store));
     }
 
     /**
@@ -172,17 +344,37 @@ module EpochProcessingSpec {
      *          s.previous_justified_checkpoint.
      *  
      */
-    function updateJustificationCurrentEpoch(s: BeaconState, store: Store) : BeaconState 
+    function updateJustificationCurrentEpoch(s: BeaconState, store: Store): (s': BeaconState) 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
         /** State's slot is just before an Epoch boundary. */
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
+        /** Block root at current epoc is in store. */
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+
+        /** Current justified checkpoint is justified and root in store. */
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        requires isJustified(s.current_justified_checkpoint, store)
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_current_epoch(s)), store)
+        /** Attestations to current epoch are valid. */
+        requires validCurrentAttestations(s, store)
+        /** First justification bit must not be already set. */
         requires s.justification_bits[0] == false 
 
         /** Only bit 0 can be modified, and it should be false initially.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustificationCurrentEpoch(s, store).justification_bits[1..] == 
+            s'.justification_bits[1..] == 
                 (s.justification_bits)[1..|s.justification_bits|]
+
+        /** New current justified checkpoint is indeed justified. */
+        ensures s'.current_justified_checkpoint.root in store.blocks.Keys 
+        ensures isJustified(s'.current_justified_checkpoint, store)
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
@@ -190,14 +382,17 @@ module EpochProcessingSpec {
             //  Current epoch checkpoint status update
             //  get attestations from current justified to LEBB
             var matching_target_attestations := 
-                get_matching_target_attestations(s, get_current_epoch(s));
+                get_matching_target_attestations(s, get_current_epoch(s), store);
             //  Supermajority status
             var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
-                        >= get_total_active_balance(s) as nat * 2;
+                        > get_total_active_balance(s) as nat * 2;
             s.(
                 current_justified_checkpoint := 
                     if b1 then 
-                        CheckPoint(get_current_epoch(s),get_block_root(s, get_current_epoch(s)))
+                        var cp := CheckPoint(get_current_epoch(s),get_block_root(s, get_current_epoch(s)));
+                        currentEpochJustificationProof(s, store);
+                        assume(isJustified(cp, store));
+                        cp
                     else 
                         s.current_justified_checkpoint,
                 justification_bits := 
@@ -205,6 +400,137 @@ module EpochProcessingSpec {
                     else s.justification_bits
             )
     }
+
+    lemma currentEpochJustificationProof(s: BeaconState, store: Store)
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        /** The previous checkpoint must be valid. */
+        requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        requires 1 <= get_previous_epoch(s) 
+        // requires <= get_current_epoch(state)
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_current_epoch(s)), store)
+        requires isJustified(s.current_justified_checkpoint, store)
+
+        /** The previous attestations must be valid. */
+        requires validCurrentAttestations(s, store)
+
+        /** There must enough votes fopr the target. */
+        requires 
+            var matching_target_attestations := 
+                get_matching_target_attestations(s, get_current_epoch(s), store);
+            get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        > get_total_active_balance(s) as nat * 2;
+
+        /** In that case the EBB at current epoch is justified. */
+        ensures
+            var cp := CheckPoint(get_current_epoch(s), get_block_root(s, get_current_epoch(s)));
+            isJustified(cp, store);
+    {
+        var cp := CheckPoint(get_current_epoch(s), get_block_root(s, get_current_epoch(s)));
+        //  Sanity check that a fixed set of validators is used
+        assert(get_total_active_balance(s) as nat == MAX_VALIDATORS_PER_COMMITTEE);
+         
+        //  To prove that cp is justified from the current justified
+        //  checkpoint we must establish the following facts:
+        assert(s.current_justified_checkpoint.epoch < get_current_epoch(s));
+        assert(s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_current_epoch(s)), store));
+        assert(isJustified(s.current_justified_checkpoint, store));
+        var matching_target_attestations := 
+                get_matching_target_attestations(s, get_current_epoch(s), store);
+
+        assert(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
+        assert(forall a :: a in matching_target_attestations ==> 
+            a.data.source == s.current_justified_checkpoint
+            && a.data.target == cp);
+
+        // calc == {
+        //     collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp);
+        //     { sameSrcSameTgtEquiv(
+        //         matching_target_attestations, s.previous_justified_checkpoint, cp);}
+        //     collectValidatorsIndices(matching_target_attestations);
+        // }
+
+        //  as attestations have same source and target
+        calc == {
+            |collectValidatorsAttestatingForLink(matching_target_attestations, s.current_justified_checkpoint, cp)|;
+            calc == {
+                collectValidatorsAttestatingForLink(matching_target_attestations, s.current_justified_checkpoint, cp);
+                { sameSrcSameTgtEquiv(
+                    matching_target_attestations, s.current_justified_checkpoint, cp);}
+                collectValidatorsIndices(matching_target_attestations);
+            }
+            |collectValidatorsIndices(matching_target_attestations)|;
+            get_attesting_balance(s, matching_target_attestations) as nat;
+        }
+    
+        // Arithmetic lemma
+        assert(
+                get_attesting_balance(s, matching_target_attestations) as nat * 3 
+                        > get_total_active_balance(s) as nat * 2 ==>
+                get_attesting_balance(s, matching_target_attestations) as nat 
+                        >= (get_total_active_balance(s) as nat * 2) / 3 + 1
+        );
+
+        collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+        s.current_justified_checkpoint, cp);
+        assert(
+           collectValidatorsAttestatingForLink(matching_target_attestations, s.current_justified_checkpoint, cp)
+            <= collectValidatorsAttestatingForLink(store.rcvdAttestations, s.current_justified_checkpoint, cp)
+        );
+
+        // calc >= {
+        //     |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
+        //     { 
+        //         assume(forall a :: a in matching_target_attestations ==> a in store.rcvdAttestations);
+
+        //         collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+        // s.previous_justified_checkpoint, cp);}
+        //     |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|;
+        // }
+
+        // assume(
+        //      |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp)| >=
+        //         |collectValidatorsAttestatingForLink(matching_target_attestations, s.previous_justified_checkpoint, cp)|
+        // );
+//             >=  get_attesting_balance(s, matching_target_attestations) as nat );
+//  collectAttestingValidatorsMonotonic(matching_target_attestations, store.rcvdAttestations,
+//         s.previous_justified_checkpoint, cp);
+
+        // calc >= {
+        //     |collectValidatorsAttestatingForLink(
+        //         store.rcvdAttestations, s.previous_justified_checkpoint, cp)|;
+        //     { assert(); }
+        //     |collectValidatorsAttestatingForLink(
+        //         matching_target_attestations, s.previous_justified_checkpoint, cp)|
+        // }
+        
+        cardIsMonotonic(collectValidatorsAttestatingForLink(
+                matching_target_attestations, s.current_justified_checkpoint, cp),
+                collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.current_justified_checkpoint, cp));
+        assert( |collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.current_justified_checkpoint, cp)|
+                >= |collectValidatorsAttestatingForLink(
+                matching_target_attestations, s.current_justified_checkpoint, cp)|);
+
+        assert(
+            |collectValidatorsAttestatingForLink(
+                store.rcvdAttestations, s.current_justified_checkpoint, cp)| >= 
+                (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 );
+        // var cp' : CheckPoint :| cp' == cp  
+        //     && s.previous_justified_checkpoint.epoch < cp'.epoch 
+        //     && s.previous_justified_checkpoint.root in chainRoots(cp.root, store)
+        //     && isJustified(s.previous_justified_checkpoint, store)
+        //     && |collectValidatorsAttestatingForLink(store.rcvdAttestations, s.previous_justified_checkpoint, cp')| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1 ;
+        assert(isJustified(cp, store));
+    }
+
 
     /**
      *  Update justification is the result of the composition of 
@@ -214,17 +540,63 @@ module EpochProcessingSpec {
      *  @returns    The state s with the checkpoints statuses updated and justification
      *              bits set accordingly. 
      */
-    function updateJustification(s: BeaconState, store: Store) : BeaconState
+    function updateJustification(s: BeaconState, store: Store): (s': BeaconState)
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        /** Block root at current epoc is in store. */
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+
+        /** Slot of s is larger than slot at previous epoch. */
+        requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+
+        /** Current justified checkpoint is justified and root in store. */ 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        requires isJustified(s.current_justified_checkpoint, store)
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_current_epoch(s)), store)
+        /** Attestations to current epoch are valid. */
+        requires validCurrentAttestations(s, store)
+
+        /** The block root at previous epoch is in the store. */
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        /** The attestations at previous epoch are valid. */
+        requires validPrevAttestations(s, store)
+
+        /** The justified checkpoints in s are indeed justified ands the root is in store. */
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        requires isJustified(s.previous_justified_checkpoint, store)
+        requires isJustified(s.current_justified_checkpoint, store)
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
-            updateJustification(s, store).justification_bits[2..] == 
+            s'.justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
+        // ensures isJustified(s'.previous_justified_checkpoint, store)
+        // ensures isJustified(s'.current_justified_checkpoint, store)
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
             var k := updateJustificationPrevEpoch(s, store);
-            updateJustificationCurrentEpoch(k, store)
+            assume((k.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0);
+            assume(get_block_root(k, get_current_epoch(k)) in store.blocks.Keys);
+            assume k.current_justified_checkpoint.root in store.blocks.Keys  ;
+            assume isJustified(k.current_justified_checkpoint, store) ;
+            assume k.current_justified_checkpoint.epoch < get_current_epoch(k) ;
+            assume k.current_justified_checkpoint.root in chainRoots(get_block_root(k, get_current_epoch(k)), store) ;
+            assume validCurrentAttestations(k, store);
+            assume k.justification_bits[0] == false ;
+            var k' := updateJustificationCurrentEpoch(k, store);
+            assume(isJustified(k'.current_justified_checkpoint, store));
+            k'
         else 
             s
     }
