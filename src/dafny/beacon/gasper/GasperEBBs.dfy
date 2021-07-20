@@ -16,7 +16,6 @@ include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/NativeTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
-include "../attestations/AttestationsHelpers.dfy"
 include "../BeaconChainTypes.dfy"
 include "../Helpers.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
@@ -32,7 +31,6 @@ module GasperEBBs {
     import opened BeaconChainTypes
     import opened BeaconHelpers
     import opened AttestationsTypes
-    import opened AttestationsHelpers
     import opened ForkChoiceTypes
    
     //   EBBs
