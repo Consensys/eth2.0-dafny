@@ -170,6 +170,9 @@ module ForkChoiceTypes {
         requires isSlotDecreasing(store)
 
         ensures |chainRoots(br, store)| >= 1  
+
+        ensures br in chainRoots(br, store)
+
         /** Result is a slot-decreasing chain of linked roots the last one is slot 0..  */
         ensures isChain(chainRoots(br, store), store)
 
