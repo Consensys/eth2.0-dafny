@@ -140,9 +140,9 @@ module BeaconHelpers {
      *  i.e state.slot - epoch * SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT.
      */
     function method get_block_root(state: BeaconState, epoch: Epoch) : Root  
-        requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-        requires epoch *  SLOTS_PER_EPOCH   < state.slot  
-        requires state.slot  - epoch  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
+        requires epoch as nat * SLOTS_PER_EPOCH as nat < 0x10000000000000000 
+        requires epoch * SLOTS_PER_EPOCH < state.slot  
+        requires state.slot - epoch * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
     { 
         var slot_of_epoch := compute_start_slot_at_epoch(epoch);  
         assert(slot_of_epoch == epoch * SLOTS_PER_EPOCH);
