@@ -17,13 +17,24 @@
  */
 module MathHelpers {
 
-    /** min(a,b) returns a if a < b, else b */
+    /** 
+     *  Get the minimum of 2 natural numbers. 
+     *
+     *  @param  a   A natural number. 
+     *  @param  b   A natural number. 
+     *  @return     a if a < b, else b.
+     */
     function method min(a: nat, b: nat): nat
     {
         if a < b then a else b
     }
 
-    /** Define 2^n. */
+    /** 
+     *  Define 2^n. 
+     *
+     *  @param  n   A natural number. 
+     *  @return     2^n.
+     */
     function power2(n : nat): nat 
         ensures power2(n) >= 1
         ensures n >= 1 ==> power2(n) >= 2 
@@ -33,7 +44,8 @@ module MathHelpers {
         if n == 0 then 1 else 2 * power2(n - 1)
     }
 
-    /** Get the next power of two.
+    /** 
+     *  Get the next power of two.
      *
      *  @param  n   A positive integer. 
      *  @return     The smallest power of 2 that is larger or equal to n.
@@ -52,7 +64,10 @@ module MathHelpers {
     }
     
     /** 
-     * get_next_power_of_two returns a power of 2. 
+     *  Prove get_next_power_of_two(n) returns a power of 2.
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that get_next_power_of_two(n) == power2(k).
      */
     lemma {:induction n} getNextPow2isPower2(n: nat)
         ensures exists k : nat {:induction k}  ::  get_next_power_of_two(n) == power2(k) 
@@ -74,10 +89,11 @@ module MathHelpers {
         }
     }
 
-    /** Get the previous power of two.
+    /** 
+     *  Get the previous power of two.
      *
      *  @param  n   A positive integer. 
-     *  @return     The largest power of 2 that is smaller than n.
+     *  @return     The largest power of 2 that is smaller or equal to n.
      */
     function method get_prev_power_of_two(n : nat) : nat 
         requires n > 0
@@ -90,7 +106,10 @@ module MathHelpers {
     }
 
     /** 
-     * get_prev_power_of_two returns a power of 2. 
+     *  Prove get_prev_power_of_two(n) returns a power of 2.
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that get_prev_power_of_two(n) == power2(k).
      */
     lemma {:induction n} getPrevPow2isPower2(n: nat)
         requires n > 0
@@ -114,6 +133,9 @@ module MathHelpers {
      
     /** 
      *  A lower bound for power2. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that power2(n + 1) >= n.
      */
     lemma {:induction n} lowerBoundPower2(n : nat) 
         ensures power2(n + 1) >= n 
@@ -138,6 +160,10 @@ module MathHelpers {
     /**
      *  Product rule for exponents applied to power of 2.
      *  2^{n + k} = 2^n x 2^k
+     *
+     *  @param  n   A positive integer. 
+     *  @param  k   A positive integer.
+     *  @return     A proof that power2( n + k ) == power2(n) * power2(k).
      */
     lemma {:induction n, k} productRulePower2(n: nat, k : nat)
         ensures power2( n + k ) == power2(n) * power2(k) 
@@ -159,6 +185,12 @@ module MathHelpers {
         }
     }
 
+    /**
+     *  Lower bound on the power of an even number.
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that for n >= 1 that power2( 2 * n ) >= 2 * power2(n).
+     */
     lemma {:induction n} lowerBoundPowerOfEvenNumber(n: nat) 
         requires n >= 1
         ensures power2( 2 * n ) >= 2 * power2(n)
@@ -178,6 +210,9 @@ module MathHelpers {
 
     /** 
      *  Test if n is a power of 2. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     True if n is a power of 2 else false.
      */
     predicate isPowerOf2(n: nat)
     {
@@ -188,29 +223,35 @@ module MathHelpers {
     }
 
     /**     
-     *  get_next_power_of_two is idempotent. 
+     *  The get_next_power_of_two is idempotent. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that get_next_power_of_two is idempotent.
      */
     lemma {:induction n} getNextPow2isIdempotent(n: nat)
         ensures get_next_power_of_two(get_next_power_of_two(n)) == get_next_power_of_two(n)
-    {
-        //Thanks Dafny
+    {   //Thanks Dafny
     }
 
     /**     
      *  Show get_next_power_of_two(n) is at least n. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that get_next_power_of_two(n) is at least n.
      */
-     lemma {:induction n} getNextPow2LowerBound(n: nat)
+    lemma {:induction n} getNextPow2LowerBound(n: nat)
         ensures n <= get_next_power_of_two(n)
-    {
-        // Thanks Dafny
+    {   // Thanks Dafny
     }
 
     /**     
      *  Show get_next_power_of_two(n) is gives a power of 2. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that get_next_power_of_two(n) is gives a power of 2.
      */
-     lemma {:induction n} nextPow2IsPow2(n: nat)
+    lemma {:induction n} nextPow2IsPow2(n: nat)
         ensures isPowerOf2(get_next_power_of_two(n))
-        //ensures exists k:nat  ::  get_next_power_of_two(n) == power2(k) 
     {
         if n <= 1 {
             assert(get_next_power_of_two(n) == power2(0)) ;
@@ -231,8 +272,12 @@ module MathHelpers {
 
     /**     
      *  Show that if n > 1 and n is a power of 2 then n/2 is also a power of 2. 
+     *
+     *  @param  n   A positive integer. 
+     *  @return     A proof that if n > 1 and n is a power of 2 
+     *              then n/2 is also a power of 2.
      */
-     lemma halfPow2IsPow2(n: nat)
+    lemma halfPow2IsPow2(n: nat)
         requires n > 1
         requires isPowerOf2(n)
         ensures isPowerOf2(n/2)
