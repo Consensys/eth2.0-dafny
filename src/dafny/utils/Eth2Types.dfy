@@ -169,11 +169,21 @@ module Eth2Types {
     type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
                                     witness Bytes(timeSeq(0 as byte, 96))
 
-    // EMPTY_BYTES32
-
-    // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
-    
+    /** A root is a sequence of 32 bytes. */
     type Root = Bytes32
+
+    /** The default zeroed Bytes32.  */
+    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
+
+    /** The default zeroed Bytes48.  */
+    const SEQ_EMPTY_48_BYTES := timeSeq<byte>(0,48)
+    
+    /** The default (empty) Bytes32 */
+    const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
+
+    /** The default (empty) Bytes48 */
+    const DEFAULT_BYTES48 : Bytes48 := Bytes(SEQ_EMPTY_48_BYTES)
+
 
     /** Some type tags.
      * 
@@ -253,7 +263,6 @@ module Eth2Types {
                 case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
-    
     /**
      * Bitwise exclusive-or of two `byte` value
      *
@@ -266,24 +275,25 @@ module Eth2Types {
         ((a as bv8)^(b as bv8)) as byte
     }      
 
-    //  Old section
-
-    // Custom types
-
     /* A String type. */
     type String = seq<char>
 
-    /* Hash. (Should probably be a fix-sized bytes. */
+    
+    // Types used in the Phase 0 spec
+
+    /** A hash is a sequence of 32 bytes. */
     type Hash = Bytes32
 
-    //  TODO: change the Bytes type
-    // type SerialisedBytes = seq<byte> 
-    
+    /** A BLSPubkey is a sequence of 48 bytes. */
     type BLSPubkey = Bytes48
     
+    /** A BLSSignature is a string. */
     type BLSSignature = String      //a BLS12-381 signature.
 
+    /** A slot is unsigned int over 64 bits. */
     type Slot = uint64
+
+    /** Gwei is unsigned int over 64 bits. */
     type Gwei = uint64
 
     /** An epoch is unsigned int over 64 bits. */
@@ -306,19 +316,5 @@ module Eth2Types {
 
     /** A signature domain. */
     type Domain	= Bytes32	
-    
-    /** The default zeroed Bytes32.  */
-    const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
-
-    /** The default zeroed Bytes48.  */
-    const SEQ_EMPTY_48_BYTES := timeSeq<byte>(0,48)
-    
-    /**
-     *  The default (empty) Bytes32
-     */
-    const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
-
-    const DEFAULT_BYTES48 : Bytes48 := Bytes(SEQ_EMPTY_48_BYTES)
-
     
 }
