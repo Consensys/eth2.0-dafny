@@ -47,7 +47,8 @@ module Helpers {
             n / d + 1
     }       
 
-    /** Create Sequences with same element. 
+    /** 
+     *  Create Sequences with same element. 
      *
      *  @tparam T   A type.
      *  @param  t   An value.
@@ -139,6 +140,11 @@ module Helpers {
 
     /** 
      *  The set of elements in flatten is the same as in the union of the elements. 
+     *
+     *  @tparam T   A type.
+     *  @param  s   A sequence of sequences of T.
+     *  @returns    A proof that x in flatten(s) <==> 
+     *              exists i :: 0 <= i < |s| && x in s[i].
      */
     lemma {:induction s} flattenPreservesElements<T>(s : seq<seq<T>>, x : T)
         ensures x in flatten(s) <==> exists i :: 0 <= i < |s| && x in s[i]
@@ -149,6 +155,10 @@ module Helpers {
      *  Flatten dsitributes over append left/right element.
      *  This is a lemma used to prove the more general 
      *  distribution lemma `flattenDistributes`.
+     *
+     *  @tparam T   A type.
+     *  @param  s   A sequence of sequences of T.
+     *  @returns    A proof that flatten(s + [x]) == flatten(s) + x.
      */
     lemma {:induction s} flattenElimLast<T>(s: seq<seq<T>>, x : seq<T>)
         ensures flatten(s + [x]) == flatten(s) + x
@@ -175,6 +185,11 @@ module Helpers {
 
     /** 
      * Length distributes over flatten of concatenations.
+     *
+     *  @tparam T   A type.
+     *  @param  s1  A sequence of sequences of T.
+     *  @param  s2  A sequence of sequences of T.
+     *  @returns    A proof that |flatten(s1 + s2)| == |flatten(s1)| + |flatten(s2)|.
      */
     lemma {:induction s1, s2} lengthDistribFlatten<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures |flatten(s1 + s2)| == |flatten(s1)| + |flatten(s2)|
@@ -190,6 +205,11 @@ module Helpers {
     
     /**
      *  Flatten distributes.
+     *
+     *  @tparam T   A type.
+     *  @param  s1  A sequence of sequences of T.
+     *  @param  s2  A sequence of sequences of T.
+     *  @returns    A proof that flatten(s1 + s2) == flatten(s1) + flatten(s2).
      */
     lemma {:induction s2} flattenDistributes<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures flatten(s1 + s2) == flatten(s1) + flatten(s2)
@@ -237,6 +257,12 @@ module Helpers {
 
     /**
      *  flattenLength distributes over +.
+     *
+     *  @tparam T   A type.
+     *  @param  s1  A sequence of sequences of T.
+     *  @param  s2  A sequence of sequences of T.
+     *  @returns    A proof that 
+     *              flattenLength(s1 + s2) == flattenLength(s1) + flattenLength(s2).
      */
     lemma {:induction s1, s2} flattenLengthDistributes<T>(s1: seq<seq<T>>, s2: seq<seq<T>>)
         ensures flattenLength(s1 + s2) == flattenLength(s1) + flattenLength(s2)
@@ -254,6 +280,12 @@ module Helpers {
 
     /**
      *  flattenLength of prefix is less than length of sequence. 
+     *
+     *  @tparam T   A type.
+     *  @param  s   A sequence of sequences of T.
+     *  @param  i   A positive integer.
+     *  @returns    A proof that if 0 <= i < |s| then
+     *              flattenLength(s[..i]) <= flattenLength(s).
      */
     lemma {:induction s} flattenLengthMonotonic<T>(s: seq<seq<T>>, i : nat)
         requires 0 <= i < |s|
@@ -273,6 +305,14 @@ module Helpers {
     /**
      *  A nice lemma stating that:
      *  Elements between indices k..k+|s[[i]] are exactly the elements of s[i].
+     *
+     *  @tparam T   A type.
+     *  @param  s   A sequence of sequences of T.
+     *  @param  i   A positive integer.
+     *  @param  k   A positive integer.
+     *  @returns    A proof that if |s| >= 1, 0 <= i < |s| - 1 and 
+     *              k == flattenLength(s[..i]) then
+     *              flatten(s)[k..k + |s[i]|] == s[i].
      */
     lemma {:induction s} flattenOneToOneChunk<T>(s : seq<seq<T>>, i: nat, k : nat) 
         requires |s| >= 1
@@ -305,6 +345,14 @@ module Helpers {
      *
      *  The proof simply uses the one-to-one correspondence between
      *  sections of flatten(s) and elements of s.
+     *
+     *  @tparam T   A type.
+     *  @param  s   A sequence of sequences of T.
+     *  @param  i   A positive integer.
+     *  @param  j   A positive integer.
+     *  @returns    A proof that if 0 <= i < |s| - 1, 0 <= j < |s[i]| and 
+     *              flattenLength(s[..i]) + j < |flatten(s)| then
+     *              flatten(s)[flattenLength(s[..i]) + j] == s[i][j].
      */
     lemma {:induction s} flattenIsOneToOne<T>(s : seq<seq<T>>, i:nat, j : nat)
         requires 0 <= i < |s| - 1
