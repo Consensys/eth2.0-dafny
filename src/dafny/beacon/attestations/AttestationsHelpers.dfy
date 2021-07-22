@@ -29,7 +29,7 @@ include "../gasper/GasperEBBs.dfy"
  *  Some properties of validators/attestations
  *  P1: attestations must be well-formed (see ForkChoiceHelpers, isValidAttestarions)
  *  P2: each validator is assigned to one committee per epoch
- *  P3: each HONEST validator attests at most oncd per epoch.
+ *  P3: each HONEST validator attests at most once per epoch.
  */
 module AttestationsHelpers {
 
@@ -286,6 +286,8 @@ module AttestationsHelpers {
             //     collectValidatorsAttestatingForLink(xa, state.current_justified_checkpoint, tgtCP) == collectValidatorsIndicesAttestatingForTarget(xa, tgtCP)
                 // == collectValidatorsIndices(xa)
     {
+        reveal_validPrevAttestations();
+        reveal_validCurrentAttestations();
         //  Get attestations at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
 
@@ -315,13 +317,13 @@ module AttestationsHelpers {
             && sameSrcSameTgt(xa[1..], src, tgt)
     }
 
-    lemma foo505(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
-        ensures sameSrcSameTgt(xa, src, tgt) 
-            <==> 
-            (forall a :: a in xa ==> a.data.source == src && a.data.target == tgt)
-    {
+    // lemma foo505(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
+    //     ensures sameSrcSameTgt(xa, src, tgt) 
+    //         <==> 
+    //         (forall a :: a in xa ==> a.data.source == src && a.data.target == tgt)
+    // {
 
-    }
+    // }
 
     lemma sameSrcSameTgtEquiv(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint) 
         requires forall a :: a in xa ==> 
@@ -339,7 +341,7 @@ module AttestationsHelpers {
     /**
      *  All previous attestations are from s.previous_justified_checkpoint to LEBB(s)
      */
-    predicate validPrevAttestations(s: BeaconState, store: Store) 
+    predicate {:opaque} validPrevAttestations(s: BeaconState, store: Store) 
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_previous_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
@@ -365,7 +367,7 @@ module AttestationsHelpers {
             && a.data.target.epoch ==  get_previous_epoch(s)
     }
 
-    predicate validCurrentAttestations(s: BeaconState, store: Store) 
+    predicate {:opaque} validCurrentAttestations(s: BeaconState, store: Store) 
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
         requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 

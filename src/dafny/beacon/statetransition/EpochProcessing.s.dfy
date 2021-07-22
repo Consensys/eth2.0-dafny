@@ -41,6 +41,9 @@ module EpochProcessingSpec {
 
     //  Specifications of justification and finalisation of a state and forward to future slot.
 
+    predicate validEpochBounbaryInStore(s: BeaconState, store: Store) 
+    
+
     /**
      *  Archive justification results on current epoch in previous epoch's record.
      *
@@ -81,7 +84,7 @@ module EpochProcessingSpec {
      *  
      */
     function updateJustificationPrevEpoch(s: BeaconState, store: Store): (s': BeaconState) 
-         /** State's slot is just before an Epoch boundary. */
+        /** State's slot is just before an Epoch boundary. */
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         /** The store is well-formed, each block with slot != 0 has a parent
@@ -95,7 +98,8 @@ module EpochProcessingSpec {
 
         /** The block root at previous epoch is in the store. */
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
-        // requires get_block_root(s, get_current_epoch(s)) in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_current_epoch(s)) in chainRoots(get_block_root(s, get_current_epoch(s)), store)
 
         /**  The previous checkpoint root is an ancestor of the root at previous epoch. */
         requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
@@ -140,7 +144,13 @@ module EpochProcessingSpec {
         ensures chainRoots(get_block_root(s', get_previous_epoch(s')), store) ==
             chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
         ensures s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_previous_epoch(s')), store) 
-        // ensures s'.previous_justified_checkpoint == s.current_justified_checkpoint
+        
+        ensures get_current_epoch(s') ==  get_current_epoch(s)
+        ensures get_block_root(s', get_current_epoch(s')) == get_block_root(s, get_current_epoch(s))
+        ensures get_block_root(s', get_current_epoch(s')) in store.blocks.Keys
+
+        ensures s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_current_epoch(s')), store) 
+        ensures s'.previous_justified_checkpoint == s.current_justified_checkpoint
 
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -156,6 +166,7 @@ module EpochProcessingSpec {
             //  Supermajority status
             var b1 := get_attesting_balance(s, matching_target_attestations) as nat * 3 
                         > get_total_active_balance(s) as nat * 2;
+            var s1 := 
             s.(
                 current_justified_checkpoint := 
                     if b1 then 
@@ -166,13 +177,16 @@ module EpochProcessingSpec {
                         assert(isJustified(cp, store));
                         assert(cp.root == get_block_root(s, get_previous_epoch(s)));
                         assert(cp.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store));
+                        // foo202(s, store);
                         cp 
                     else 
                         s.current_justified_checkpoint,
                 previous_justified_checkpoint := s.current_justified_checkpoint,
                 justification_bits := 
                     if b1 then newJustBits[1 := true] else newJustBits
-            )
+            );
+            foo202(s1, store);
+            s1
     }
 
 
@@ -197,6 +211,7 @@ module EpochProcessingSpec {
         assume(chainRoots(get_block_root(s, get_previous_epoch(s)), store) <= 
             chainRoots(get_block_root(s, get_current_epoch(s)), store));
     }
+
 
     /**
      *  Collecting attesting validators in monotomnic wrt attestations. 
@@ -241,6 +256,7 @@ module EpochProcessingSpec {
             var cp := CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)));
             isJustified(cp, store);
     {
+        reveal_isJustified();
         var cp := CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)));
         //  Sanity check that a fixed set of validators is used
         assert(get_total_active_balance(s) as nat == MAX_VALIDATORS_PER_COMMITTEE);
@@ -441,6 +457,7 @@ module EpochProcessingSpec {
             var cp := CheckPoint(get_current_epoch(s), get_block_root(s, get_current_epoch(s)));
             isJustified(cp, store);
     {
+        reveal_isJustified();
         var cp := CheckPoint(get_current_epoch(s), get_block_root(s, get_current_epoch(s)));
         //  Sanity check that a fixed set of validators is used
         assert(get_total_active_balance(s) as nat == MAX_VALIDATORS_PER_COMMITTEE);
@@ -557,10 +574,13 @@ module EpochProcessingSpec {
             s'.justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
         
+        /** The update should preserve the follwing properties: */
         ensures s'.previous_justified_checkpoint.root in store.blocks.Keys
         ensures s'.current_justified_checkpoint.root in store.blocks.Keys
         ensures isJustified(s'.previous_justified_checkpoint, store)
         ensures isJustified(s'.current_justified_checkpoint, store)
+
+        /** And leve unchanged some other fields of the state. */
         ensures 
             && s'.genesis_time == s.genesis_time
             && s'.slot == s.slot
