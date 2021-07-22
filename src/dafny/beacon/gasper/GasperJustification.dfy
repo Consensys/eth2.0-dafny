@@ -121,7 +121,7 @@ module GasperJustification {
      *  @param  cp      A check point.
      *  @param  store   A store,
      */
-    predicate isJustified(cp: CheckPoint, store: Store)
+    predicate {:opaque} isJustified(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys         
         /** The store is well-formed, each block with slot != 0 has a parent
