@@ -884,7 +884,7 @@ module EpochProcessingSpec {
      */
     function finalUpdates(s: BeaconState, store: Store) : BeaconState
     {
-        //  rotate the attestations.
+        //  rotate the attestations and start with new empty set for current.
         s.(
             previous_epoch_attestations := s.current_epoch_attestations,
             current_epoch_attestations := []
