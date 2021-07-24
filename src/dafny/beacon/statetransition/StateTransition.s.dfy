@@ -153,6 +153,30 @@ module StateTransitionSpec {
         )
     }
 
+    predicate foo606(s: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+    {
+        && (forall k :: k in s.block_roots ==> k in store.blocks.Keys)
+        && s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        && get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        && (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        && s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        && validPrevAttestations(s, store)
+        && get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> validCurrentAttestations(s, store)
+        && s.previous_justified_checkpoint.root in store.blocks.Keys 
+        && s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        && (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> blockRootsValid(s, store)
+
+        && isJustified(s.previous_justified_checkpoint, store)
+        && isJustified(s.current_justified_checkpoint, store)
+
+        && (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+    }
+
     /**
      *  Finalise a state and forward to slot in the future.
      *  
@@ -161,24 +185,50 @@ module StateTransitionSpec {
      *  @returns        A new state obtained by archiving roots and incrementing slot.
      *                  slot.
      */
-    function forwardStateToSlot(s: BeaconState, slot: Slot, store: Store) : BeaconState 
+    function forwardStateToSlot(s: BeaconState, slot: Slot, store: Store): (s': BeaconState)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires foo606(s, store)
+        // requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
+
+        // requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        // requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+
+
+        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        // requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        // /** The attestations at previous epoch are valid. */
+        // requires validPrevAttestations(s, store)
+        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH  < s.slot ==> validCurrentAttestations(s, store)
+
         requires s.slot <= slot
         requires |s.validators| == |s.balances|
 
-        ensures forwardStateToSlot(s, slot, store).slot == slot
-        ensures forwardStateToSlot(s, slot, store).eth1_deposit_index == s.eth1_deposit_index
-        ensures |forwardStateToSlot(s, slot, store).validators| == |forwardStateToSlot(s, slot, store).balances|
-        ensures forwardStateToSlot(s, slot, store).validators == s.validators
-        ensures forwardStateToSlot(s, slot, store).balances == s.balances
-        ensures forwardStateToSlot(s, slot, store).eth1_data_votes == s.eth1_data_votes
-        
+        ensures s'.slot == slot
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures |s'.validators| == |s'.balances|
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures s'.eth1_data_votes == s.eth1_data_votes
+
+        ensures foo606(s', store)
+
+
         //  termination ranking function
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
             s
         else
-            nextSlot(forwardStateToSlot(s, slot - 1, store), store)
+            var s':= forwardStateToSlot(s, slot - 1, store);
+            // assume(foo606(s', store));
+            // assume(forall k :: k in s'.block_roots ==> k in store.blocks.Keys);
+            // assume(s'.current_justified_checkpoint.epoch < get_current_epoch(s'));
+            // assume(get_previous_epoch(s') >= 1 ==> s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_previous_epoch(s')), store));
+            nextSlot(s', store)
     }
 
     lemma forwardStateIsNotStoreDependent(s: BeaconState, slot: Slot, store1: Store, store2: Store)
@@ -230,7 +280,9 @@ module StateTransitionSpec {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
+        requires foo606(s, store)
+
+        // requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
 
         /** @todo: is current_epoch >=1 enough? */
         // requires get_previous_epoch(s) >= 1
@@ -242,29 +294,29 @@ module StateTransitionSpec {
         /** Current justified checkpoint is justified and root in store. */ 
         // requires s.current_justified_checkpoint.root in store.blocks.Keys 
         // requires isJustified(s.current_justified_checkpoint, store)
-        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
-        requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        // requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        // requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
        
         /** The block root at previous epoch is in the store. */
         // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
-        requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
-        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
-        /** The attestations at previous epoch are valid. */
-        requires validPrevAttestations(s, store)
-        requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> validCurrentAttestations(s, store)
+        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        // requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        // /** The attestations at previous epoch are valid. */
+        // requires validPrevAttestations(s, store)
+        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> validCurrentAttestations(s, store)
 
         /** The justified checkpoints in s are indeed justified ands the root is in store. */
-        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
-        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        // requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        // requires s.current_justified_checkpoint.root in store.blocks.Keys 
         
-        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> blockRootsValid(s, store)
+        // requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> blockRootsValid(s, store)
 
-        requires isJustified(s.previous_justified_checkpoint, store)
-        requires isJustified(s.current_justified_checkpoint, store)
+        // requires isJustified(s.previous_justified_checkpoint, store)
+        // requires isJustified(s.current_justified_checkpoint, store)
 
          /** Attestations to current epoch are valid. */
-        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+        // requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
@@ -289,6 +341,10 @@ module StateTransitionSpec {
         ensures isJustified(nextSlot(s, store).previous_justified_checkpoint, store)
         ensures nextSlot(s, store).current_justified_checkpoint.root in store.blocks.Keys  
         ensures isJustified(nextSlot(s, store).current_justified_checkpoint, store)
+
+        ensures foo606(nextSlot(s, store), store)
+
+        ensures forall k :: k in nextSlot(s, store).block_roots ==> k in store.blocks.Keys
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
