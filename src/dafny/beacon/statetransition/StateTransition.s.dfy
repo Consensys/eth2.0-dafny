@@ -24,7 +24,7 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "EpochProcessing.s.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
-
+include "../gasper/GasperJustification.dfy"
 
 /**
  * State transition functional specification for the Beacon Chain.
@@ -43,6 +43,7 @@ module StateTransitionSpec {
     import opened MathHelpers
     import opened EpochProcessingSpec
     import opened ForkChoiceTypes
+    import opened GasperJustification
 
     /**
      *  Collect pubkey in a list of validators.
@@ -224,8 +225,51 @@ module StateTransitionSpec {
      *  Defines the value of state at next slot.
      */
     function nextSlot(s: BeaconState, store: Store) : BeaconState 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
+
+        /** @todo: is current_epoch >=1 enough? */
+        // requires get_previous_epoch(s) >= 1
+
+        /** Block root at current epoc is in store. */
+        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        /** Current justified checkpoint is justified and root in store. */ 
+        // requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        // requires isJustified(s.current_justified_checkpoint, store)
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+       
+        /** The block root at previous epoch is in the store. */
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        /** The attestations at previous epoch are valid. */
+        requires validPrevAttestations(s, store)
+        requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> validCurrentAttestations(s, store)
+
+        /** The justified checkpoints in s are indeed justified ands the root is in store. */
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> blockRootsValid(s, store)
+
+        requires isJustified(s.previous_justified_checkpoint, store)
+        requires isJustified(s.current_justified_checkpoint, store)
+
+         /** Attestations to current epoch are valid. */
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+
         requires |s.validators| == |s.balances|
+
         ensures nextSlot(s, store).latest_block_header.state_root != DEFAULT_BYTES32
         /** If s.slot is not at the boundary of an epoch, the 
             attestation/finality fields are unchanged. */
@@ -239,16 +283,64 @@ module StateTransitionSpec {
             && nextSlot(s, store).balances  == s.balances
             && |nextSlot(s, store).validators| == |nextSlot(s, store).balances| 
             && nextSlot(s, store).eth1_data_votes ==  s.eth1_data_votes
-            &&  nextSlot(s, store).eth1_deposit_index  == s.eth1_deposit_index
+            && nextSlot(s, store).eth1_deposit_index  == s.eth1_deposit_index
+
+        ensures nextSlot(s, store).previous_justified_checkpoint.root in store.blocks.Keys  
+        ensures isJustified(nextSlot(s, store).previous_justified_checkpoint, store)
+        ensures nextSlot(s, store).current_justified_checkpoint.root in store.blocks.Keys  
+        ensures isJustified(nextSlot(s, store).current_justified_checkpoint, store)
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
                 assert(s.slot % SLOTS_PER_EPOCH != 0);
                 // updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
-                var s1 := resolveStateRoot(s).(slot := s.slot);
+                var s1 := resolveStateRoot(s).(slot := s.slot, block_roots := s.block_roots);
+
+                assert(s1.slot == s.slot);
+                // assume(s1.block_roots == s.block_roots);
+                assert(get_current_epoch(s1) * SLOTS_PER_EPOCH < s1.slot  );
+                assert get_block_root(s1, get_current_epoch(s1)) in store.blocks.Keys;
+                assert get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys;
+                assert(s1.current_justified_checkpoint == s.current_justified_checkpoint);
+                assert(s1.previous_justified_checkpoint == s.previous_justified_checkpoint);
+                assert s1.current_justified_checkpoint.root in store.blocks.Keys ;
+                assert s1.previous_justified_checkpoint.root in store.blocks.Keys ;
+                // assert isJustified(s1.current_justified_checkpoint, store);
+                assert s1.current_justified_checkpoint.epoch < get_current_epoch(s1);
+
+                assert(get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s, get_previous_epoch(s)));
+
+                assert get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys;
+
+                // assume(s1.block_roots == s.block_roots);
+                assert s1.previous_justified_checkpoint.root in chainRoots(get_block_root(s1, get_previous_epoch(s1)), store) ;
+                assert s1.previous_justified_checkpoint.epoch < get_previous_epoch(s1);
+                assert(s1.previous_epoch_attestations == s.previous_epoch_attestations);
+                assert s1.current_justified_checkpoint.root in chainRoots(get_block_root(s1, get_previous_epoch(s1)), store);
+
+                preserveValidPrev(s, s1, store);
+                assert validPrevAttestations(s, store);
+                assert validPrevAttestations(s1, store);
+
+                assert s1.previous_justified_checkpoint.root in store.blocks.Keys ;
+                assert s1.current_justified_checkpoint.root in store.blocks.Keys ;
+                
+                assert isJustified(s1.previous_justified_checkpoint, store);
+                assert isJustified(s1.current_justified_checkpoint, store);
+
+                // assert(updateJustificationPrevEpoch(s1, store) == updateJustificationPrevEpoch(s, store));
+                preserveValidCurrent(updateJustificationPrevEpoch(s, store), updateJustificationPrevEpoch(s1, store), store);
+                assert validCurrentAttestations(updateJustificationPrevEpoch(s1, store), store);
+
                 var s2 := updateJustificationAndFinalisation(s1, store);
+                assert(isJustified(s2.previous_justified_checkpoint, store));
+                assert(isJustified(s2.current_justified_checkpoint, store));
                 var s3 := finalUpdates(s2, store);
+                assert(isJustified(s3.previous_justified_checkpoint, store));
+                assert(isJustified(s3.current_justified_checkpoint, store));
                 var s4 := s3.(slot := s.slot + 1);
+                assert(isJustified(s3.previous_justified_checkpoint, store));
+                assert(isJustified(s3.current_justified_checkpoint, store));
                 s4
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 

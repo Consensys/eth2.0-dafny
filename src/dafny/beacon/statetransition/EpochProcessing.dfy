@@ -19,6 +19,8 @@ include "../Helpers.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 include "EpochProcessing.s.dfy"
+include "../gasper/GasperJustification.dfy"
+
 /**
  * State transition function for the Beacon Chain.
  */
@@ -33,6 +35,7 @@ module EpochProcessing {
     import opened AttestationsHelpers
     import opened EpochProcessingSpec
     import opened ForkChoiceTypes
+    import opened GasperJustification
 
 
 // # Attestations
@@ -51,11 +54,53 @@ module EpochProcessing {
      *  @param  s   A beacon state.
      *  @returns    
      */
-    method process_epoch(s: BeaconState, ghost store: Store) returns (s' : BeaconState) 
+    method process_epoch(s: BeaconState, store: Store) returns (s' : BeaconState) 
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
+
+         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+         /** Slot of s is larger than slot at previous epoch. */
+        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+        requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+
+        /** Block root at current epoc is in store. */
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        /** Current justified checkpoint is justified and root in store. */ 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        requires isJustified(s.current_justified_checkpoint, store)
+       
+        /** The block root at previous epoch is in the store. */
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        /** The attestations at previous epoch are valid. */
+        requires validPrevAttestations(s, store)
+
+        /** The justified checkpoints in s are indeed justified ands the root is in store. */
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        requires isJustified(s.previous_justified_checkpoint, store)
+        requires isJustified(s.current_justified_checkpoint, store)
+
+        //  /** Attestations to current epoch are valid. */
+        requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+
+        requires |s.validators| == |s.balances|
+
 
         requires |s.validators| == |s.balances|
 
@@ -107,8 +152,45 @@ module EpochProcessing {
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
-    method process_justification_and_finalization(s : BeaconState, ghost store: Store) returns (s' : BeaconState) 
+    method process_justification_and_finalization(s : BeaconState, store: Store) returns (s' : BeaconState) 
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+         /** Slot of s is larger than slot at previous epoch. */
+        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+        requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+
+        /** Block root at current epoc is in store. */
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        /** Current justified checkpoint is justified and root in store. */ 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
+        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+        requires isJustified(s.current_justified_checkpoint, store)
+       
+        /** The block root at previous epoch is in the store. */
+        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+        requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
+        requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
+        /** The attestations at previous epoch are valid. */
+        requires validPrevAttestations(s, store)
+
+        /** The justified checkpoints in s are indeed justified ands the root is in store. */
+        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        
+        requires isJustified(s.previous_justified_checkpoint, store)
+        requires isJustified(s.current_justified_checkpoint, store)
+
+        //  /** Attestations to current epoch are valid. */
+        requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
 
         requires |s.validators| == |s.balances|
 
@@ -159,12 +241,14 @@ module EpochProcessing {
             //  Compute the attestations in s.previous_epoch_attestations that 
             //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
             //  of the previous epoch. (retrieve in the historical roots).
-            var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
+            //  @note We use s to collect the target attestations instead of s' 
+            //  in the orginal specs as we need to ensure that validPrevAttestations holds.
+            var matching_target_attestations_prev := get_matching_target_attestations(s, previous_epoch, store) ;  
             //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ; 
 
             // Previous epoch
-            if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
-                                get_total_active_balance(s') as uint128 * 2 {
+            if get_attesting_balance(s', matching_target_attestations_prev) as nat * 3 >      
+                                get_total_active_balance(s') as nat * 2 {
                 //  shift the justified checkpoint
                 s' := s'.(current_justified_checkpoint := 
                             CheckPoint(previous_epoch,
@@ -178,8 +262,8 @@ module EpochProcessing {
 
             ghost var s2 := s';
             //  Current epoch
-            var matching_target_attestations_cur := get_matching_target_attestations(s', current_epoch) ;
-            if get_attesting_balance(s', matching_target_attestations_cur) as nat * 3 >=       
+            var matching_target_attestations_cur := get_matching_target_attestations(s', current_epoch, store) ;
+            if get_attesting_balance(s', matching_target_attestations_cur) as nat * 3 >       
                                     get_total_active_balance(s') as nat * 2 {
                 //  shift the justified checkpoint
                 s' := s'.(
@@ -200,12 +284,12 @@ module EpochProcessing {
              *  bit[3]        bit[2]        bit[1]        bit[0]
              *  
              *
-             *  Python slice a[k:l] means: a[k] ... a[l -1]
+             *  Python slice a[k:l] means: a[k] ... a[l - 1]
              */
             ghost var s3 := s';
 
             var bits : seq<bool> := s'.justification_bits;
-            // assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
+            assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
             //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
             //  following condition is false. As a result we do not need to compute 
             //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
@@ -230,8 +314,6 @@ module EpochProcessing {
             assert(s' == updateFinalisedCheckpoint(s3, s, store));
             return s';
         }
-
-        return s;
     }
 
 }
