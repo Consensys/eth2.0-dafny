@@ -186,6 +186,33 @@ module ForkChoiceTypes {
             [ br ] + chainRoots(store.blocks[br].parent_root, store)
     }
 
+    lemma chainRootsMonotonic(br1: Root, br2: Root, br3: Root, store: Store) 
+        /** The block root must in the store.  */
+        requires br1 in store.blocks.Keys
+        requires br2 in store.blocks.Keys
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires br2 in chainRoots(br1, store)
+        requires br3 in  chainRoots(br2, store)
+
+        ensures br3 in chainRoots(br1, store)
+
+        decreases height(br1, store)
+    {
+        var v1 := chainRoots(br1, store);
+        if br2 == v1[0] {
+            assert(br1 == br2);
+        } else {
+            var pr1 := store.blocks[br1].parent_root;
+            assert(chainRoots(pr1, store) == v1[1..]);
+            chainRootsMonotonic(pr1, br2, br3, store);
+            assert(br3 in chainRoots(pr1, store));
+        }
+    }
+
     /**
      *  The height of a block in the store.
      *
