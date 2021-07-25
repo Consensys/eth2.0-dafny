@@ -13,65 +13,39 @@
  */
 
 include "../utils/Eth2Types.dfy"
+include "../utils/MathHelpers.dfy"
 include "../utils/NativeTypes.dfy"
+
 include "../ssz/Constants.dfy"
-include "./BeaconChainTypes.dfy"
+include "../ssz/Serialise.dfy"
+
+include "BeaconChainTypes.dfy"
+include "Helpers.p.dfy"
 include "attestations/AttestationsTypes.dfy"
 include "validators/Validators.dfy"
-include "../ssz/Serialise.dfy"
-include "../utils/MathHelpers.dfy"
+
+
 
 /**
  * Misc helpers.
  */
 module BeaconHelpers {
 
+    //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
+    import opened MathHelpers
     import opened NativeTypes
+
     import opened Constants
+    import opened SSZ
+
     import opened BeaconChainTypes
+    import opened BeaconHelperProofs
     import opened AttestationsTypes
     import opened Validators
-    import opened SSZ
-    import opened MathHelpers
+    
 
-    lemma NatDivision(a: nat, b: nat)
-        requires b != 0
-        ensures a / b == (a as real / b as real).Floor
-    {
-        // Ref: https://stackoverflow.com/questions/50627131/in-dafny-can-the-relationship-between-integer-natural-division-and-real-divisio
-        assert a == (a / b) * b + (a % b);
-
-        // Cast some values to `real`, because this is a programming language.
-        // (In math, 7 and 7.0 are the same object and this wouldn't be needed...)
-        assert a as real == (a / b) as real * b as real + (a % b) as real;
-
-        assert (a % b) as real / b as real < b as real;
-        assert a as real / b as real == (a / b) as real + (a % b) as real / b as real;
-        assert (a % b) < b;
-        assert (a % b) as real / b as real < 1 as real;
-        
-        // Aha! That reveals that the real quotient `a as real / b as real` is equal to the natural quotient `a / b` (a natural number) plus a fraction.
-        // This looks enough like `Floor` that Dafny can take it from here.
-    }
-
-    /**
-     *  A simple lemma to bound integer division when divisor >= 1.
-     */
-    lemma divLess(x : nat , k : nat) 
-        requires k >= 1
-        ensures 0 <= x / k <= x 
-    {   //  Thanks Dafny
-    }
-
-    /**
-     *  ( x  /  k ) * k is less than or equal to x.
-     */
-    lemma div2(x : nat, k : nat) 
-        requires k >= 1 
-        ensures ( x / k ) * k <= x
-    {
-    }
+    
     /**
      *  Check that a bitlist has all bits set to 1.
      *  @param      xs  
@@ -247,17 +221,9 @@ module BeaconHelpers {
 
     
 
-    /** max(a,b) returns a if a > b, else b */
-    function method max(a: nat, b: nat): nat
-    {
-        if a > b then a else b
-    }   
+     
 
-    // /** min(a,b) returns a if a < b, else b */
-    // function method min(a: nat, b: nat): nat
-    // {
-    //     if a < b then a else b
-    // }   
+      
 
     function method uint64Range(start: uint64, end: uint64): seq<uint64>
         requires end >= start
@@ -430,56 +396,6 @@ module BeaconHelpers {
 
     
 
-    // lemma NatDivHelper(a: nat, b: nat, c: nat)
-    //     requires b != 0
-    //     ensures (a % b) as real / b as real - (c % b) as real / b as real == ((a % b) - (c % b)) as real / b as real
-    // {
-    //     // Thanks Dafny
-
-    // }
-
-    // lemma NatDivHelper2(a: nat, b: nat, c: nat)
-    //     requires b != 0
-    //     //requires a >= c
-    //     ensures ((a % b) - (c % b)) % b == (a - c) % b
-    //     // refer to ironfleet library
-   
-
-    // lemma NatDivHelper3(a: nat, b: nat)
-    //     requires b > 0
-    //     ensures (a * b) % b == 0
-    //     // refer to ironfleet library
-
-    lemma computeCommitteeLemma(len: nat, index: nat, count: nat)
-        requires count > 0
-        requires len * index / count  < 0x10000000000000000
-        requires len * (index +1) / count < 0x10000000000000000
-        ensures len * (index +1) / count >= len * index  / count
-    {
-        computeCommitteeLemma2(len * (index +1), len * index, count);
-
-    }
-
-    lemma computeCommitteeLemma2(a: nat, b: nat, count: nat)
-        requires count > 0
-        requires a >= b
-        ensures a/count >= b/count
-    {
-        if a == b {
-            // Thanks Dafny
-        }
-        else {
-            assert a > b;
-            var i : nat :| a == b + i;
-            assert i > 0;
-            NatDivision(a,count);
-            assert a / count == (a as real / count as real).Floor;
-            NatDivision(b,count);
-            assert b / count == (b as real / count as real).Floor;
-            assert a as real / count as real > b as real / count as real;
-        }
-    }
-
      //Return the randao mix at a recent ``epoch``.
     function method get_randao_mix(state: BeaconState, epoch: Epoch): Bytes32
     {
@@ -569,7 +485,7 @@ module BeaconHelpers {
         assert (slot % SLOTS_PER_EPOCH) * committees_per_slot + index < committees_per_slot * SLOTS_PER_EPOCH;
         assert TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat;
         //assert 0 <= slot % SLOTS_PER_EPOCH < SLOTS_PER_EPOCH;
-        confirmBoundBreach3(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
+        getBeaconCommitteeLemma(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
         proveActiveValidatorsSatisfyBounds(|get_active_validator_indices(s.validators, epoch)|, committees_per_slot as nat, (slot % SLOTS_PER_EPOCH) as nat, index as nat);
         //assert len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) > len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
 
@@ -581,203 +497,7 @@ module BeaconHelpers {
         )
     } 
 
-    lemma proveAtLeastOneCommitteeFormedBreachsBound(len_indices: nat, CPS: nat)
-        requires TWO_UP_11 as nat * TWO_UP_11 as nat < len_indices 
-        requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
-        //requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
-        //requires 0 <= cIndex < CPS
-
-        ensures 
-            exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: 
-            ((len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat)
-    {
-        assert CPS == 64;
-        
-        assert exists cIndex, slot  | 0 <= cIndex < CPS && 0 <= slot < SLOTS_PER_EPOCH as nat :: // exists slot | 0 <= slot < SLOTS_PER_EPOCH as nat :: //
-               ((len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (slot * CPS + cIndex)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat)
-               by
-               {
-                    assert //var slot := 31  && var cIndex := 63 ==>
-                    (len_indices * ((31 * CPS + 63) + 1) / (CPS * SLOTS_PER_EPOCH as nat)) - (len_indices * (31 * CPS + 63)  / (CPS * SLOTS_PER_EPOCH as nat)) > MAX_VALIDATORS_PER_COMMITTEE as nat;
-               }
-    }
-
-    lemma proveAllCommitteesFormedBreachBound(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
-        requires TWO_UP_5 as nat <= len_indices 
-        requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
-        requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
-        requires 0 <= cIndex < CPS
-
-        ensures var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
-                var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
-
-                len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> end - start > MAX_VALIDATORS_PER_COMMITTEE as nat
-                // at this point all committees formed will breach the maximum size bound
-    {
-        var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
-        var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
-
-        assert len_indices >= ((TWO_UP_11 * TWO_UP_11) + TWO_UP_11) as nat ==> end - start > MAX_VALIDATORS_PER_COMMITTEE as nat;
-    }
-
-    // len_indices is the number of active validators, 
-    // CPS = committees per slot, 
-    // cIndex is the Committee Index from get_beacon_committee
-    lemma proveActiveValidatorsSatisfyBounds(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
-
-        requires TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat // valid range for the number of active validators
-
-        requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
-        requires 0 <= slot < SLOTS_PER_EPOCH as nat;
-        requires 0 <= cIndex < CPS;
-
-        ensures var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
-                var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
-        
-                0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat
-         
-    {
-        var start :=  (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat);
-        var end := (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat);
-
-        //assert 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < 64 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == 63;
-        //assert TWO_UP_18 as nat - TWO_UP_12 as nat <= len_indices < TWO_UP_18 as nat ==> CPS == 63;
-
-        assert  TWO_UP_18 as nat <= len_indices ==> CPS == 64;
-        assert TWO_UP_18 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == 64 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        assert 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < TWO_UP_18 as nat && CPS == 63 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        //assert 62 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < 63 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 62 ==> 
-        //    0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        //assert 61 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < 62 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 61 ==> 
-        //    0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        assert forall i :: 2 <= i <= 63 && (i-1) * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < i * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == i-1 ;
-        
-        assert forall i :: 2 <= i <= 63 && (i-1) * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat <= len_indices < i * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == i-1 ==> 
-            0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-
-        assert len_indices < 2 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat ==> CPS == 1;
-        assert TWO_UP_5 as nat <= len_indices < 2 * SLOTS_PER_EPOCH as nat * TARGET_COMMITTEE_SIZE as nat && CPS == 1 ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-        assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat ==> 0 < end - start <= MAX_VALIDATORS_PER_COMMITTEE as nat;
     
-        //assert TWO_UP_5 as nat <= len_indices <= TWO_UP_11 as nat * TWO_UP_11 as nat && CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat) 
-        // ==> 
-         //   0 < (len_indices * ((slot * CPS + cIndex) + 1)) / (CPS * SLOTS_PER_EPOCH as nat) - (len_indices * (slot * CPS + cIndex) ) / (CPS * SLOTS_PER_EPOCH as nat) <= MAX_VALIDATORS_PER_COMMITTEE as nat;
-
-    }
-
-    
-
-
-
-    lemma confirmBoundBreach3(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
-        requires TWO_UP_5 as nat <= len_indices 
-        requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
-        requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
-        requires 0 <= cIndex < CPS
-
-        ensures len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
-    {
-        confirmBoundBreach5(len_indices * ((slot * CPS + cIndex) + 1), len_indices * (slot * CPS + cIndex) , (CPS * SLOTS_PER_EPOCH as nat));
-
-        assert len_indices * ((slot * CPS + cIndex) + 1) - len_indices  * (slot * CPS + cIndex) >=  (CPS  * SLOTS_PER_EPOCH as nat) ==> 
-                len_indices * ((slot * CPS + cIndex) + 1) / (CPS  * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
-
-        calc {
-            len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex);
-            {confirmBoundBreach6(len_indices as nat, (slot * CPS + cIndex));} len_indices * (slot * CPS + cIndex) + len_indices - len_indices * (slot * CPS + cIndex);
-            len_indices as nat;
-        }
-        assert len_indices == len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex);
-
-        assert len_indices >= (CPS * SLOTS_PER_EPOCH as nat) <==> len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex) >=  (CPS * SLOTS_PER_EPOCH as nat);
-
-        assert  TWO_UP_5 as nat <= len_indices 
-            ==> len_indices >= (CPS * SLOTS_PER_EPOCH as nat) 
-            ==> len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
-    }
-
-    lemma confirmBoundBreach6(a: nat, b: nat)
-        ensures a * (b + 1) == a * b + a 
-    {
-
-    }
-
-    lemma confirmBoundBreach5(a: nat, b: nat, c: nat)
-        requires c > 0
-        ensures a - b >= c ==> a/c > b/c 
-    {
-
-    }
-
-
-    // lemma confirmBoundBreach4(len_indices: uint64, CPS: uint64, slot: uint64, cIndex: uint64)
-    //     //requires len_indices < TWO_UP_13  
-    //     requires CPS == max(1, min(
-    //         MAX_COMMITTEES_PER_SLOT as nat,  
-    //         len_indices as nat/ SLOTS_PER_EPOCH as nat / TARGET_COMMITTEE_SIZE as nat) 
-    //     ) as uint64
-    //     requires 0 <= slot < SLOTS_PER_EPOCH // i.e. slot % SPE
-    //     requires 0 <= cIndex < CPS
-
-    //     //ensures TWO_UP_5 as nat <= len_indices as nat < (64 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE)  as nat ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat    
-    // {
-    //     assert len_indices < TWO_UP_13 <==> CPS == 1;
-    //     assert len_indices < TWO_UP_5 ==> CPS == 1 && cIndex == 0; 
-
-    //     //assert TWO_UP_5 as nat <= len_indices as nat < 0x10000000000000000 as nat ==> ((slot * CPS + cIndex) as nat + 1) - (slot * CPS + cIndex) as nat == 1;
-    //     //assert len_indices < TWO_UP_5 && slot == 0 ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) -
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat) == 0 ;
-        
-    //     //assert TWO_UP_4 <= len_indices < TWO_UP_5 && slot == 1 ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
-
-    //     //assert TWO_UP_5 as nat <= len_indices as nat <  TWO_UP_16  as nat ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
-
-    //     //assert TWO_UP_5 as nat <= len_indices as nat < (64 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE)  as nat ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
-
-    //     assert (64 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE) as nat <= len_indices as nat  < 0x10000000000000000 ==> CPS == 64 && len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //           len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
-
-    //     //assert TWO_UP_5 as nat <= len_indices as nat < TWO_UP_20  as nat ==> len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat) >
-    //     //       len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat);
-
-    // //    assert (len_indices as nat * ((slot * CPS + cIndex) as nat + 1) / (CPS as nat * SLOTS_PER_EPOCH as nat)) -
-    // //             (len_indices as nat * (slot * CPS + cIndex) as nat / (CPS as nat * SLOTS_PER_EPOCH as nat)) == 0;
-    // }
-
-    //ensures |get_active_validator_indices(s.validators, epoch)| as uint64 < 2 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE ==> get_committee_count_per_slot(s,epoch) == 1
-    //ensures 2 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE <= |get_active_validator_indices(s.validators, epoch)| as uint64 < 3 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE==> get_committee_count_per_slot(s,epoch) == 2
-    //ensures 3 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE <= |get_active_validator_indices(s.validators, epoch)| as uint64 < 4 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE==> get_committee_count_per_slot(s,epoch) == 3
-
-    //ensures 64 * SLOTS_PER_EPOCH * TARGET_COMMITTEE_SIZE <= |get_active_validator_indices(s.validators, epoch)| as uint64 ==> get_committee_count_per_slot(s,epoch) == 64
-    // TARGET_COMMITTEE_SIZE == TWO_UP_7;
-
-    lemma divHelper(a: nat, b: nat, c: nat)
-        requires a < 0x10000000000000000
-        requires c > 0
-        requires b <= c
-        ensures a * b / c < 0x10000000000000000
-    {
-        assert a * b <= a * c;
-    }
-
-    lemma divHelper2(a: nat, b: nat, c: nat)
-        requires a < 0x10000000000000000
-        requires c > 0
-        requires b <= c
-        ensures a * b / c <= a
-    {
-        // Thanks Dafny
-    }
-
+       
 
 }
