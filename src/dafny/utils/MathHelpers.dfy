@@ -40,6 +40,22 @@ module MathHelpers {
         if a > b then a else b
     }  
 
+    /** Get a sequence of natural numbers [start, start+1, ..., end-1].
+     *
+     *  @param  start   A natural number. 
+     *  @param  end     A natural number. 
+     *  @return         A sequence [start, start+1, ..., end-1]. 
+     */
+    function method range(start: nat, end: nat): seq<nat>
+        requires end >= start
+        ensures |range(start,end)| == (end - start) 
+        ensures forall i :: 0 <= i < |range(start,end)| ==> start <= range(start,end)[i] < end
+        decreases end - start
+    {
+        if (end - start) == 0 then []
+        else [start] + range(start+1, end)
+    }
+
     /** 
      *  Define 2^n. 
      *
@@ -393,6 +409,7 @@ module MathHelpers {
         requires b <= c
         ensures a * b / c <= a
     {
+        assert (a * b / c) * c <= a * c;
         assert a * b <= a * c;
     }
 
@@ -448,6 +465,8 @@ module MathHelpers {
             assert a as real / c as real > b as real / c as real;
         }
     }
+
+
 
 
 }

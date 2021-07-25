@@ -221,19 +221,8 @@ module BeaconHelpers {
 
     
 
-     
+    
 
-      
-
-    function method uint64Range(start: uint64, end: uint64): seq<uint64>
-        requires end >= start
-        ensures |uint64Range(start,end)| == (end - start) as int
-        ensures forall i :: 0 <= i < |uint64Range(start,end)| ==> start <= uint64Range(start,end)[i] < end
-        decreases end - start
-    {
-        if (end - start) == 0 then []
-        else [start] + uint64Range(start+1, end)
-    }
 
     // Check if ``validator`` is active.
     predicate method is_active_validator(validator: Validator, epoch: Epoch)
@@ -367,7 +356,11 @@ module BeaconHelpers {
         computeCommitteeLemma(|indices|, index as nat, count as nat);
         
         assert end > start;
-        var range := uint64Range(start as uint64, end as uint64);
+        assert end < 0x10000000000000000;
+        assert start < 0x10000000000000000;
+
+        //var range := uint64Range(start as uint64, end as uint64);
+        var range := range(start, end);
 
         assert |indices| < 0x10000000000000000;
         assert forall i :: 0 <= i < |range| ==> range[i] as nat < end;
@@ -383,14 +376,14 @@ module BeaconHelpers {
 
     }
 
-    function method compute_committee_helper(indices: seq<ValidatorIndex>, seed: Bytes32, range: seq<uint64>) : seq<ValidatorIndex>
+    function method compute_committee_helper(indices: seq<ValidatorIndex>, seed: Bytes32, range: seq<nat>) : seq<ValidatorIndex>
         requires |indices| < 0x10000000000000000
         requires forall i :: 0 <= i < |range| ==> range[i] as int < |indices|
         ensures |compute_committee_helper(indices, seed, range)| as nat == |range|
         ensures forall e :: e in compute_committee_helper(indices, seed, range) ==> e in indices
     {
         if |range| == 0 then []
-        else [indices[compute_shuffled_index(range[0], |indices| as uint64, seed)]] + compute_committee_helper(indices, seed, range[1..])
+        else [indices[compute_shuffled_index(range[0] as uint64, |indices| as uint64, seed)]] + compute_committee_helper(indices, seed, range[1..])
     }
 
 
