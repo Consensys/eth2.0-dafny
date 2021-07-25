@@ -72,11 +72,7 @@ module BeaconHelpers {
         (slot / SLOTS_PER_EPOCH) as Epoch
     }
 
-    predicate minimumActiveValidators(s: BeaconState)
-    {
-        |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-    }
-
+    
     /**
      *  Slot number at start of an epoch.
      *  

@@ -44,21 +44,7 @@ module StateTransitionSpec {
     import opened ProcessOperationsSpec
     
 
-    /**
-     *  Collect pubkey in a list of validators.
-     *
-     *  @param  xv  A list of validators,
-     *  @returns    The set of keys helpd byt the validators in `xv`.
-     */
-    function keysInValidators(xv : seq<Validator>) : set<BLSPubkey>
-        decreases xv
-    {
-        if |xv| == 0 then  
-            {}
-        else 
-            { xv[0].pubkey } + keysInValidators(xv[1..])
-    }
-
+    
     
     //  Specifications of finalisation of a state and forward to future slot.
 
