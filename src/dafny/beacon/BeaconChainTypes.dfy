@@ -46,6 +46,24 @@ module BeaconChainTypes {
     function method hash<T(==)>(t : T) : Bytes32 
         ensures hash(t) != DEFAULT_BYTES32
 
+    
+    // Misc dependencies
+
+    /**
+     *  Eth1Data2.
+     *
+     *  @param      deposit_root
+     *  @param      deposit_count
+     *  @param      block_hash
+     */
+    datatype Eth1Data = Eth1Data(
+        deposit_root: Hash,
+        deposit_count: uint64,
+        block_hash: Hash
+    )
+
+    /** The zeroed (default) Eth1 data. */
+    const DEFAULT_ETH1DATA := Eth1Data(DEFAULT_BYTES32, 0, DEFAULT_BYTES32)
 
     /** The vector of historical roots type.  */
     type VectorOfHistRoots = x : seq<Root> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
@@ -54,27 +72,16 @@ module BeaconChainTypes {
     /** Empty vector of historical roots. */
     const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
-    /** The list of historical roots type.  */
-    type ListOfHistRoots = x : seq<Root> |  |x| <= HISTORICAL_ROOTS_LIMIT as int
-        witness DEFAULT_LIST_OF_HIST_ROOTS
-
-    /** Empty list of historical roots. */
-    const DEFAULT_LIST_OF_HIST_ROOTS : seq<Root> := []
-
-
-    /** The randao mixes type.  */
-    type VectorOfRandaoMix = x : seq<Bytes32> |  |x| == EPOCHS_PER_HISTORICAL_VECTOR as int
-        witness DEFAULT_RANDAO_MIX
-
-    /** Empty vector of randao mixes. */
-    const DEFAULT_RANDAO_MIX := timeSeq<Bytes32>(DEFAULT_BYTES32, EPOCHS_PER_HISTORICAL_VECTOR as int)
-
-    /** The slashings type.  */
-    type VectorOfSlashings = x : seq<Gwei> |  |x| == EPOCHS_PER_SLASHINGS_VECTOR as int
-        witness DEFAULT_SLASHINGS
-
-    /** Empty vector of slashings. */
-    const DEFAULT_SLASHINGS := timeSeq<Gwei>(0 as Gwei, EPOCHS_PER_SLASHINGS_VECTOR as int)
+    /**
+     * Historical Batch.
+     * 
+     *  @param      block_roots
+     *  @paran      state_roots
+     */
+    datatype HistoricalBatch = HistoricalBatch(
+        block_roots: VectorOfHistRoots,
+        state_roots: VectorOfHistRoots
+    )
 
     /**
      *  Beacon chain block header.
@@ -83,7 +90,7 @@ module BeaconChainTypes {
      *  @param  proposer_index
      *  @param  parent_root
      *  @param  state_root
-     *  @param  body_root
+     *  @param  body_root       // Not implemented in the simplified model
      */
     datatype BeaconBlockHeader = BeaconBlockHeader(
         slot: Slot,
@@ -93,9 +100,7 @@ module BeaconChainTypes {
         // body_root: Root
     )
 
-    /**
-     *  Zeroed (default)  block header.
-     */
+    /** The zeroed (default) block header. */
     const DEFAULT_BLOCK_HEADER := BeaconBlockHeader(
         0 as Slot,
         0 as ValidatorIndex,
@@ -103,14 +108,40 @@ module BeaconChainTypes {
         DEFAULT_BYTES32
     )
 
+
+    // Beacon operations
+
+    /**
+     *  A ProposerSlashing is used to police potentially 
+     *  nefarious validator block proposal activity. This 
+     *  makes duplicate block proposals “expensive” to 
+     *  disincentivize activity that might lead to forking 
+     *  and conflicting views of the canonical chain. 
+     *  Validators can be slashed if they signed two 
+     *  different beacon blocks for the same slot.
+     *
+     *  The headers seem to correspond to different witness blocks signed 
+     *  by the proposer_index which makes them slashable.
+     * 
+     *  @param  header_1        The signed header of the first of the two slashable beacon blocks 
+     *  @param  header_2        The signed header of the second of the two slashable beacon blocks
+     *  
+     */ 
+    datatype ProposerSlashing = ProposerSlashing(
+        header_1: BeaconBlockHeader,
+        header_2: BeaconBlockHeader
+    )
+
+
+    // Beacon blocks
+
     /**
      *  Beacon block body.
      *
      *  @param  randao_reveal
      *  @param  eth1_data           Eth1 data vote 
      *  @param  graffiti            Arbitrary data
-     *  @param  proposer_slashings  
-     *                              The proposers that are slashed.
+     *  @param  proposer_slashings  The proposers that are slashed.
      *  @param  attester_slashings
      *  @param  attestations
      *  @param  deposits
@@ -122,15 +153,15 @@ module BeaconChainTypes {
         // graffiti: uint32,                          //  In K: Bytes32
         proposer_slashings: seq<ProposerSlashing>,
         attester_slashings: seq<AttesterSlashing>,
-        attestations: seq<PendingAttestation>,
+        attestations: seq<Attestation>,
         deposits: seq<Deposit>,
         voluntary_exits: seq<VoluntaryExit>
     )
 
-    /**
-     *  The zeroed (default) block body.
-     */
-    const DEFAULT_BLOCK_BODY := BeaconBlockBody(DEFAULT_BYTES32, DEFAULT_ETH1DATA, [], [], [], [], [])
+    /** The zeroed (default) block body. */
+    const DEFAULT_BLOCK_BODY := BeaconBlockBody(
+        DEFAULT_BYTES32, DEFAULT_ETH1DATA, [], [], [], [], []
+    )
 
     /**
      *  Beacon block.
@@ -167,51 +198,70 @@ module BeaconChainTypes {
         body: BeaconBlockBody
     )  
 
-    /**
-     *  The zeroed (default) block.
-     */
+    /** The zeroed (default) block. */
     const DEFAULT_BLOCK := BeaconBlock(
-            0 as Slot, 0 as ValidatorIndex, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
+        0 as Slot, 0 as ValidatorIndex, DEFAULT_BYTES32, DEFAULT_BYTES32, DEFAULT_BLOCK_BODY
     )
 
-    type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int witness DEFAULT_JUSTIFICATION_BITVECTOR
 
-    /**
-     *  Default bitvector of size 4 initialised with false.
-     */
-    const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
+    // Beacon state
 
-    /**
-     *  A list of validators.  
-     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
-     * */
-    type ListOfValidators = x : seq<Validator> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
-            DEFAULT_LIST_VALIDATORS
+    /** The list of historical roots type.  */
+    type ListOfHistRoots = x : seq<Root> |  |x| <= HISTORICAL_ROOTS_LIMIT as int 
+        witness DEFAULT_LIST_OF_HIST_ROOTS
 
-    /**
-     *  A list of balances.  
-     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
-     * */
-    type ListOfBalances = x : seq<Gwei> | |x| <= VALIDATOR_REGISTRY_LIMIT as int witness 
-            DEFAULT_LIST_BALANCES
-            
-    /**
-     *  Default bitvector of size 4 initialised with false.
-     */
-    const DEFAULT_LIST_VALIDATORS : seq<Validator> := []
-    const DEFAULT_LIST_BALANCES : seq<Gwei> := []
+    /** The default (empty) list of historical roots. */
+    const DEFAULT_LIST_OF_HIST_ROOTS : seq<Root> := []
 
     /**
      *  A list of Eth1Data.  
      *  The maximum size of this list is EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH.
      */
-    type ListOfEth1Data = x : seq<Eth1Data> | |x| <= EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int witness 
-            DEFAULT_LIST_ETH1DATA
+    type ListOfEth1Data = x : seq<Eth1Data> | |x| <= EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int 
+        witness DEFAULT_LIST_ETH1DATA
             
-    /**
-     *  Default list of Eth1Data
-     */
+    /** The default (empty) list of Eth1Data. */
      const DEFAULT_LIST_ETH1DATA : seq<Eth1Data> := []
+    
+    /**
+     *  A list of validators.  
+     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
+     */
+    type ListOfValidators = x : seq<Validator> | |x| <= VALIDATOR_REGISTRY_LIMIT as int 
+        witness DEFAULT_LIST_VALIDATORS
+
+    /** The default (empty) list of Validators. */
+    const DEFAULT_LIST_VALIDATORS : seq<Validator> := []
+
+    /**
+     *  A list of balances.  
+     *  The maximum size of this list is VALIDATOR_REGISTRY_LIMIT (which is 2^40).
+     */
+    type ListOfBalances = x : seq<Gwei> | |x| <= VALIDATOR_REGISTRY_LIMIT as int 
+        witness DEFAULT_LIST_BALANCES
+    
+    /** The default (empty) list of Balances. */
+    const DEFAULT_LIST_BALANCES : seq<Gwei> := []
+
+    /** The randao mixes type.  */
+    type VectorOfRandaoMix = x : seq<Bytes32> |  |x| == EPOCHS_PER_HISTORICAL_VECTOR as int 
+        witness DEFAULT_RANDAO_MIX
+
+    /** The default (empty) vector of randao mixes. */
+    const DEFAULT_RANDAO_MIX := timeSeq<Bytes32>(DEFAULT_BYTES32, EPOCHS_PER_HISTORICAL_VECTOR as int)
+
+    /** The slashings type.  */
+    type VectorOfSlashings = x : seq<Gwei> |  |x| == EPOCHS_PER_SLASHINGS_VECTOR as int
+        witness DEFAULT_SLASHINGS
+
+    /** Empty vector of slashings. */
+    const DEFAULT_SLASHINGS := timeSeq<Gwei>(0 as Gwei, EPOCHS_PER_SLASHINGS_VECTOR as int)
+
+    type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int 
+        witness DEFAULT_JUSTIFICATION_BITVECTOR
+
+    /** The default bitvector of size 4 initialised with false. */
+    const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
 
     
     /** 
@@ -363,54 +413,6 @@ module BeaconChainTypes {
             DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT
-    )
-
-    /**
-     *  A ProposerSlashing is used to police potentially 
-     *  nefarious validator block proposal activity. This 
-     *  makes duplicate block proposals “expensive” to 
-     *  disincentivize activity that might lead to forking 
-     *  and conflicting views of the canonical chain. 
-     *  Validators can be slashed if they signed two 
-     *  different beacon blocks for the same slot.
-     *
-     *  The headers seem to correspond to different witness blocks signed 
-     *  by the proposer_index which makes them slashable.
-     * 
-     *  @param  proposer_index  index of the validator to be slashed for double proposing
-     *  @param  header_1        The signed header of the first of the two slashable beacon blocks 
-     *  @param  header_2        The signed header of the second of the two slashable beacon blocks
-     *  
-     */ 
-    datatype ProposerSlashing = ProposerSlashing(
-        header_1: BeaconBlockHeader,
-        header_2: BeaconBlockHeader
-    )
-
-     /**
-     *  Eth1Data2.
-     */
-    datatype Eth1Data = Eth1Data(
-        deposit_root: Hash,
-        deposit_count: uint64,
-        block_hash: Hash
-    )
-
-    /**
-     *  The zeroed (default) Eth1 data.
-     */
-    const DEFAULT_ETH1DATA := Eth1Data(DEFAULT_BYTES32, 0, DEFAULT_BYTES32)
-
-
-    /**
-     * Historical Batch.
-     * 
-     *  @param      block_roots
-     *  @paran      state_roots
-     */
-    datatype HistoricalBatch = HistoricalBatch(
-        block_roots: VectorOfHistRoots,
-        state_roots: VectorOfHistRoots
     )
 
  }
