@@ -29,6 +29,17 @@ module MathHelpers {
         if a < b then a else b
     }
 
+    /** Get the maximum of 2 natural numbers.
+     *
+     *  @param  a   A natural number. 
+     *  @param  b   A natural number. 
+     *  @return     a if a > b, else b. 
+     */
+    function method max(a: nat, b: nat): nat
+    {
+        if a > b then a else b
+    }  
+
     /** 
      *  Define 2^n. 
      *
@@ -291,5 +302,152 @@ module MathHelpers {
             isPowerOf2(power2(k-1)); 
         }
     }
+
+    /**     
+     *  Show that if b => 1 then integer division of a by b is equivalent to
+     *  the floor of a/b. 
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @return     A proof that if b => 1 then integer division of a by b is 
+     *              equivalent to (a as real / b as real).Floor.
+     */
+    lemma NatDivision(a: nat, b: nat)
+        requires b != 0
+        ensures a / b == (a as real / b as real).Floor
+    {
+        assert a == (a / b) * b + (a % b);
+
+        assert a as real == (a / b) as real * b as real + (a % b) as real;
+
+        assert (a % b) as real / b as real < b as real;
+        assert a as real / b as real == (a / b) as real + (a % b) as real / b as real;
+        assert (a % b) < b;
+        assert (a % b) as real / b as real < 1 as real;
+    }
+
+    /**
+     *  A simple lemma to bound integer division when divisor >= 1.
+     *
+     *  @param  x   A positive integer. 
+     *  @param  k   A positive integer. 
+     *  @return     A proof that if k >= 1 then x/k has lower bound 0 and upper bound x.
+     */
+    lemma divLess(x : nat , k : nat) 
+        requires k >= 1
+        ensures 0 <= x / k <= x 
+    {   
+        if k == 1 {
+            assert x / k == x;
+        }
+        else {
+            assert k > 1;
+            NatDivision(x, k);
+            assert x / k <= x;
+        }
+    }
+
+    /**
+     *  ( x  /  k ) * k is less than or equal to x.
+     *
+     *  @param  x   A positive integer. 
+     *  @param  k   A positive integer. 
+     *  @return     A proof that if k >= 1 then (x/k)*k has an upper bound x.
+     */
+    lemma div2(x : nat, k : nat) 
+        requires k >= 1 
+        ensures ( x / k ) * k <= x
+    {   //  Thanks Dafny
+    }
+
+    /**
+     *  If a is a uint64, c > 0 and b <= c then ( a  /  b ) * c is a uint64.
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @param  c   A positive integer. 
+     *  @return     A proof that if a is a uint64, c > 0 and b <= c then 
+     *              ( a  /  b ) * c is a uint64.
+     */
+    lemma divHelper(a: nat, b: nat, c: nat)
+        requires a < 0x10000000000000000
+        requires c > 0
+        requires b <= c
+        ensures a * b / c < 0x10000000000000000
+    {
+        assert a * b <= a * c;
+    }
+
+    /**
+     *  If a is a uint64, c > 0 and b <= c then ( a  /  b ) * c <= a>.
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @param  c   A positive integer. 
+     *  @return     A proof that if a is a uint64, c > 0 and b <= c then 
+     *              ( a  /  b ) * c <= a.
+     */
+    lemma divHelper2(a: nat, b: nat, c: nat)
+        requires a < 0x10000000000000000
+        requires c > 0
+        requires b <= c
+        ensures a * b / c <= a
+    {
+        assert a * b <= a * c;
+    }
+
+    /**
+     *  Expansion of a * (b + 1).
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @return     A proof that a * (b + 1) == a * b + a.
+     */
+    lemma natExpansion(a: nat, b: nat)
+        ensures a * (b + 1) == a * b + a 
+    { // Thanks Dafny
+    }
+
+    /**
+     *   a - b >= c implies a/c > b/c
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @param  c   A positive integer. 
+     *  @return     A proof that if c > 0 then a - b >= c ==> a/c > b/c.
+     */
+    lemma natRatioRule(a: nat, b: nat, c: nat)
+        requires c > 0
+        ensures a - b >= c ==> a/c > b/c 
+    { // Thanks Dafny
+    }
+
+    /**
+     *  a/c >= b/c
+     *
+     *  @param  a   A positive integer. 
+     *  @param  b   A positive integer. 
+     *  @param  c   A positive integer. 
+     *  @return     A proof that if c > 0and a >= b then a/c >= b/c.
+     */
+    lemma commonDivRule(a: nat, b: nat, c: nat)
+        requires c > 0
+        requires a >= b
+        ensures a/c >= b/c
+    {
+        if a == b { // Thanks Dafny
+        }
+        else {
+            assert a > b;
+            var i : nat :| a == b + i;
+            assert i > 0;
+            NatDivision(a,c);
+            assert a / c == (a as real / c as real).Floor;
+            NatDivision(b,c);
+            assert b / c == (b as real / c as real).Floor;
+            assert a as real / c as real > b as real / c as real;
+        }
+    }
+
 
 }
