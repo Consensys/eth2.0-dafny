@@ -15,8 +15,6 @@
 include "../../ssz/Constants.dfy"
 include "../../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
-// include "Types.dfy"
-// include "Attestations.dfy"
 
 module Validators {
 
@@ -24,8 +22,9 @@ module Validators {
     import opened Constants
     import opened NativeTypes
     import opened Eth2Types
-    // import opened Attestations
    
+    // Misc dependencies
+
     /**
      *  A Validator.
      *
@@ -40,7 +39,7 @@ module Validators {
      */
     datatype Validator = Validator(
         pubkey: BLSPubkey,
-        // withdrawalCredentials: Hash,
+        // withdrawal_credentials: Hash,
         effective_balance: Gwei,
         slashed: bool,
         activation_eligibility_epoch: Epoch,
@@ -49,7 +48,10 @@ module Validators {
         withdrawable_epoch: Epoch
     )
     
-    const DEFAULT_VALIDATOR := Validator(DEFAULT_BYTES48, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH)
+    /** The default Validator. */
+    const DEFAULT_VALIDATOR := Validator(
+        DEFAULT_BYTES48, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH
+    )
     
      /**
      *  Deposit data.
@@ -75,6 +77,9 @@ module Validators {
         amount: Gwei
         // signature: BLSSignature
     )
+
+
+    // Beacon operations
 
     /**
      *  Deposit.
