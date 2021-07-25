@@ -22,12 +22,13 @@ include "../../utils/SetHelpers.dfy"
  */
 module AttestationsTypes {
 
-    import opened Helpers
+    //  Import some constants and types
     import opened Eth2Types
     import opened Constants
+    import opened Helpers
     import opened SetHelpers
 
-    // Containers
+    // Misc dependencies
 
     /** 
      *  A Checkpoint. 
@@ -91,32 +92,50 @@ module AttestationsTypes {
      */
     datatype AttestationData = AttestationData(
         slot: Slot,
-        index: CommitteeIndex, // not used, should be the committee the validator belongs to.
+        index: CommitteeIndex,      // the committee the validator belongs to
         beacon_block_root: Root, 
         source: CheckPoint,
-        target: CheckPoint        //    target.epoch == epoch(slot)
-    )    
+        target: CheckPoint          // target.epoch == epoch(slot)
+    )   
 
-    /**
-     *  Default value for AttestationData.
-     */
+    /** The default value for AttestationData. */
     const DEFAULT_ATTESTATION_DATA := 
         AttestationData(0 as Slot,  0 as CommitteeIndex, DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
 
-    // datatype AggregationBits 
-    type AggregationBits = x : seq<bool> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat witness DEFAULT_AGGREGATION_BITS
+    /** The AttestingIndices type. */
+    type AttestingIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat
+        witness DEFAULT_ATTESTING_INDICES
 
-    const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE as nat)
-
-    const DEFAULT_INCLUSION_DELAY := 1 as Slot; // TODO: determine an appropriate default value
-
-    const DEFAULT_PROPOSER_INDEX := 0 as ValidatorIndex;
+    /** The default value for attesting_indices. */
+    const DEFAULT_ATTESTING_INDICES := timeSeq(0 as ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE as nat)
 
     /**
-     *  A Pending attestation (including a delay slot).
+     *  An indexed attestation (including a delay slot).
      *  
-     *  @param  data    The actual data i.e. vote of the attestation.
-     *  @todo:  enable other fileds.
+     *  @param  attesting_indices       The actual data i.e. vote of the attestation.
+     *  @param  data                    The actual data i.e. vote of the attestation.
+     */
+    datatype IndexedAttestation = IndexedAttestation(
+        attesting_indices: AttestingIndices,
+        data: AttestationData
+        // signature: BLSSignature
+    )
+
+    /** The AggregationBits type, a list of bits of max length MAX_VALIDATORS_PER_COMMITTEE */
+    type AggregationBits = x : seq<bool> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        witness DEFAULT_AGGREGATION_BITS
+
+    /** The default AggregrationBits. Note the default is set to a length of MAX_VALIDATORS_PER_COMMITTEE. */
+    const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE as nat)
+
+    
+    /**
+     *  A pending attestation (including a delay slot).
+     *  
+     *  @param  aggregation_bits    
+     *  @param  data                The actual data i.e. vote of the attestation.
+     *  @param  inlusion_delay      
+     *  @param  proposer_index      
      */
     datatype PendingAttestation = PendingAttestation(
         aggregation_bits: AggregationBits,
@@ -125,44 +144,47 @@ module AttestationsTypes {
         proposer_index: ValidatorIndex
     )
 
-    /*
-    If we omit the signature we can use AttestationData in place of Attestation.
-    class Attestation(Container):
-    aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
-    data: AttestationData
-    signature: BLSSignature
-    */
+    /** The default inclusion_delay. */
+    const DEFAULT_INCLUSION_DELAY := 1 as Slot; // TODO: determine an appropriate default value
 
+    /** The default proposer_index. */
+    const DEFAULT_PROPOSER_INDEX := 0 as ValidatorIndex;
 
-    /**
-     *  Default value for PendingAttestation.
-     */
+    /** The default value for PendingAttestation. */
     const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA, DEFAULT_INCLUSION_DELAY, DEFAULT_PROPOSER_INDEX)
 
-    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat witness DEFAULT_LIST_ATTESTATIONS
+    /** A list of PendingAttestations, max length is (MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ). */
+    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+        witness DEFAULT_LIST_ATTESTATIONS
+
+    /** The default list of PendingAttestations. */
+    const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
+
+
+    // Beacon operations
 
     /**
-     *  Default bitvector of size 4 initialised with false.
+     *  An attester slashing.
+     *  
+     *  @param  attestation_1       
+     *  @param  attestation_2
      */
-    const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
-    // timeSeq(DEFAULT_PENDING_ATTESTATION, MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int)
-
-    // datatype AttestingIndices 
-    type AttestingIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat witness DEFAULT_ATTESTING_INDICES
-
-    const DEFAULT_ATTESTING_INDICES := timeSeq(0 as ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE as nat)
-
-    // datatype IndexedAttestation
-    datatype IndexedAttestation = IndexedAttestation(
-        attesting_indices: AttestingIndices,
-        data: AttestationData,
-        signature: BLSSignature
-    )
-    
-    // datatype AttesterSlashing
     datatype AttesterSlashing = AttesterSlashing(
         attestation_1: IndexedAttestation,
         attestation_2: IndexedAttestation
     )
+    
+    /**
+     *  An attestation.
+     *  
+     *  @param  aggregation_bits    
+     *  @param  data                The actual data i.e. vote of the attestation.
+     *  @param  signature           // Not implemented in the simplified model      
+     */
+    datatype Attestation = Attestation(
+        aggregation_bits: AggregationBits,
+        data: AttestationData
+        // signature: BLSSignature
+    )   
 
 }
