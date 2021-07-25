@@ -14,6 +14,7 @@
 
 include "../../ssz/Constants.dfy"
 include "../../utils/SetHelpers.dfy"
+include "../../utils/MathHelpers.dfy"
 include "../../utils/NativeTypes.dfy"
 include "AttestationsTypes.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -34,6 +35,7 @@ module AttestationsHelpers {
     import opened Eth2Types
     import opened NativeTypes
     import opened SetHelpers
+    import opened MathHelpers
     import opened AttestationsTypes
     import opened BeaconChainTypes
     import opened BeaconHelpers

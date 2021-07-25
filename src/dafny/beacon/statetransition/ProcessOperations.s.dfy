@@ -22,6 +22,7 @@ include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
+include "../Helpers.s.dfy"
 include "../../ssz/Serialise.dfy"
 
 
@@ -39,6 +40,7 @@ module ProcessOperationsSpec {
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
+    import opened BeaconHelperSpec
     import opened MathHelpers
     import opened SSZ
 
@@ -147,26 +149,8 @@ module ProcessOperationsSpec {
 
     }
 
-    /** */
-    function updateRandao(s: BeaconState, b: BeaconBlockBody) : BeaconState
-        requires |s.validators| == |s.balances|
-        ensures |updateRandao(s,b).validators| == |updateRandao(s,b).balances|
-        ensures updateRandao(s,b) == s.(randao_mixes := updateRandao(s,b).randao_mixes)
-        ensures updateRandao(s,b).latest_block_header == s.latest_block_header
-    {
-        var epoch := get_current_epoch(s);
-
-        // Verify RANDAO reveal not implemented
-        //var proposer := s.validators[get_beacon_proposer_index(s)];
-        // signing_root = compute_signing_root(epoch, get_domain(state, DOMAIN_RANDAO))
-        // assert bls.Verify(proposer.pubkey, signing_root, body.randao_reveal)
-
-        // # Mix in RANDAO reveal (use simplified mix value)
-        var mix := DEFAULT_BYTES32; //var mix := xor(get_randao_mix(s, epoch), hash(b.randao_reveal));
-        s.(randao_mixes := s.randao_mixes[(epoch % EPOCHS_PER_HISTORICAL_VECTOR) as nat := mix])
-    }
-
-/**
+    
+    /**
      *  Take into account deposits in a block.
      *
      *  @param  s           A beacon state.
@@ -376,7 +360,7 @@ module ProcessOperationsSpec {
     }
 
     ///////////////////////
-    predicate attestationIsWellFormed(s: BeaconState, a: PendingAttestation)
+    predicate attestationIsWellFormed(s: BeaconState, a: Attestation)
     {
         get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)  
         /** Epoch of target matches epoch of the slot the attestation is made. */
@@ -400,7 +384,7 @@ module ProcessOperationsSpec {
 
     }
 
-    function updateAttestation(s: BeaconState, a: PendingAttestation) : BeaconState
+    function updateAttestation(s: BeaconState, a: Attestation) : BeaconState
         requires attestationIsWellFormed(s, a)
         requires |s.current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
         requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
@@ -458,7 +442,7 @@ module ProcessOperationsSpec {
         //assert is_valid_indexed_attestation(s', get_indexed_attestation(s', a));
     }
 
-    function updateAttestations(s: BeaconState, a: ListOfAttestations) : BeaconState
+    function updateAttestations(s: BeaconState, a: seq<Attestation>) : BeaconState
         requires |s.validators| == |s.balances|
         requires |a| as nat <= MAX_ATTESTATIONS as nat
         requires forall i:: 0 <= i < |a| ==> attestationIsWellFormed(s, a[i])
@@ -516,7 +500,7 @@ module ProcessOperationsSpec {
             updateAttestation(s1, a[index])
     }
 
-    lemma AttestationHelperLemma(s: BeaconState, s1: BeaconState, a: PendingAttestation)
+    lemma AttestationHelperLemma(s: BeaconState, s1: BeaconState, a: Attestation)
         requires attestationIsWellFormed(s, a);
         requires s1.validators == s.validators
         requires s1.slot == s.slot

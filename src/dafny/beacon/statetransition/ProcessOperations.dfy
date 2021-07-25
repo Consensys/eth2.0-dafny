@@ -23,7 +23,7 @@ include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
-include "StateTransition.s.dfy"
+include "../Helpers.s.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "ProcessOperations.s.dfy"
 
@@ -42,9 +42,9 @@ module ProcessOperations {
     import opened Validators
     import opened AttestationsTypes
     import opened Helpers
+    import opened BeaconHelperSpec
     import opened SeqHelpers
     import opened BeaconHelpers
-    import opened StateTransitionSpec
     import opened AttestationsHelpers
     import opened ProcessOperationsSpec
     
@@ -163,6 +163,7 @@ module ProcessOperations {
         s5
     }
 
+
     /**
      *
      *  Example.
@@ -192,7 +193,7 @@ module ProcessOperations {
      *
      *  Question: what is the invariant for the attestations in a state?
      */
-    method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
+    method process_attestation(s: BeaconState, a: Attestation) returns (s' : BeaconState)
         requires attestationIsWellFormed(s, a)
         requires |s.current_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
         requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
@@ -375,7 +376,7 @@ module ProcessOperations {
         {
             assert 1 <= |bb.attestations|; 
             //assert 0 <= i < |bb.attestations| - 1;
-            seqInitLast<PendingAttestation>(bb.attestations, i);
+            seqInitLast<Attestation>(bb.attestations, i);
             assert bb.attestations[..i+1] == bb.attestations[..i] + [bb.attestations[i]];
             s':= process_attestation(s', bb.attestations[i]); 
             i := i+1;
