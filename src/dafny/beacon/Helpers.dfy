@@ -20,6 +20,7 @@ include "../ssz/Constants.dfy"
 include "../ssz/Serialise.dfy"
 
 include "BeaconChainTypes.dfy"
+include "Helpers.s.dfy"
 include "Helpers.p.dfy"
 include "attestations/AttestationsTypes.dfy"
 include "validators/Validators.dfy"
@@ -40,6 +41,7 @@ module BeaconHelpers {
     import opened SSZ
 
     import opened BeaconChainTypes
+    import opened BeaconHelperSpec
     import opened BeaconHelperProofs
     import opened AttestationsTypes
     import opened Validators
@@ -101,63 +103,7 @@ module BeaconHelpers {
     }
 
 
-    // Beacon State Mutators
-
-/** increase_balance
-     *  Increase the validator balance at index ``index`` by ``delta``.
-     *
-     *  @notes  The datatype Gwei has temporarily been changed from uint64 to nat so as to simplify the
-     *          properties required to process a deposit. Hence a further requires will be needed to prevent
-     *          overflow once this temporary simplification is removed.
-     *  
-     **/
-    // function method increase_balance(s: BeaconState, index: ValidatorIndex, delta: Gwei): BeaconState 
-    //     requires index as int < |s.balances| 
-    //     requires s.balances[index] as int + delta as int < 0x10000000000000000
-    //     ensures |s.balances| == |increase_balance(s,index,delta).balances|
-    //     ensures increase_balance(s,index,delta).balances[index] == s.balances[index] + delta
-    // {
-    //     s.(
-    //         balances := s.balances[index as int := (s.balances[index] + delta)]
-    //     )
-    // }
-    
-    /** increase_balance
-     *  Increase the validator balance at index ``index`` by ``delta``.
-     *  
-     **/
-    function method increase_balance(s: BeaconState, index: ValidatorIndex, delta: Gwei): BeaconState 
-        requires index as int < |s.balances| 
-        requires s.balances[index] as int + delta as int < 0x10000000000000000
-        ensures |s.balances| == |increase_balance(s,index,delta).balances|
-        ensures increase_balance(s,index,delta).balances[index] == s.balances[index] + delta
-    {
-        s.(
-            balances := s.balances[index as int := (s.balances[index] + delta)]
-        )
-    }
-
-    /** decrease_balance
-     *  Decrease the validator balance at index ``index`` by ``delta``.
-     *
-     **/
-    function method decrease_balance(s: BeaconState, index: ValidatorIndex, delta: Gwei): BeaconState 
-        requires index as int < |s.balances| 
-        ensures |s.balances| == |decrease_balance(s,index,delta).balances|
-        ensures if s.balances[index] > delta then decrease_balance(s,index,delta).balances[index] == s.balances[index] - delta
-                else decrease_balance(s,index,delta).balances[index] == 0
-        ensures s.validators == decrease_balance(s,index,delta).validators
-    {
-        if s.balances[index] > delta then
-            s.(
-                balances := s.balances[index as int := (s.balances[index] - delta)]
-            )
-        else
-            s.(
-                balances := s.balances[index as int := 0]
-            )
-    }
-
+   
     function method sorted_intersection(a : seq<ValidatorIndex>, b: seq<ValidatorIndex>): seq<uint64>
         requires forall i,j :: 0 <= i < j < |a| ==> a[i] < a[j]
         requires forall i,j :: 0 <= i < j < |b| ==> b[i] < b[j]
@@ -172,157 +118,7 @@ module BeaconHelpers {
 
         
     
-    /** initiate_validator_exit
-     *  
-     *  Initiate the exit of the validator with index ``index``.
-     *
-     */
-    function method initiate_validator_exit(s: BeaconState, index: ValidatorIndex) : BeaconState
-        requires |s.validators| == |s.balances|
-        requires index as int < |s.validators| 
-        //requires s.validators[index].exitEpoch == FAR_FUTURE_EPOCH
-
-        ensures |s.validators| == |initiate_validator_exit(s,index).validators|
-        ensures |initiate_validator_exit(s,index).validators| == |initiate_validator_exit(s,index).balances|
-        ensures initiate_validator_exit(s,index).validators[index].exitEpoch > get_current_epoch(s) + MAX_SEED_LOOKAHEAD
-                || initiate_validator_exit(s,index).validators[index].exitEpoch == s.validators[index].exitEpoch
-        ensures forall i :: (0 <= i < |s.validators|) && (i != index as int) ==> 
-                initiate_validator_exit(s,index).validators[i].exitEpoch == s.validators[i].exitEpoch
-        ensures initiate_validator_exit(s,index).validators[index].exitEpoch < FAR_FUTURE_EPOCH
-    {
-        // # Return if validator already initiated exit
-        // validator = state.validators[index]
-        if s.validators[index].exitEpoch != FAR_FUTURE_EPOCH then
-            s
-        else 
-        //     return
-        //assert s.validators[index].exitEpoch == FAR_FUTURE_EPOCH;
-        
-        // # Compute exit queue epoch
-        // exit_epochs = [v.exit_epoch for v in state.validators if v.exit_epoch != FAR_FUTURE_EPOCH]
-        var exit_epochs := get_exit_epochs(s.validators);
-        
-        // exit_queue_epoch = max(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(state))])
-        var exit_queue_epoch := max_epoch(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]);
-
-        assert compute_activation_exit_epoch(get_current_epoch(s)) > get_current_epoch(s) + MAX_SEED_LOOKAHEAD;
-        assert compute_activation_exit_epoch(get_current_epoch(s)) in exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))];
-        assert max_epoch(exit_epochs + [compute_activation_exit_epoch(get_current_epoch(s))]) >= compute_activation_exit_epoch(get_current_epoch(s));
-        assert exit_queue_epoch > get_current_epoch(s) + MAX_SEED_LOOKAHEAD;
-
-        // exit_queue_churn = len([v for v in state.validators if v.exit_epoch == exit_queue_epoch])
-        var exit_queue_churn := |get_queue_churn(s.validators, exit_queue_epoch)|;
-        var validator_churn_limit := get_validator_churn_limit(s);
-
-        // if exit_queue_churn >= get_validator_churn_limit(state):
-        //     exit_queue_epoch += Epoch(1)
-
-        // # Set validator exit epoch and withdrawable epoch
-        // validator.exit_epoch = exit_queue_epoch
-        // validator.withdrawable_epoch = Epoch(validator.exit_epoch + MIN_VALIDATOR_WITHDRAWABILITY_DELAY)
-
-        assume exit_queue_epoch as int + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat < 0x10000000000000000; 
-
-        if exit_queue_churn  >= get_validator_churn_limit(s) as nat then 
-            s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch + 1 as Epoch,
-                                                            withdrawable_epoch := (exit_queue_epoch as nat + 1 + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
-        else
-            s.(validators := s.validators[index as int := s.validators[index].(exitEpoch := exit_queue_epoch,
-                                                            withdrawable_epoch := (exit_queue_epoch as nat + MIN_VALIDATOR_WITHDRAWABILITY_DELAY as nat) as Epoch)])
-    }
-
-
-        /** slash_validator
-     *  
-     *  Slash the validator with index ``slashed_index``.
-     */
-    function method slash_validator(s: BeaconState, slashed_index: ValidatorIndex, whistleblower_index: ValidatorIndex): BeaconState
-        requires slashed_index as int < |s.validators| 
-        requires whistleblower_index as int < |s.validators| 
-        requires |s.validators| == |s.balances|
-        //requires s.validators[slashed_index].exitEpoch == FAR_FUTURE_EPOCH
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-        //ensures |get_active_validator_indices(slash_validator(s,slashed_index,whistleblower_index).validators, get_current_epoch(s))| > 0
-        ensures slash_validator(s, slashed_index, whistleblower_index).slot == s.slot
-    {
-        var epoch : Epoch := get_current_epoch(s);
-        var proposer_index := get_beacon_proposer_index(s);
-
-        var s' := initiate_validator_exit(s, slashed_index); // only validator exitEpoch & withdrawable_epoch fields possibly changed
-
-        assert |s.balances| == |s'.balances|;
-        assert |s'.balances| == |s'.validators|;
-        assert get_current_epoch(s) == get_current_epoch(s');
-        
-        //assert initiate_validator_exit(s,slashed_index).validators[slashed_index].exitEpoch > get_current_epoch(s) + MAX_SEED_LOOKAHEAD;
-        assert forall i :: (0 <= i < |s.validators|) && (i != slashed_index as int) ==> 
-                initiate_validator_exit(s,slashed_index).validators[i].exitEpoch == s.validators[i].exitEpoch;
-        
-        //assert s'.validators[slashed_index].exitEpoch > get_current_epoch(s) + MAX_SEED_LOOKAHEAD;
-        assert forall i :: (0 <= i < |s.validators|) && (i != slashed_index as int) ==> 
-                s'.validators[i].exitEpoch == s.validators[i].exitEpoch;
-        
-        assert forall i :: (0 <= i < |s'.validators|) ==> 
-                is_active_validator(s.validators[i], get_current_epoch(s)) == is_active_validator(s'.validators[i], get_current_epoch(s'));
-
-        initiateValidatorExitPreservesActivateValidators(s.validators, s'.validators,  get_current_epoch(s'));
-        assert get_active_validator_indices(s'.validators, get_current_epoch(s')) == get_active_validator_indices(s.validators, get_current_epoch(s));
-        assert |get_active_validator_indices(s'.validators, get_current_epoch(s'))| > 0;
-        
-        // NOTE:    steps reordered to suit Dafny function method output
-        //          order irrelevant as 'Apply proposer and whistleblower rewards' relies only on s'.validators[slashed_index].effective_balance
-
-        // # Apply proposer and whistleblower rewards
-        
-        // if whistleblower_index is None:
-        //     whistleblower_index = proposer_index
-        // Note: 'None' is not available in Dafny and so functions that call slash_validator will have this parameter set to proposer_index
-        
-        
-        // NOTE: there doesn't seem to be anything to check that the validator being slashed isn't the proposer of the block that contains the ps
-        // though it makes sense that a validator wouldn't proposer to slash itself!
-        // assert slashed_index != whistleblower_index;
-
-        var whistleblower_reward : Gwei := (s'.validators[slashed_index].effective_balance as int / WHISTLEBLOWER_REWARD_QUOTIENT as nat) as Gwei;
-        var proposer_reward := (whistleblower_reward as int / PROPOSER_REWARD_QUOTIENT as int) as Gwei;
-        var validator_penalty := (s'.validators[slashed_index].effective_balance as int / MIN_SLASHING_PENALTY_QUOTIENT as nat) as Gwei;
-
-        //s' := increase_balance(s', proposer_index, proposer_reward);
-        //s' := increase_balance(s', whistleblower_index, Gwei(whistleblower_reward - proposer_reward));
-        
-        //var validator := s'.validators[slashed_index];
-        // validator.slashed = True
-        // validator.withdrawable_epoch = max(validator.withdrawable_epoch, Epoch(epoch + EPOCHS_PER_SLASHINGS_VECTOR))
-        // state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += validator.effective_balance
-
-        assume (s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] as int + s'.validators[slashed_index].effective_balance as int) < 0x10000000000000000;
-        assert slashed_index as int < |s'.balances|; 
-        assert proposer_index as int < |s'.balances|; 
-        assert whistleblower_index as int < |s'.balances|; 
-        assume s'.balances[proposer_index] as int + proposer_reward as int < 0x10000000000000000;
-        // Note: if proposer_index == whistleblower_index then the following assume statement is required rather than
-        // assume s'.balances[whistleblower_index] as int + (whistleblower_reward - proposer_reward) as int < 0x10000000000000000;
-        // The following assume statement covers both cases and will be replaced at a later date by functionality that
-        // takes into account the total amount of Eth available.
-        assume s'.balances[whistleblower_index] as int + whistleblower_reward  as int < 0x10000000000000000;
-
-        s'.(validators := s'.validators[slashed_index := s'.validators[slashed_index].(slashed := true,
-                                                            withdrawable_epoch := max(s'.validators[slashed_index].withdrawable_epoch as nat,(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat)) as Epoch)],
-            slashings := s'.slashings[(epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat) := s'.slashings[epoch as int % EPOCHS_PER_SLASHINGS_VECTOR as nat] + s'.validators[slashed_index].effective_balance],
-            balances := increase_balance(
-                            increase_balance(
-                                decrease_balance(s', slashed_index, validator_penalty), 
-                                proposer_index, 
-                                proposer_reward), 
-                            whistleblower_index, 
-                            (whistleblower_reward - proposer_reward)).balances)
-            
-        
-        // the triple nested mutation of balances is somewhat messy but for the moment it allows slashed_validator to remain as a function method 
-        //(rather than a method)
-
-    }
-
+    
     function method get_exit_epochs(sv: ListOfValidators) : seq<Epoch>
         ensures forall i :: 0 <= i < |get_exit_epochs(sv)| ==> get_exit_epochs(sv)[i] < FAR_FUTURE_EPOCH
     {
@@ -415,31 +211,7 @@ module BeaconHelpers {
         0 as ValidatorIndex // temporary return value
     }
 
-    // Return the shuffled index corresponding to ``seed`` (and ``index_count``).
-    // Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
-    // See the 'generalized domain' algorithm on page 3
-    function method compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32): ValidatorIndex
-        requires index < index_count
-    {
-        // for current_round in range(SHUFFLE_ROUND_COUNT):
-        //     pivot = bytes_to_uint64(hash(seed + uint_to_bytes(uint8(current_round)))[0:8]) % index_count
-        //     flip = (pivot + index_count - index) % index_count
-        //     position = max(index, flip)
-        //     source = hash(
-        //         seed
-        //         + uint_to_bytes(uint8(current_round))
-        //         + uint_to_bytes(uint32(position // 256))
-        //     )
-        //     byte = uint8(source[(position % 256) // 8])
-        //     bit = (byte >> (position % 8)) % 2
-        //     index = flip if bit else index
-
-        // return index
-
-        0 as ValidatorIndex // temporary return value
-
-    }
-
+    
     //Return the beacon proposer index at the current slot.
     function method get_beacon_proposer_index(state: BeaconState): ValidatorIndex
         requires |get_active_validator_indices(state.validators, get_current_epoch(state))| > 0
@@ -749,7 +521,31 @@ module BeaconHelpers {
 
     //compute_shuffled_index
 
-    // def compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32) -> uint64:
+    // // Return the shuffled index corresponding to ``seed`` (and ``index_count``).
+    // // Swap or not (https://link.springer.com/content/pdf/10.1007%2F978-3-642-32009-5_1.pdf)
+    // // See the 'generalized domain' algorithm on page 3
+    // function method compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32): ValidatorIndex
+    //     requires index < index_count
+    // {
+    //     // for current_round in range(SHUFFLE_ROUND_COUNT):
+    //     //     pivot = bytes_to_uint64(hash(seed + uint_to_bytes(uint8(current_round)))[0:8]) % index_count
+    //     //     flip = (pivot + index_count - index) % index_count
+    //     //     position = max(index, flip)
+    //     //     source = hash(
+    //     //         seed
+    //     //         + uint_to_bytes(uint8(current_round))
+    //     //         + uint_to_bytes(uint32(position // 256))
+    //     //     )
+    //     //     byte = uint8(source[(position % 256) // 8])
+    //     //     bit = (byte >> (position % 8)) % 2
+    //     //     index = flip if bit else index
+
+    //     // return index
+
+    //     0 as ValidatorIndex // temporary return value
+
+    // }
+// def compute_shuffled_index(index: uint64, index_count: uint64, seed: Bytes32) -> uint64:
     // """
     // Return the shuffled index corresponding to ``seed`` (and ``index_count``).
     // """
@@ -823,7 +619,7 @@ module BeaconHelpers {
     {
         var start := (|indices| * index as nat) / count as nat;
         var end := (|indices| * (index as nat +1)) / count as nat;
-        computeCommitteeLemma(|indices|, index as nat, count as nat);
+        commonDivRule(|indices| as nat * (index as nat +1), |indices| as nat * index as nat, count as nat);
         
         assert end > start;
         assert end < 0x10000000000000000;

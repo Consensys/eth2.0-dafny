@@ -470,5 +470,40 @@ module AttestationsHelpers {
                 + filterAttestationsyy(xl[1..], s)
 
     }
+
+     ///////////////////////
+    predicate attestationIsWellFormed(s: BeaconState, a: Attestation)
+    {
+        get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)  
+        /** Epoch of target matches epoch of the slot the attestation is made. */
+        && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
+        /** Attestation is not too old and not too recent. */
+        && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat
+        
+        && a.data.index < get_committee_count_per_slot(s, a.data.target.epoch)
+        // Preconditions for get_beacon_committee
+        && TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        && a.data.index < TWO_UP_6 // this comes from the assert on attestations in process_attestations
+        // same as above
+        //&& a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) // at most 64 committees per slot 
+    
+        && |a.aggregation_bits| == |get_beacon_committee(s, a.data.slot, a.data.index)|
+        
+        && (if a.data.target.epoch == get_current_epoch(s) then  
+            a.data.source == s.current_justified_checkpoint
+           else 
+            a.data.source == s.previous_justified_checkpoint)
+
+    }
+
+    lemma AttestationHelperLemma(s: BeaconState, s1: BeaconState, a: Attestation)
+        requires attestationIsWellFormed(s, a);
+        requires s1.validators == s.validators
+        requires s1.slot == s.slot
+        requires s1.current_justified_checkpoint == s.current_justified_checkpoint
+        requires s1.previous_justified_checkpoint == s.previous_justified_checkpoint
+        ensures attestationIsWellFormed(s1, a);
+    { // Thanks Dafny
+    }
    
 }

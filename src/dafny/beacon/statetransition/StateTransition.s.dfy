@@ -17,6 +17,7 @@ include "../../utils/Helpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
+include "../validators/ValidatorHelpers.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
@@ -36,6 +37,7 @@ module StateTransitionSpec {
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
+    import opened ValidatorHelpers
     import opened AttestationsTypes
     import opened AttestationsHelpers
     import opened BeaconHelpers
@@ -45,6 +47,7 @@ module StateTransitionSpec {
     import opened ProcessOperations
     import opened StateTransitionProofs
 
+    
     
     //  Specifications of finalisation of a state and forward to future slot.
 

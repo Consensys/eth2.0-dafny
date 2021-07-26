@@ -15,12 +15,12 @@
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
 include "../utils/NativeTypes.dfy"
-
 include "../ssz/Constants.dfy"
 
 include "BeaconChainTypes.dfy"
-include "Helpers.dfy"
 include "validators/Validators.dfy"
+
+
 
 /**
  *  Beacon chain helper functional specifications.
@@ -31,26 +31,12 @@ module BeaconHelperSpec {
     import opened Eth2Types
     import opened MathHelpers
     import opened NativeTypes
-
     import opened Constants
 
     import opened BeaconChainTypes
-    import opened BeaconHelpers
     import opened Validators
-
-
-    /**
-     *  Check if there is at least one active validator.
-     *
-     *  @param      s   A beacon state.
-     *  @returns        True if 
-     *                  |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0,
-     *                  otherwise False.
-     */
-    predicate minimumActiveValidators(s: BeaconState)
-    {
-        |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-    }
+    import opened AttestationsTypes
+    
 
     /**
      *  Collect pubkey in a list of validators.
@@ -68,18 +54,6 @@ module BeaconHelperSpec {
     }
 
 
-    function total_deposits(deposits: seq<Deposit>): nat
-    {
-        if |deposits| == 0 then 0
-        //else deposits[0].data.amount as nat + total_deposits(deposits[1..])
-        else total_deposits(deposits[..|deposits|-1]) + deposits[|deposits|-1].data.amount as nat
-    }
-
-    function total_balances(bal: seq<Gwei>): nat
-    {
-        if |bal| == 0 then 0
-        else bal[0] as nat + total_balances(bal[1..])
-    }
 
     function get_VolExit_validator_indices(ve: seq<VoluntaryExit>): seq<int>
         ensures |get_VolExit_validator_indices(ve)| == |ve|
