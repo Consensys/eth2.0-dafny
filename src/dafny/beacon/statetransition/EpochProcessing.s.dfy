@@ -24,7 +24,7 @@ include "../../libraries/integers/power.i.dfy"
 include "../statetransition/ProcessOperations.s.dfy"
 include "../../utils/Helpers.dfy"
 include "../../utils/MathHelpers.dfy"
-//include "../validators/Validators.dfy"
+include "../validators/ValidatorHelpers.dfy"
 
 
 /**
@@ -46,7 +46,7 @@ module EpochProcessingSpec {
     import opened ProcessOperationsSpec
     import opened Helpers
     import opened MathHelpers
-    //import opened Validators
+    import opened ValidatorHelpers
     
     function updateEpoch(s: BeaconState): BeaconState
     //  Make sure s.slot does not overflow
@@ -716,69 +716,12 @@ module EpochProcessingSpec {
     }
     
     function updateEffectiveBalance(s: BeaconState) : BeaconState
-        requires |s.balances| == |s.validators|
-        ensures updateEffectiveBalance(s) == updateEffectiveBalanceHelper(s, |s.validators|)
     {
-        updateEffectiveBalanceHelper(s, |s.validators|)
+        s
     }
 
     
-    function updateEffectiveBalanceHelper(s: BeaconState, len: nat) : BeaconState
-        requires len <= |s.balances| == |s.validators| 
-        ensures |updateEffectiveBalanceHelper(s, len).validators| == |s.validators| 
-        ensures |updateEffectiveBalanceHelper(s, len).balances| == |s.balances| 
-        //ensures updateEffectiveBalanceHelper(s, len).balances == s.balances
-
-        // ensures forall v :: len <= v < |s.validators| ==> updateEffectiveBalanceHelper(s, len).validators[v].effective_balance  == s.validators[v].effective_balance
-        ensures forall v :: 0 <= v < |s.balances| ==> updateEffectiveBalanceHelper(s, len).balances[v]  == s.balances[v]
-        ensures updateEffectiveBalanceHelper(s, len) == s.(validators := updateEffectiveBalanceHelper(s, len).validators)
-        ensures forall v :: len <= v < |s.validators| ==> updateEffectiveBalanceHelper(s, len).validators[v]  == s.validators[v]
-        
-        ensures forall v :: 0 <= v < len ==> 
-            var balance := s.balances[v];
-            var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
-            var DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
-            var UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
-
-            assume s.balances[v] as nat + DOWNWARD_THRESHOLD as nat  < 0x10000000000000000;
-            assume s.validators[v].effective_balance as nat + UPWARD_THRESHOLD as nat  < 0x10000000000000000;
-            assert 0 <= (balance % EFFECTIVE_BALANCE_INCREMENT) < EFFECTIVE_BALANCE_INCREMENT;
-            //assert balance >= (balance % EFFECTIVE_BALANCE_INCREMENT);
-
-            //updateEffectiveBalanceHelper(s, len).validators[v].effective_balance == 
-            var new_bal := if (s.balances[v] + DOWNWARD_THRESHOLD < s.validators[v].effective_balance || s.validators[v].effective_balance + UPWARD_THRESHOLD < s.balances[v]) 
-                                    then min((s.balances[v] - (s.balances[v] % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei 
-                                    else s.validators[v].effective_balance;
-            updateEffectiveBalanceHelper(s, len).validators[v] == s.validators[v].(effective_balance := new_bal)
-
-        decreases len
-    {
-        if len == 0 then s
-        else
-            var index := len - 1;
-
-            // Update effective balances with hysteresis
-            assert index < |s.balances|;
-            var balance := s.balances[index];
-            var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
-            var DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
-            var UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
-
-            assume balance as nat + DOWNWARD_THRESHOLD as nat  < 0x10000000000000000;
-            assume s.validators[index].effective_balance as nat + UPWARD_THRESHOLD as nat  < 0x10000000000000000;
-            assert 0 <= (balance % EFFECTIVE_BALANCE_INCREMENT) < EFFECTIVE_BALANCE_INCREMENT;
-            //assert balance >= (balance % EFFECTIVE_BALANCE_INCREMENT);
-
-            var s1 := if (balance + DOWNWARD_THRESHOLD < s.validators[index].effective_balance || s.validators[index].effective_balance + UPWARD_THRESHOLD < balance) 
-                    then s.(validators := s.validators[index := s.validators[index].(effective_balance := min((balance - (balance % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei)])
-                    else s;
-
-            assert s1.validators[index].effective_balance == if (balance + DOWNWARD_THRESHOLD < s.validators[index].effective_balance || s.validators[index].effective_balance + UPWARD_THRESHOLD < balance) 
-                                                         then min((balance - (balance % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei 
-                                                         else s.validators[index].effective_balance;
-            updateEffectiveBalanceHelper(s1, len-1) 
-
-    }
+    
     
     function updateSlashingsReset(s: BeaconState) : BeaconState
     {

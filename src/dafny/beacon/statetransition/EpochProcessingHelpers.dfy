@@ -22,6 +22,7 @@ include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../BeaconChainTypes.dfy"
 include "../statetransition/EpochProcessing.s.dfy"
+include "../validators/ValidatorHelpers.dfy"
 
 /**
  *  Helpers for Epoch processing.
@@ -38,6 +39,7 @@ module EpochProcessingHelpers {
     import opened BeaconHelpers
     import opened BeaconChainTypes
     import opened EpochProcessingSpec
+    import opened ValidatorHelpers
 
     /**
      *  RuleI for slashing. 
@@ -139,7 +141,7 @@ module EpochProcessingHelpers {
                     links, 
                     cp1, 
                     cp2)| 
-                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE as nat) / 3 + 1
         // requires  
     {
 

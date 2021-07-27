@@ -388,7 +388,7 @@ module ForkChoiceHelpers {
                     links, 
                     CheckPoint(j as Epoch, xb[ebbs[j]]), 
                     CheckPoint(i as Epoch, xb[ebbs[i]]))| 
-                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE as nat) / 3 + 1
     }
  
 }

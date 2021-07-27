@@ -109,7 +109,7 @@ module EpochProcessingProofs {
                     links, 
                     cp1, 
                     cp2)| 
-                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
+                        >= (2 * MAX_VALIDATORS_PER_COMMITTEE as nat) / 3 + 1
         // requires  
     {
 

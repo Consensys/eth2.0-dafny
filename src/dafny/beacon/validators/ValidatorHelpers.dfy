@@ -20,10 +20,7 @@ include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
-//include "ValidatorHelpers.p.dfy"
 include "../Helpers.dfy"
-
-
 
 /**
  *  Beacon chain helper functional specifications.
