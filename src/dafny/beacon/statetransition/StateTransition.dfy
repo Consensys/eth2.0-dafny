@@ -111,7 +111,7 @@ module StateTransition {
      *  @returns        The state obtained after adding `b` to the current state.
      *                  
      */
-     method stateTransition(s: BeaconState, b: BeaconBlock, ghost store: Store) returns (s' : BeaconState)
+     method stateTransition(s: BeaconState, b: BeaconBlock, store: Store) returns (s' : BeaconState)
         //  make sure the last state was one right after addition of new block
         requires isValidBlock(s, b, store)
 
@@ -178,7 +178,7 @@ module StateTransition {
      *                  is the same as resolveStateRoot(s).
      *
      */
-    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot, ghost store: Store) returns (s' : BeaconState)
+    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot, store: Store) returns (s' : BeaconState)
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
         requires |s.validators| == |s.balances|
         
