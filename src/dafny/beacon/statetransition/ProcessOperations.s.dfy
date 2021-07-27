@@ -755,7 +755,7 @@ module ProcessOperationsSpec {
      *  @returns            The state obtained after taking account the deposits in `body` 
      *                      from state `s` 
      *
-     *  @note               The processing of deposits doesn't not use assume statements
+     *  @note               The processing of deposits does not use assume statements
      *                      to prevent the overflow of amounts. The strategy of assuming
      *                      that such overflow is not possible due to an upper limit on
      *                      the amount of eth is used here and could be applied in other
