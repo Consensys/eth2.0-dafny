@@ -58,6 +58,46 @@ module EpochProcessingSpec {
             ==> br in chainRoots(get_block_root(s, get_current_epoch(s)), store)
     }
 
+     predicate {:opaque} blockRootsValidWeak(s: BeaconState, store: Store) 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        ensures blockRootsValidWeak(s, store) && get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+            ==> get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+
+         ensures blockRootsValidWeak(s, store) && get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+            ==> get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+
+        // requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+
+        /** The block root at previous epoch is in the store. */
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+
+    {
+        (forall br :: br in s.block_roots ==> br in store.blocks.Keys)
+        &&
+        (get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot ==> 
+        (forall br :: br in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+            ==> br in chainRoots(get_block_root(s, get_current_epoch(s)), store)))
+    }
+
+    lemma foo808(s: BeaconState, store: Store)
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+        requires blockRootsValidWeak(s, store)
+
+        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+        ensures get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys 
+        ensures get_block_root(s, get_current_epoch(s)) in store.blocks.Keys 
+    {
+        reveal_blockRootsValidWeak();
+    }
+
     /**
      *  Archive justification results on current epoch in previous epoch's record.
      *
@@ -111,13 +151,10 @@ module EpochProcessingSpec {
         requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
 
         /** The block root at previous epoch is in the store. */
-        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
-        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
 
-        requires blockRootsValid(s, store)
-
-        // requires get_block_root(s, get_previous_epoch(s)) in chainRoots(get_block_root(s, get_current_epoch(s)), store)
-        // requires get_block_root(s, get_current_epoch(s)) in chainRoots(get_block_root(s, get_current_epoch(s)), store)
+        requires blockRootsValidWeak(s, store)
 
         /**  The previous checkpoint root is an ancestor of the root at previous epoch. */
         requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
@@ -172,7 +209,8 @@ module EpochProcessingSpec {
 
     {
         //  This functon is opaque and we need its definition for the post-condition proof.
-        reveal_blockRootsValid();
+        reveal_blockRootsValidWeak();
+        // foo808(s, store);
         //  The definition.
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
@@ -537,20 +575,29 @@ module EpochProcessingSpec {
 
         /** Slot of s is larger than slot at previous epoch. */
         requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
-        requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+        // requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
 
         /** Block root at current epoc is in store. */
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
-        requires blockRootsValid(s, store)
+        requires blockRootsValidWeak(s, store)
 
         /** Current justified checkpoint is justified and root in store. */ 
         requires s.current_justified_checkpoint.root in store.blocks.Keys 
         requires isJustified(s.current_justified_checkpoint, store)
         requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
-        requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+
+        // ensures get_block_root(s, get_previous_epoch(s)) 
+        // requires 
+        //     foo808(s, store);
+        //     assume(get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys);
+        //     s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
        
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys 
+        requires 
+            s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
+
         /** The block root at previous epoch is in the store. */
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
@@ -567,7 +614,8 @@ module EpochProcessingSpec {
         requires isJustified(s.current_justified_checkpoint, store)
 
          /** Attestations to current epoch are valid. */
-        requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+        requires 
+            validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
@@ -757,23 +805,23 @@ module EpochProcessingSpec {
         requires isSlotDecreasing(store)
 
         /** Slot of s is larger than slot at previous epoch. */
-        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
-        requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+        // requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+        // requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
 
         /** Block root at current epoc is in store. */
-        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
-        requires blockRootsValid(s, store)
+        requires blockRootsValidWeak(s, store)
 
         /** Current justified checkpoint is justified and root in store. */ 
         requires s.current_justified_checkpoint.root in store.blocks.Keys 
-        requires isJustified(s.current_justified_checkpoint, store)
+        // requires isJustified(s.current_justified_checkpoint, store)
         requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
         requires s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
        
         /** The block root at previous epoch is in the store. */
-        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
         requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
         requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
@@ -781,8 +829,8 @@ module EpochProcessingSpec {
         requires validPrevAttestations(s, store)
 
         /** The justified checkpoints in s are indeed justified ands the root is in store. */
-        requires s.previous_justified_checkpoint.root in store.blocks.Keys 
-        requires s.current_justified_checkpoint.root in store.blocks.Keys 
+        // requires s.previous_justified_checkpoint.root in store.blocks.Keys 
+        // requires s.current_justified_checkpoint.root in store.blocks.Keys 
         
         requires isJustified(s.previous_justified_checkpoint, store)
         requires isJustified(s.current_justified_checkpoint, store)
@@ -846,7 +894,7 @@ module EpochProcessingSpec {
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
-        requires blockRootsValid(s, store)
+        requires blockRootsValidWeak(s, store)
 
         /** Current justified checkpoint is justified and root in store. */ 
         requires s.current_justified_checkpoint.root in store.blocks.Keys 
