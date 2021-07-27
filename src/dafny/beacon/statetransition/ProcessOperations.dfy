@@ -21,11 +21,9 @@ include "../../utils/SeqHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
-include "../validators/ValidatorHelpers.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
-include "../attestations/AttestationsHelpers.dfy"
 include "ProcessOperations.s.dfy"
 include "ProcessOperations.p.dfy"
 
@@ -42,13 +40,11 @@ module ProcessOperations {
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
-    import opened ValidatorHelpers
     import opened AttestationsTypes
     import opened Helpers
     import opened BeaconHelperSpec
     import opened SeqHelpers
     import opened BeaconHelpers
-    import opened AttestationsHelpers
     import opened ProcessOperationsSpec
     import opened ProcessOperationsProofs
     

@@ -18,11 +18,9 @@ include "../../ssz/Constants.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 include "../forkchoice/ForkChoiceHelpers.dfy"
 include "../attestations/AttestationsTypes.dfy"
-include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../BeaconChainTypes.dfy"
 include "../statetransition/EpochProcessing.s.dfy"
-include "../validators/ValidatorHelpers.dfy"
 
 /**
  *  Helpers for Epoch processing.
@@ -35,12 +33,10 @@ module EpochProcessingHelpers {
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
     import opened AttestationsTypes
-    import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened BeaconChainTypes
     import opened EpochProcessingSpec
-    import opened ValidatorHelpers
-
+    
     /**
      *  RuleI for slashing. 
      *  A validator cannot vote more than once for a given epoch.

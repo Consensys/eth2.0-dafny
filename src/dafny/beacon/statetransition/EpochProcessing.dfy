@@ -16,8 +16,6 @@ include "../../utils/NonNativeTypes.dfy"
 include "../../ssz/Constants.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
-include "../attestations/AttestationsHelpers.dfy"
-include "../validators/ValidatorHelpers.dfy"
 include "EpochProcessing.s.dfy"
 include "ProcessOperations.s.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -33,9 +31,7 @@ module EpochProcessing {
     import opened Constants
     import opened BeaconChainTypes
     import opened AttestationsTypes
-    import opened ValidatorHelpers
     import opened BeaconHelpers
-    import opened AttestationsHelpers
     import opened EpochProcessingSpec
     import opened ProcessOperationsSpec
     import opened Eth2Types

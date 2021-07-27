@@ -27,7 +27,6 @@ include "../Helpers.dfy"
 include "../Helpers.s.dfy"
 include "StateTransition.s.dfy"
 include "StateTransition.p.dfy"
-include "../attestations/AttestationsHelpers.dfy"
 include "EpochProcessing.dfy"
 include "ProcessOperations.dfy"
 include "ProcessOperations.s.dfy"
@@ -52,7 +51,6 @@ module StateTransition {
     import opened BeaconHelperSpec
     import opened StateTransitionSpec
     import opened StateTransitionProofs
-    import opened AttestationsHelpers
     import opened EpochProcessing
     import opened ProcessOperations
     import opened ProcessOperationsSpec

@@ -20,7 +20,6 @@ include "../../ssz/Constants.dfy"
 include "../forkchoice/ForkChoiceTypes.dfy"
 include "../forkchoice/ForkChoiceHelpers.dfy"
 include "../attestations/AttestationsTypes.dfy"
-include "../attestations/AttestationsHelpers.dfy"
 include "../Helpers.dfy"
 include "../BeaconChainTypes.dfy"
 include "../statetransition/EpochProcessing.s.dfy"
@@ -37,7 +36,6 @@ module EpochProcessingProofs {
     import opened ForkChoiceTypes
     import opened ForkChoiceHelpers
     import opened AttestationsTypes
-    import opened AttestationsHelpers
     import opened BeaconHelpers
     import opened BeaconChainTypes
     import opened EpochProcessingSpec
