@@ -48,55 +48,55 @@ module ProcessOperationsProofs {
     
     // Helper lemmas
 
-    lemma helperIndicesLemma(indices: seq<ValidatorIndex>)
-        requires |indices| > 0
-        ensures forall i :: 0 < i < |indices| ==> indices[..i+1] == indices[..i] + [indices[i]]
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma(indices: seq<ValidatorIndex>)
+    //     requires |indices| > 0
+    //     ensures forall i :: 0 < i < |indices| ==> indices[..i+1] == indices[..i] + [indices[i]]
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma2(indices: seq<ValidatorIndex>)
-        requires |indices| > 0
-        ensures indices == indices[..|indices|-1] + [indices[|indices|-1]]
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma2(indices: seq<ValidatorIndex>)
+    //     requires |indices| > 0
+    //     ensures indices == indices[..|indices|-1] + [indices[|indices|-1]]
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma3(indices: seq<uint64>, i: nat)
-        requires 0 <= i < |indices|
-        ensures indices[..i+1] == indices[..i] + [indices[i]]
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma3(indices: seq<uint64>, i: nat)
+    //     requires 0 <= i < |indices|
+    //     ensures indices[..i+1] == indices[..i] + [indices[i]]
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma4(s: BeaconState, indices: seq<uint64>, i: nat)
-        requires 0 <= i <= |indices|
-        requires valid_state_indices(s, indices)
-        ensures valid_state_indices(s, indices[..i])
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma4(s: BeaconState, indices: seq<uint64>, i: nat)
+    //     requires 0 <= i <= |indices|
+    //     requires valid_state_indices(s, indices)
+    //     ensures valid_state_indices(s, indices[..i])
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma5(indices: seq<uint64>, i: nat)
-        requires i <= |indices|
-        ensures |indices[..i]| == i;
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma5(indices: seq<uint64>, i: nat)
+    //     requires i <= |indices|
+    //     ensures |indices[..i]| == i;
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma6(indices: seq<uint64>, i: nat)
-        requires i == |indices|
-        ensures indices[..i] == indices
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma6(indices: seq<uint64>, i: nat)
+    //     requires i == |indices|
+    //     ensures indices[..i] == indices
+    // {
+    //     // Thanks Dafny
+    // }
 
-    lemma helperIndicesLemma7(indices: seq<uint64>, i: nat)
-        requires i < |indices|
-        ensures indices[..i+1] == indices[..i] + [indices[i]];
-    {
-        // Thanks Dafny
-    }
+    // lemma helperIndicesLemma7(indices: seq<uint64>, i: nat)
+    //     requires i < |indices|
+    //     ensures indices[..i+1] == indices[..i] + [indices[i]];
+    // {
+    //     // Thanks Dafny
+    // }
 
 /////////////////////
 
@@ -184,6 +184,17 @@ module ProcessOperationsProofs {
 
     }
 
+    lemma PSHelperLemma3(ps : seq<ProposerSlashing>)
+        requires |ps| > 0
+        requires forall i,j :: 0 <= i < j < |ps| && i != j ==> ps[i].header_1.proposer_index!= ps[j].header_1.proposer_index // ve indices are unique
+        ensures ps[|ps|-1].header_1.proposer_index as int !in get_PS_validator_indices(ps[..|ps|-1])
+    {
+        mappingPSIndices(ps[..|ps|-1]);
+        assert forall i :: 0 <= i < |ps[..|ps|-1]| ==> get_PS_validator_indices(ps[..|ps|-1])[i] == ps[i].header_1.proposer_index as int;
+    }
+
+
+
 
     lemma VEHelperLemma1(s: BeaconState, s1: BeaconState, ve1: seq<VoluntaryExit>, ve2: VoluntaryExit, ve: seq<VoluntaryExit>)
         requires |ve1| == |ve|-1
@@ -270,6 +281,17 @@ module ProcessOperationsProofs {
         }
     }
 
+    //lemma PSpreconditionLemma()
+    lemma VEHelperLemma3(ve : seq<VoluntaryExit>)
+        requires |ve| > 0
+        requires forall i,j :: 0 <= i < j < |ve| && i != j ==> ve[i].validator_index!= ve[j].validator_index // ve indices are unique
+        ensures ve[|ve|-1].validator_index as int !in get_VolExit_validator_indices(ve[..|ve|-1])
+    {
+        mappingVolExitIndices(ve[..|ve|-1]);
+        assert forall i :: 0 <= i < |ve[..|ve|-1]| ==> get_VolExit_validator_indices(ve[..|ve|-1])[i] == ve[i].validator_index as int;
+    }
+
+    
     
 
 }

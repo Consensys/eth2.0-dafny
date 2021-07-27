@@ -298,12 +298,12 @@ function total_deposits(deposits: seq<Deposit>): nat
         
         ensures minimumActiveValidators(slash_validator(s,slashed_index,whistleblower_index))
     {
-        slashValidatorPreservesActivateValidators(s, slashed_index, whistleblower_index);
+        slashValidatorPreservesActiveValidators(s, slashed_index, whistleblower_index);
     }
 
     // ?? prove that the only way slashed is set to true is by calling slash_validator?? 
     
-    lemma slashValidatorPreservesActivateValidators(s: BeaconState, slashed_index: ValidatorIndex, whistleblower_index: ValidatorIndex)
+    lemma slashValidatorPreservesActiveValidators(s: BeaconState, slashed_index: ValidatorIndex, whistleblower_index: ValidatorIndex)
         requires slashed_index as int < |s.validators| 
         requires whistleblower_index as int < |s.validators| 
         requires |s.validators| == |s.balances|

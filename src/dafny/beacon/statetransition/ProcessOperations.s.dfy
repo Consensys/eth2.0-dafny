@@ -499,7 +499,7 @@ module ProcessOperationsSpec {
             |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
     {
         if is_slashable_validator(s.validators[slash_index], get_current_epoch(s)) then
-            slashValidatorPreservesActivateValidators(s, slash_index, get_beacon_proposer_index(s));
+            slashValidatorPreservesActiveValidators(s, slash_index, get_beacon_proposer_index(s));
             slash_validator(s, slash_index, get_beacon_proposer_index(s))
         else
             s
