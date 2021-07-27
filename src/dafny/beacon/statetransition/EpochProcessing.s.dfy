@@ -12,6 +12,8 @@
  * under the License.
  */
 
+ //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"

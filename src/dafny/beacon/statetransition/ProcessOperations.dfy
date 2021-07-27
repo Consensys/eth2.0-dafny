@@ -12,6 +12,8 @@
  * under the License.
  */
 
+ //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:400 /noCheating:0
+
 include "../../utils/NativeTypes.dfy"
 include "../../utils/NonNativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
