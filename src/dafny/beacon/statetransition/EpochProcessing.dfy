@@ -12,7 +12,7 @@
  * under the License.
  */
 
- //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
 
 include "../../utils/NonNativeTypes.dfy"
 include "../../ssz/Constants.dfy"
@@ -187,6 +187,142 @@ module EpochProcessing {
 
         assert s' == updateEpoch(s);
         return s';
+    }
+
+    /**
+     *  Update justification and finalisation status.
+     *  
+     *  @param  s   A beacon state.
+     *  @returns    The state obtained after updating the justification/finalisation
+     *              variables of `s`.
+     *
+     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
+     */
+    method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+
+        requires |s.validators| == |s.balances|
+
+        /** Computes the next state according to the functional specification. */
+        ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
+        
+        /** Some components of the state are left unchanged. */
+        ensures s'.slot == s.slot
+        ensures s'.eth1_deposit_index == s.eth1_deposit_index
+        ensures s'.validators == s.validators
+        ensures s'.balances == s.balances
+        ensures |s'.validators| == |s'.balances|
+        ensures s'.previous_epoch_attestations == s.previous_epoch_attestations 
+        //ensures get_previous_epoch(s') >= s'.finalised_checkpoint.epoch
+    {
+        //  epoch in state s is given by s.slot
+
+        if get_current_epoch(s) <= GENESIS_EPOCH + 1 {
+            //  Initial FFG checkpoint values have a `0x00` stub for `root`.
+            //  Skip FFG updates in the first two epochs to avoid corner cases 
+            //  that might result in modifying this stub.
+            return s;   
+        } else {
+            assert(get_current_epoch(s) >= 2);
+            //  Process justifications and finalisations
+            var previous_epoch := get_previous_epoch(s);
+            var current_epoch := get_current_epoch(s);
+            assert(previous_epoch == current_epoch - 1);
+            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s.slot as int);
+            assert(s.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
+                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
+
+            //  Process justifications and update justification bits
+            // state.previous_justified_checkpoint = state.current_justified_checkpoint
+            s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
+
+            //  Right-Shift of justification bits and initialise first to false
+            s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
+            //  Determine whether ??
+            assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
+            assert(s'.slot == s.slot);
+            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s'.slot as int);
+            //  slot of previous epoch is not too far in the past
+            assert(s'.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
+                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
+            assert(s'.block_roots == s.block_roots);
+            assert(get_block_root(s', previous_epoch) == get_block_root(s, previous_epoch));
+            assert(|s'.validators| == |s.validators|);
+            //  Compute the attestations in s.previous_epoch_attestations that 
+            //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
+            //  of the previous epoch. (retrieve in the historical roots).
+            var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
+            //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ;  
+            // Previous epoch
+            if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
+                                get_total_active_balance(s') as uint128 * 2 {
+                //  shift the justified checkpoint
+                s' := s'.(current_justified_checkpoint := 
+                            CheckPoint(previous_epoch,
+                                        get_block_root(s', previous_epoch)));
+                s' := s'.(justification_bits := s'.justification_bits[1 := true]);
+            }
+            assert(s'.slot == updateJustificationPrevEpoch(s).slot);
+            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s).current_justified_checkpoint);
+            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s).previous_justified_checkpoint);
+            assert(s' == updateJustificationPrevEpoch(s)); 
+
+            ghost var s2 := s';
+            //  Current epoch
+            var matching_target_attestations_cur := get_matching_target_attestations(s', current_epoch) ;
+            if get_attesting_balance(s', matching_target_attestations_cur) as nat * 3 >=       
+                                    get_total_active_balance(s') as nat * 2 {
+                //  shift the justified checkpoint
+                s' := s'.(
+                        justification_bits := s'.justification_bits[0 := true],
+                        current_justified_checkpoint := 
+                            CheckPoint(current_epoch,
+                                        get_block_root(s', current_epoch)));
+            }
+            assert(s' == updateJustificationCurrentEpoch(s2));
+
+            //  Process finalizations
+            /*
+             *  Epochs layout
+             *
+             *  | ............ | ........... | .......... | ........ |
+             *  | ............ | ........... | .......... | ........ |
+             *  e1             e2            e3           e4
+             *  bit[3]        bit[2]        bit[1]        bit[0]
+             *  
+             *
+             *  Python slice a[k:l] means: a[k] ... a[l -1]
+             */
+            ghost var s3 := s';
+
+            var bits : seq<bool> := s'.justification_bits;
+            // assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
+            //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
+            //  following condition is false. As a result we do not need to compute 
+            //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
+            //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
+            //  
+            //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
+            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) {
+                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
+            }
+            //  The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
+            if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
+            }
+            //  The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
+            if (all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) {
+                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
+            }
+            //  The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
+            if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) {
+                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
+            }
+            assert(s' == updateFinalisedCheckpoint(s3, s));
+            return s';
+        }
+
+        return s;
     }
     
     /** 
@@ -412,7 +548,8 @@ module EpochProcessing {
         var next_epoch := current_epoch + 1;
         s' := s.(
                 randao_mixes := s.randao_mixes[
-                            (next_epoch % EPOCHS_PER_HISTORICAL_VECTOR) as nat := get_randao_mix(s, current_epoch)
+                            (next_epoch % EPOCHS_PER_HISTORICAL_VECTOR) as nat 
+                                := get_randao_mix(s, current_epoch)
                         ]
             );
     }
@@ -451,141 +588,5 @@ module EpochProcessing {
         );
     }
 
-    /**
-     *  Update justification and finalisation status.
-     *  
-     *  @param  s   A beacon state.
-     *  @returns    The state obtained after updating the justification/finalisation
-     *              variables of `s`.
-     *
-     *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
-     */
-    method process_justification_and_finalization(s : BeaconState) returns (s' : BeaconState) 
-        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-
-        requires |s.validators| == |s.balances|
-
-        /** Computes the next state according to the functional specification. */
-        ensures s' == updateFinalisedCheckpoint(updateJustification(s), s)
-        
-        /** Some components of the state are left unchanged. */
-        ensures s'.slot == s.slot
-        ensures s'.eth1_deposit_index == s.eth1_deposit_index
-        ensures s'.validators == s.validators
-        ensures s'.balances == s.balances
-        ensures |s'.validators| == |s'.balances|
-        ensures s'.previous_epoch_attestations == s.previous_epoch_attestations 
-        //ensures get_previous_epoch(s') >= s'.finalised_checkpoint.epoch
-        
-    {
-        //  epoch in state s is given by s.slot
-
-        if get_current_epoch(s) <= GENESIS_EPOCH + 1 {
-            //  Initial FFG checkpoint values have a `0x00` stub for `root`.
-            //  Skip FFG updates in the first two epochs to avoid corner cases 
-            //  that might result in modifying this stub.
-            return s;   
-        } else {
-            assert(get_current_epoch(s) >= 2);
-            //  Process justifications and finalisations
-            var previous_epoch := get_previous_epoch(s);
-            var current_epoch := get_current_epoch(s);
-            assert(previous_epoch == current_epoch - 1);
-            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s.slot as int);
-            assert(s.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
-                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
-
-            //  Process justifications and update justification bits
-            // state.previous_justified_checkpoint = state.current_justified_checkpoint
-            s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
-
-            //  Right-Shift of justification bits and initialise first to false
-            s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
-            //  Determine whether ??
-            assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
-            assert(s'.slot == s.slot);
-            assert(previous_epoch as int * SLOTS_PER_EPOCH as int  < s'.slot as int);
-            //  slot of previous epoch is not too far in the past
-            assert(s'.slot as int - (previous_epoch as int *  SLOTS_PER_EPOCH as int) 
-                        <=  SLOTS_PER_HISTORICAL_ROOT as int );
-            assert(s'.block_roots == s.block_roots);
-            assert(get_block_root(s', previous_epoch) == get_block_root(s, previous_epoch));
-            assert(|s'.validators| == |s.validators|);
-            //  Compute the attestations in s.previous_epoch_attestations that 
-            //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
-            //  of the previous epoch. (retrieve in the historical roots).
-            var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
-            //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ;  
-            // Previous epoch
-            if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
-                                get_total_active_balance(s') as uint128 * 2 {
-                //  shift the justified checkpoint
-                s' := s'.(current_justified_checkpoint := 
-                            CheckPoint(previous_epoch,
-                                        get_block_root(s', previous_epoch)));
-                s' := s'.(justification_bits := s'.justification_bits[1 := true]);
-            }
-            assert(s'.slot == updateJustificationPrevEpoch(s).slot);
-            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s).current_justified_checkpoint);
-            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s).previous_justified_checkpoint);
-            assert(s' == updateJustificationPrevEpoch(s)); 
-
-            ghost var s2 := s';
-            //  Current epoch
-            var matching_target_attestations_cur := get_matching_target_attestations(s', current_epoch) ;
-            if get_attesting_balance(s', matching_target_attestations_cur) as nat * 3 >=       
-                                    get_total_active_balance(s') as nat * 2 {
-                //  shift the justified checkpoint
-                s' := s'.(
-                        justification_bits := s'.justification_bits[0 := true],
-                        current_justified_checkpoint := 
-                            CheckPoint(current_epoch,
-                                        get_block_root(s', current_epoch)));
-            }
-            assert(s' == updateJustificationCurrentEpoch(s2));
-
-            //  Process finalizations
-            /*
-             *  Epochs layout
-             *
-             *  | ............ | ........... | .......... | ........ |
-             *  | ............ | ........... | .......... | ........ |
-             *  e1             e2            e3           e4
-             *  bit[3]        bit[2]        bit[1]        bit[0]
-             *  
-             *
-             *  Python slice a[k:l] means: a[k] ... a[l -1]
-             */
-            ghost var s3 := s';
-
-            var bits : seq<bool> := s'.justification_bits;
-            // assume(s.previous_justified_checkpoint.epoch as nat + 3 < 0x10000000000000000 );
-            //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
-            //  following condition is false. As a result we do not need to compute 
-            //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
-            //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
-            //  
-            //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
-            if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) {
-                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
-            }
-            //  The 2nd/3rd most recent epochs are justified, the 2nd using the 3rd as source
-            if (all(bits[1..3]) && s.previous_justified_checkpoint.epoch == current_epoch - 2) {
-                s' := s'.(finalised_checkpoint := s.previous_justified_checkpoint) ;
-            }
-            //  The 1st/2nd/3rd most recent epochs are justified, the 1st using the 3rd as source
-            if (all(bits[0..3]) && s.current_justified_checkpoint.epoch == current_epoch - 2) {
-                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
-            }
-            //  The 1st/2nd most recent epochs are justified, the 1st using the 2nd as source
-            if (all(bits[0..2]) && s.current_justified_checkpoint.epoch == current_epoch - 1) {
-                s' := s'.(finalised_checkpoint := s.current_justified_checkpoint) ;
-            }
-            assert(s' == updateFinalisedCheckpoint(s3, s));
-            return s';
-        }
-
-        return s;
-    }
-
+    
 }
