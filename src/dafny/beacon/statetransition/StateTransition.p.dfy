@@ -51,15 +51,24 @@ module StateTransitionProofs {
      *  @param  s   A beacon state. 
      *  @return     The proof is currently assumed.
      *
-     *  @notes      It is assumed that all previous epoch attestations, and in fact all current epoch attestations,
-     *              meet these requirements. 
+     *  @notes      It is assumed that all previous epoch attestations, and in fact all current 
+     *              epoch attestations, meet these requirements. 
      *              These properties could be confirmed as part of process_attestation.
      */
     lemma PreviousEpochAttestationsProperties(s: BeaconState)
         requires |s.validators| == |s.balances|
-        ensures forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
-        ensures forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        ensures forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        ensures forall a :: a in s.previous_epoch_attestations 
+                ==> a.data.index 
+                    < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
+                    <= TWO_UP_6 
+        ensures forall a :: a in s.previous_epoch_attestations 
+                ==> TWO_UP_5 as nat 
+                    <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
+                    <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        ensures forall a :: a in s.previous_epoch_attestations 
+                ==> 0 
+                    < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
+                    <= MAX_VALIDATORS_PER_COMMITTEE as nat 
     // {} 
 
 }
