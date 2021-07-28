@@ -12,6 +12,9 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:0
+
+
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
 include "../utils/NativeTypes.dfy"
