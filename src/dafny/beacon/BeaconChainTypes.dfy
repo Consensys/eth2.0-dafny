@@ -32,21 +32,7 @@ module BeaconChainTypes {
     import opened Validators
     import opened AttestationsTypes
     
-   /**
-     *  Compute Root/Hash/Bytes32 for different types.
-     *  
-     *  @todo   Use the hash_tree_root from Merkle?.
-     *  @note   The property of hash_tree_root below is enough for 
-     *          proving some invariants. So we may use a module refinement
-     *          to integrate the actual hash_tree_root from Merkle module.
-     */
-    function method hash_tree_root<T(==)>(t : T) : Bytes32 
-        ensures hash_tree_root(t) != DEFAULT_BYTES32
 
-    function method hash<T(==)>(t : T) : Bytes32 
-        ensures hash(t) != DEFAULT_BYTES32
-
-    
     // Misc dependencies
 
     /**
