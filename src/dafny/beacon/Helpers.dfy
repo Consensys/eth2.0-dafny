@@ -2290,5 +2290,42 @@ module BeaconHelpers {
     { // Thanks Dafny
     }
 
+    /**
+     *   A proof to  assist with the function method get_beacon_committee.
+     *
+     *  @param  len_indices     A positive integer representing the number of active validators. 
+     *  @param  CPS             A positive integer representing the number of committees per slot. 
+     *  @param  slot            A positive integer representing the slot. 
+     *  @param  cIndex          A positive integer representing the committee index. 
+     *  @return                 A proof that len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat).
+     */
+    lemma getBeaconCommitteeLemma(len_indices: nat, CPS: nat, slot: nat, cIndex: nat)
+        requires TWO_UP_5 as nat <= len_indices 
+        requires CPS == max(1, min(MAX_COMMITTEES_PER_SLOT as nat, len_indices/ SLOTS_PER_EPOCH  as nat/ TARGET_COMMITTEE_SIZE as nat) as nat)
+        requires 0 <= slot < SLOTS_PER_EPOCH as nat// i.e. slot % SPE
+        requires 0 <= cIndex < CPS
+
+        ensures len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
+    {
+        natRatioRule(len_indices * ((slot * CPS + cIndex) + 1), len_indices * (slot * CPS + cIndex) , (CPS * SLOTS_PER_EPOCH as nat));
+
+        assert len_indices * ((slot * CPS + cIndex) + 1) - len_indices  * (slot * CPS + cIndex) >=  (CPS  * SLOTS_PER_EPOCH as nat) ==> 
+                len_indices * ((slot * CPS + cIndex) + 1) / (CPS  * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
+
+        calc {
+            len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex);
+            {natExpansion(len_indices as nat, (slot * CPS + cIndex));} len_indices * (slot * CPS + cIndex) + len_indices - len_indices * (slot * CPS + cIndex);
+            len_indices as nat;
+        }
+        assert len_indices == len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex);
+
+        assert len_indices >= (CPS * SLOTS_PER_EPOCH as nat) <==> len_indices * ((slot * CPS + cIndex) + 1) - len_indices * (slot * CPS + cIndex) >=  (CPS * SLOTS_PER_EPOCH as nat);
+
+        assert  TWO_UP_5 as nat <= len_indices 
+            ==> len_indices >= (CPS * SLOTS_PER_EPOCH as nat) 
+            ==> len_indices * ((slot * CPS + cIndex) + 1) / (CPS * SLOTS_PER_EPOCH as nat) > len_indices * (slot * CPS + cIndex) / (CPS * SLOTS_PER_EPOCH as nat);
+    }
+
+
 
 }
