@@ -12,6 +12,9 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:0
+
+
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
 include "../utils/NativeTypes.dfy"
@@ -23,13 +26,9 @@ include "../ssz/Serialise.dfy"
 
 include "BeaconChainTypes.dfy"
 include "Helpers.s.dfy"
-include "Helpers.p.dfy"
+include "ActiveValidatorBounds.p.dfy"
 include "attestations/AttestationsTypes.dfy"
-//include "attestations/AttestationsHelpers.dfy"
 include "validators/Validators.dfy"
-//include "validators/ValidatorHelpers.dfy"
-
-
 
 /**
  * Misc helpers.
@@ -51,9 +50,7 @@ module BeaconHelpers {
     import opened BeaconHelperSpec
     import opened BeaconHelperProofs
     import opened AttestationsTypes
-    //import opened AttestationsHelpers
     import opened Validators
-    //import opened ValidatorHelpers
 
     
 
@@ -1520,19 +1517,7 @@ module BeaconHelpers {
     }
 
 
-    function total_deposits(deposits: seq<Deposit>): nat
-    {
-        if |deposits| == 0 then 0
-        //else deposits[0].data.amount as nat + total_deposits(deposits[1..])
-        else total_deposits(deposits[..|deposits|-1]) + deposits[|deposits|-1].data.amount as nat
-    }
-
-    function total_balances(bal: seq<Gwei>): nat
-    {
-        if |bal| == 0 then 0
-        else bal[0] as nat + total_balances(bal[1..])
-    }
-
+    
 
     lemma slash_validator_lemma(s: BeaconState, slashed_index: ValidatorIndex, whistleblower_index: ValidatorIndex)
         requires slashed_index as int < |s.validators| 
@@ -1954,74 +1939,8 @@ module BeaconHelpers {
             ) + countAttestationsForLink(xa[1..], src, tgt)
     }
 
-    /**
-     *  Collect set of indices of validators attesting a link.
-     *
-     *  @param  xa      A seq of attestations.
-     *  @param  src     The source checkpoint of the link.
-     *  @param  tgt     The target checkpoint of the link.
-     *  @returns        The set of validators's indices that vote for (src. tgt) in `xa`. 
-     */
-     function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<nat>
-        ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
-            e < MAX_VALIDATORS_PER_COMMITTEE as nat
-        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
-        decreases xa
-    {
-        if |xa| == 0 then 
-            { }
-        else 
-            unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectValidatorsAttestatingForLink(xa[1..], src, tgt), MAX_VALIDATORS_PER_COMMITTEE as nat);
-            (if xa[0].data.source == src && xa[0].data.target == tgt then 
-                trueBitsCount(xa[0].aggregation_bits)
-            else 
-                {}
-            ) + collectValidatorsAttestatingForLink(xa[1..], src, tgt)
-    }
-
-    /**
-     *  Collect set of indices of validators attesting a link to a given target.
-     *
-     *  @param  xa      A seq of attestations.
-     *  @param  tgt     The target checkpoint of the link.
-     *  @returns        The set of validators's indices that vote for (_. tgt) in `xa`. 
-     */
-    function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<nat>
-        ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
-            e < MAX_VALIDATORS_PER_COMMITTEE as nat
-        ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE as nat
-        decreases xa
-    {
-        if |xa| == 0 then 
-            { }
-        else 
-            unionCardBound(trueBitsCount(xa[0].aggregation_bits),
-                collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt), MAX_VALIDATORS_PER_COMMITTEE as nat);
-            (if xa[0].data.target == tgt then 
-                trueBitsCount(xa[0].aggregation_bits)
-            else 
-                {}
-            ) + collectValidatorsIndicesAttestatingForTarget(xa[1..], tgt)
-    }
-
-    /**
-     *  Collect the set of indices for which xb[i] is true.
-     *  
-     *  @param  xb  A sequence of bools.
-     *  @returns    The number of elements that are true in `xb`.
-     */
-    function trueBitsCount(xb : seq<bool>) : set<nat> 
-        ensures |trueBitsCount(xb)| <= |xb|
-        ensures forall i :: i in trueBitsCount(xb) <==> 0 <= i < |xb| && xb[i]
-        decreases xb
-    {
-        if |xb| == 0 then 
-            {}
-        else 
-            (if xb[|xb| - 1] then { |xb| - 1 } else {}) + trueBitsCount(xb[..|xb| - 1])
-    }
-
+    
+    
     /**
      *  The set of validators attesting to a target is larger than the set 
      *  of validators attesting to a link with that target. 
