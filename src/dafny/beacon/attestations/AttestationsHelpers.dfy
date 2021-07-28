@@ -254,6 +254,8 @@ module AttestationsHelpers {
             // get_current_epoch(state) *  SLOTS_PER_EPOCH  < state.slot  
             && get_block_root(state, get_current_epoch(state)) in store.blocks.Keys
             && validCurrentAttestations(state, store)
+    
+        // requires epoch == get_previous_epoch(state)
 
         ensures |xa| < 0x10000000000000000
         
@@ -290,7 +292,7 @@ module AttestationsHelpers {
         reveal_validCurrentAttestations();
         //  Get attestations at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
-
+        // assume(ax == state.previous_epoch_attestations);
         // Apply lemma to current or previous
         // sameSrcSameTgtEquiv(
         //     ax, 
@@ -306,6 +308,8 @@ module AttestationsHelpers {
         // foo505(ax, );
         //  Filter according to target.
         filterAttestations(ax, CheckPoint(epoch, get_block_root(state, epoch)))
+        // assume(forall a :: a in k ==> a in ax);
+        // k
     }
 
     predicate sameSrcSameTgt(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
@@ -364,15 +368,24 @@ module AttestationsHelpers {
      */
     predicate {:opaque} validPrevAttestations(s: BeaconState, store: Store) 
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-        requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        // requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_previous_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
 
          /** The block root must in the store.  */
-        requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
+
+        // ensures validPrevAttestations(s, store)  ==> 
+        //     (forall a :: a in s.previous_epoch_attestations ==>
+        //     && a in store.rcvdAttestations
+        //     && a.data.source == s.previous_justified_checkpoint
+        //     && a.data.source.epoch == s.previous_justified_checkpoint.epoch
+        //     && a.data.target.root == get_block_root(s, get_previous_epoch(s))
+        //     && a.data.target.epoch ==  get_previous_epoch(s)
+        // )
     {
         (forall a :: a in s.previous_epoch_attestations ==> a in store.rcvdAttestations)
         &&
@@ -380,26 +393,37 @@ module AttestationsHelpers {
         //      s.previous_justified_checkpoint,
         //      CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)))
         //      )
-        (forall a :: a in s.previous_epoch_attestations ==>
-            // && a in store.rcvdAttestations
-            && a.data.source == s.previous_justified_checkpoint
-            // && a.data.source.epoch == s.previous_justified_checkpoint.epoch
-            && a.data.target.root == get_block_root(s, get_previous_epoch(s))
-            && a.data.target.epoch ==  get_previous_epoch(s)
+        (get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> 
+            (forall a :: a in s.previous_epoch_attestations ==>
+                // && a in store.rcvdAttestations
+                && a.data.source == s.previous_justified_checkpoint
+                // && a.data.source.epoch == s.previous_justified_checkpoint.epoch
+                && a.data.target.root == get_block_root(s, get_previous_epoch(s))
+                && a.data.target.epoch ==  get_previous_epoch(s)
+            )
         )
     }
 
     predicate {:opaque} validCurrentAttestations(s: BeaconState, store: Store) 
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-        requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
+        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
 
          /** The block root must in the store.  */
-        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
+
+        // ensures get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> 
+        //     (forall a :: a in s.current_epoch_attestations ==>
+        //     && a in store.rcvdAttestations
+        //     && a.data.source == s.current_justified_checkpoint
+        //     // && a.data.source.epoch == s.current_justified_checkpoint.epoch
+        //     && a.data.target.root == get_block_root(s, get_current_epoch(s))
+        //     && a.data.target.epoch ==  get_current_epoch(s)
+        // )
     {
         (forall a :: a in s.current_epoch_attestations ==> a in store.rcvdAttestations)
         // && 
@@ -408,13 +432,65 @@ module AttestationsHelpers {
         //      s.current_justified_checkpoint,
         //      CheckPoint( get_current_epoch(s), get_block_root(s, get_current_epoch(s)) )
         //      )
-        forall a :: a in s.current_epoch_attestations ==>
-            && a in store.rcvdAttestations
-            && a.data.source == s.current_justified_checkpoint
-            // && a.data.source.epoch == s.current_justified_checkpoint.epoch
-            && a.data.target.root == get_block_root(s, get_current_epoch(s))
-            && a.data.target.epoch ==  get_current_epoch(s)
+        (get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==>
+            (forall a :: a in s.current_epoch_attestations ==>
+                // && a in store.rcvdAttestations
+                && a.data.source == s.current_justified_checkpoint
+                // && a.data.source.epoch == s.current_justified_checkpoint.epoch
+                && a.data.target.root == get_block_root(s, get_current_epoch(s))
+                && a.data.target.epoch ==  get_current_epoch(s)
+            )
+        )
     }
+
+    /**
+     *  Transfer validity of attestions accross epoch boundasries.
+     */
+    lemma transferValidCurrentAttToPreviousAtEpoch(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
+        requires (s1.slot + 1) %  SLOTS_PER_EPOCH == 0
+        // requires get_current_epoch(s1) as nat *  SLOTS_PER_EPOCH as nat <  0x10000000000000000 
+        // requires get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot  
+        // requires s1.slot - get_current_epoch(s1) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
+        requires s2.slot == s1.slot + 1
+        requires s2.previous_justified_checkpoint == s1.current_justified_checkpoint
+        requires s2.previous_epoch_attestations == s1.current_epoch_attestations
+        requires s1.block_roots == s2.block_roots
+
+        requires validCurrentAttestations(s1, store) 
+
+        ensures validPrevAttestations(s2, store);
+    {
+        //
+        reveal_validCurrentAttestations();
+        reveal_validPrevAttestations();
+        // assert((forall a :: a in s.current_epoch_attestations ==> a in store.rcvdAttestations));
+        // forall (a | a in s2.previous_epoch_attestations)
+        //     ensures a in store.rcvdAttestations
+        //     ensures a.data.source == s2.previous_justified_checkpoint
+        //     ensures a.data.target.root == get_block_root(s2, get_previous_epoch(s2))
+        //     ensures a.data.target.epoch ==  get_previous_epoch(s2)
+        // {
+            // reveal_validCurrentAttestations();
+        // reveal_validPrevAttestations();
+            // assert a in s1.current_epoch_attestations;
+            // assert validCurrentAttestations(s1, store);
+            // assert a.data.source == s1.current_justified_checkpoint;
+            // assert a.data.source == s2.previous_justified_checkpoint;
+
+            // assert s1.block_roots == s2.block_roots ;
+            // assert get_previous_epoch(s2) == get_current_epoch(s1);
+            // assert get_block_root(s2, get_previous_epoch(s2)) == get_block_root(s1, get_current_epoch(s1));
+            // assert a.data.target.epoch ==  get_previous_epoch(s2);
+            // assert a.data.target.root == get_block_root(s2, get_previous_epoch(s2));
+            // assert a in store.rcvdAttestations;
+        // }
+    }   
 
     lemma preserveValidCurrent(s1: BeaconState, s2: BeaconState, store: Store)
         /** Store is well-formed. */
@@ -549,6 +625,7 @@ module AttestationsHelpers {
         // ensures filterAttestations(xl, cp) <= xl 
         ensures forall a :: a in xl && a.data.target == cp <==> a in filterAttestations(xl, cp) 
         ensures |filterAttestations(xl, cp)| == countAttestationsForTgt(xl, cp)
+        // ensures forall a :: a in filterAttestations(xl, cp) ==> a in xl 
         decreases xl
     {
         if |xl| == 0 then 
