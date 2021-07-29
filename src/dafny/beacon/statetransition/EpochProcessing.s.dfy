@@ -58,7 +58,7 @@ module EpochProcessingSpec {
             ==> br in chainRoots(get_block_root(s, get_current_epoch(s)), store)
     }
 
-     predicate {:opaque} blockRootsValidWeak(s: BeaconState, store: Store) 
+    predicate {:opaque} blockRootsValidWeak(s: BeaconState, store: Store) 
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
         requires isClosedUnderParent(store)
