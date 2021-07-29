@@ -492,6 +492,44 @@ module AttestationsHelpers {
         // }
     }   
 
+    lemma transferValidCurrentAttToPreviousAtEpoch2(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
+        requires (s1.slot + 1) %  SLOTS_PER_EPOCH != 0
+        // requires (s1.slot + 1) %  SLOTS_PER_EPOCH != 0
+        // requires get_current_epoch(s1) as nat *  SLOTS_PER_EPOCH as nat <  0x10000000000000000 
+        // requires get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot  
+        // requires s1.slot - get_current_epoch(s1) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
+        requires  get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot;
+        requires s2.slot == s1.slot + 1
+        requires s2.previous_justified_checkpoint == s1.previous_justified_checkpoint
+        requires s2.current_justified_checkpoint == s1.current_justified_checkpoint
+
+        requires s2.previous_epoch_attestations == s1.previous_epoch_attestations
+        requires s2.current_epoch_attestations == s1.current_epoch_attestations
+
+        // requires s1.block_roots == s2.block_roots
+        // requires get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s2, get_previous_epoch(s2))
+        requires get_block_root(s1, get_current_epoch(s1)) == get_block_root(s2, get_current_epoch(s2)) 
+        requires get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s2, get_previous_epoch(s2))
+
+
+        requires validCurrentAttestations(s1, store) 
+        requires validPrevAttestations(s1, store) 
+
+        ensures validPrevAttestations(s2, store)
+        ensures validCurrentAttestations(s2, store)
+    {
+        //
+        reveal_validCurrentAttestations();
+        reveal_validPrevAttestations();
+    }   
+
+
     lemma preserveValidCurrent(s1: BeaconState, s2: BeaconState, store: Store)
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
