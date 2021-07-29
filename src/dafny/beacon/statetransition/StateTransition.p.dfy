@@ -41,7 +41,7 @@ module StateTransitionProofs {
      *              An alternative to this assumption lemma would be to add preconditions to assert 
      *              that the number of active validators cannot drop to zero.
      */
-    lemma SetMinimumNumberOfValidators(s: BeaconState)
+    lemma {:axiom} SetMinimumNumberOfValidators(s: BeaconState)
         ensures minimumActiveValidators(s)
     // {}
 
@@ -55,7 +55,7 @@ module StateTransitionProofs {
      *              epoch attestations, meet these requirements. 
      *              These properties could be confirmed as part of process_attestation.
      */
-    lemma PreviousEpochAttestationsProperties(s: BeaconState)
+    lemma {:axiom}  PreviousEpochAttestationsProperties(s: BeaconState)
         requires |s.validators| == |s.balances|
         ensures forall a :: a in s.previous_epoch_attestations 
                 ==> a.data.index 
