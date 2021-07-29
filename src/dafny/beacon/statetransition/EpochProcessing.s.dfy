@@ -84,6 +84,47 @@ module EpochProcessingSpec {
             ==> br in chainRoots(get_block_root(s, get_current_epoch(s)), store)))
     }
 
+    predicate blockRootsValidWeak2(s: BeaconState, store: Store) 
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+    {
+        (forall br :: br in s.block_roots ==> br in store.blocks.Keys)
+        // &&
+        && (forall br :: br in chainRoots(s.block_roots[0], store) ==>  br in store.blocks.Keys)
+        && (forall i, j :: 0 < i < j < SLOTS_PER_HISTORICAL_ROOT ==> 
+            s.block_roots[i] in chainRoots(s.block_roots[j], store)
+        )
+    }
+
+    // lemma foo909(s: BeaconState, store: Store)
+    //     /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)  
+    //     requires blockRootsValidWeak2(s, store)
+    //     // ensures blockRootsValidWeak(s, store)
+    // {
+    //     reveal_blockRootsValidWeak2();
+    //     reveal_blockRootsValidWeak();
+    //     forall (br | br in s.block_roots )
+    //         ensures br in store.blocks.Keys
+    //     {
+
+    //     }
+    // }
+
+    // lemma foo505((s: BeaconState, store: Store) 
+    //      /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)  
+    //     requires blockRootsValidWeak2(s, store)
+
+    //     ensures 
+
+
     lemma foo808(s: BeaconState, store: Store)
         /** The store is well-formed, each block with slot != 0 has a parent
             which is itself in the store. */
