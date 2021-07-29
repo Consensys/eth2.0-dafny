@@ -26,6 +26,7 @@ include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
+include "../Helpers.p.dfy"
 include "ProcessOperations.s.dfy"
 include "ProcessOperations.p.dfy"
 
@@ -47,6 +48,7 @@ module ProcessOperations {
     import opened BeaconHelperSpec
     import opened SeqHelpers
     import opened BeaconHelpers
+    import opened BeaconHelperProofs
     import opened ProcessOperationsSpec
     import opened ProcessOperationsProofs
     
@@ -132,10 +134,8 @@ module ProcessOperations {
             seqInitLast<AttesterSlashing>(bb.attester_slashings, i);
             assert bb.attester_slashings[..i+1] 
                     == bb.attester_slashings[..i] + [bb.attester_slashings[i]];
-            valid_indexed_attestation_lemma(s1, s', bb.attester_slashings[i].attestation_1);
-            assert is_valid_indexed_attestation(s', bb.attester_slashings[i].attestation_1);
-            valid_indexed_attestation_lemma(s1, s', bb.attester_slashings[i].attestation_2);
-            assert is_valid_indexed_attestation(s', bb.attester_slashings[i].attestation_2);
+            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_1);
+            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_2);
             assert |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, 
                                         bb.attester_slashings[i].attestation_2.attesting_indices)| > 0;
             s', slashed_any := process_attester_slashing(s', bb.attester_slashings[i]);
@@ -259,7 +259,8 @@ module ProcessOperations {
         requires s.validators[ps.header_1.proposer_index].activation_epoch 
                     <= get_current_epoch(s) 
                     < s.validators[ps.header_1.proposer_index].withdrawable_epoch
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
         
         ensures s' == updateProposerSlashing(s,ps)
@@ -302,11 +303,12 @@ module ProcessOperations {
                     ==> a.attestation_1.attesting_indices[i] as int < |s.validators|
         requires forall i :: 0 <= i < |a.attestation_2.attesting_indices|
                     ==> a.attestation_2.attesting_indices[i] as int < |s.validators|
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
         requires is_slashable_attestation_data(a.attestation_1.data, a.attestation_2.data)
-        requires is_valid_indexed_attestation(s, a.attestation_1)
-        requires is_valid_indexed_attestation(s, a.attestation_2)
+        requires is_valid_indexed_attestation(a.attestation_1)
+        requires is_valid_indexed_attestation(a.attestation_2)
         requires |sorted_intersection(a.attestation_1.attesting_indices, 
                                       a.attestation_2.attesting_indices)| 
                     > 0
@@ -323,9 +325,9 @@ module ProcessOperations {
         //(data_1.source.epoch < data_2.source.epoch && data_2.target.epoch < data_1.target.epoch)
         assert is_slashable_attestation_data(a.attestation_1.data, a.attestation_2.data);
         // Verify indices are sorted and unique, and at least 1
-        assert is_valid_indexed_attestation(s, a.attestation_1);
+        assert is_valid_indexed_attestation(a.attestation_1);
         // assert is_valid_indexed_attestation(state, attestation_2)
-        assert is_valid_indexed_attestation(s, a.attestation_2);
+        assert is_valid_indexed_attestation(a.attestation_2);
 
         s' := s;
         flag := false;
@@ -365,6 +367,7 @@ module ProcessOperations {
                                                         get_beacon_proposer_index(origState)
                                                     );
                 s' := slash_validator(origState, ts[i], get_beacon_proposer_index(origState));
+                //assert minimumActiveValidators(s');
                 flag := true;
             }
             else {
@@ -486,6 +489,7 @@ module ProcessOperations {
      *  @returns    The state obtained depositing of `d` to `s`.
     */
     method process_deposit(s: BeaconState, d : Deposit)  returns (s' : BeaconState)  
+        requires minimumActiveValidators(s)
         requires |s.validators| + 1 <= VALIDATOR_REGISTRY_LIMIT as int
         requires s.eth1_deposit_index as int + 1 < 0x10000000000000000 
         requires |s.validators| == |s.balances|
@@ -522,6 +526,7 @@ module ProcessOperations {
      *  @returns                The state obtained applying `voluntary_exit` to `s`.
      */
     method process_voluntary_exit(s: BeaconState, voluntary_exit: VoluntaryExit) returns (s' : BeaconState) 
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
         requires voluntary_exit.validator_index as int < |s.validators|
         requires !s.validators[voluntary_exit.validator_index].slashed

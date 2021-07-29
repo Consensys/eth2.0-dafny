@@ -181,6 +181,9 @@ module Eth2Types {
     /** The default (empty) Bytes32 */
     const DEFAULT_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
 
+    /** The default seed Bytes32 */
+    const DEFAULT_SEED_BYTES32 : Bytes32 := Bytes(SEQ_EMPTY_32_BYTES)
+
     /** The default (empty) Bytes48 */
     const DEFAULT_BYTES48 : Bytes48 := Bytes(SEQ_EMPTY_48_BYTES)
 

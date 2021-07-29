@@ -25,6 +25,7 @@ include "../validators/Validators.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
+include "../Helpers.p.dfy"
 include "../../ssz/Serialise.dfy"
 include "ProcessOperations.p.dfy"
 
@@ -42,6 +43,7 @@ module ProcessOperationsSpec {
     import opened Validators
     import opened AttestationsTypes
     import opened BeaconHelpers
+    import opened BeaconHelperProofs
     import opened BeaconHelperSpec
     import opened MathHelpers
     import opened SeqHelpers
@@ -110,12 +112,10 @@ module ProcessOperationsSpec {
         && (forall i :: 0 <= i < |bb.attester_slashings| ==> 
             var a1 := bb.attester_slashings[i].attestation_1;
             var a2 := bb.attester_slashings[i].attestation_2;
-            && is_valid_indexed_attestation(s, a1)
-            && is_valid_indexed_attestation(s, a2)
+            && is_valid_indexed_attestation(a1)
+            && is_valid_indexed_attestation(a2)
             && |sorted_intersection(a1.attesting_indices, a2.attesting_indices)| > 0
             && is_slashable_attestation_data(a1.data, a2.data)
-            && is_valid_indexed_attestation(s, a1)
-            && is_valid_indexed_attestation(s, a2)
             && |sorted_intersection(a1.attesting_indices, a2.attesting_indices)| > 0
         )
     }
@@ -241,7 +241,8 @@ module ProcessOperationsSpec {
      */
     function updateOperations(s: BeaconState, bb: BeaconBlockBody): BeaconState
         requires  |s.validators| == |s.balances|
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires isValidBeaconBlockBody(s, bb)
 
         ensures updateOperations(s, bb) == updateVoluntaryExits(
@@ -332,10 +333,6 @@ module ProcessOperationsSpec {
         ensures minimumActiveValidators(updateProposerSlashing(s, ps))
     {
         var s' := slash_validator(s, ps.header_1.proposer_index, get_beacon_proposer_index(s));
-        // lemma to ensure minimumActiveValidators(updateProposerSlashing(s, ps))
-        slashValidatorPreservesMinimumActiveValidators(s, 
-                                                      ps.header_1.proposer_index, 
-                                                      get_beacon_proposer_index(s));
         s'
     }
 
@@ -484,20 +481,22 @@ module ProcessOperationsSpec {
      */
     function updateAttesterSlashingComp(s: BeaconState, slash_index: ValidatorIndex) : BeaconState 
         requires slash_index as int < |s.validators| 
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
-
+        
         ensures |updateAttesterSlashingComp(s, slash_index).validators| == |s.validators| 
         ensures |updateAttesterSlashingComp(s, slash_index).validators| 
                 == |updateAttesterSlashingComp(s, slash_index).balances| 
         ensures updateAttesterSlashingComp(s, slash_index).slot == s.slot
         ensures updateAttesterSlashingComp(s, slash_index).eth1_deposit_index == s.eth1_deposit_index
-        ensures 
-            var s1 := updateAttesterSlashingComp(s, slash_index);
-            |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        // ensures 
+        //     var s1 := updateAttesterSlashingComp(s, slash_index);
+        //     |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        ensures minimumActiveValidators(updateAttesterSlashingComp(s, slash_index))
     {
         if is_slashable_validator(s.validators[slash_index], get_current_epoch(s)) then
-            slashValidatorPreservesActiveValidators(s, slash_index, get_beacon_proposer_index(s));
+            //slashValidatorPreservesActiveValidators(s, slash_index, get_beacon_proposer_index(s));
             slash_validator(s, slash_index, get_beacon_proposer_index(s))
         else
             s
@@ -512,7 +511,8 @@ module ProcessOperationsSpec {
      *                  for all 0 <= i < |indices|.        
      */
     function updateAttesterSlashing(s: BeaconState, indices: seq<uint64>) : BeaconState 
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
         requires |s.validators| == |s.balances|
         requires valid_state_indices(s,indices)
         //requires forall i :: 0 <= i < |indices| ==> indices[i] as int < |s.validators| 
@@ -523,9 +523,10 @@ module ProcessOperationsSpec {
         ensures updateAttesterSlashing(s, indices).slot == s.slot
         ensures updateAttesterSlashing(s, indices).eth1_deposit_index == s.eth1_deposit_index
         ensures updateAttesterSlashing(s, indices).latest_block_header == s.latest_block_header
-        ensures 
-            var s1 := updateAttesterSlashing(s, indices);
-            |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        //ensures 
+        //    var s1 := updateAttesterSlashing(s, indices);
+        //    |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        ensures minimumActiveValidators(updateAttesterSlashing(s, indices))
         decreases indices
     {
         if |indices| == 0 then 
@@ -555,8 +556,8 @@ module ProcessOperationsSpec {
      *                  the sorted intersection are slashed.
      */
     function updateAttesterSlashings(s: BeaconState, a: seq<AttesterSlashing>) : BeaconState 
-        requires forall i :: 0 <= i < |a| ==> is_valid_indexed_attestation(s, a[i].attestation_1)
-        requires forall i :: 0 <= i < |a| ==> is_valid_indexed_attestation(s, a[i].attestation_2)
+        requires forall i :: 0 <= i < |a| ==> is_valid_indexed_attestation(a[i].attestation_1)
+        requires forall i :: 0 <= i < |a| ==> is_valid_indexed_attestation(a[i].attestation_2)
         requires forall i :: 0 <= i < |a| 
                     ==> forall j :: 0 <= j < |a[i].attestation_1.attesting_indices|
                     ==> a[i].attestation_1.attesting_indices[j] as int < |s.validators|
@@ -709,6 +710,7 @@ module ProcessOperationsSpec {
      *  @returns        The state obtained after taking account the deposit `d` from state `s` 
      */
     function updateDeposit(s: BeaconState, d: Deposit) : BeaconState 
+        requires minimumActiveValidators(s)
         requires s.eth1_deposit_index as int +  1 < 0x10000000000000000 
         requires |s.validators| == |s.balances|
         requires |s.validators| + 1 <= VALIDATOR_REGISTRY_LIMIT as int
@@ -719,6 +721,7 @@ module ProcessOperationsSpec {
         ensures d.data.pubkey in seqKeysInValidators(s.validators)  
                 ==> updateDeposit(s,d).validators == s.validators 
         ensures updateDeposit(s,d).eth1_deposit_index == s.eth1_deposit_index + 1
+        ensures updateDeposit(s,d).slot == s.slot
         ensures |updateDeposit(s,d).validators| == |updateDeposit(s,d).balances|        
         ensures |s.validators| <= |updateDeposit(s,d).validators| <= |s.validators| + 1 
         ensures |s.balances| <= |updateDeposit(s,d).balances| <= |s.balances| + 1 
@@ -727,24 +730,32 @@ module ProcessOperationsSpec {
         ensures total_balances(updateDeposit(s,d).balances) 
                 == total_balances(s.balances) + d.data.amount as int 
                 < 0x10000000000000000
+        ensures forall i :: 0 <= i < |s.validators| 
+                ==> s.validators[i] == updateDeposit(s,d).validators[i]
+        ensures minimumActiveValidators(updateDeposit(s,d))
+        
     {
         var pk := seqKeysInValidators(s.validators); 
         var k := d.data.pubkey;
         
-        s.(
-            eth1_deposit_index := (s.eth1_deposit_index as int + 1) as uint64,
-            validators := if k in pk then 
-                                s.validators // unchanged validator members
+        var s' := s.(
+                eth1_deposit_index := (s.eth1_deposit_index as int + 1) as uint64,
+                validators := if k in pk then 
+                                    s.validators // unchanged validator members
+                                else 
+                                    validator_append(s.validators, get_validator_from_deposit(d)), 
+                balances := if k in pk then 
+                                individualBalanceBoundMaintained(s.balances,d);
+                                updateExistingBalance(s, get_validator_index(pk, k), d.data.amount);
+                                increase_balance(s,get_validator_index(pk, k),d.data.amount).balances
                             else 
-                                validator_append(s.validators, get_validator_from_deposit(d)), 
-            balances := if k in pk then 
-                            individualBalanceBoundMaintained(s.balances,d);
-                            updateExistingBalance(s, get_validator_index(pk, k), d.data.amount);
-                            increase_balance(s,get_validator_index(pk, k),d.data.amount).balances
-                        else 
-                            distBalancesProp(s.balances,[d.data.amount]);
-                            balance_append(s.balances, d.data.amount) 
-        )
+                                distBalancesProp(s.balances,[d.data.amount]);
+                                balance_append(s.balances, d.data.amount) 
+            );
+        assert forall i :: 0 <= i < |s.validators| 
+                ==> s.validators[i] == s'.validators[i];
+        assert minimumActiveValidators(s');
+        s'
     }
     
     /**

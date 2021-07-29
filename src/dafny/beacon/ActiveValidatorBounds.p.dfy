@@ -26,7 +26,7 @@ include "attestations/AttestationsTypes.dfy"
 /**
  *  Proofs relating to the bounds on active validators required to form committees.
  */
-module BeaconHelperProofs {
+module ActiveValidatorBounds {
 
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types

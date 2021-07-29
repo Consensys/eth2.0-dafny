@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
@@ -213,5 +213,84 @@ module BeaconHelperSpec {
         else 
             (if xb[|xb| - 1] then { |xb| - 1 } else {}) + trueBitsCount(xb[..|xb| - 1])
     }
+
+    /**
+     *  Check if ``indices``, ``seed``, ``index``, and ``count`` are valid inputs
+     *  to compute_committee.
+     *
+     *  @param      indices     A sequence of active validator indices.
+     *  @param      seed        A seed value.
+     *  @param      index       (slot % SLOTS_PER_EPOCH) * committees_per_slot + CommitteeIndex
+     *  @param      count       committees_per_slot * SLOTS_PER_EPOCH
+     *  @returns                True if the inputs satisfy the requirements of
+     *                          compute_committee.
+     */
+    predicate is_valid_compute_committee_parameters(indices: seq<ValidatorIndex>, 
+                                                    seed: Bytes32, 
+                                                    index: uint64, 
+                                                    count: uint64
+                                                   ) 
+    {
+        count > 0
+        && index < count
+        && (0 < |indices| < 0x10000000000000000)
+        && (|indices|  * index as nat / count as nat  < 0x10000000000000000)
+        && (|indices| * (index as nat +1) / count as nat < 0x10000000000000000)
+        && (|indices| * (index as nat +1) / count as nat <= |indices| )
+        && (|indices| * (index as nat +1) / count as nat > |indices| * index as nat / count as nat)
+        && (0 
+            < (|indices| * (index as nat + 1)) / (count as nat) 
+                - (|indices| * index as nat ) / count as nat 
+            <= MAX_VALIDATORS_PER_COMMITTEE as nat)
+    }
+
+    /**
+     *  Check if ``n``is a valid number of active validators.
+     *
+     *  @param  n   A positive integer.   
+     *  @returns    True if 32 <= n <= 2^22
+     */
+    predicate is_valid_number_active_validators(n: nat) 
+    {
+        TWO_UP_5 as nat <= n <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+    }
+
+    /**
+     *  Check if ``i`` is a valid committee index.
+     *
+     *  @param  i       A positive integer.   
+     *  @param  ccps    The committee count per slot.   
+     *  @returns        True if i < ccps <= 64
+     */
+    predicate is_valid_committee_index(i: CommitteeIndex, ccps: uint64) 
+    {
+        i as nat < ccps as nat <= TWO_UP_6 as nat
+    }
+
+    /**
+     *  Check if ``i`` is a valid gwei  amount.
+     *
+     *  @param  i       A positive integer.   
+     *  @returns        True if i < 0x10000000000000000
+     */
+    predicate is_valid_gwei_amount(i: nat)
+    {
+        i < 0x10000000000000000
+    }
+
+    /**
+     *  Check if ``len_bc``is a valid beacon committee length given ``len_bits``.
+     *
+     *  @param      len_bc      A positive integer.
+     *  @param      len_bits    A positive integer.
+     *  @returns                True if len_bc < len_bits <=
+     *                          len_bc < len_bits <= MAX_VALIDATORS_PER_COMMITTEE.
+     */
+    predicate is_valid_beacon_committee_length(len_bc: nat, len_bits: nat)
+    {
+        (0 < len_bc <= len_bits <= MAX_VALIDATORS_PER_COMMITTEE as nat)
+    }
+
+    
 
 }
