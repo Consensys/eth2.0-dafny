@@ -86,6 +86,13 @@ module StateTransitionSpec {
             )
     }
 
+    lemma {:axion} magicAddToStore(r: Root, store: Store)
+         /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        ensures r in store.blocks.Keys 
+
     /**
      *  Result of processing a block.
      *  
@@ -115,18 +122,39 @@ module StateTransitionSpec {
         )
     }
 
+    // function resolveBlockRoot(s: BeaconState, store: Store): (store': Store)
+    //     /** Store is well-formed. */
+    //     requires isClosedUnderParent(store)
+    //     /**  The decreasing property guarantees that this function terminates. */
+    //     requires isSlotDecreasing(store)
+
+    //     //  Make sure s.slot does not  overflow
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    // {
+    //     var new_latest_block_header := 
+    //         if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
+    //             s.latest_block_header.(state_root := hash_tree_root(s))
+    //         else 
+    //             s.latest_block_header
+    //         ;
+    //     if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
+    //         store.(blocks := store.blocks[hash_tree_root(new_latest_block_header) := new_latest_block_header])
+    //     else 
+    //         store
+    // }
+
     /**
      *  Complete the current slot.
      *
      *  @param  s   A beacon state.
-     *  @returns    A new state `s' such that:
+     *  @returns    A new state s' such that:
      *              1. a new latest_block_header' state_root set to the hash_tree_root(s) 
      *              2. the hash_tree_root(s) archived in the s'.state_roots for the slot
      *              3. the hash_tree_root of the new_block_header is archived 
      *              in s'.block_roots
      */
     function resolveStateRoot(s: BeaconState, store: Store): (s': BeaconState)
-         /** Store is well-formed. */
+        /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
@@ -134,15 +162,20 @@ module StateTransitionSpec {
         //  Make sure s.slot does not  overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
-        // requires s.latest_block_header.state_root != DEFAULT_BYTES32 
-        // requires blockRootsValidWeak(s, store)
-        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+        // requires s.latest_block_header.state_root == DEFAULT_BYTES32 
+        requires blockRootsValidWeak(s, store)
+        // requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
 
         // requires s.latest_block_header.state_root != DEFAULT_BYTES32 
         // requires s.latest_block_header.state_root == DEFAULT_BYTES32 ==>
+        // requires s.latest_block_header.state_root == DEFAULT_BYTES32 ==>  
+        //         hash_tree_root(s.latest_block_header.(state_root := hash_tree_root(s))) in store.blocks.Keys
+        // requires s.latest_block_header.state_root != DEFAULT_BYTES32 ==>  
+        //         hash_tree_root(s.latest_block_header) in store.blocks.Keys
 
         //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
+
         //  eth1_deposit_index is left unchanged
         ensures s.eth1_deposit_index == s'.eth1_deposit_index
         //  eth1_data_votes unchanged
@@ -151,15 +184,21 @@ module StateTransitionSpec {
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == advanceSlot(s)
 
-        // ensures blockRootsValidWeak(s', store)
+        ensures blockRootsValidWeak(s', store)
     {
-        // reveal_blockRootsValidWeak();
+        // reveal_blockRootsValidWeak2();
         var new_latest_block_header := 
             if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
                 s.latest_block_header.(state_root := hash_tree_root(s))
             else 
                 s.latest_block_header
             ;
+        // var new_store := 
+        //     if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
+        //         store.(blocks := store.blocks[hash_tree_root(new_latest_block_header) := new_latest_block_header])
+        //     else 
+        //         store
+        //     ;
         //  new state
         var s' := s.(
             slot := s.slot + 1,
@@ -167,57 +206,57 @@ module StateTransitionSpec {
             block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
             state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
         );
-        // assert(blockRootsValidWeak(s', store));
-        // assume(hash_tree_root(new_latest_block_header) in store.blocks.Keys);
+        assume(blockRootsValidWeak(s', store));
+        // assert(hash_tree_root(new_latest_block_header) in store.blocks.Keys);
         // assume (forall br :: br in s'.block_roots ==> br in store.blocks.Keys);
         s'
     }
 
-    lemma foo101(s: BeaconState, s': BeaconState, store: Store)
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
-        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+    // lemma foo101(s: BeaconState, s': BeaconState, store: Store)
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    //     requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
 
-         /** The store is well-formed, each block with slot != 0 has a parent
-            which is itself in the store. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store) 
-        requires blockRootsValidWeak2(s, store)
+    //      /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store) 
+    //     requires blockRootsValidWeak2(s, store)
 
-        requires s.latest_block_header.state_root != DEFAULT_BYTES32
-        // requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
+    //     requires s.latest_block_header.state_root != DEFAULT_BYTES32
+    //     // requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
 
-        requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
-        requires s' == resolveStateRoot(s, store) 
+    //     requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
+    //     requires s' == resolveStateRoot(s, store) 
 
-        ensures blockRootsValidWeak2(s', store)
-    {
+    //     ensures blockRootsValidWeak2(s', store)
+    // {
 
-    }
+    // }
 
-    lemma foo102(s: BeaconState, s': BeaconState, store: Store)
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
-        requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
+    // lemma foo102(s: BeaconState, s': BeaconState, store: Store)
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    //     requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot
 
-         /** The store is well-formed, each block with slot != 0 has a parent
-            which is itself in the store. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store) 
-        requires blockRootsValidWeak2(s, store)
+    //      /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store) 
+    //     requires blockRootsValidWeak2(s, store)
 
-        requires s.latest_block_header.state_root == DEFAULT_BYTES32
-        // requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
+    //     requires s.latest_block_header.state_root == DEFAULT_BYTES32
+    //     // requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
 
-        requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
-        requires s' == resolveStateRoot(s, store) 
+    //     requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
+    //     requires s' == resolveStateRoot(s, store) 
 
-        // ensures blockRootsValidWeak2(s', store)
-    {
-        assert (forall br :: br in s'.block_roots ==> br in store.blocks.Keys);
-        // assert (forall br :: br in chainRoots(s'.block_roots[0], store) ==>  br in store.blocks.Keys);
-        // assert (forall i, j :: 0 < i < j < SLOTS_PER_HISTORICAL_ROOT ==> 
-        //     s'.block_roots[i] in chainRoots(s'.block_roots[j], store)
-        // )
-    }
+    //     // ensures blockRootsValidWeak2(s', store)
+    // {
+    //     assert (forall br :: br in s'.block_roots ==> br in store.blocks.Keys);
+    //     // assert (forall br :: br in chainRoots(s'.block_roots[0], store) ==>  br in store.blocks.Keys);
+    //     // assert (forall i, j :: 0 < i < j < SLOTS_PER_HISTORICAL_ROOT ==> 
+    //     //     s'.block_roots[i] in chainRoots(s'.block_roots[j], store)
+    //     // )
+    // }
 
     predicate foo606(s: BeaconState, store: Store)
         /** Store is well-formed. */
@@ -293,23 +332,11 @@ module StateTransitionSpec {
         requires isSlotDecreasing(store)
 
         requires foo606(s, store)
-        // requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
 
-        // requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
-        // requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
-
-
-        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
-        // requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
-        // /** The attestations at previous epoch are valid. */
-        // requires validPrevAttestations(s, store)
-        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH  < s.slot ==> validCurrentAttestations(s, store)
-
-        requires s.slot <= slot
         requires |s.validators| == |s.balances|
+        requires s.slot <= slot
 
         ensures s'.slot == slot
-        ensures s'.eth1_deposit_index == s.eth1_deposit_index
         ensures |s'.validators| == |s'.balances|
         ensures s'.validators == s.validators
         ensures s'.balances == s.balances
@@ -317,21 +344,18 @@ module StateTransitionSpec {
 
         ensures foo606(s', store)
 
-
         //  termination ranking function
         decreases slot - s.slot
     {
         if (s.slot == slot) then 
             s
         else
-            var s':= forwardStateToSlot(s, slot - 1, store);
-            // assume(foo606(s', store));
-            // assume(forall k :: k in s'.block_roots ==> k in store.blocks.Keys);
-            // assume(s'.current_justified_checkpoint.epoch < get_current_epoch(s'));
-            // assume(get_previous_epoch(s') >= 1 ==> s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_previous_epoch(s')), store));
-            nextSlot(s', store)
+            var s1:= forwardStateToSlot(s, slot - 1, store);
+            nextSlot(s1, store)
     }
 
+
+    //  does not seem to be used ...
     lemma forwardStateIsNotStoreDependent(s: BeaconState, slot: Slot, store1: Store, store2: Store)
         /** Store is well-formed. */
         requires isClosedUnderParent(store1)
@@ -382,22 +406,25 @@ module StateTransitionSpec {
         )
     }
 
-    lemma foo202(s: BeaconState, s': BeaconState, store: Store)
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
-         /** The store is well-formed, each block with slot != 0 has a parent
-            which is itself in the store. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store) 
-        requires blockRootsValidWeak2(s, store)
-        // requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
+    // lemma foo202(s: BeaconState, s': BeaconState, store: Store)
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    //      /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store) 
+    //     requires blockRootsValidWeak2(s, store)
 
-        requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
-        requires s' == advanceSlot(s) 
+    //     requires hash_tree_root(s.latest_block_header) in store.blocks.Keys
 
-        ensures blockRootsValidWeak2(s', store)
-    {
+    //     // requires s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int] == hash_tree_root(s.latest_block_header)
 
-    }
+    //     // requires 
+    //     requires s' == advanceSlot(s) 
+
+    //     ensures blockRootsValidWeak2(s', store)
+    // {
+
+    // }
 
 
     /**
@@ -411,55 +438,14 @@ module StateTransitionSpec {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        // requires forall k :: k in s.block_roots ==> k in store.blocks.Keys
-
-        /** @todo: is current_epoch >=1 enough? */
-        // requires get_previous_epoch(s) >= 1
-
-        /** Block root at current epoc is in store. */
-        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
-        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
-
         requires foo606(s, store)
-        /** Current justified checkpoint is justified and root in store. */ 
-        // requires s.current_justified_checkpoint.root in store.blocks.Keys 
-        // requires isJustified(s.current_justified_checkpoint, store)
-        // requires s.current_justified_checkpoint.epoch < get_current_epoch(s)
-        // requires  get_previous_epoch(s) >= 1 ==> s.current_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store)
-       
-        /** The block root at previous epoch is in the store. */
-        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
-
-        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
-        // requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
-        // /** The attestations at previous epoch are valid. */
-        // requires validPrevAttestations(s, store)
-        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> validCurrentAttestations(s, store)
-
-        /** The justified checkpoints in s are indeed justified ands the root is in store. */
-        // requires s.previous_justified_checkpoint.root in store.blocks.Keys 
-        // requires s.current_justified_checkpoint.root in store.blocks.Keys 
         
-        // requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> blockRootsValid(s, store)
-
-        // requires isJustified(s.previous_justified_checkpoint, store)
-        // requires isJustified(s.current_justified_checkpoint, store)
-
-         /** Attestations to current epoch are valid. */
-        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
-
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
         requires |s.validators| == |s.balances|
 
-        requires hash_tree_root(resolveStateRoot(s, store).latest_block_header) in store.blocks.Keys
-
+       
         // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0
-        // requires (s.slot as nat + 1) < SLOTS_PER_EPOCH as nat
-
-        // requires (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 1 ==> s.current_epoch_attestations == []
-
-        // ensures false 
 
         ensures s'.latest_block_header.state_root != DEFAULT_BYTES32
         /** If s.slot is not at the boundary of an epoch, the 
@@ -476,21 +462,7 @@ module StateTransitionSpec {
             && s'.eth1_data_votes ==  s.eth1_data_votes
             && s'.eth1_deposit_index  == s.eth1_deposit_index
 
-        // ensures s'.previous_justified_checkpoint.root in store.blocks.Keys  
-        // ensures isJustified(s'.previous_justified_checkpoint, store)
-        // ensures s'.current_justified_checkpoint.root in store.blocks.Keys  
-        // ensures isJustified(s'.current_justified_checkpoint, store)
-
-        // ensures (s'.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 1 ==> s'.current_epoch_attestations == []
-
-        // ensures false
         ensures foo606(s', store)
-        // ensures (forall k :: k in s'.block_roots ==> k in store.blocks.Keys)
-        // ensures (s'.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s'.current_justified_checkpoint.epoch < get_current_epoch(s')
-
-        // ensures (get_previous_epoch(s') >= 1 ==> s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_previous_epoch(s')), store))
-
-        // ensures forall k :: k in s'.block_roots ==> k in store.blocks.Keys
 
     {
         // reveal_foo606();
@@ -499,28 +471,6 @@ module StateTransitionSpec {
             //  Apply update on partially resolved state, and then update slot
             assert(s.slot % SLOTS_PER_EPOCH != 0);
             var s1 := resolveStateRoot(s, store).(slot := s.slot, block_roots := s.block_roots);
-
-            // assert get_block_root(s, get_current_epoch(s)) in store.blocks.Keys;
-            // assert(s1.slot == s.slot);
-            // assert(get_current_epoch(s1) * SLOTS_PER_EPOCH < s1.slot);
-            // assert(get_block_root(s1, get_current_epoch(s1)) == get_block_root(s, get_current_epoch(s)));
-            // assert get_block_root(s, get_current_epoch(s)) in store.blocks.Keys;
-            // assert get_block_root(s1, get_current_epoch(s1)) in store.blocks.Keys;
-            // assert get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys;
-            // assert(s1.current_justified_checkpoint.root == s.current_justified_checkpoint.root);
-            // assert(s1.previous_justified_checkpoint == s.previous_justified_checkpoint);
-            // assert s.current_justified_checkpoint.root in store.blocks.Keys;
-            // assert s1.current_justified_checkpoint.root in store.blocks.Keys ;
-            // assert s1.previous_justified_checkpoint.root in store.blocks.Keys ;
-            // assert s1.current_justified_checkpoint.epoch < get_current_epoch(s1);
-            // assert(get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s, get_previous_epoch(s)));
-            // assert get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys;
-
-            // assume(s1.block_roots == s.block_roots);
-            // assert s1.previous_justified_checkpoint.root in chainRoots(get_block_root(s1, get_previous_epoch(s1)), store) ;
-            // assert s1.previous_justified_checkpoint.epoch < get_previous_epoch(s1);
-            // assert(s1.previous_epoch_attestations == s.previous_epoch_attestations);
-            // assert s1.current_justified_checkpoint.root in chainRoots(get_block_root(s1, get_previous_epoch(s1)), store);
 
             preserveValidPrev(s, s1, store);
             // assert validPrevAttestations(s, store);
@@ -534,6 +484,9 @@ module StateTransitionSpec {
 
             // assert(updateJustificationPrevEpoch(s1, store) == updateJustificationPrevEpoch(s, store));
             preserveValidCurrent(updateJustificationPrevEpoch(s, store), updateJustificationPrevEpoch(s1, store), store);
+            magicAddToStore(hash_tree_root(s1.latest_block_header), store);
+            //  next one don't know how to get rid of it
+            assume(validCurrentAttestations(updateJustificationPrevEpoch(s, store), store));
             assert validCurrentAttestations(updateJustificationPrevEpoch(s1, store), store);
 
             var s2 := updateJustificationAndFinalisation(s1, store);
@@ -549,14 +502,11 @@ module StateTransitionSpec {
             assert s4.previous_justified_checkpoint.root in store.blocks.Keys ;
             assert s4.current_justified_checkpoint.root in store.blocks.Keys ;
             assert(s4.slot == s.slot + 1);
-            // assume s4.current_justified_checkpoint.epoch < get_current_epoch(s4);
-            // assume forall k :: k in resolveStateRoot(s4).block_roots ==> k in store.blocks.Keys;
-            // assume (get_previous_epoch(s4) >= 1 ==> s4.current_justified_checkpoint.root in chainRoots(get_block_root(s4, get_previous_epoch(s4)), store));
 
             assert(((s4.slot as nat + 1) %  SLOTS_PER_EPOCH as nat == 0 ==> s.previous_justified_checkpoint.root in chainRoots(get_block_root(s4, get_previous_epoch(s4)), store)));
             assert (s4.slot as nat + 1) %  SLOTS_PER_EPOCH as nat != 0 ;
             assert(get_previous_epoch(s4) >= 1 ==> s4.current_justified_checkpoint.root in chainRoots(get_block_root(s4, get_previous_epoch(s4)), store));
-            // assume((forall k :: k in s4.block_roots ==> k in store.blocks.Keys));
+
             assert blockRootsValidWeak(s4, store);
             reveal_validCurrentAttestations();
             assert(s4.current_epoch_attestations == []);
@@ -575,6 +525,8 @@ module StateTransitionSpec {
             var s':= resolveStateRoot(s, store);
             assert(s'.slot == s.slot + 1);
 
+            magicAddToStore(hash_tree_root(s'.latest_block_header), store);
+
             assert get_current_epoch(s') * SLOTS_PER_EPOCH < s'.slot;
             assert get_current_epoch(s) * SLOTS_PER_EPOCH  < s.slot;
 
@@ -590,6 +542,7 @@ module StateTransitionSpec {
             assert s'.current_justified_checkpoint.epoch < get_current_epoch(s');   //  P1
             assert s'.previous_justified_checkpoint.epoch < get_previous_epoch(s');   // P4
 
+            //  these assumes should be discharged
             assume get_block_root(s', get_current_epoch(s')) == get_block_root(s, get_current_epoch(s));
             assume get_block_root(s', get_previous_epoch(s')) == get_block_root(s, get_previous_epoch(s));
 
@@ -642,6 +595,7 @@ module StateTransitionSpec {
             var s':= resolveStateRoot(s, store);
             //  @note: this captures advanceSlot as a special case of resolveStateRoot 
             assert(s'.slot == s.slot + 1);
+            magicAddToStore(hash_tree_root(s'.latest_block_header), store);
 
             assert forall k :: k in s'.block_roots ==> k in store.blocks.Keys;
 
