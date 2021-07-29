@@ -1060,11 +1060,11 @@ module BeaconHelpers {
      */
     function method get_matching_source_attestations(state: BeaconState, epoch: Epoch) : seq<PendingAttestation>
         requires get_previous_epoch(state) <= epoch <= get_current_epoch(state)
-        requires is_valid_state_epoch_attestions(state)
+        requires is_valid_state_epoch_attestations(state)
         
 
         ensures |get_matching_source_attestations(state, epoch)| < 0x10000000000000000
-        ensures is_valid_state_epoch_attestions(state)
+        ensures is_valid_state_epoch_attestations(state)
     {
         if epoch == get_current_epoch(state) then
             state.current_epoch_attestations
@@ -1104,7 +1104,7 @@ module BeaconHelpers {
         requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
         requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
-        requires is_valid_state_epoch_attestions(state)
+        requires is_valid_state_epoch_attestations(state)
         
         ensures |get_matching_target_attestations(state, epoch)| < 0x10000000000000000
         ensures forall a :: a in get_matching_target_attestations(state, epoch) ==>
@@ -1129,7 +1129,7 @@ module BeaconHelpers {
         requires epoch as nat *  SLOTS_PER_EPOCH as nat  <  state.slot as nat
         requires state.slot - epoch *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(state) <= epoch <= get_current_epoch(state)
-        requires is_valid_state_epoch_attestions(state)
+        requires is_valid_state_epoch_attestations(state)
         
         ensures |get_matching_head_attestations(state, epoch)| < 0x10000000000000000
         ensures forall a :: a in get_matching_head_attestations(state, epoch) ==>
@@ -1255,7 +1255,7 @@ module BeaconHelpers {
      *  
      *  @note   This function is a helper to several functions.
      */
-    predicate is_valid_state_epoch_attestions(s: BeaconState)
+    predicate is_valid_state_epoch_attestations(s: BeaconState)
     {
         is_valid_pending_attestions(s, s.current_epoch_attestations)
         && is_valid_pending_attestions(s, s.previous_epoch_attestations)
@@ -1552,7 +1552,7 @@ module BeaconHelpers {
      *  @returns                (rewards,penalties).
      */
     function method get_source_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
 
         ensures |get_source_deltas(s).0| == |get_source_deltas(s).1| == |s.validators|
     {
@@ -1569,7 +1569,7 @@ module BeaconHelpers {
     function method get_target_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
 
         ensures |get_target_deltas(s).0| == |get_target_deltas(s).1| == |s.validators|
     {
@@ -1586,7 +1586,7 @@ module BeaconHelpers {
     function method get_head_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         requires 1 <= get_previous_epoch(s) <= get_current_epoch(s)
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
         
         ensures |get_head_deltas(s).0| == |get_head_deltas(s).1| == |s.validators|
     {
@@ -1601,7 +1601,7 @@ module BeaconHelpers {
      *  @returns                (rewards,penalties).
      */
     function method get_inclusion_delay_deltas(s: BeaconState) : (seq<Gwei>,seq<Gwei>)
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
         ensures |get_inclusion_delay_deltas(s).0| == |get_inclusion_delay_deltas(s).1| == |s.validators|
     {
         var rewards : seq<Gwei> := timeSeq<Gwei>(0,|s.validators|);
@@ -1698,7 +1698,7 @@ module BeaconHelpers {
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  s.slot as nat
         requires s.slot - get_previous_epoch(s) *  SLOTS_PER_EPOCH <=  SLOTS_PER_HISTORICAL_ROOT 
         requires 1 <= get_previous_epoch(s) //<= get_current_epoch(s)
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
  
         ensures |get_inactivity_penalty_deltas(s).0| == |get_inactivity_penalty_deltas(s).1| == |s.validators|
     {
@@ -1798,7 +1798,7 @@ module BeaconHelpers {
     function method get_attestation_deltas(s: BeaconState) : (seq<Gwei>, seq<Gwei>)
         requires 1 <= get_previous_epoch(s) //<= get_current_epoch(s)
         // i.e. this means it isn't applicable to the GENESIS_EPOCH
-        requires is_valid_state_epoch_attestions(s)
+        requires is_valid_state_epoch_attestations(s)
 
         ensures |get_attestation_deltas(s).0| == |get_attestation_deltas(s).1| == |s.validators|
     {
