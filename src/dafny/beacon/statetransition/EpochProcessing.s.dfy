@@ -63,36 +63,24 @@ module EpochProcessingSpec {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-
         requires |s.validators| == |s.balances|
-
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> a.data.index 
-                        < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
-                        <= TWO_UP_6 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> TWO_UP_5 as nat 
-                        <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
-                        <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> 0 
-                        < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                        <= MAX_VALIDATORS_PER_COMMITTEE as nat 
+        requires is_valid_state_epoch_attestations(s)
         
         ensures 
             var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
-            assert forall a :: a in s1.previous_epoch_attestations 
-                    ==> a.data.index 
-                        < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
-                        <= TWO_UP_6;
-            assert forall a :: a in s1.previous_epoch_attestations 
-                    ==> TWO_UP_5 as nat 
-                        <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
-                        <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-            assert forall a :: a in s1.previous_epoch_attestations 
-                    ==> 0 
-                        < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                        <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+            // assert forall a :: a in s1.previous_epoch_attestations 
+            //         ==> a.data.index 
+            //             < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
+            //             <= TWO_UP_6;
+            // assert forall a :: a in s1.previous_epoch_attestations 
+            //         ==> TWO_UP_5 as nat 
+            //             <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
+            //             <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+            // assert forall a :: a in s1.previous_epoch_attestations 
+            //         ==> 0 
+            //             < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
+            //             <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+            assert is_valid_state_epoch_attestations(s1);
             assert s1 == updateJustificationAndFinalisation(s);
             updateEpoch(s) == updateParticipationRecords(
                                 updateHistoricalRoots(
@@ -119,24 +107,24 @@ module EpochProcessingSpec {
                             := updateFinalisedCheckpoint(updateJustification(s), s).finalised_checkpoint);
         assert s1.previous_epoch_attestations == s.previous_epoch_attestations;
         assert s1.validators == s.validators;
-
         assert s.slot == s1.slot;
         assert s.balances == s1.balances;
         assert |s1.validators| == |s1.balances|;
+        assert is_valid_state_epoch_attestations(s1);
 
         assert get_current_epoch(s1) == get_current_epoch(s1);
-        assert forall a :: a in s1.previous_epoch_attestations 
-                ==> a.data.index 
-                    < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
-                    <= TWO_UP_6;
-        assert forall a :: a in s1.previous_epoch_attestations 
-                ==> TWO_UP_5 as nat 
-                    <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
-                    <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-        assert forall a :: a in s1.previous_epoch_attestations 
-                ==> 0 
-                    < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                    <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+        // assert forall a :: a in s1.previous_epoch_attestations 
+        //         ==> a.data.index 
+        //             < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
+        //             <= TWO_UP_6;
+        // assert forall a :: a in s1.previous_epoch_attestations 
+        //         ==> TWO_UP_5 as nat 
+        //             <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
+        //             <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
+        // assert forall a :: a in s1.previous_epoch_attestations 
+        //         ==> 0 
+        //             < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
+        //             <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
 
         var s2 := updateRAndP(s1);
         assert s2 == updateRAndP(updateJustificationAndFinalisation(s));
@@ -285,11 +273,22 @@ module EpochProcessingSpec {
         /** Justification bit are right-shifted and last two are not modified.
             Bit0 (new checkpoint) and Bit1 (previous checkpoint) may be modified.
          */
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             updateJustificationPrevEpoch(s).justification_bits[2..] == 
                 (s.justification_bits)[1..|s.justification_bits| - 1]
             && updateJustificationPrevEpoch(s).justification_bits[0] == false
-        // ensures get_current_epoch(s) == get_current_epoch(updateJustificationPrevEpoch(s))
+        
+        ensures updateJustificationPrevEpoch(s).slot == s.slot
+        ensures updateJustificationPrevEpoch(s).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateJustificationPrevEpoch(s).validators == s.validators
+        ensures updateJustificationPrevEpoch(s).balances == s.balances
+        ensures |updateJustificationPrevEpoch(s).validators| == |updateJustificationPrevEpoch(s).balances|
+        ensures updateJustificationPrevEpoch(s).previous_epoch_attestations == s.previous_epoch_attestations 
+        ensures updateJustificationPrevEpoch(s).current_epoch_attestations == s.current_epoch_attestations
+        ensures is_valid_state_epoch_attestations(updateJustificationPrevEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
@@ -374,12 +373,23 @@ module EpochProcessingSpec {
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         requires s.justification_bits[0] == false 
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
 
         /** Only bit 0 can be modified, and it should be false initially.
          */
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
             updateJustificationCurrentEpoch(s).justification_bits[1..] == 
                 (s.justification_bits)[1..|s.justification_bits|]
+        
+        ensures updateJustificationCurrentEpoch(s).slot == s.slot
+        ensures updateJustificationCurrentEpoch(s).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateJustificationCurrentEpoch(s).validators == s.validators
+        ensures updateJustificationCurrentEpoch(s).balances == s.balances
+        ensures |updateJustificationCurrentEpoch(s).validators| == |updateJustificationCurrentEpoch(s).balances|
+        ensures updateJustificationCurrentEpoch(s).previous_epoch_attestations == s.previous_epoch_attestations 
+        ensures updateJustificationCurrentEpoch(s).current_epoch_attestations == s.current_epoch_attestations
+        ensures is_valid_state_epoch_attestations(updateJustificationCurrentEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s 
@@ -415,6 +425,7 @@ module EpochProcessingSpec {
     function updateJustification(s: BeaconState) : BeaconState
         requires |s.validators| == |s.balances|
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        requires is_valid_state_epoch_attestations(s)
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
@@ -426,6 +437,10 @@ module EpochProcessingSpec {
         ensures updateJustification(s).validators == s.validators
         ensures updateJustification(s).balances == s.balances
         ensures |updateJustification(s).validators| == |updateJustification(s).balances|
+        ensures updateJustification(s).previous_epoch_attestations == s.previous_epoch_attestations 
+        ensures updateJustification(s).current_epoch_attestations == s.current_epoch_attestations 
+        
+        ensures is_valid_state_epoch_attestations(updateJustification(s))
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
             var k := updateJustificationPrevEpoch(s);
@@ -581,17 +596,19 @@ module EpochProcessingSpec {
     function updateFinalisedCheckpoint(s': BeaconState, s: BeaconState) : BeaconState
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
         requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
         requires s' == updateJustification(s)
 
         ensures updateFinalisedCheckpoint(s', s).slot == s.slot == s'.slot
-        //ensures updateFinalisedCheckpoint(s', s).slot == s.slot
         ensures updateFinalisedCheckpoint(s', s).eth1_deposit_index == s.eth1_deposit_index
         ensures updateFinalisedCheckpoint(s', s).validators == s.validators == s'.validators
         ensures updateFinalisedCheckpoint(s', s).balances == s.balances == s'.balances
         ensures |updateFinalisedCheckpoint(s', s).validators| == |updateFinalisedCheckpoint(s', s).balances|
         ensures updateFinalisedCheckpoint(s', s).previous_epoch_attestations == s.previous_epoch_attestations == s'.previous_epoch_attestations
+        ensures updateFinalisedCheckpoint(s', s).current_epoch_attestations == s.current_epoch_attestations == s'.current_epoch_attestations
         //ensures get_previous_epoch(updateFinalisedCheckpoint(s', s)) == get_previous_epoch(s)
         ensures updateFinalisedCheckpoint(s', s) == s'.(finalised_checkpoint := updateFinalisedCheckpoint(s', s).finalised_checkpoint)
+        ensures is_valid_state_epoch_attestations(updateFinalisedCheckpoint(s', s))
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
             s
@@ -630,8 +647,11 @@ module EpochProcessingSpec {
      *              and finalisation statuses.
      */
     function updateJustificationAndFinalisation(s: BeaconState) : BeaconState
-            requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
-            requires |s.validators| == |s.balances|
+        requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures is_valid_state_epoch_attestations(updateJustificationAndFinalisation(s))       
     {
         updateFinalisedCheckpoint(updateJustification(s), s)
     }
@@ -649,18 +669,19 @@ module EpochProcessingSpec {
      */
     function updateRAndP(s: BeaconState): BeaconState
         requires |s.validators| == |s.balances|
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> a.data.index 
-                        < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
-                        <= TWO_UP_6 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> TWO_UP_5 as nat 
-                        <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
-                        <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> 0 
-                        < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                        <= MAX_VALIDATORS_PER_COMMITTEE as nat
+        requires is_valid_state_epoch_attestations(s)
+        // requires forall a :: a in s.previous_epoch_attestations 
+        //             ==> a.data.index 
+        //                 < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
+        //                 <= TWO_UP_6 
+        // requires forall a :: a in s.previous_epoch_attestations 
+        //             ==> TWO_UP_5 as nat 
+        //                 <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
+        //                 <= TWO_UP_11 as nat * TWO_UP_11 as nat 
+        // requires forall a :: a in s.previous_epoch_attestations 
+        //             ==> 0 
+        //                 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
+        //                 <= MAX_VALIDATORS_PER_COMMITTEE as nat
         
         ensures  if get_current_epoch(s) <= GENESIS_EPOCH + 1 then updateRAndP(s) == s
                  else 
@@ -963,7 +984,6 @@ module EpochProcessingSpec {
         s.(
             slashings := s.slashings[(next_epoch % EPOCHS_PER_SLASHINGS_VECTOR) as nat := 0 as Gwei]
         )
-
     }
 
     /**
