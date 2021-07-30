@@ -12,7 +12,7 @@
  * under the License.
  */
 
- // @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000 /vcsKeepGoingTimeout:8  /verifySeparately
+ // @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 /vcsMaxKeepGoingSplits:10 /vcsCores:12 /vcsMaxCost:1000  /vcsKeepGoingTimeout:30  /vcsFinalAssertTimeout:90  /verifySeparately
 
 
 include "../../utils/Eth2Types.dfy"
@@ -243,7 +243,7 @@ module GasperProofs {
     {
         reveal_validPrevAttestations();
         reveal_validCurrentAttestations();
-        reveal_isJustified();
+        // reveal_isJustified();
         if (cp1.epoch == cp2.epoch == 0) {
             // oneFinalisedImpliesJustified(cp1, store); 
             assert(store.blocks[cp1.root].slot == 0);

@@ -121,7 +121,7 @@ module GasperJustification {
      *  @param  cp      A check point.
      *  @param  store   A store,
      */
-    predicate {:opaque} isJustified(cp: CheckPoint, store: Store)
+    predicate isJustified(cp: CheckPoint, store: Store)
         /** The block root must in the store.  */
         requires cp.root in store.blocks.Keys         
         /** The store is well-formed, each block with slot != 0 has a parent
@@ -164,7 +164,7 @@ module GasperJustification {
             |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp)| 
                 >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     {
-        reveal_isJustified();
+        // reveal_isJustified();
         var cpsrc : CheckPoint :| cpsrc.epoch < cp.epoch && cpsrc.root in chainRoots(cp.root, store)
             && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cpsrc, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
         attForTgtLargerThanLinks(store.rcvdAttestations, cpsrc, cp);
