@@ -22,6 +22,7 @@ include "../attestations/AttestationsTypes.dfy"
 include "../BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
 include "../statetransition/StateTransition.dfy"
+include "../statetransition/StateTransition.s.dfy"
 include "../Helpers.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "../validators/Validators.dfy"
@@ -37,6 +38,7 @@ module ForkChoice {
     import opened BeaconChainTypes
     import opened ForkChoiceTypes
     import opened StateTransition
+    import opened StateTransitionSpec
     import opened BeaconHelpers
     import opened Validators
     import opened AttestationsTypes
@@ -420,6 +422,13 @@ module ForkChoice {
         method {:timeLimitMultiplier 10} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
             requires storeIsValid(store)
+
+            /** Store is well-formed. */
+            requires isClosedUnderParent(store)
+            /**  The decreasing property guarantees that this function terminates. */
+            requires isSlotDecreasing(store)
+
+            requires foo606(pre_state, store)
 
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys
