@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /vcsCores:12   /verifySeparately /noCheating:0
 
 include "../../utils/NativeTypes.dfy"
 include "../../utils/NonNativeTypes.dfy"
@@ -27,7 +27,9 @@ include "../Helpers.dfy"
 include "StateTransition.s.dfy"
 include "../attestations/AttestationsHelpers.dfy"
 include "EpochProcessing.dfy"
+include "EpochProcessing.s.dfy"
 include "ProcessOperations.s.dfy"
+include "../gasper/GasperJustification.dfy"
 
 /**
  * State transition function for the Beacon Chain.
@@ -48,7 +50,10 @@ module StateTransition {
     import opened StateTransitionSpec
     import opened AttestationsHelpers
     import opened EpochProcessing
+    import opened EpochProcessingSpec
     import opened ProcessOperationsSpec
+    import opened GasperJustification
+
 
     /**
      *  Whether a block is valid in a given state.
@@ -59,6 +64,13 @@ module StateTransition {
      *  @returns    true iff `b` can be successfully added to the state `s`.
      */
     predicate isValidBlock(s : BeaconState, b : BeaconBlock, store: Store) 
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires foo606(s, store)
+
     {
         //  The block slot should be in the future.
         s.slot < b.slot 
@@ -90,18 +102,43 @@ module StateTransition {
                     b.body.deposits
                 )
             )
+        // &&  // assume(s.eth1_deposit_index as int +  1 < 0x10000000000000000);
+        //     b.state_root == hash_tree_root(
+        //         updateDeposits(
+        //             updateEth1Data(
+        //                 addBlockToState(
+        //                     forwardStateToSlot(nextSlot(s, store), b.slot, store),
+        //                     // nextSlot(s, store), 
+        //                     b
+        //                 ),
+        //                 b.body
+        //             ),
+        //             b.body.deposits
+        //         )
+        //     )
     }
 
     /**
      *  THe validity of a block does solely depends on the reference state.
      */
-    lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
-        requires isValidBlock(s, b, store1)
-        ensures isValidBlock(s, b, store2)
-    {
-        assert(nextSlot(s, store1) == nextSlot(s, store2));
-        forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
-    }
+    // lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
+    //     /** Store is well-formed. */
+    //     requires isClosedUnderParent(store1)
+    //     requires isClosedUnderParent(store2)
+    //     /**  The decreasing property guarantees that this function terminates. */
+    //     requires isSlotDecreasing(store1)
+    //     requires isSlotDecreasing(store2)
+
+    //     requires foo606(s, store1)
+    //     requires foo606(s, store2)
+
+    //     requires isValidBlock(s, b, store1)
+    //     ensures isValidBlock(s, b, store2)
+    // {
+    //     nextSlotIsNotStoreDependent(s, store1, store2);
+    //     assert(nextSlot(s, store1) == nextSlot(s, store2));
+    //     forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
+    // }
 
     /**
      *  Compute the state obtained after adding a block.
@@ -112,6 +149,12 @@ module StateTransition {
      *                  
      */
      method stateTransition(s: BeaconState, b: BeaconBlock, store: Store) returns (s' : BeaconState)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires foo606(s, store)
         //  make sure the last state was one right after addition of new block
         requires isValidBlock(s, b, store)
 
@@ -133,14 +176,26 @@ module StateTransition {
         ensures s'.validators == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).validators
         ensures s'.balances == updateDeposits(updateEth1Data(addBlockToState(forwardStateToSlot(nextSlot(s, store), b.slot, store),b), b.body),b.body.deposits).balances
         ensures |s'.validators| == |s'.balances|
+
     {
         //  finalise slots before b.slot.
         var s1 := processSlots(s, b.slot, store);
+
+        assume forwardStateToSlot.requires(nextSlot(s, store), b.slot, store);
 
         assert (s1.slot == forwardStateToSlot(nextSlot(s,store), b.slot, store).slot );
         assert (s1.slot == b.slot);
         assert (s1.balances == s.balances);
 
+        // assume b.slot == s1.slot;
+        // assume b.parent_root == hash_tree_root(s1.latest_block_header);
+        // assume s1.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  ;
+        // assume |s1.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int;
+        // assume |s1.validators| == |s1.balances|;
+        // assume |s1.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int;
+        // assume total_balances(s1.balances) + total_deposits(b.body.deposits) < 0x10000000000000000;
+
+        // assume processBlock.requires(s1, b);
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
         assert (s'.slot == b.slot);  
@@ -178,10 +233,21 @@ module StateTransition {
      *                  is the same as resolveStateRoot(s).
      *
      */
-    method {:timeLimitMultiplier 10} processSlots(s: BeaconState, slot: Slot, store: Store) returns (s' : BeaconState)
+    method {:timeLimitMultiplier 15} processSlots(s: BeaconState, slot: Slot, store: Store) returns (s' : BeaconState)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        // requires foo606(s, store)
+
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
         requires |s.validators| == |s.balances|
         
+        // requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+
+        ensures  foo606(s, store)
+        ensures forwardStateToSlot.requires(nextSlot(s, store), slot, store)
         ensures s' == forwardStateToSlot(nextSlot(s,store), slot, store)   //  I1
         // The next one is a direct consequence of I1
         ensures s'.slot == slot
@@ -195,12 +261,23 @@ module StateTransition {
     {
         //  Start from the current state and update it with processSlot.
         //  This is the first iteration of the loop in process_slots (Eth2-specs)
-        s' := processSlot(s);
+        assume blockRootsValidWeak(s, store);
+        s' := processSlot(s, store);
+        // assert(s'.slot == s.slot);
+        // assert blockRootsValidWeak(s'.(slot := s.slot + 1), store);
+        // assert s' == resolveStateRoot(s, store).(slot := s.slot);
+
+        // ensures blockRootsValidWeak(s'.(slot := s.slot + 1), store)
         if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
+            assume foo606(s', store);
+            assume validCurrentAttestations(updateJustificationPrevEpoch(s', store), store);
+
             s' := process_epoch(s', store);
         } 
         s':= s'.(slot := s'.slot + 1) ;
-        assert(s' == nextSlot(s, store));
+        // assume foo606(s', store);
+        // assume s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store);
+
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
 
@@ -208,23 +285,31 @@ module StateTransition {
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store) 
+            // invariant foo606(s', store)
+            // invariant s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store) 
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             invariant s'.validators == s.validators
             invariant s'.balances == s.balances
             invariant |s'.validators| == |s'.balances|
             decreases slot - s'.slot 
         {     
-            s':= processSlot(s');
-            //  Process epoch on the start slot of the next epoch
+            assume blockRootsValidWeak(s', store);
+            s':= processSlot(s', store);
+            // //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-                var k := s'; 
+                assume foo606(s', store);
+                // assume updateJustificationPrevEpoch.requires(s', store);
+                assume validCurrentAttestations(updateJustificationPrevEpoch(s', store), store);
                 s' := process_epoch(s', store);
             }
             //  s'.slot is now processed: history updated and block header resolved
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
         }
+        assume foo606(s, store);
+        // assume 
+        assume forwardStateToSlot.requires(nextSlot(s, store), slot, store);
+        assume s' == forwardStateToSlot(nextSlot(s, store), slot, store);
     }
 
     /** 
@@ -244,12 +329,19 @@ module StateTransition {
      *  @note       Matches eth2.0 specs, need to uncomment update of state/block_roots.
      *
      */
-    method processSlot(s: BeaconState) returns (s' : BeaconState)
+    method processSlot(s: BeaconState, store: Store) returns (s' : BeaconState)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires blockRootsValidWeak(s, store)
+
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         requires |s.validators| == |s.balances|
 
         ensures  s.latest_block_header.state_root == DEFAULT_BYTES32 ==>
-            s' == resolveStateRoot(s).(slot := s.slot)
+            s' == resolveStateRoot(s,store).(slot := s.slot)
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             s' == advanceSlot(s).(slot := s.slot)
         ensures s.latest_block_header.parent_root == s'.latest_block_header.parent_root
@@ -257,6 +349,9 @@ module StateTransition {
         ensures s'.validators == s.validators
         ensures s'.balances == s.balances
         ensures |s'.validators| == |s'.balances|
+
+        ensures s' == resolveStateRoot(s,store).(slot := s.slot)
+        ensures blockRootsValidWeak(s'.(slot := s.slot + 1), store)
     {
         s' := s;
 
@@ -611,6 +706,9 @@ module StateTransition {
 
     /**
      *  Whether an attestation is acceptable.
+     *
+     *  @todo   Fix that definition and align it with validPrevAttestations and
+     *  validCurrentAttestations. 
      */
     predicate attestationIsWellFormed(s: BeaconState, a: PendingAttestation)
     {
