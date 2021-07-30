@@ -241,6 +241,9 @@ module GasperProofs {
                 validatorSetsViolateRuleII(v1, v2, store)
             )
     {
+        reveal_validPrevAttestations();
+        reveal_validCurrentAttestations();
+        reveal_isJustified();
         if (cp1.epoch == cp2.epoch == 0) {
             // oneFinalisedImpliesJustified(cp1, store); 
             assert(store.blocks[cp1.root].slot == 0);
@@ -280,6 +283,7 @@ module GasperProofs {
                 validatorSetsViolateRuleI(v1, v2, store.rcvdAttestations);
             }
         } else if cp2.epoch == cp1.epoch + 1 {
+                // reveal_isJustified();
                 //  Get the next checkpoint justified by cp1
                 var cp1PlusOne : CheckPoint :|
                     cp1PlusOne.epoch == cp1.epoch + 1 
@@ -322,6 +326,7 @@ module GasperProofs {
                 }
         } else {
             assert(cp2.epoch > cp1.epoch + 1);
+            // reveal_isJustified();
             //  Get a checkpoint cp2_l that is justified and justifies cp2
             var cp2_l : CheckPoint :|
                 && cp2_l.epoch < cp2.epoch 
