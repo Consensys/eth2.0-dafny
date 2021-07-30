@@ -164,6 +164,7 @@ module GasperJustification {
             |collectValidatorsIndicesAttestatingForTarget(store.rcvdAttestations, cp)| 
                 >= ( 2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1
     {
+        reveal_isJustified();
         var cpsrc : CheckPoint :| cpsrc.epoch < cp.epoch && cpsrc.root in chainRoots(cp.root, store)
             && |collectValidatorsAttestatingForLink(store.rcvdAttestations, cpsrc, cp)| >= (2 * MAX_VALIDATORS_PER_COMMITTEE) / 3 + 1;
         attForTgtLargerThanLinks(store.rcvdAttestations, cpsrc, cp);
