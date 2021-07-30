@@ -59,8 +59,7 @@ module EpochProcessing {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
         requires (s.slot + 1) % SLOTS_PER_EPOCH == 0
-
-         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
+        // requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
@@ -70,6 +69,10 @@ module EpochProcessing {
          /** Slot of s is larger than slot at previous epoch. */
         requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
         requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
+
+        // requires foo606(s, store)
+        
+        requires blockRootsValidWeak(s, store)
 
         /** Block root at current epoc is in store. */
         requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
@@ -102,7 +105,7 @@ module EpochProcessing {
         requires |s.validators| == |s.balances|
 
 
-        requires |s.validators| == |s.balances|
+        // requires |s.validators| == |s.balances|
 
         /** Update justification and finalisation accodring to functional spec. */
         ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s, store), s, store), store)
@@ -135,6 +138,7 @@ module EpochProcessing {
      *              the attestations updates.
      */
     method process_final_updates(s: BeaconState, ghost store: Store)  returns (s' : BeaconState)
+        // requires blockRootsValidWeak(s, store)
         ensures s' == finalUpdates(s, store)
     {
         s' := s.(
@@ -159,6 +163,8 @@ module EpochProcessing {
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
+
+        requires blockRootsValidWeak(s, store)
 
          /** Slot of s is larger than slot at previous epoch. */
         requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
