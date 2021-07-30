@@ -203,6 +203,7 @@ module EpochProcessingSpec {
         requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
         /** The attestations at previous epoch are valid. */
         requires validPrevAttestations(s, store)
+        // requires validCurrentAttestations(s, store)
 
         /** The justified checkpoints in s are indeed justified ands the root is in store. */
         requires s.previous_justified_checkpoint.root in store.blocks.Keys 
@@ -247,6 +248,8 @@ module EpochProcessingSpec {
 
         ensures s'.current_justified_checkpoint.root in chainRoots(get_block_root(s', get_current_epoch(s')), store) 
         ensures s'.previous_justified_checkpoint == s.current_justified_checkpoint
+
+        // ensures validCurrentAttestations(s', store)
 
     {
         //  This functon is opaque and we need its definition for the post-condition proof.
@@ -642,10 +645,15 @@ module EpochProcessingSpec {
         /** The block root at previous epoch is in the store. */
         requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
 
+        /** Block root at current epoc is in store. */
+        requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
+
         requires s.previous_justified_checkpoint.root in chainRoots(get_block_root(s, get_previous_epoch(s)), store) 
         requires s.previous_justified_checkpoint.epoch < get_previous_epoch(s)
         /** The attestations at previous epoch are valid. */
         requires validPrevAttestations(s, store)
+
+        // requires validCurrentAttestations(s, store)
 
         /** The justified checkpoints in s are indeed justified ands the root is in store. */
         requires s.previous_justified_checkpoint.root in store.blocks.Keys 
@@ -655,8 +663,7 @@ module EpochProcessingSpec {
         requires isJustified(s.current_justified_checkpoint, store)
 
          /** Attestations to current epoch are valid. */
-        requires 
-            validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
+        requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
 
         //  The last two bits are copied from the two middle bits of s.justification_bits
         ensures get_current_epoch(s) > GENESIS_EPOCH + 1 ==> 
@@ -686,6 +693,24 @@ module EpochProcessingSpec {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
             var k := updateJustificationPrevEpoch(s, store);
             // foo202(k, store);
+            //  Proof that currentAttestations valid in k 
+            // assert k.current_epoch_attestations == s.current_epoch_attestations;
+            // assert validCurrentAttestations(s, store);
+            // reveal_validCurrentAttestations();
+            // assert (forall a :: a in k.current_epoch_attestations ==> a in store.rcvdAttestations);
+            // assert validCurrentAttestations(k.(current_justified_checkpoint := s.current_justified_checkpoint), store);
+            // &&
+            // (get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==>
+            //     (forall a :: a in s.current_epoch_attestations ==>
+            //         // && a in store.rcvdAttestations
+            //         && a.data.source == s.current_justified_checkpoint
+            //         // && a.data.source.epoch == s.current_justified_checkpoint.epoch
+            //         && a.data.target.root == get_block_root(s, get_current_epoch(s))
+            //         && a.data.target.epoch ==  get_current_epoch(s)
+            //     )
+            // )
+            //
+            // assume validCurrentAttestations(k, store);
             assert k.current_justified_checkpoint.root in chainRoots(get_block_root(k, get_current_epoch(k)), store) ;
             var k' := updateJustificationCurrentEpoch(k, store);
             k'

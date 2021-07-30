@@ -215,24 +215,24 @@ module StateTransitionSpec {
         s'
     }
 
-    lemma foo007(s: BeaconState, store: Store)
-        /** The store is well-formed, each block with slot != 0 has a parent
-            which is itself in the store. */
-        requires isClosedUnderParent(store)
-        requires isSlotDecreasing(store)  
+    // lemma foo007(s: BeaconState, store: Store)
+    //     /** The store is well-formed, each block with slot != 0 has a parent
+    //         which is itself in the store. */
+    //     requires isClosedUnderParent(store)
+    //     requires isSlotDecreasing(store)  
 
-        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+    //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
-        requires (s.slot + 1) % SLOTS_PER_EPOCH  == 0
-        // requires blockRootsValidWeak()
-        // requires blockRootsValidWeak(s'.(slot := s.slot + 1), store);
-        // assert s' == resolveStateRoot(s, store).(slot := s.slot);
+    //     requires (s.slot + 1) % SLOTS_PER_EPOCH  == 0
+    //     // requires blockRootsValidWeak()
+    //     // requires blockRootsValidWeak(s'.(slot := s.slot + 1), store);
+    //     // assert s' == resolveStateRoot(s, store).(slot := s.slot);
 
-        requires blockRootsValidWeak(s.(slot := s.slot + 1), store)
-        ensures blockRootsValidWeak(resolveStateRoot(s, store).(slot := s.slot), store)
-    {
+    //     requires blockRootsValidWeak(s.(slot := s.slot + 1), store)
+    //     ensures blockRootsValidWeak(resolveStateRoot(s, store).(slot := s.slot), store)
+    // {
 
-    }
+    // }
 
     // lemma foo101(s: BeaconState, s': BeaconState, store: Store)
     //     requires s.slot as nat + 1 < 0x10000000000000000 as nat
@@ -387,29 +387,29 @@ module StateTransitionSpec {
 
 
     //  does not seem to be used ...
-    lemma forwardStateIsNotStoreDependent(s: BeaconState, slot: Slot, store1: Store, store2: Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store1)
-        requires isClosedUnderParent(store2)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store1)
-        requires isSlotDecreasing(store2)
+    // lemma forwardStateIsNotStoreDependent(s: BeaconState, slot: Slot, store1: Store, store2: Store)
+    //     /** Store is well-formed. */
+    //     requires isClosedUnderParent(store1)
+    //     requires isClosedUnderParent(store2)
+    //     /**  The decreasing property guarantees that this function terminates. */
+    //     requires isSlotDecreasing(store1)
+    //     requires isSlotDecreasing(store2)
 
-        requires foo606(s, store1)
-        requires foo606(s, store2)
+    //     requires foo606(s, store1)
+    //     requires foo606(s, store2)
 
-        requires s.slot <= slot
-        requires |s.validators| == |s.balances|
-        ensures forwardStateToSlot(s, slot, store1) == forwardStateToSlot(s, slot, store2) 
-    {
-        if s.slot == slot {
-            //  Thanks Dafny 
-        } else {
-            var s' := forwardStateToSlot(s, slot - 1, store1);
-            forwardStateIsNotStoreDependent(s, slot - 1, store1, store2);
-            assert(nextSlot(s', store1) == nextSlot(s', store2));
-        }
-    }
+    //     requires s.slot <= slot
+    //     requires |s.validators| == |s.balances|
+    //     ensures forwardStateToSlot(s, slot, store1) == forwardStateToSlot(s, slot, store2) 
+    // {
+    //     if s.slot == slot {
+    //         //  Thanks Dafny 
+    //     } else {
+    //         var s' := forwardStateToSlot(s, slot - 1, store1);
+    //         forwardStateIsNotStoreDependent(s, slot - 1, store1, store2);
+    //         assert(nextSlot(s', store1) == nextSlot(s', store2));
+    //     }
+    // }
 
     /**
      *  Advance a state by one slot.
