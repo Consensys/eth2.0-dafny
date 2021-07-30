@@ -12,6 +12,8 @@
  * under the License.
  */
 
+ // @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:0
+
 include "../../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/Helpers.dfy"
@@ -106,6 +108,7 @@ module StateTransitionSpec {
         //  Verify that the parent matches
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
         requires |s.validators| == |s.balances| 
+
         ensures |addBlockToState(s,b).validators| == |addBlockToState(s,b).balances|
         ensures addBlockToState(s,b).eth1_data_votes == s.eth1_data_votes
         //  ensures |addBlockToState(s,b).eth1_data_votes| == |s.eth1_data_votes|
@@ -210,6 +213,25 @@ module StateTransitionSpec {
         // assert(hash_tree_root(new_latest_block_header) in store.blocks.Keys);
         // assume (forall br :: br in s'.block_roots ==> br in store.blocks.Keys);
         s'
+    }
+
+    lemma foo007(s: BeaconState, store: Store)
+        /** The store is well-formed, each block with slot != 0 has a parent
+            which is itself in the store. */
+        requires isClosedUnderParent(store)
+        requires isSlotDecreasing(store)  
+
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+
+        requires (s.slot + 1) % SLOTS_PER_EPOCH  == 0
+        // requires blockRootsValidWeak()
+        // requires blockRootsValidWeak(s'.(slot := s.slot + 1), store);
+        // assert s' == resolveStateRoot(s, store).(slot := s.slot);
+
+        requires blockRootsValidWeak(s.(slot := s.slot + 1), store)
+        ensures blockRootsValidWeak(resolveStateRoot(s, store).(slot := s.slot), store)
+    {
+
     }
 
     // lemma foo101(s: BeaconState, s': BeaconState, store: Store)
@@ -341,6 +363,15 @@ module StateTransitionSpec {
         ensures s'.validators == s.validators
         ensures s'.balances == s.balances
         ensures s'.eth1_data_votes == s.eth1_data_votes
+        ensures s'.eth1_deposit_index  == s.eth1_deposit_index
+
+
+//  ensures 
+//             && s'.validators  == s.validators
+//             && s'.balances  == s.balances
+//             && |s'.validators| == |s'.balances| 
+//             && s'.eth1_data_votes ==  s.eth1_data_votes
+//             && s'.eth1_deposit_index  == s.eth1_deposit_index
 
         ensures foo606(s', store)
 
@@ -456,6 +487,8 @@ module StateTransitionSpec {
             && s'.current_epoch_attestations  == s.current_epoch_attestations
             && s'.previous_justified_checkpoint  == s.previous_justified_checkpoint
             && s'.current_justified_checkpoint  == s.current_justified_checkpoint
+            
+        ensures 
             && s'.validators  == s.validators
             && s'.balances  == s.balances
             && |s'.validators| == |s'.balances| 
@@ -655,6 +688,33 @@ module StateTransitionSpec {
             // assert ((s'.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0 ==> s'.current_justified_checkpoint.epoch < get_current_epoch(s'));
             // resolveStateRoot(s)
             s'
+    }
+
+    lemma nextSlotIsNotStoreDependent(s: BeaconState, store1: Store, store2: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store1)
+        requires isClosedUnderParent(store2)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store1)
+        requires isSlotDecreasing(store2)
+
+        requires foo606(s, store1)
+        requires foo606(s, store2)
+        
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+
+        requires |s.validators| == |s.balances|
+
+        ensures nextSlot(s, store1) == nextSlot(s, store2)
+    {
+        if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 {
+            //  Thanks Dafny
+        } else if (s.slot + 1) %  SLOTS_PER_EPOCH != 1 {
+            //  Thanks Dafny
+        } else {
+            assert (s.slot + 1) %  SLOTS_PER_EPOCH == 1; 
+            //  Thanks Dafny
+        }
     }
 
 }
