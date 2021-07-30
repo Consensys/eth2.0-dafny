@@ -1,15 +1,28 @@
 
 
+
+- prove stateTransition + justification
+- prove on_block
+- remove two assumes (get_block_root in nextSlot
+- try to localise assume in magic lemma: remove from resolveStateRoot
+
+- nice to have: 
+    - add teo justification proof to Gasper
+    - integrate justification in stateTransition
+
+- integrate with justification bits
+- integrate with 1-finalisation bits  
+
 - proof for two finalisation
  - def of two finalisation
  - new version of lemma 5 for two finalisation
 
-- use IndecxAttestations and remove the REGISTRY_LIMIT constraint.
+- [NOT DONE] use IndecxAttestations and remove the REGISTRY_LIMIT constraint.
 
 Monday:
-- finish proof of lemma5 for one finalisation
+- [DONE] finish proof of lemma5 for one finalisation
 - [HARD] add ruleI and ruleII, and show 1-finalisation OK except breaking ruleI or ruleII
-- start 2-finalise
+- [DONE] start 2-finalise
 
 Tuesday:
 - finish 2-finalise
