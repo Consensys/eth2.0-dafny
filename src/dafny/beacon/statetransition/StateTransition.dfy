@@ -121,24 +121,24 @@ module StateTransition {
     /**
      *  THe validity of a block does solely depends on the reference state.
      */
-    lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store1)
-        requires isClosedUnderParent(store2)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store1)
-        requires isSlotDecreasing(store2)
+    // lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
+    //     /** Store is well-formed. */
+    //     requires isClosedUnderParent(store1)
+    //     requires isClosedUnderParent(store2)
+    //     /**  The decreasing property guarantees that this function terminates. */
+    //     requires isSlotDecreasing(store1)
+    //     requires isSlotDecreasing(store2)
 
-        requires foo606(s, store1)
-        requires foo606(s, store2)
+    //     requires foo606(s, store1)
+    //     requires foo606(s, store2)
 
-        requires isValidBlock(s, b, store1)
-        ensures isValidBlock(s, b, store2)
-    {
-        nextSlotIsNotStoreDependent(s, store1, store2);
-        assume(nextSlot(s, store1) == nextSlot(s, store2));
-        forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
-    }
+    //     requires isValidBlock(s, b, store1)
+    //     ensures isValidBlock(s, b, store2)
+    // {
+    //     nextSlotIsNotStoreDependent(s, store1, store2);
+    //     assume(nextSlot(s, store1) == nextSlot(s, store2));
+    //     forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
+    // }
 
     /**
      *  Compute the state obtained after adding a block.
