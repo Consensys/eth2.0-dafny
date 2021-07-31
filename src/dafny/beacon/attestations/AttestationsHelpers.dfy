@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -44,6 +44,8 @@ module AttestationsHelpers {
     import opened ForkChoiceTypes
     import opened GasperEBBs
 
+    //  Helpers
+
     /**
      *  The number of attestations for a pair of checkpoints.
      *  
@@ -52,7 +54,7 @@ module AttestationsHelpers {
      *  @param  tgt A checkpoint.
      *  @returns    The number of votes for src --> tgt in `xa`.
      */
-    function method countAttestationsForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint): nat
+    function method countAttestationsForLink(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint): nat
         ensures countAttestationsForLink(xa, src, tgt) <= |xa|
         decreases xa
     {
@@ -66,7 +68,14 @@ module AttestationsHelpers {
             ) + countAttestationsForLink(xa[1..], src, tgt)
     }
 
-    function method countAttestationsForTgt(xa : seq<PendingAttestation>, tgt: CheckPoint): nat
+    /**
+     *  The number of attestations for a pair of checkpoints.
+     *  
+     *  @param  xa  The known list of attestations (votes).
+     *  @param  tgt A checkpoint.
+     *  @returns    The number of votes for * --> tgt in `xa`.
+     */
+    function method countAttestationsForTgt(xa: seq<PendingAttestation>, tgt: CheckPoint): nat
         ensures countAttestationsForTgt(xa, tgt) <= |xa|
         decreases xa
     {
@@ -88,7 +97,7 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (src. tgt) in `xa`. 
      */
-     function collectValidatorsAttestatingForLink(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint) : set<ValidatorInCommitteeIndex>
+     function collectValidatorsAttestatingForLink(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint) : set<ValidatorInCommitteeIndex>
         ensures forall e :: e in collectValidatorsAttestatingForLink(xa, src, tgt) ==>
             e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
@@ -99,7 +108,6 @@ module AttestationsHelpers {
                 && a.data.target == tgt 
                 && a.aggregation_bits[v]
             )
-
         decreases xa
     {
         if |xa| == 0 then 
@@ -121,7 +129,7 @@ module AttestationsHelpers {
      *  @param  tgt     The target checkpoint of the link.
      *  @returns        The set of validators's indices that vote for (_.tgt) in `xa`. 
      */
-    function collectValidatorsIndicesAttestatingForTarget(xa : seq<PendingAttestation>, tgt: CheckPoint) : set<ValidatorInCommitteeIndex>
+    function collectValidatorsIndicesAttestatingForTarget(xa: seq<PendingAttestation>, tgt: CheckPoint) : set<ValidatorInCommitteeIndex>
         ensures forall e :: e in collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==>
             0 <= e < MAX_VALIDATORS_PER_COMMITTEE
         ensures |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| <= MAX_VALIDATORS_PER_COMMITTEE
@@ -152,7 +160,7 @@ module AttestationsHelpers {
      *  @param      xb  A sequence of bools.
      *  @returns        The set of indices that are true in `xb`.
      */
-    function method trueBitsCount(xb : seq<bool>) : set<nat> 
+    function method trueBitsCount(xb: seq<bool>) : set<nat> 
         ensures |trueBitsCount(xb)| <= |xb|
         ensures forall i :: i in trueBitsCount(xb) <==> 0 <= i < |xb| && xb[i]
         decreases xb
@@ -163,24 +171,6 @@ module AttestationsHelpers {
             (if xb[|xb| - 1] then { |xb| - 1 } else {}) + trueBitsCount(xb[..|xb| - 1])
     }
 
-    /**
-     *  The set of validators attesting to a target is larger than the set 
-     *  of validators attesting to a link with that target. 
-     *
-     *  @param  xa      A seq of attestations.
-     *  @param  src     The source checkpoint of the link.
-     *  @param  tgt     The target checkpoint of the link.
-     */
-    lemma {:induction xa} attForTgtLargerThanLinks(xa : seq<PendingAttestation>, src : CheckPoint, tgt: CheckPoint)
-        ensures collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) 
-        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| 
-    {
-        assert(collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) );
-        cardIsMonotonic(collectValidatorsAttestatingForLink(xa, src, tgt), collectValidatorsIndicesAttestatingForTarget(xa, tgt));
-    }
-
-    // lemma 
-    
     /**
      *  @param  state   A beacon state.
      *  @param  epoch   An epoch which is either the state's epoch ior the previous one.
@@ -251,187 +241,77 @@ module AttestationsHelpers {
             && validPrevAttestations(state, store)
 
         requires epoch == get_current_epoch(state) ==> 
-            // get_current_epoch(state) *  SLOTS_PER_EPOCH  < state.slot  
             && get_block_root(state, get_current_epoch(state)) in store.blocks.Keys
             && validCurrentAttestations(state, store)
     
-        // requires epoch == get_previous_epoch(state)
-
         ensures |xa| < 0x10000000000000000
         
         ensures forall a :: a in xa ==> a in store.rcvdAttestations
 
-        // ensures forall a :: a in xa ==>
-        //             && a.data.target.root == get_block_root(state, epoch)
-                
         ensures epoch == get_previous_epoch(state) ==> 
             var tgtCP := CheckPoint(get_previous_epoch(state), get_block_root(state, get_previous_epoch(state)));
-            // sameSrcSameTgt(xa, state.previous_justified_checkpoint, tgtCP)
             (forall a :: a in xa ==> 
                 a.data.target == tgtCP 
                 && a.data.source == state.previous_justified_checkpoint)
-
-            // epoch == get_previous_epoch(state) ==> 
-            //     // collectValidatorsIndices(xa) == 
-            //     collectValidatorsAttestatingForLink(xa, state.previous_justified_checkpoint, tgtCP) 
-            //     == collectValidatorsIndicesAttestatingForTarget(xa, tgtCP)
-            //     // == collectValidatorsIndices(xa))
 
         ensures epoch == get_current_epoch(state) ==>
             var tgtCP := CheckPoint(get_current_epoch(state), get_block_root(state, get_current_epoch(state)));
             (forall a :: a in xa ==> 
                 a.data.target == tgtCP 
                 && a.data.source == state.current_justified_checkpoint)
-            // && sameSrcSameTgt(xa, state.current_justified_checkpoint, tgtCP)
-
-            // epoch == get_current_epoch(state) ==> 
-            //     collectValidatorsAttestatingForLink(xa, state.current_justified_checkpoint, tgtCP) == collectValidatorsIndicesAttestatingForTarget(xa, tgtCP)
-                // == collectValidatorsIndices(xa)
     {
         reveal_validPrevAttestations();
         reveal_validCurrentAttestations();
         //  Get attestations at epoch as recorded in state (previous epoch or current epoch).
         var ax := get_matching_source_attestations(state, epoch);
-        // assume(ax == state.previous_epoch_attestations);
-        // Apply lemma to current or previous
-        // sameSrcSameTgtEquiv(
-        //     ax, 
-        //     if epoch == get_previous_epoch(state) then 
-        //         state.previous_justified_checkpoint
-        //     else 
-        //         state.current_justified_checkpoint,
-        //     if epoch == get_previous_epoch(state) then 
-        //         CheckPoint(get_previous_epoch(state), get_block_root(state, get_previous_epoch(state)))
-        //     else 
-        //         CheckPoint(get_current_epoch(state), get_block_root(state, get_current_epoch(state)))
-        // );
-        // foo505(ax, );
         //  Filter according to target.
         filterAttestations(ax, CheckPoint(epoch, get_block_root(state, epoch)))
-        // assume(forall a :: a in k ==> a in ax);
-        // k
     }
 
-    predicate sameSrcSameTgt(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
-    {
-        if |xa| == 0 then 
-            true 
-        else 
-            (xa[0].data.source == src && xa[0].data.target == tgt)
-            && sameSrcSameTgt(xa[1..], src, tgt)
-    }
-
-    // lemma foo505(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
-    //     ensures sameSrcSameTgt(xa, src, tgt) 
-    //         <==> 
-    //         (forall a :: a in xa ==> a.data.source == src && a.data.target == tgt)
-    // {
-
-    // }
-
-    lemma sameSrcSameTgtEquiv(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint) 
-        requires forall a :: a in xa ==> 
-            && a.data.source == src
-            && a.data.target == tgt
-        // requires sameSrcSameTgt(xa, src, tgt)
-        ensures collectValidatorsIndices(xa) ==
-                collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==
-                collectValidatorsAttestatingForLink(xa, src, tgt)
-    {   
-        //  Apply lemma.
-        collectSameSrcSameTgtEquiv(xa, src, tgt);
-    }
-
-    lemma preserveValidPrev(s1: BeaconState, s2: BeaconState, store: Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)
-        requires s1.previous_justified_checkpoint == s2.previous_justified_checkpoint
-        requires s1.previous_epoch_attestations == s2.previous_epoch_attestations
-        requires get_previous_epoch(s1) * SLOTS_PER_EPOCH < s1.slot 
-        requires get_previous_epoch(s2) * SLOTS_PER_EPOCH < s2.slot 
-        requires get_previous_epoch(s1) == get_previous_epoch(s2)
-        requires get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys
-        requires get_block_root(s2, get_previous_epoch(s2)) in store.blocks.Keys
-
-        requires get_block_root(s1, get_previous_epoch(s1)) == 
-            get_block_root(s2, get_previous_epoch(s2))
-
-        ensures validPrevAttestations(s1, store) ==> validPrevAttestations(s2, store)
-    {
-        reveal_validPrevAttestations();
-    }
 
     /**
      *  All previous attestations are from s.previous_justified_checkpoint to LEBB(s)
+     *  
+     *  @param  s       A beacon state.
+     *  @param  store   A store.
      */
     predicate {:opaque} validPrevAttestations(s: BeaconState, store: Store) 
         requires get_previous_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-        // requires get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_previous_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
 
-         /** The block root must in the store.  */
-        // requires get_block_root(s, get_previous_epoch(s)) in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
-
-        // ensures validPrevAttestations(s, store)  ==> 
-        //     (forall a :: a in s.previous_epoch_attestations ==>
-        //     && a in store.rcvdAttestations
-        //     && a.data.source == s.previous_justified_checkpoint
-        //     && a.data.source.epoch == s.previous_justified_checkpoint.epoch
-        //     && a.data.target.root == get_block_root(s, get_previous_epoch(s))
-        //     && a.data.target.epoch ==  get_previous_epoch(s)
-        // )
     {
         (forall a :: a in s.previous_epoch_attestations ==> a in store.rcvdAttestations)
         &&
-        // sameSrcSameTgt(s.previous_epoch_attestations,
-        //      s.previous_justified_checkpoint,
-        //      CheckPoint(get_previous_epoch(s), get_block_root(s, get_previous_epoch(s)))
-        //      )
         (get_previous_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> 
             (forall a :: a in s.previous_epoch_attestations ==>
-                // && a in store.rcvdAttestations
                 && a.data.source == s.previous_justified_checkpoint
-                // && a.data.source.epoch == s.previous_justified_checkpoint.epoch
                 && a.data.target.root == get_block_root(s, get_previous_epoch(s))
                 && a.data.target.epoch ==  get_previous_epoch(s)
             )
         )
     }
 
+    /**
+     *  Current attestations are valid in s.
+     *
+     *  @param  s       A beacon state.
+     *  @param  store   A store.
+     */
     predicate {:opaque} validCurrentAttestations(s: BeaconState, store: Store) 
         requires get_current_epoch(s) as nat *  SLOTS_PER_EPOCH as nat  <  0x10000000000000000 
-        // requires get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot  
         requires s.slot  - get_current_epoch(s)  *  SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
 
-         /** The block root must in the store.  */
-        // requires get_block_root(s, get_current_epoch(s)) in store.blocks.Keys
         /** Store is well-formed. */
         requires isClosedUnderParent(store)
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
-
-        // ensures get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==> 
-        //     (forall a :: a in s.current_epoch_attestations ==>
-        //     && a in store.rcvdAttestations
-        //     && a.data.source == s.current_justified_checkpoint
-        //     // && a.data.source.epoch == s.current_justified_checkpoint.epoch
-        //     && a.data.target.root == get_block_root(s, get_current_epoch(s))
-        //     && a.data.target.epoch ==  get_current_epoch(s)
-        // )
     {
         (forall a :: a in s.current_epoch_attestations ==> a in store.rcvdAttestations)
-        // && 
         &&
-        // sameSrcSameTgt(s.current_epoch_attestations,
-        //      s.current_justified_checkpoint,
-        //      CheckPoint( get_current_epoch(s), get_block_root(s, get_current_epoch(s)) )
-        //      )
         (get_current_epoch(s) *  SLOTS_PER_EPOCH   < s.slot ==>
             (forall a :: a in s.current_epoch_attestations ==>
                 // && a in store.rcvdAttestations
@@ -441,114 +321,6 @@ module AttestationsHelpers {
                 && a.data.target.epoch ==  get_current_epoch(s)
             )
         )
-    }
-
-    /**
-     *  Transfer validity of attestions accross epoch boundasries.
-     */
-    lemma transferValidCurrentAttToPreviousAtEpoch(s1: BeaconState, s2: BeaconState, store: Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)
-
-        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
-        requires (s1.slot + 1) %  SLOTS_PER_EPOCH == 0
-        // requires get_current_epoch(s1) as nat *  SLOTS_PER_EPOCH as nat <  0x10000000000000000 
-        // requires get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot  
-        // requires s1.slot - get_current_epoch(s1) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-        requires s2.slot == s1.slot + 1
-        requires s2.previous_justified_checkpoint == s1.current_justified_checkpoint
-        requires s2.previous_epoch_attestations == s1.current_epoch_attestations
-        requires s1.block_roots == s2.block_roots
-
-        requires validCurrentAttestations(s1, store) 
-
-        ensures validPrevAttestations(s2, store);
-    {
-        //
-        reveal_validCurrentAttestations();
-        reveal_validPrevAttestations();
-        // assert((forall a :: a in s.current_epoch_attestations ==> a in store.rcvdAttestations));
-        // forall (a | a in s2.previous_epoch_attestations)
-        //     ensures a in store.rcvdAttestations
-        //     ensures a.data.source == s2.previous_justified_checkpoint
-        //     ensures a.data.target.root == get_block_root(s2, get_previous_epoch(s2))
-        //     ensures a.data.target.epoch ==  get_previous_epoch(s2)
-        // {
-            // reveal_validCurrentAttestations();
-        // reveal_validPrevAttestations();
-            // assert a in s1.current_epoch_attestations;
-            // assert validCurrentAttestations(s1, store);
-            // assert a.data.source == s1.current_justified_checkpoint;
-            // assert a.data.source == s2.previous_justified_checkpoint;
-
-            // assert s1.block_roots == s2.block_roots ;
-            // assert get_previous_epoch(s2) == get_current_epoch(s1);
-            // assert get_block_root(s2, get_previous_epoch(s2)) == get_block_root(s1, get_current_epoch(s1));
-            // assert a.data.target.epoch ==  get_previous_epoch(s2);
-            // assert a.data.target.root == get_block_root(s2, get_previous_epoch(s2));
-            // assert a in store.rcvdAttestations;
-        // }
-    }   
-
-    lemma transferValidCurrentAttToPreviousAtEpoch2(s1: BeaconState, s2: BeaconState, store: Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)
-
-        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
-        requires (s1.slot + 1) %  SLOTS_PER_EPOCH != 0
-        // requires (s1.slot + 1) %  SLOTS_PER_EPOCH != 0
-        // requires get_current_epoch(s1) as nat *  SLOTS_PER_EPOCH as nat <  0x10000000000000000 
-        // requires get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot  
-        // requires s1.slot - get_current_epoch(s1) * SLOTS_PER_EPOCH <= SLOTS_PER_HISTORICAL_ROOT 
-        requires  get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot;
-        requires s2.slot == s1.slot + 1
-        requires s2.previous_justified_checkpoint == s1.previous_justified_checkpoint
-        requires s2.current_justified_checkpoint == s1.current_justified_checkpoint
-
-        requires s2.previous_epoch_attestations == s1.previous_epoch_attestations
-        requires s2.current_epoch_attestations == s1.current_epoch_attestations
-
-        // requires s1.block_roots == s2.block_roots
-        // requires get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s2, get_previous_epoch(s2))
-        requires get_block_root(s1, get_current_epoch(s1)) == get_block_root(s2, get_current_epoch(s2)) 
-        requires get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s2, get_previous_epoch(s2))
-
-
-        requires validCurrentAttestations(s1, store) 
-        requires validPrevAttestations(s1, store) 
-
-        ensures validPrevAttestations(s2, store)
-        ensures validCurrentAttestations(s2, store)
-    {
-        //
-        reveal_validCurrentAttestations();
-        reveal_validPrevAttestations();
-    }   
-
-
-    lemma preserveValidCurrent(s1: BeaconState, s2: BeaconState, store: Store)
-        /** Store is well-formed. */
-        requires isClosedUnderParent(store)
-        /**  The decreasing property guarantees that this function terminates. */
-        requires isSlotDecreasing(store)
-        requires s1.current_justified_checkpoint == s2.current_justified_checkpoint
-        requires s1.current_epoch_attestations == s2.current_epoch_attestations
-        requires get_current_epoch(s1) * SLOTS_PER_EPOCH < s1.slot 
-        requires get_current_epoch(s2) * SLOTS_PER_EPOCH < s2.slot 
-        requires get_current_epoch(s1) == get_current_epoch(s2)
-        requires get_block_root(s1, get_current_epoch(s1)) in store.blocks.Keys
-        requires get_block_root(s2, get_current_epoch(s2)) in store.blocks.Keys
-
-        requires get_block_root(s1, get_current_epoch(s1)) == 
-            get_block_root(s2, get_current_epoch(s2))
-
-        ensures validCurrentAttestations(s1, store) ==> validCurrentAttestations(s2, store)
-    {
-        reveal_validCurrentAttestations();
     }
 
     /**
@@ -571,10 +343,8 @@ module AttestationsHelpers {
         |collectValidatorsIndices(attestations)| as Gwei
     }
 
-
-
     /**
-     *  Collecty the indices of the validators in xa.
+     *  Collect the indices of the validators in xa.
      *
      *  @param  xa  A list of attestations.
      *
@@ -593,62 +363,6 @@ module AttestationsHelpers {
                 MAX_VALIDATORS_PER_COMMITTEE as nat);
             trueBitsCount(xa[0].aggregation_bits) + 
                 collectValidatorsIndices(xa[1..])
-    }
-
-    /**
-     *  Collecting validators attesting in a list with fixed src and tgt yields
-     *  same result as collecting validators for fixed src/tgt.
-     */
-    lemma collectSameSrcSameTgtEquiv(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
-        requires forall a :: a in xa ==> 
-            && a.data.source == src
-            && a.data.target == tgt
-        // requires sameSrcSameTgt(xa, src, tgt)
-        ensures collectValidatorsIndices(xa) ==
-            collectValidatorsAttestatingForLink(xa, src, tgt)
-    {   //  Thanks Dafny
-    }
-
-    // function method get_unslashed_attesting_indices(state: BeaconState,
-                                    // attestations: seq<PendingAttestation>): set<ValidatorIndex>
-    // output = set()  # type: Set[ValidatorIndex]
-    // for a in attestations:
-    //     output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
-    // return set(filter(lambda index: not state.validators[index].slashed, output))
-    // {
-    //     attestations 
-    // }
-
-    // function method  get_total_balance(state: BeaconState, indices: set<ValidatorIndex>) : Gwei
-    // """
-    // Return the combined effective balance of the ``indices``.
-    // ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
-    // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-    // """
-    // {
-        // return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])));
-        //  for now we return the size of indices
-        // |indices| as Gwei 
-    // }
-    
-
-    /**
-     *  We assume 
-     *  1. the set of validators is fixed
-     *  2. each validator has a stake of 1ETH 
-     *  3. there are exactly MAX_VALIDATORS_PER_COMMITTEE in each committee.
-     *
-     *  @note   This is a simplification wlog.
-     */
-    function method get_total_active_balance(state: BeaconState) : Gwei
-        // requires |state.validators| < 0x10000000000000000
-        // """
-        // Return the combined effective balance of the active validators.
-        // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
-        // """
-    {
-        // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
-        MAX_VALIDATORS_PER_COMMITTEE as Gwei
     }
 
     /**
@@ -672,11 +386,205 @@ module AttestationsHelpers {
             (if xl[0].data.target == cp then [xl[0]] else [])
                 + filterAttestations(xl[1..], cp)
     }
-   
-    // lemma foo202(xl : seq<PendingAttestation>, cp : CheckPoint) 
-    //     ensures |filterAttestations(xl, cp)| == countAttestationsForTgt(xl, cp)
-    // {
+  
+    //  Python specs. Not implemeted yet.
 
+    // function method get_unslashed_attesting_indices(state: BeaconState,
+                                    // attestations: seq<PendingAttestation>): set<ValidatorIndex>
+    // output = set()  # type: Set[ValidatorIndex]
+    // for a in attestations:
+    //     output = output.union(get_attesting_indices(state, a.data, a.aggregation_bits))
+    // return set(filter(lambda index: not state.validators[index].slashed, output))
+    // {
+    //     attestations 
     // }
-   
+
+    // function method  get_total_balance(state: BeaconState, indices: set<ValidatorIndex>) : Gwei
+    // """
+    // Return the combined effective balance of the ``indices``.
+    // ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+    // Math safe up to ~10B ETH, afterwhich this overflows uint64.
+    // """
+    // {
+        // return Gwei(max(EFFECTIVE_BALANCE_INCREMENT, sum([state.validators[index].effective_balance for index in indices])));
+        //  for now we return the size of indices
+        // |indices| as Gwei 
+    // }
+
+    /**
+     *  The total active (reference) balance.
+     *
+     *  @param  state   A beacon state.
+     *     
+     *  @note: We assume 
+     *      1. the set of validators is fixed
+     *      2. each validator has a stake of 1ETH 
+     *      3. there are exactly MAX_VALIDATORS_PER_COMMITTEE in each committee.
+     *
+     *  @note   This is a simplification wlog.
+     */
+    function method get_total_active_balance(state: BeaconState) : Gwei
+        // requires |state.validators| < 0x10000000000000000
+        // """
+        // Return the combined effective balance of the active validators.
+        // Note: ``get_total_balance`` returns ``EFFECTIVE_BALANCE_INCREMENT`` Gwei minimum to avoid divisions by zero.
+        // """
+    {
+        // get_total_balance(state, set(get_active_validator_indices(state, get_current_epoch(state))))
+        MAX_VALIDATORS_PER_COMMITTEE as Gwei
+    }
+
+    //  Proofs 
+
+    /**
+     *  The set of validators attesting to a target is larger than the set 
+     *  of validators attesting to a link with that target. 
+     *
+     *  @param  xa      A seq of attestations.
+     *  @param  src     The source checkpoint of the link.
+     *  @param  tgt     The target checkpoint of the link.
+     */
+    lemma {:induction xa} attForTgtLargerThanLinks(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
+        ensures collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) 
+        ensures |collectValidatorsAttestatingForLink(xa, src, tgt)| <= |collectValidatorsIndicesAttestatingForTarget(xa, tgt)| 
+    {
+        assert(collectValidatorsAttestatingForLink(xa, src, tgt) <= collectValidatorsIndicesAttestatingForTarget(xa, tgt) );
+        cardIsMonotonic(collectValidatorsAttestatingForLink(xa, src, tgt), collectValidatorsIndicesAttestatingForTarget(xa, tgt));
+    }
+
+    /**
+     *  If all attestations 
+     */
+    lemma sameSrcSameTgtEquiv(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint) 
+        requires forall a :: a in xa ==> 
+            && a.data.source == src
+            && a.data.target == tgt
+        ensures collectValidatorsIndices(xa) ==
+                collectValidatorsIndicesAttestatingForTarget(xa, tgt) ==
+                collectValidatorsAttestatingForLink(xa, src, tgt)
+    {   
+        //  Apply lemma.
+        collectSameSrcSameTgtEquiv(xa, src, tgt);
+    }
+
+    /**
+     *  State equivalence that preserves valid previous attestations.
+     */
+    lemma preserveValidPrev(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        requires s1.previous_justified_checkpoint == s2.previous_justified_checkpoint
+        requires s1.previous_epoch_attestations == s2.previous_epoch_attestations
+        requires get_previous_epoch(s1) * SLOTS_PER_EPOCH < s1.slot 
+        requires get_previous_epoch(s2) * SLOTS_PER_EPOCH < s2.slot 
+        requires get_previous_epoch(s1) == get_previous_epoch(s2)
+        requires get_block_root(s1, get_previous_epoch(s1)) in store.blocks.Keys
+        requires get_block_root(s2, get_previous_epoch(s2)) in store.blocks.Keys
+
+        requires get_block_root(s1, get_previous_epoch(s1)) == 
+            get_block_root(s2, get_previous_epoch(s2))
+
+        ensures validPrevAttestations(s1, store) ==> validPrevAttestations(s2, store)
+    {
+        reveal_validPrevAttestations();
+    }
+
+    /**
+     *  Transfer validity of attesttaions accross epoch boundaries.
+     */
+    lemma transferValidCurrentAttToPreviousAtEpoch(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
+        requires (s1.slot + 1) %  SLOTS_PER_EPOCH == 0
+        requires s2.slot == s1.slot + 1
+        requires s2.previous_justified_checkpoint == s1.current_justified_checkpoint
+        requires s2.previous_epoch_attestations == s1.current_epoch_attestations
+        requires s1.block_roots == s2.block_roots
+
+        requires validCurrentAttestations(s1, store) 
+
+        ensures validPrevAttestations(s2, store);
+    {
+        //  Thanks dadfny
+        reveal_validCurrentAttestations();
+        reveal_validPrevAttestations();
+    }   
+
+    /**
+     *  Transfer validity of previous/current attesttaions accross epoch boundaries.
+     */
+    lemma transferValidCurrentAttToPreviousAtEpoch2(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+
+        requires s1.slot as nat + 1 < 0x10000000000000000 as nat
+        requires (s1.slot + 1) %  SLOTS_PER_EPOCH != 0
+        requires  get_current_epoch(s1) *  SLOTS_PER_EPOCH   < s1.slot;
+        requires s2.slot == s1.slot + 1
+        requires s2.previous_justified_checkpoint == s1.previous_justified_checkpoint
+        requires s2.current_justified_checkpoint == s1.current_justified_checkpoint
+
+        requires s2.previous_epoch_attestations == s1.previous_epoch_attestations
+        requires s2.current_epoch_attestations == s1.current_epoch_attestations
+
+        requires get_block_root(s1, get_current_epoch(s1)) == get_block_root(s2, get_current_epoch(s2)) 
+        requires get_block_root(s1, get_previous_epoch(s1)) == get_block_root(s2, get_previous_epoch(s2))
+
+        requires validCurrentAttestations(s1, store) 
+        requires validPrevAttestations(s1, store) 
+
+        ensures validPrevAttestations(s2, store)
+        ensures validCurrentAttestations(s2, store)
+    {
+        //  Thanks Dafny
+        reveal_validCurrentAttestations();
+        reveal_validPrevAttestations();
+    }   
+
+
+    /**
+     *  Transfer validity of current attesttaions accross epoch boundaries.
+     */
+    lemma preserveValidCurrent(s1: BeaconState, s2: BeaconState, store: Store)
+        /** Store is well-formed. */
+        requires isClosedUnderParent(store)
+        /**  The decreasing property guarantees that this function terminates. */
+        requires isSlotDecreasing(store)
+        requires s1.current_justified_checkpoint == s2.current_justified_checkpoint
+        requires s1.current_epoch_attestations == s2.current_epoch_attestations
+        requires get_current_epoch(s1) * SLOTS_PER_EPOCH < s1.slot 
+        requires get_current_epoch(s2) * SLOTS_PER_EPOCH < s2.slot 
+        requires get_current_epoch(s1) == get_current_epoch(s2)
+        requires get_block_root(s1, get_current_epoch(s1)) in store.blocks.Keys
+        requires get_block_root(s2, get_current_epoch(s2)) in store.blocks.Keys
+
+        requires get_block_root(s1, get_current_epoch(s1)) == 
+            get_block_root(s2, get_current_epoch(s2))
+
+        ensures validCurrentAttestations(s1, store) ==> validCurrentAttestations(s2, store)
+    {
+        reveal_validCurrentAttestations();
+    }
+
+    /**
+     *  Collecting validators attesting in a list with fixed src and tgt yields
+     *  same result as collecting validators for fixed src/tgt.
+     */
+    lemma collectSameSrcSameTgtEquiv(xa: seq<PendingAttestation>, src: CheckPoint, tgt: CheckPoint)
+        requires forall a :: a in xa ==> 
+            && a.data.source == src
+            && a.data.target == tgt
+        ensures collectValidatorsIndices(xa) ==
+            collectValidatorsAttestatingForLink(xa, src, tgt)
+    {   //  Thanks Dafny
+    }
+
 }
