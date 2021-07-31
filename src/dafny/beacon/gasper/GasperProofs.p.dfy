@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -245,7 +245,6 @@ module GasperProofs {
         reveal_validCurrentAttestations();
         // reveal_isJustified();
         if (cp1.epoch == cp2.epoch == 0) {
-            // oneFinalisedImpliesJustified(cp1, store); 
             assert(store.blocks[cp1.root].slot == 0);
             assert(store.blocks[cp2.root].slot == 0);
             assert(cp1.root == cp2.root);
@@ -378,7 +377,6 @@ module GasperProofs {
         }
     }
 
-
     /**
      *  Violation of Rule I (Gasper slashing conditions).
      *
@@ -393,13 +391,11 @@ module GasperProofs {
      */
     predicate validatorViolatesRuleI(links: ListOfAttestations, v: ValidatorInCommitteeIndex) 
     {
-        // true
         exists a1, a2 ::
             a1 in links && a2 in links &&
             a1.data.target.root != a2.data.target.root 
             && a1.data.target.epoch == a2.data.target.epoch
             && a1.aggregation_bits[v] && a2.aggregation_bits[v]
-            // && (a1.aggregation_validators[v1] == a2.aggregation_validators[v2] == v)
     }
 
     /**
@@ -446,12 +442,6 @@ module GasperProofs {
         && isValidPendingAttestation(a2, store) 
         //  a1 and a2 are made by same validator
         && a1.aggregation_bits[v] && a2.aggregation_bits[v]
-
-        //     exists v1 : ValidatorInCommitteeIndex, v2 : ValidatorInCommitteeIndex :: 
-        //     (a1.aggregation_bits[v1] && a2.aggregation_bits[v2]
-        //     && (a1.aggregation_validators[v1] == a2.aggregation_validators[v2] == v)
-        // )
-        //  Validator v has made nested votes.
         && a1.data.source.epoch < a2.data.source.epoch < a2.data.target.epoch < a1.data.target.epoch 
     }
 
