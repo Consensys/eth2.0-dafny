@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -40,12 +40,9 @@ module Eth2Types {
 
     type CorrectBitlist = u:BitlistWithLength | |u.s| <= u.limit witness BitlistWithLength([],0)
 
-    /** The default zeroed Bytes32.  */
-    // const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 
     /** The type `Seq32Byte` corresponding to sequences of 32 `Bytes`s */
     type Seq32Byte = x:seq<byte> | |x| == 32 witness timeSeq(0 as byte, 32)
-    // SEQ_EMPTY_32_BYTES
 
     /** Create type synonym for a chunk */
     type chunk = Seq32Byte
@@ -143,8 +140,6 @@ module Eth2Types {
      */
     type Serialisable = s:RawSerialisable | wellTyped(s) witness Uint8(0)
 
-    // type CorrectlyTypedSerialisable = s:Serialisable | s.List? ==> 
-
     /** The type `Bytes4` corresponds to a Serialisable built using the
      * `Bytes` constructor passing a sequence of 4 `byte`s to it
      */
@@ -169,9 +164,6 @@ module Eth2Types {
     type Bytes96 = s:Serialisable | s.Bytes? && |s.bs| == 96
                                     witness Bytes(timeSeq(0 as byte, 96))
 
-    // EMPTY_BYTES32
-
-    // const EMPTY_BYTES32 := Bytes32(SEQ_EMPTY_32_BYTES)
     
     type Root = Bytes32
 
@@ -253,7 +245,6 @@ module Eth2Types {
                 case Vector(v) => Vector_(typeOf(v[0]),|v|)
     }
 
-    
     /**
      * Bitwise exclusive-or of two `byte` value
      *
@@ -266,8 +257,6 @@ module Eth2Types {
         ((a as bv8)^(b as bv8)) as byte
     }      
 
-    //  Old section
-
     // Custom types
 
     /* A String type. */
@@ -276,9 +265,7 @@ module Eth2Types {
     /* Hash. (Should probably be a fix-sized bytes. */
     type Hash = Bytes32
 
-    //  TODO: change the Bytes type
-    // type SerialisedBytes = seq<byte> 
-    
+
     type BLSPubkey = Bytes48
     
     type BLSSignature = String      //a BLS12-381 signature.
