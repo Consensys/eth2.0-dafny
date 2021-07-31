@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -15,8 +15,6 @@
 include "../../ssz/Constants.dfy"
 include "../../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
-// include "Types.dfy"
-// include "Attestations.dfy"
 
 module Validators {
 
@@ -24,11 +22,9 @@ module Validators {
     import opened Constants
     import opened NativeTypes
     import opened Eth2Types
-    // import opened Attestations
    
     /** Validator registry index. */
     type ValidatorIndex = i:nat | 0 <= i < VALIDATOR_REGISTRY_LIMIT as nat
-        // MAX_VALIDATORS_PER_COMMITTEE 
 
     /** A validator index within a committee. */
     type ValidatorInCommitteeIndex = i:nat | 0 <= i < MAX_VALIDATORS_PER_COMMITTEE as nat 
