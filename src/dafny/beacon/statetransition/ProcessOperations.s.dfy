@@ -254,6 +254,9 @@ module ProcessOperationsSpec {
                                                     bb.attestations), 
                                                 bb.deposits), 
                                             bb.voluntary_exits)
+        ensures minimumActiveValidators(updateOperations(s, bb))
+        ensures updateOperations(s, bb).slot == s.slot;
+        ensures updateOperations(s, bb).latest_block_header == s.latest_block_header;
     {
         //assert isValidProposerSlashings(s, bb);
         var s1 := updateProposerSlashings(s, bb.proposer_slashings);
@@ -489,6 +492,7 @@ module ProcessOperationsSpec {
         ensures |updateAttesterSlashingComp(s, slash_index).validators| 
                 == |updateAttesterSlashingComp(s, slash_index).balances| 
         ensures updateAttesterSlashingComp(s, slash_index).slot == s.slot
+        ensures updateAttesterSlashingComp(s, slash_index).latest_block_header == s.latest_block_header
         ensures updateAttesterSlashingComp(s, slash_index).eth1_deposit_index == s.eth1_deposit_index
         // ensures 
         //     var s1 := updateAttesterSlashingComp(s, slash_index);
@@ -614,6 +618,7 @@ module ProcessOperationsSpec {
         ensures updateAttestation(s, a).validators == s.validators
         ensures updateAttestation(s, a).balances == s.balances
         ensures updateAttestation(s, a).slot == s.slot
+        ensures updateAttestation(s, a).latest_block_header == s.latest_block_header
         ensures updateAttestation(s, a).current_justified_checkpoint 
                 == s.current_justified_checkpoint
         ensures updateAttestation(s, a).previous_justified_checkpoint 
@@ -687,6 +692,7 @@ module ProcessOperationsSpec {
         ensures minimumActiveValidators(updateAttestations(s, a))
         ensures updateAttestations(s, a).validators == s.validators
         ensures updateAttestations(s, a).slot == s.slot
+        ensures updateAttestations(s, a).latest_block_header == s.latest_block_header
         ensures updateAttestations(s, a).current_justified_checkpoint == s.current_justified_checkpoint
         ensures updateAttestations(s, a).previous_justified_checkpoint == s.previous_justified_checkpoint
         ensures updateAttestations(s, a).eth1_deposit_index == s.eth1_deposit_index
@@ -722,6 +728,7 @@ module ProcessOperationsSpec {
                 ==> updateDeposit(s,d).validators == s.validators 
         ensures updateDeposit(s,d).eth1_deposit_index == s.eth1_deposit_index + 1
         ensures updateDeposit(s,d).slot == s.slot
+        ensures updateDeposit(s,d).latest_block_header == s.latest_block_header
         ensures |updateDeposit(s,d).validators| == |updateDeposit(s,d).balances|        
         ensures |s.validators| <= |updateDeposit(s,d).validators| <= |s.validators| + 1 
         ensures |s.balances| <= |updateDeposit(s,d).balances| <= |s.balances| + 1 
@@ -789,6 +796,8 @@ module ProcessOperationsSpec {
                 == total_balances(s.balances) + total_deposits(deposits)
         ensures get_current_epoch(updateDeposits(s, deposits)) 
                 == get_current_epoch(s)
+        ensures updateDeposits(s, deposits).slot == s.slot
+        ensures updateDeposits(s, deposits).latest_block_header == s.latest_block_header
         ensures minimumActiveValidators(updateDeposits(s, deposits))
         
         decreases |deposits|
@@ -818,6 +827,8 @@ module ProcessOperationsSpec {
         requires get_current_epoch(s) 
                 >= s.validators[ve.validator_index].activation_epoch + SHARD_COMMITTEE_PERIOD 
          
+        ensures updateVoluntaryExit(s, ve).slot == s.slot
+        ensures updateVoluntaryExit(s, ve).latest_block_header == s.latest_block_header
         ensures |updateVoluntaryExit(s, ve).validators| == |s.validators| 
         ensures |updateVoluntaryExit(s, ve).validators| == |s.balances| 
         ensures forall i :: 0 <= i < |s.validators| && i != ve.validator_index as int 
@@ -864,6 +875,7 @@ module ProcessOperationsSpec {
         ensures |updateVoluntaryExits(s, ve).validators| == |s.validators|
         ensures |updateVoluntaryExits(s, ve).validators| == |updateVoluntaryExits(s, ve).balances|
         ensures updateVoluntaryExits(s, ve).slot == s.slot
+        ensures updateVoluntaryExits(s, ve).latest_block_header == s.latest_block_header
         ensures get_current_epoch(updateVoluntaryExits(s, ve)) == get_current_epoch(s)
         ensures forall i :: 0 <= i < |s.validators| 
                 ==> updateVoluntaryExits(s, ve).validators[i].activation_epoch == s.validators[i].activation_epoch
