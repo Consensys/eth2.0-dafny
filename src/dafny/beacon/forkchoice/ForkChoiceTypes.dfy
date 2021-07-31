@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -41,10 +41,12 @@ module ForkChoiceTypes {
      *  @param  threshold               Not in the store as per eth2.0 specs but
      *                                  used here as the constant numebr of validators.
      *
-     *  @note                   From the spec 
+     *  @param  rcvdAttestations        Attestations received so far (not limited to recent ones).
+     *                                  Used for verification.
+     *  @note                           From the spec 
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/fork-choice.md#on_block}           
-     *  @todo                   It seems that blocks and block_states should have the same
-     *                          keys at any time. This is proved in invariant0.
+     *  @todo                           It seems that blocks and block_states should have the same
+     *                                  keys at any time. This is proved in invariant0.
      */
     datatype Store = Store (
         time: uint64,
@@ -55,8 +57,7 @@ module ForkChoiceTypes {
         blocks : map<Root, BeaconBlock>,
         block_states : map<Root, BeaconState>,
         threshold: nat,
-        ghost rcvdAttestations : ListOfAttestations //  attestations received so far
-        // ghost 
+        ghost rcvdAttestations : ListOfAttestations //  attestations received so far. Used for verification
         // checkpoint_states: map<CheckPoint, BeaconState>
         // latest_messages: Dict[ValidatorIndex, LatestMessage]
     )
@@ -92,6 +93,8 @@ module ForkChoiceTypes {
      *
      *  @param  xr      A non-empty seq of block roots.
      *  @param  store   A store.
+     *  @note           There are equivalent possible definitions but this one
+     *                  works well for verification.
      *
      *  @example of a chain of size 6.  
      *  xr = [br5, br4, br3, br2, br1, br0] with 
@@ -107,21 +110,23 @@ module ForkChoiceTypes {
         |xr| >= 1
         &&
         (forall i :: 0 <= i < |xr| ==> xr[i] in store.blocks.Keys)
-        // xr[0] in store.blocks.Keys
         &&  
         store.blocks[xr[|xr| - 1]].slot == 0 
         && 
         if |xr| == 1 then 
             //  last block with slot 0 is assumed to be a chain.
-            // true
             store.blocks[xr[0]].slot == 0 
         else 
-            // xr[1] in store.blocks.Keys
             && store.blocks[xr[0]].parent_root == xr[1] 
             && store.blocks[xr[0]].slot > store.blocks[xr[1]].slot
             && isChain(xr[1..], store)
     }
 
+    /**
+     *  An alternative simpler definition of isChain that should be equivalent to
+     *  isChain. However, using it makes the verification of some methods/functions
+     *  inconclusive. 
+     */
     predicate isChain2(xr: seq<Root>, store: Store)  
         decreases xr
     {
@@ -161,7 +166,7 @@ module ForkChoiceTypes {
      *  block   b5----------->b4---------->b3---->b2------>b1------->b0 == br     
      *  slot    0             32           63     95       109       134
      */
-    function chainRoots(br: Root, store: Store) : seq<Root>
+    function chainRoots(br: Root, store: Store): seq<Root>
         /** The block root must in the store.  */
         requires br in store.blocks.Keys
         /** Store is well-formed. */
@@ -186,6 +191,19 @@ module ForkChoiceTypes {
             [ br ] + chainRoots(store.blocks[br].parent_root, store)
     }
 
+    /**
+     *  Transitivity property of chainRoots.
+     *  If:
+     *      1. br2 in an ancestor of br1
+     *      2. br3 is an ancestor of br2
+     *  then br3 is an ancestor of br1. 
+     *  
+     *  @param  br1      A hash root of a block that is in the `store`.
+     *  @param  br2      A hash root of a block that is in the `store`.
+     *  @param  br3      A hash root of a block that is in the `store`.
+     *  @param  store    A store (similar to the view of the validator).
+     *
+     */
     lemma chainRootsMonotonic(br1: Root, br2: Root, br3: Root, store: Store) 
         /** The block root must in the store.  */
         requires br1 in store.blocks.Keys
@@ -236,8 +254,4 @@ module ForkChoiceTypes {
         else 
             1 + height(store.blocks[br].parent_root, store)
     }
-
-    
-
-
 }

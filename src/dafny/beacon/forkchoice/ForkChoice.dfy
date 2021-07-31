@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -13,7 +13,6 @@
  */
 
 // @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /trace /noCheating:1
-
 
 include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -89,7 +88,7 @@ module ForkChoice {
             CheckPoint(anchor_epoch, anchor_root),
             CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
-            map[anchor_root := anchor_state],            //  block_states
+            map[anchor_root := anchor_state],           //  block_states
             |anchor_state.validators|,
             []
         )
@@ -363,7 +362,7 @@ module ForkChoice {
         }
        
         /**
-         *  The proof that a store is chain follows directly from the properties
+         *  The proof that a store is a chain follows directly from the properties
          *  of ancestors.
          *  
          *  @param  r       A root.
@@ -418,6 +417,8 @@ module ForkChoice {
          *                      the state that corresponds to the bloc parent_root but here
          *                      for convenience and readability.
          *  @param  b           A block to be added to the chain.
+         *
+         *  @todo               In this experimental branch this mrthod
          */
         method {:timeLimitMultiplier 20} on_block(b: BeaconBlock, pre_state : BeaconState) 
 
@@ -446,33 +447,32 @@ module ForkChoice {
             requires |pre_state.validators| == |pre_state.balances| 
 
             //  Record block in the observer (ghost var) block list.
-            // ensures acceptedBlocks == old(acceptedBlocks) + { b };
-            // //  Progress: the store size increases.
-            // ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
-            // //  Immutability: Old blocks are not modified
-            // ensures forall k :: k in old(acceptedBlocks) ==> k in acceptedBlocks
-            // //  Immutability of the chain: Old store items are preserved
-            // ensures forall k :: k in old(store).blocks.Keys ==> 
-            //     k in store.blocks.Keys 
-            //     && old(store).blocks[k] == store.blocks[k]
-            //     && k in store.block_states.Keys
-            //     && old(store).block_states[k] == store.block_states[k]
-            // //  Progress: The store size increases.
-            // ensures |store.blocks| == |old(store.blocks)| + 1
-            // //  Inductive invariant: store validity is preserved.
-            // ensures storeIsValid(store)
+            ensures acceptedBlocks == old(acceptedBlocks) + { b };
+            //  Progress: the store size increases.
+            ensures |acceptedBlocks| == |old(acceptedBlocks)| + 1
+            //  Immutability: Old blocks are not modified
+            ensures forall k :: k in old(acceptedBlocks) ==> k in acceptedBlocks
+            //  Immutability of the chain: Old store items are preserved
+            ensures forall k :: k in old(store).blocks.Keys ==> 
+                k in store.blocks.Keys 
+                && old(store).blocks[k] == store.blocks[k]
+                && k in store.block_states.Keys
+                && old(store).block_states[k] == store.block_states[k]
+            //  Progress: The store size increases.
+            ensures |store.blocks| == |old(store.blocks)| + 1
+            //  Inductive invariant: store validity is preserved.
+            ensures storeIsValid(store)
 
             //  Modifies the store.
             modifies this
         {
-            // assert(hash_tree_root(b) !in store.blocks.Keys);
+            assert(hash_tree_root(b) !in store.blocks.Keys);
+            //  Python specs
             // pre_state = store.block_states[block.parent_root].copy()
             // Blocks cannot be in the future. If they are, their consideration must be delayed until the are in the past.
             // assert get_current_slot(store) >= block.slot
 
             // Whether b is valid block does not depend on store but only on pre_state
-            // assert(isValidBlock(pre_state, b, old(store)));
-            // isValidBlockIsNotStoreDependent(pre_state, b, old(store), store);
             assert(isValidBlock(pre_state, b, store));
             // Check the block is valid and compute the post-state
             var new_state := stateTransition(pre_state, b, store);
@@ -481,14 +481,13 @@ module ForkChoice {
             // Add new block to the store
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
-            // assert(storeInvariant1(store));
+            assert(storeInvariant1(store));
+            //  Python specs
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
             // Check block is a descendant of the finalized block at the checkpoint finalized slot
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
-
-            
 
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state]);
@@ -504,8 +503,20 @@ module ForkChoice {
             }
         }
 
+        /**
+         *  This function is not implemented.
+         *  
+         *  @param      store       A store.
+         *  @param      block_root  The block roots vector of a state.
+         *  @param      blocks      The map from root to blocks.
+         *  @returns                false. 
+         *
+         *  @todo                   Implement this method.
+         */
         method filter_block_tree(store: Store, block_root: Root, blocks: map<Root, BeaconBlock>) returns (r: bool) 
         {
+            //  Python specs 
+
             //  Collect children of block block_root
             // var block := store.blocks[block_root];
             // children = [
@@ -540,8 +551,6 @@ module ForkChoice {
 
             // # Otherwise, branch not viable
             return false;
-
         }
-
     }
 }
