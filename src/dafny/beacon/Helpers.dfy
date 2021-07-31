@@ -927,6 +927,7 @@ module BeaconHelpers {
                 initiate_validator_exit(s,index).validators[i].exitEpoch == s.validators[i].exitEpoch
         ensures initiate_validator_exit(s,index).validators[index].exitEpoch < FAR_FUTURE_EPOCH
         ensures initiate_validator_exit(s,index).slot == s.slot
+        ensures initiate_validator_exit(s,index).latest_block_header == s.latest_block_header
         ensures minimumActiveValidators(initiate_validator_exit(s,index))
     {
         // # Return if validator already initiated exit
