@@ -68,7 +68,7 @@ module EpochProcessingSpec {
         
         ensures 
             var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
-            ssert is_valid_state_epoch_attestations(s1);
+            assert is_valid_state_epoch_attestations(s1);
             assert s1 == updateJustificationAndFinalisation(s);
             updateEpoch(s) == updateParticipationRecords(
                                 updateHistoricalRoots(
