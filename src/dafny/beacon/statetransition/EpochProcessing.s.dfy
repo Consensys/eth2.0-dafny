@@ -68,19 +68,7 @@ module EpochProcessingSpec {
         
         ensures 
             var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
-            // assert forall a :: a in s1.previous_epoch_attestations 
-            //         ==> a.data.index 
-            //             < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
-            //             <= TWO_UP_6;
-            // assert forall a :: a in s1.previous_epoch_attestations 
-            //         ==> TWO_UP_5 as nat 
-            //             <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
-            //             <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-            // assert forall a :: a in s1.previous_epoch_attestations 
-            //         ==> 0 
-            //             < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-            //             <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
-            assert is_valid_state_epoch_attestations(s1);
+            ssert is_valid_state_epoch_attestations(s1);
             assert s1 == updateJustificationAndFinalisation(s);
             updateEpoch(s) == updateParticipationRecords(
                                 updateHistoricalRoots(
@@ -100,6 +88,7 @@ module EpochProcessingSpec {
                                 )
                             )
         ensures updateEpoch(s).latest_block_header == s.latest_block_header
+        ensures is_valid_state_epoch_attestations(updateEpoch(s))
     {
         var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
         assert s1 == updateJustificationAndFinalisation(s);
@@ -113,19 +102,6 @@ module EpochProcessingSpec {
         assert is_valid_state_epoch_attestations(s1);
 
         assert get_current_epoch(s1) == get_current_epoch(s1);
-        // assert forall a :: a in s1.previous_epoch_attestations 
-        //         ==> a.data.index 
-        //             < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
-        //             <= TWO_UP_6;
-        // assert forall a :: a in s1.previous_epoch_attestations 
-        //         ==> TWO_UP_5 as nat 
-        //             <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
-        //             <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-        // assert forall a :: a in s1.previous_epoch_attestations 
-        //         ==> 0 
-        //             < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-        //             <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
-
         var s2 := updateRAndP(s1);
         assert s2 == updateRAndP(updateJustificationAndFinalisation(s));
 
@@ -670,25 +646,14 @@ module EpochProcessingSpec {
     function updateRAndP(s: BeaconState): BeaconState
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
-        // requires forall a :: a in s.previous_epoch_attestations 
-        //             ==> a.data.index 
-        //                 < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
-        //                 <= TWO_UP_6 
-        // requires forall a :: a in s.previous_epoch_attestations 
-        //             ==> TWO_UP_5 as nat 
-        //                 <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
-        //                 <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        // requires forall a :: a in s.previous_epoch_attestations 
-        //             ==> 0 
-        //                 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-        //                 <= MAX_VALIDATORS_PER_COMMITTEE as nat
-        
+         
         ensures  if get_current_epoch(s) <= GENESIS_EPOCH + 1 then updateRAndP(s) == s
                  else 
                     updateRAndP(s) == updateRewardsAndPenalties(s, 
                                                                 get_attestation_deltas(s).0, 
                                                                 get_attestation_deltas(s).1
                                                                )
+        ensures is_valid_state_epoch_attestations(updateRAndP(s))
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then s
         else
@@ -715,6 +680,7 @@ module EpochProcessingSpec {
                                        penalties: seq<Gwei>
                                       ): BeaconState
         requires |rewards| == |penalties| <= |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
         
         ensures |s.balances| == |updateRewardsAndPenalties(s, rewards, penalties).balances|
         ensures |s.validators| == |updateRewardsAndPenalties(s, rewards, penalties).validators|
@@ -732,6 +698,7 @@ module EpochProcessingSpec {
                     ==> updateRewardsAndPenalties(s, rewards, penalties).validators[i] == s.validators[i]
         ensures updateRewardsAndPenalties(s, rewards, penalties) 
                 == s.(balances := updateRewardsAndPenalties(s, rewards, penalties).balances)
+        ensures is_valid_state_epoch_attestations(updateRewardsAndPenalties(s, rewards, penalties))
 
         decreases |rewards|, |penalties|
     {
@@ -766,6 +733,7 @@ module EpochProcessingSpec {
      */
     function updateSlashings(s: BeaconState) : BeaconState
         requires |s.balances| == |s.validators|
+        requires is_valid_state_epoch_attestations(s)
         ensures 
             var epoch := get_current_epoch(s);
             var total_balance := get_total_active_balance_full(s);
@@ -791,6 +759,7 @@ module EpochProcessingSpec {
                                                         adjusted_total_slashing_balance, 
                                                         increment
                                                        )
+        ensures is_valid_state_epoch_attestations(updateSlashings(s))
     {
         var epoch := get_current_epoch(s);
         var total_balance := get_total_active_balance_full(s);
@@ -840,6 +809,7 @@ module EpochProcessingSpec {
                         / total_balance  as nat 
                     < 0x10000000000000000
         requires epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+        requires is_valid_state_epoch_attestations(s)
             
         ensures |updateSlashingsHelper(s, 
                                        len, 
@@ -904,6 +874,13 @@ module EpochProcessingSpec {
                                   increment
                                  ).balances[v] == new_bal
        
+        ensures is_valid_state_epoch_attestations(updateSlashingsHelper(s, 
+                                                                        len, 
+                                                                        epoch, 
+                                                                        total_balance, 
+                                                                        adjusted_total_slashing_balance, 
+                                                                        increment
+                                                                        ))
         decreases len
     {
         if len == 0 then s
@@ -950,6 +927,8 @@ module EpochProcessingSpec {
      *  @returns    The state obtained after applying the epoch eth1 data reset.
      */
     function updateEth1DataReset(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(updateEth1DataReset(s))
     {
         var next_epoch := get_current_epoch(s) + 1;
         // Reset eth1 data votes
@@ -967,6 +946,7 @@ module EpochProcessingSpec {
      *              and should be updated to if  process_effective_balance_updates changes.
      */
     function updateEffectiveBalance(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
     {
         s
     }
@@ -978,6 +958,8 @@ module EpochProcessingSpec {
      *  @returns    The state obtained after applying the epoch slashings reset.
      */
     function updateSlashingsReset(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(updateSlashingsReset(s))
     {
         var next_epoch := get_current_epoch(s) + 1;
         // Reset slashings
@@ -993,6 +975,8 @@ module EpochProcessingSpec {
      *  @returns    The state obtained after applying the epoch randao mixes reset.
      */
     function updateRandaoMixes(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(updateRandaoMixes(s))
     {
         var current_epoch := get_current_epoch(s);
         var next_epoch := current_epoch + 1;
@@ -1012,6 +996,8 @@ module EpochProcessingSpec {
      *  @returns    The state obtained after applying the epoch historical roots update.
      */
     function updateHistoricalRoots(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(updateHistoricalRoots(s))
     {
        var next_epoch := (get_current_epoch(s) + 1) as Epoch;
        if next_epoch % (SLOTS_PER_HISTORICAL_ROOT / SLOTS_PER_EPOCH) == 0 then
@@ -1030,6 +1016,8 @@ module EpochProcessingSpec {
      *  @returns    `s` with the attestations rotated.
      */
     function updateParticipationRecords(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(updateParticipationRecords(s))
     {
         //  rotate the attestations.
         s.(
