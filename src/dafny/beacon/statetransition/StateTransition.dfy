@@ -131,6 +131,21 @@ module StateTransition {
         // assert (b.state_root == hash_tree_root(s'));
     }  
 
+    lemma helperLemma(s: BeaconState, i: nat)
+        requires s.slot as nat <= i
+        requires i + 1 < 0x10000000000000000 as nat
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        //ensures forwardStateToSlot(s, slot) == nextSlot(forwardStateToSlot(s, slot - 1)) == nextSlot(s)
+        //ensures forwardStateToSlot(s, (slot+1) as Slot) == nextSlot(forwardStateToSlot(s, slot)) == nextSlot(s)
+        
+        ensures forwardStateToSlot(s, (i+1) as Slot) == nextSlot(forwardStateToSlot(s, i as Slot)) 
+
+    {
+        assert forwardStateToSlot(s, i as Slot).slot as nat == i;
+    }
+
     /**
      *  Advance current state to a given slot.
      *
@@ -157,69 +172,261 @@ module StateTransition {
      *                  is the same as resolveStateRoot(s).
      *
      */
-    method {:timeLimitMultiplier 10} process_slots(s: BeaconState, slot: Slot) returns (s' : BeaconState)
-        requires s.slot < slot  //  update in 0.12.0 (was <= before)
+    method process_slots(s: BeaconState, slot: Slot) returns (s' : BeaconState) // {:timeLimitMultiplier 10} 
+        requires s.slot as nat < slot as nat < 0x10000000000000000 as nat//  update in 0.12.0 (was <= before)
         requires |s.validators| == |s.balances|
-
-        requires forall a :: a in s.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 
-        requires forall a :: a in s.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in s.previous_epoch_attestations ==> 0 < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
-       
+        requires is_valid_state_epoch_attestations(s)
         
-        ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
+        
         // // The next one is a direct consequence of I1
         ensures s'.slot == slot
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
-        // ensures s'.validators == s.validators
-        // ensures s'.balances == s.balances
         ensures |s'.validators| == |s'.balances|
+        ensures s' == forwardStateToSlot(nextSlot(s), slot)   //  I1
 
         //  Termination ranking function
         decreases slot - s.slot
     {
         //  Start from the current state and update it with processSlot.
         //  This is the first iteration of the loop in process_slots (Eth2-specs)
+
+        var i : nat := s.slot as nat;
         s' := process_slot(s);
         if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
             assert |s'.validators| == |s'.balances|;
-            assert forall a :: a in s'.previous_epoch_attestations ==> a.data.index < get_committee_count_per_slot(s', compute_epoch_at_slot(a.data.slot)) <= TWO_UP_6 ;
-            assert forall a :: a in s'.previous_epoch_attestations ==> TWO_UP_5 as nat <= |get_active_validator_indices(s'.validators, compute_epoch_at_slot(a.data.slot))| <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-            assert forall a :: a in s'.previous_epoch_attestations ==> 0 < |get_beacon_committee(s', a.data.slot, a.data.index)| == |a.aggregation_bits| <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
-       
+            assert is_valid_state_epoch_attestations(s');
             s' := process_epoch(s');
         } 
+        assert i == s'.slot as nat;
         s':= s'.(slot := s'.slot + 1) ;
+
+        i := i + 1;
+        assert s'.slot as nat == i;
         assert(s' == nextSlot(s));
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
+        assert s' == forwardStateToSlot(nextSlot(s), s'.slot);
+        assert s' == forwardStateToSlot(nextSlot(s), i as Slot);
 
-        //  Now fast forward state to `slot`
-        while (s'.slot < slot)  
-            invariant s'.slot <= slot
+        assert s' == recurseNextSlot(s, 1);
+
+        // //  Now fast forward state to `slot`
+        while (i < slot as nat)  
+            invariant i == s'.slot as nat
+            invariant nextSlot(s).slot as nat <= i;
+            //invariant s.slot == s'.slot - i;
+            invariant i <= slot as nat < 0x10000000000000000 as nat
+            //invariant i + 1 < 0x10000000000000000 as nat;
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            invariant s' == forwardStateToSlot(nextSlot(s), s'.slot) 
+            //invariant is_valid_state_epoch_attestations(s1)
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
-            //invariant s'.validators == s.validators
-            //invariant s'.balances == s.balances
             invariant |s'.validators| == |s'.balances|
-            decreases slot - s'.slot 
+
+            invariant is_valid_state_epoch_attestations(s')
+            invariant s' == forwardStateToSlot(nextSlot(s), i as Slot);
+            //invariant s'.slot as nat + 1 < 0x10000000000000000 as nat
+            //invariant |s0.validators| == |s0.balances|
+            //invariant is_valid_state_epoch_attestations(s0)
+            //invariant s' == nextSlot(s0)
+            //invariant s' == recurseNextSlot(s, s'.slot as nat - s.slot as nat)
+            //invariant s' == forwardStateToSlot(nextSlot(s), s'.slot) 
+            
+            
+            //decreases slot - s'.slot 
+            decreases slot as nat - i 
         {     
-            s':= process_slot(s');
-            //  Process epoch on the start slot of the next epoch
-            if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-                var k := s'; 
-                PreviousEpochAttestationsProperties(s');
-                s' := process_epoch(s');
-            }
-            //  s'.slot is now processed: history updated and block header resolved
-            //  The state's slot is processed and we can advance to the next slot.
-            s':= s'.(slot := s'.slot + 1) ;
-            //assert(s' == nextSlot(s));
+            var orig := s';
+            
+            s' := process_slots_iteration(orig);
+            // assert s'.slot as nat + 1 < 0x10000000000000000 as nat;
+            // assert orig == forwardStateToSlot(nextSlot(s), i as Slot);
+            // assert orig.slot as nat + 1 < 0x10000000000000000 as nat;
+            // assert |orig.validators| == |orig.balances|;
+            // assert is_valid_state_epoch_attestations(orig);
+            
+            // //assert orig == s';
+
+            // //assert s' == forwardStateToSlot(nextSlot(s), s'.slot); 
+            // s' := process_slot(s');
+            // //  Process epoch on the start slot of the next epoch
+            // if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
+            //     assert |s'.validators| == |s'.balances|;
+            //     assert is_valid_state_epoch_attestations(s');
+            //     s' := process_epoch(s');
+            // }
+            // //  s'.slot is now processed: history updated and block header resolved
+            // //  The state's slot is processed and we can advance to the next slot.
+            // s' := s'.(slot := s'.slot + 1) ;
+            
+            assert s' == nextSlot(orig);
+            assert orig == forwardStateToSlot(nextSlot(s), i as Slot);
+            
+            //assert orig == forwardStateToSlot(nextSlot(s), (i-1) as Slot);
+
+            assert nextSlot(s).slot as nat <= i;
+            assert i + 1 < 0x10000000000000000 as nat;
+            helperLemma(nextSlot(s), i);
+            assert nextSlot(forwardStateToSlot(nextSlot(s), i as Slot)) == forwardStateToSlot(nextSlot(s), (i+1) as Slot);
+            assert s' == nextSlot(forwardStateToSlot(nextSlot(s), i as Slot));
+            assert s' == forwardStateToSlot(nextSlot(s), (i+1)  as Slot);
+
+            i := i + 1;
+
+            //var temp := nextSlot(s0);
+            //assert s' == nextSlot(temp);
+            //assert s' == nextSlot(recurseNextSlot(s, s'.slot as nat - s.slot as nat));
+
+            //assert s' == recurseNextSlot(s, s'.slot as nat - s.slot as nat);
+            
+            //assert s' == forwardStateToSlot(nextSlot(s), s'.slot) ;
+            //assert s' == nextSlot(temp);
+            //assert s1 == nextSlot(s0);
+            //assert s1 == nextSlot(s);
+            
+            //assert s1 == forwardStateToSlot(nextSlot(s0), s1.slot);
+
+            //s' := s1;
+            
+            //assert s' == forwardStateToSlot(s1, s'.slot);
+            //assert s' == forwardStateToSlot(nextSlot(s), s'.slot);
+
+            //s0 := orig;
+
+            //assert s' == forwardStateToSlot(temp, s'.slot);
             //  s'.block header state_root should now be resolved
             assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
         }
         assert s' == forwardStateToSlot(nextSlot(s), slot); 
     }
+
+    method process_slots_iteration(s: BeaconState) returns (s' : BeaconState) // {:timeLimitMultiplier 10} 
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat//  update in 0.12.0 (was <= before)
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures s'  == nextSlot(s)
+    {
+
+        s' := process_slot(s);
+            //  Process epoch on the start slot of the next epoch
+            if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
+                assert |s'.validators| == |s'.balances|;
+                assert is_valid_state_epoch_attestations(s');
+                s' := process_epoch(s');
+            }
+            //  s'.slot is now processed: history updated and block header resolved
+            //  The state's slot is processed and we can advance to the next slot.
+            s' := s'.(slot := s'.slot + 1) ;
+            
+            assert s' == nextSlot(s);
+    }
+        
+     
+
+    
+
+    // lemma Slots2Lemma(s: BeaconState, slot: Slot)
+    //     requires s.slot as nat == slot as nat - 1
+    //     requires |s.validators| == |s.balances|
+    //     requires is_valid_state_epoch_attestations(s)
+
+    //     ensures forwardStateToSlot(s, slot) == nextSlot(forwardStateToSlot(s, slot - 1)) == nextSlot(s)
+    // {}
+
+    function recurseNextSlot(s: BeaconState, i : nat) : BeaconState
+        requires s.slot as nat + i < 0x10000000000000000 as nat
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures recurseNextSlot(s,i).slot as nat == s.slot as nat + i < 0x10000000000000000 as nat
+        ensures |recurseNextSlot(s,i).validators| == |s.balances|
+        ensures is_valid_state_epoch_attestations(recurseNextSlot(s,i))
+        ensures i == 1 ==> recurseNextSlot(s,i) == nextSlot(s)
+        decreases i
+    {
+        if i == 0 then s
+        //else if i == 1 then nextSlot(s)
+        else 
+            nextSlot(recurseNextSlot(s, i-1))
+    }
+
+    // lemma recurseLemma2(s: BeaconState, i: nat)
+    //     requires i > 0
+    //     requires s.slot as nat + i < 0x10000000000000000 as nat
+    //     requires |s.validators| == |s.balances|
+    //     requires is_valid_state_epoch_attestations(s)
+
+    //     ensures 
+    //         //assert recurseNextSlot(s, i - 1).slot as nat == s.slot as nat + i - 1 as nat;
+    //         recurseNextSlot(s, i) == nextSlot(recurseNextSlot(s, i - 1 )) 
+    // { // Thanks Dafny
+    // }
+
+    lemma recurseLemma3(s: BeaconState, i: nat)
+        requires i > 1
+        requires s.slot as nat + i < 0x10000000000000000 as nat
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures 
+            //assert recurseNextSlot(s, i - 1).slot as nat == s.slot as nat + i - 1 as nat;
+            recurseNextSlot(s, i) == nextSlot(recurseNextSlot(nextSlot(s), i - 2 )) 
+    { // Thanks Dafny
+    }
+
+    lemma recurseLemma(s: BeaconState, slot: Slot)
+        requires s.slot <= slot
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures forwardStateToSlot(s, slot) == recurseNextSlot(s, slot as nat - s.slot as nat)
+        //ensures forwardStateToSlot(s, slot) == recurseNextSlot(nextSlot(s), slot as nat - s.slot as nat - 1)
+        decreases slot - s.slot
+
+    {
+        if s.slot == slot {
+            assert forwardStateToSlot(s, slot) == s;
+            assert forwardStateToSlot(s, slot) == recurseNextSlot(s,0);
+        }
+        else if s.slot == slot - 1  {
+            assert s == forwardStateToSlot(s, slot - 1);
+            assert forwardStateToSlot(s, slot) == nextSlot(forwardStateToSlot(s, slot - 1));
+            assert forwardStateToSlot(s, slot) == nextSlot(s);
+            assert forwardStateToSlot(s, slot) == recurseNextSlot(s,1);
+        }
+        else {
+            var i := slot as nat - s.slot as nat;
+            assert forwardStateToSlot(s, slot) == nextSlot(forwardStateToSlot(s, slot - 1));
+            recurseLemma(forwardStateToSlot(s, slot - 1), slot-1);
+            var diff := slot as nat - s.slot as nat;
+            assert forwardStateToSlot(s, slot) == nextSlot(recurseNextSlot(s, diff - 1));
+            //recurseLemma2(s, diff);
+            assert forwardStateToSlot(s, slot) == recurseNextSlot(s, diff);
+
+        }
+
+        
+    }
+
+
+    // lemma Slots2Lemma(s: BeaconState, s1: BeaconState, slot: Slot, i : nat)
+    //     requires i > 1
+    //     requires s.slot as nat == slot as nat - i
+    //     requires s1.slot as nat == slot as nat - 1
+    //     requires |s.validators| == |s.balances|
+    //     requires is_valid_state_epoch_attestations(s)
+    //     requires s1 == nextSlot(s) 
+
+    //     ensures s1 == forwardStateToSlot(nextSlot(s), slot - 1);
+        
+    // {
+    //     assert s1 == forwardStateToSlot(s, slot - 1);
+    //     assert s1 == nextSlot(forwardStateToSlot(s, slot - 2));
+    //     assert forwardStateToSlot(s, slot - 2) == s;
+    //     assert s1 == forwardStateToSlot(forwardStateToSlot(s, slot - 2), slot - 1);
+    //     assert s1 == forwardStateToSlot(s1, slot - 1);
+    //     assert s1 == forwardStateToSlot(nextSlot(s), slot - 1);
+    // }
 
     /** 
      *  Cache data for a slot.
@@ -241,6 +448,7 @@ module StateTransition {
     method process_slot(s: BeaconState) returns (s' : BeaconState)
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
 
         ensures  s.latest_block_header.state_root == DEFAULT_BYTES32 ==>
             s' == resolveStateRoot(s).(slot := s.slot)
@@ -251,6 +459,8 @@ module StateTransition {
         ensures s'.validators == s.validators
         ensures s'.balances == s.balances
         ensures |s'.validators| == |s'.balances|
+        ensures s'.latest_block_header.state_root != DEFAULT_BYTES32
+        ensures is_valid_state_epoch_attestations(s')
     {
         s' := s;
 
