@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -42,7 +42,6 @@ module BeaconChainTypes {
      */
     function method hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != DEFAULT_BYTES32
-
 
     /** The historical roots type.  */
     type VectorOfHistRoots = x : seq<Root> |  |x| == SLOTS_PER_HISTORICAL_ROOT as int
@@ -187,7 +186,6 @@ module BeaconChainTypes {
      */
      const DEFAULT_LIST_ETH1DATA : seq<Eth1Data> := []
 
-    
     /** 
      *  The Beacon state type.
      *
@@ -354,7 +352,7 @@ module BeaconChainTypes {
         header_2: BeaconBlockHeader
     )
 
-     /**
+    /**
      *  Eth1Data2.
      */
     datatype Eth1Data = Eth1Data(
@@ -367,7 +365,6 @@ module BeaconChainTypes {
      *  The zeroed (default) Eth1 data.
      */
     const DEFAULT_ETH1DATA := Eth1Data(DEFAULT_BYTES32, 0, DEFAULT_BYTES32)
-
 
     /**
      * Historical Batch.

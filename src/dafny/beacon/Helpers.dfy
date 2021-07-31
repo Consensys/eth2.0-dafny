@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -30,24 +30,6 @@ module BeaconHelpers {
     import opened BeaconChainTypes
     import opened AttestationsTypes
     import opened Validators
-
-    /**
-     *  A simple lemma to bound integer division when divisor >= 1.
-     */
-    lemma divLess(x : nat , k : nat) 
-        requires k >= 1
-        ensures 0 <= x / k <= x 
-    {   //  Thanks Dafny
-    }
-
-    /**
-     *  ( x  /  k ) * k is less than or equal to x.
-     */
-    lemma div2(x : nat, k : nat) 
-        requires k >= 1 
-        ensures ( x / k ) * k <= x
-    {
-    }
 
     /**
      *  Check that a bitlist has all bits set to 1.
@@ -177,6 +159,23 @@ module BeaconHelpers {
             else count_eth1_data_votes(l[1..], d)
     }
     
+    /**
+     *  A simple lemma to bound integer division when divisor >= 1.
+     */
+    lemma divLess(x : nat , k : nat) 
+        requires k >= 1
+        ensures 0 <= x / k <= x 
+    {   //  Thanks Dafny
+    }
+
+    /**
+     *  ( x  /  k ) * k is less than or equal to x.
+     */
+    lemma div2(x : nat, k : nat) 
+        requires k >= 1 
+        ensures ( x / k ) * k <= x
+    {
+    }
     
 
 }
