@@ -1772,9 +1772,9 @@ module BeaconHelpers {
                 var effective_balance := s.validators[eligible_indices[0] as nat].effective_balance as nat;
                 assert INACTIVITY_PENALTY_QUOTIENT as nat > 0;
 
-                var temp := effective_balance as nat * get_finality_delay(s) as nat;
-                var second_part_of_penalty := temp as nat / INACTIVITY_PENALTY_QUOTIENT as nat;
-                AssumeNoGweiOverflow(second_part_of_penalty as nat);
+                var temp : nat := effective_balance as nat * get_finality_delay(s) as nat;
+                var second_part_of_penalty : nat := (temp / INACTIVITY_PENALTY_QUOTIENT as nat) as nat;
+                AssumeNoGweiOverflow(second_part_of_penalty);
                 var total_penalty := penalties[eligible_indices[0] as nat] as nat 
                                         + first_part_of_penalty as nat 
                                         + second_part_of_penalty as nat;
@@ -2157,6 +2157,28 @@ module BeaconHelpers {
                 0
             ) + countAttestationsForLink(xa[1..], src, tgt)
     }
+
+
+
+    /** 
+     *  Sete the effective balance at index ``index`` to ``eb``.
+     *
+     *  @param  s       A beacon state.
+     *  @param  index   A validator index.
+     *  @param  eb      A gwei amount.
+     *  @returns        A new state where the validator effective balance at ``index`` is 
+     *                  set to ``eb``.
+     */
+    function method set_effective_balance(s: BeaconState, index: ValidatorIndex, eb: Gwei): BeaconState 
+        requires index as int < |s.validators| 
+        requires eb as nat < 0x10000000000000000
+        ensures |s.validators| == |set_effective_balance(s, index, eb).validators|
+        ensures set_effective_balance(s,index,eb).validators[index].effective_balance == eb
+    {
+        s.(validators := s.validators[index as nat := s.validators[index].(effective_balance := eb as Gwei)])
+    }
+
+
     
     /**
      *  The set of validators attesting to a target is larger than the set 
@@ -2437,5 +2459,18 @@ module BeaconHelpers {
                                                 )
     { // Thanks Dafny
     } 
+
+    /**
+     *  A proof that a new maintains the status of is_valid_state_epoch_attestations.
+     *
+     *  @param  s   A beacon state. 
+     *  @return     A proof that is_valid_state_epoch_attestations(s) is true.
+     *
+     *  @note       This proof is assumed.
+     */
+    lemma {:axiom } AssumeIsValidStateEpoch_Attestations(s: BeaconState)
+        ensures is_valid_state_epoch_attestations(s)
+    // {}
+
 
 }

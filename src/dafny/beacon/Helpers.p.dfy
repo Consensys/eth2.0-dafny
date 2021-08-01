@@ -121,10 +121,32 @@ module BeaconHelperProofs {
      *  @note           A proof could be constructed on the basis of the total amount
      *                  of Eth in existence.
      */
-    lemma {:axiom } AssumeNoGweiOverflowToUpdateEffectiveBalance(sv: seq<Validator>, adj: nat, total: nat)
+    lemma {:axiom } AssumeNoGweiOverflowToUpdateSlashings(sv: seq<Validator>, adj: nat, total: nat)
         requires total > 0
         ensures forall i :: 0 <= i < |sv| 
                 ==> 0 <= sv[i].effective_balance as nat * adj / total < 0x10000000000000000
+    // {}
+
+    /**
+     *  A proof that a min relative to each balance doesn't cause a Gwei overflow.
+     *
+     *  @param  sv      A sequence of validators. 
+     *  @param  adj     A positive integer. 
+     *  @param  total   A positive integer. 
+     *  @return         A proof that min((s.balances[v] - s.balances[v] % EFFECTIVE_BALANCE_INCREMENT) as nat, 
+     *                  MAX_EFFECTIVE_BALANCE as nat)
+     *                  < 0x10000000000000000.
+     *
+     *  @note           This proof is assumed.
+     *  @note           A proof could be constructed on the basis of the total amount
+     *                  of Eth in existence.
+     */
+    lemma {:axiom } AssumeNoGweiOverflowToUpdateEffectiveBalance(sb: seq<Gwei>)
+        ensures forall i :: 0 <= i < |sb| 
+                ==> min((sb[i] - sb[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, 
+                         MAX_EFFECTIVE_BALANCE as nat
+                       ) as nat 
+                    < 0x10000000000000000
     // {}
 
     /**

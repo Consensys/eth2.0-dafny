@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../../utils/NonNativeTypes.dfy"
 include "../../ssz/Constants.dfy"
@@ -419,7 +419,7 @@ module EpochProcessing {
         
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
-        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        AssumeNoGweiOverflowToUpdateSlashings(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
         AssumeNoEpochOverflow(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2);
 
         s' := s;
@@ -480,12 +480,46 @@ module EpochProcessing {
      *  @note       This component has been simplified.
      */
     method process_effective_balance_updates(s: BeaconState) returns (s' : BeaconState)
+        requires |s.validators| == |s.balances| 
         requires is_valid_state_epoch_attestations(s)
 
-        ensures s' == updateEffectiveBalance(s)
+        ensures |s'.validators| == |s'.balances| 
         ensures is_valid_state_epoch_attestations(s')
+        ensures s' == updateEffectiveBalance(s)
     {
+        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.balances);
+
+        var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
+        var down := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
+        var up := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
+
         s' := s;
+        var i := 0;
+        assert s' == updateEffectiveBalanceHelper(s, i, up as nat, down as nat);
+
+        while i < |s'.balances|
+            invariant  |s.validators| == |s.balances| ==|s'.balances| == |s'.validators|
+            invariant i <= |s'.validators| == |s'.balances| 
+            invariant forall v :: i <= v < |s.validators| ==> s'.validators[v] == s.validators[v]
+            invariant forall v :: 0 <= v < |s.validators| ==> s'.balances[v] == s.balances[v]
+            invariant is_valid_state_epoch_attestations(s')
+            invariant s' == updateEffectiveBalanceHelper(s, i, up as nat, down as nat)
+        {
+            assert EFFECTIVE_BALANCE_INCREMENT > 0;
+            
+            if (s.balances[i] as nat + down as nat < s.validators[i].effective_balance as nat) 
+                || (s.validators[i].effective_balance as nat + up as nat < s.balances[i] as nat) {
+                    var new_bal := min((s.balances[i] - (s.balances[i] % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat);
+                    s' := set_effective_balance(s', i as ValidatorIndex, new_bal as Gwei);
+            }
+            
+            i := i + 1;
+            assert s' == updateEffectiveBalanceHelper(s, i, up as nat, down as nat);
+
+        }
+        assert s' == updateEffectiveBalanceHelper(s, i, up as nat, down as nat);
+        assert i == |s'.validators|;
+        assert s' == updateEffectiveBalance(s);
     }
     
     /** 

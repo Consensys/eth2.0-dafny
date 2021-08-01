@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1c
 
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
@@ -801,7 +801,7 @@ module EpochProcessingSpec {
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
         
-        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        AssumeNoGweiOverflowToUpdateSlashings(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
         assert forall v :: 0 <= v < |s.validators| 
                 ==> 0 <= s.validators[v].effective_balance as nat 
                         * adjusted_total_slashing_balance as nat 
@@ -974,12 +974,77 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the epoch effective balance updates.
      *  @note       This function matches to the simplified method currently being used 
-     *              and should be updated to if  process_effective_balance_updates changes.
+     *              and should be updated to if process_effective_balance_updates changes.
      */
     function updateEffectiveBalance(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
+
+        ensures is_valid_state_epoch_attestations(updateEffectiveBalance(s))
     {
-        s
+        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.balances);
+
+        var HYSTERESIS_INCREMENT := EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
+        var DOWNWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
+        var UPWARD_THRESHOLD := HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
+        updateEffectiveBalanceHelper(s, |s.validators|, UPWARD_THRESHOLD as nat, DOWNWARD_THRESHOLD as nat)
+    }
+
+    /**
+     *  A helper function for updateEffectiveBalance.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    The state obtained after applying the effective balance updates.
+     */
+    function updateEffectiveBalanceHelper(s: BeaconState, len: nat, up: nat, down: nat) : BeaconState
+        requires len <= |s.balances| == |s.validators| 
+        requires is_valid_state_epoch_attestations(s)
+        requires forall v :: 0 <= v < |s.validators| 
+                 ==> min((s.balances[v] - s.balances[v] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat) as nat 
+                < 0x10000000000000000
+            
+        ensures |updateEffectiveBalanceHelper(s,len, up, down).validators| == |s.validators|  
+        ensures |updateEffectiveBalanceHelper(s, len, up, down).balances| == |s.balances| 
+        ensures updateEffectiveBalanceHelper(s, len, up, down).balances == s.balances
+        ensures updateEffectiveBalanceHelper(s, len, up, down) 
+                == s.(validators := updateEffectiveBalanceHelper(s, len, up, down).validators)
+        ensures forall v :: len <= v < |s.validators| 
+                ==> updateEffectiveBalanceHelper(s,len, up, down).validators[v]  == s.validators[v]
+        ensures forall v :: 0 <= v < len ==> 
+            assert v < |s.validators|;
+            var new_val := if (s.balances[v] as nat + down < s.validators[v].effective_balance as nat) 
+                        || (s.validators[v].effective_balance as nat + up < s.balances[v] as nat)
+                        then 
+                            set_effective_balance(s, v as ValidatorIndex, min((s.balances[v] - s.balances[v] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei).validators[v] 
+                        else 
+                            s.validators[v]; 
+            updateEffectiveBalanceHelper(s,len, up, down).validators[v] == new_val
+       
+        ensures is_valid_state_epoch_attestations(updateEffectiveBalanceHelper(s,len, up, down))
+
+        decreases len
+    {
+        if len == 0 then s
+
+        else
+            var i := len - 1;
+            assert i < |s.balances|;
+            
+            var s1 := if (s.balances[i] as nat + down < s.validators[i].effective_balance as nat) 
+                        || (s.validators[i].effective_balance as nat + up < s.balances[i] as nat)
+                        then 
+                            var new_bal := min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat);
+                            set_effective_balance(s, i as ValidatorIndex, new_bal as Gwei)
+                        else s;   
+
+            assert s1.validators[i] == if (s.balances[i] as nat + down < s.validators[i].effective_balance as nat) 
+                                        || (s.validators[i].effective_balance as nat + up < s.balances[i] as nat)
+                                        then 
+                                            set_effective_balance(s, i as ValidatorIndex, min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei).validators[i] 
+                                        else 
+                                            s.validators[i];
+            AssumeIsValidStateEpoch_Attestations(s1);
+            updateEffectiveBalanceHelper(s1, len-1, up, down)
     }
     
     /**
