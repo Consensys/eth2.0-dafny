@@ -93,6 +93,21 @@ module BeaconHelperProofs {
     // {}
 
     /**
+     *  A proof that an amount (as a nat) doesn't cause a Gwei overflow.
+     *
+     *  @param  i   A positive integer. 
+     *  @return     A proof that i < 0x10000000000000000.
+     *
+     *  @note       This proof is assumed.
+     *  @note       A proof could be constructed on the basis of the total amount
+     *              of Eth in existence.
+     */
+    lemma {:axiom } AssumeNoGweiOverflowToAddRewards(s: BeaconState, r: seq<Gwei>)
+        requires |r| <= |s.balances| 
+        ensures forall i :: 0 <= i < |r| ==> s.balances[i] + r[i] < 0x10000000000000000
+    // {}
+
+    /**
      *  A proof that an epoch calculation (as a nat) doesn't cause an overflow.
      *
      *  @param  e   A positive integer. 

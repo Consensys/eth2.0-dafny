@@ -18,6 +18,7 @@ include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
+include "../Helpers.p.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../helpers/helper_lemmas/MathHelper.dfy"
 include "../../utils/NativeTypes.dfy"
@@ -36,6 +37,7 @@ module EpochProcessingSpec {
     import opened BeaconChainTypes
     import opened AttestationsTypes
     import opened BeaconHelpers
+    import opened BeaconHelperProofs
     import opened Eth2Types
     import opened MathHelperLemmas
     import opened NativeTypes
@@ -106,20 +108,30 @@ module EpochProcessingSpec {
         var s2 := updateRAndP(s1);
         assert s2 == updateRAndP(updateJustificationAndFinalisation(s));
 
-        var s3 := s2;
+        var s3 := updateRegistry(s2);
+        assert s3 == updateRegistry(
+                        updateRAndP(
+                            updateJustificationAndFinalisation(s)
+                        )
+                    );
+        
         assert |s3.validators| == |s3.balances| == |s.validators|;
         var s4 := updateSlashings(s3);
         assert s4 == updateSlashings(
-                        updateRAndP(
-                            updateJustificationAndFinalisation(s)
+                        updateRegistry(
+                            updateRAndP(
+                                updateJustificationAndFinalisation(s)
+                            )
                         )
                     );
 
         var s5 := updateEth1DataReset(s4);
         assert s5 == updateEth1DataReset(
                         updateSlashings(
-                            updateRAndP(
-                                updateJustificationAndFinalisation(s)
+                            updateRegistry(
+                                updateRAndP(
+                                    updateJustificationAndFinalisation(s)
+                                )
                             )
                         )
                     );
@@ -129,8 +141,10 @@ module EpochProcessingSpec {
         assert s6 == updateEffectiveBalance(
                         updateEth1DataReset(
                             updateSlashings(
-                                updateRAndP(
-                                    updateJustificationAndFinalisation(s)
+                                updateRegistry(
+                                    updateRAndP(
+                                        updateJustificationAndFinalisation(s)
+                                    )
                                 )
                             )
                         )
@@ -141,8 +155,10 @@ module EpochProcessingSpec {
                         updateEffectiveBalance(
                             updateEth1DataReset(
                                 updateSlashings(
-                                    updateRAndP(
-                                        updateJustificationAndFinalisation(s)
+                                    updateRegistry(
+                                        updateRAndP(
+                                            updateJustificationAndFinalisation(s)
+                                        )
                                     )
                                 )
                             )
@@ -155,8 +171,10 @@ module EpochProcessingSpec {
                             updateEffectiveBalance(
                                 updateEth1DataReset(
                                     updateSlashings(
-                                        updateRAndP(
-                                            updateJustificationAndFinalisation(s)
+                                        updateRegistry(
+                                            updateRAndP(
+                                                updateJustificationAndFinalisation(s)
+                                            )
                                         )
                                     )
                                 )
@@ -171,8 +189,10 @@ module EpochProcessingSpec {
                                 updateEffectiveBalance(
                                     updateEth1DataReset(
                                         updateSlashings(
-                                            updateRAndP(
-                                                updateJustificationAndFinalisation(s)
+                                            updateRegistry(
+                                                updateRAndP(
+                                                    updateJustificationAndFinalisation(s)
+                                                )
                                             )
                                         )
                                     )
@@ -189,8 +209,10 @@ module EpochProcessingSpec {
                                     updateEffectiveBalance(
                                         updateEth1DataReset(
                                             updateSlashings(
-                                                updateRAndP(
-                                                    updateJustificationAndFinalisation(s)
+                                                updateRegistry(
+                                                    updateRAndP(
+                                                        updateJustificationAndFinalisation(s)
+                                                    )
                                                 )
                                             )
                                         )
@@ -648,20 +670,14 @@ module EpochProcessingSpec {
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
          
-        ensures  if get_current_epoch(s) <= GENESIS_EPOCH + 1 then updateRAndP(s) == s
-                 else 
-                    updateRAndP(s) == updateRewardsAndPenalties(s, 
-                                                                get_attestation_deltas(s).0, 
-                                                                get_attestation_deltas(s).1
-                                                               )
         ensures is_valid_state_epoch_attestations(updateRAndP(s))
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then s
         else
-            assume get_previous_epoch(s) >= s.finalised_checkpoint.epoch;
-            assert EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s);
-            assert 1 <= get_previous_epoch(s);
             var (rewards, penalties) := get_attestation_deltas(s);
+            AssumeNoGweiOverflowToAddRewards(s, rewards);
+            assert forall i :: 0 <= i < |rewards| 
+                     ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
             updateRewardsAndPenalties(s, rewards, penalties)
     }
 
@@ -682,16 +698,17 @@ module EpochProcessingSpec {
                                       ): BeaconState
         requires |rewards| == |penalties| <= |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
+        requires forall i :: 0 <= i < |rewards| 
+                     ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
         
         ensures |s.balances| == |updateRewardsAndPenalties(s, rewards, penalties).balances|
         ensures |s.validators| == |updateRewardsAndPenalties(s, rewards, penalties).validators|
         ensures forall i :: |rewards| <= i < |s.balances| 
                     ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] == s.balances[i]
         ensures 
-             assume forall i :: 0 <= i < |rewards| 
-                    ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
-             forall i :: 0 <= i < |rewards| 
-                    ==> updateRewardsAndPenalties(s, rewards, penalties).balances[i] 
+            forall i :: 0 <= i < |rewards| 
+                    ==> 
+                        updateRewardsAndPenalties(s, rewards, penalties).balances[i] 
                         == if s.balances[i] + rewards[i] > penalties[i] 
                         then s.balances[i] + rewards[i] - penalties[i]
                         else 0 as Gwei
@@ -705,8 +722,6 @@ module EpochProcessingSpec {
     {
         if |rewards| == 0 then s
         else
-            assume forall i :: 0 <= i < |rewards| 
-                ==> s.balances[i] as nat + rewards[i] as nat < 0x10000000000000000;
             var index := |rewards| - 1;
             var s1 := increase_balance(s, index as ValidatorIndex, rewards[index]);
             assert s1.balances[index] == s.balances[index] + rewards[index];
@@ -719,6 +734,20 @@ module EpochProcessingSpec {
                     then s2.balances[index] == s.balances[index] + rewards[index] - penalties[index] 
                     else s2.balances[index] == 0 as Gwei;
             updateRewardsAndPenalties(s2, rewards[..index], penalties[..index])
+    }
+
+    /**
+     *  The functional equivalent of process_registry_updates.
+     *
+     *  @param  s   A beacon state.
+     *  @returns    The state obtained after applying the epoch registy updates.
+     *  @note       This function matches to the simplified method currently being used 
+     *              and should be updated to if  process_registry_updates changes.
+     */
+    function updateRegistry(s: BeaconState) : BeaconState
+        requires is_valid_state_epoch_attestations(s)
+    {
+        s
     }
 
     /**

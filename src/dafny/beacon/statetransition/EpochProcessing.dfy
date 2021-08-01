@@ -18,6 +18,7 @@ include "../../utils/NonNativeTypes.dfy"
 include "../../ssz/Constants.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
+include "../Helpers.p.dfy"
 include "EpochProcessing.s.dfy"
 include "ProcessOperations.s.dfy"
 include "../../utils/Eth2Types.dfy"
@@ -34,6 +35,7 @@ module EpochProcessing {
     import opened BeaconChainTypes
     import opened AttestationsTypes
     import opened BeaconHelpers
+    import opened BeaconHelperProofs
     import opened EpochProcessingSpec
     import opened ProcessOperationsSpec
     import opened Eth2Types
@@ -330,16 +332,14 @@ module EpochProcessing {
         }
         
         s' := s;
-        assume get_previous_epoch(s) >= s.finalised_checkpoint.epoch;
-        assert EFFECTIVE_BALANCE_INCREMENT <= get_total_active_balance_full(s); 
-        assert 1 <= get_previous_epoch(s);
         var (rewards, penalties) := get_attestation_deltas(s');
         var i := 0;
         
         assert s' == updateRewardsAndPenalties(s, rewards[..i], penalties[..i]);
-        // assume statements are used throughout to prevent overflows 
-        assume forall v :: 0 <= v < |rewards| 
-                ==> s.balances[v] as nat + rewards[v] as nat < 0x10000000000000000;
+        // An assume lemma is used to prevent overflows 
+        AssumeNoGweiOverflowToAddRewards(s', rewards);
+        // i.e. assume forall v :: 0 <= v < |rewards| 
+        //        ==> s.balances[v] as nat + rewards[v] as nat < 0x10000000000000000;
         
         while i < |s'.validators| 
             invariant i <= |rewards| == |penalties|
@@ -370,6 +370,23 @@ module EpochProcessing {
         assert penalties[..i] == penalties;
         assert s' == updateRewardsAndPenalties(s, rewards, penalties);
         assert s' == updateRAndP(s);
+    }
+
+    /** 
+     *  Process registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the epoch registry updates
+     *
+     *  @note       This component has been simplified.
+     */
+    method process_registry_updates(s: BeaconState) returns (s' : BeaconState)
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures s' == updateRegistry(s)
+        ensures is_valid_state_epoch_attestations(s')
+    {
+        s' := s;
     }
 
     /** 
