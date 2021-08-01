@@ -89,6 +89,7 @@ module EpochProcessingSpec {
                             )
         ensures updateEpoch(s).latest_block_header == s.latest_block_header
         ensures is_valid_state_epoch_attestations(updateEpoch(s))
+        ensures |updateEpoch(s).validators| == |s.validators|
     {
         var s1 := updateFinalisedCheckpoint(updateJustification(s), s);
         assert s1 == updateJustificationAndFinalisation(s);
