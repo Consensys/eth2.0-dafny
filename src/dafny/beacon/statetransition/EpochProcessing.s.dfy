@@ -764,31 +764,31 @@ module EpochProcessingSpec {
     function updateSlashings(s: BeaconState) : BeaconState
         requires |s.balances| == |s.validators|
         requires is_valid_state_epoch_attestations(s)
-        ensures 
-            var epoch := get_current_epoch(s);
-            var total_balance := get_total_active_balance_full(s);
-            var sumSlashings := get_total_slashings(s.slashings);
-            var adjusted_total_slashing_balance 
-                := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat, 
-                        total_balance as nat
-                      ) as Gwei;
-            var increment := EFFECTIVE_BALANCE_INCREMENT; 
-            assert total_balance > 0 as Gwei;
-            assert increment > 0 as Gwei;
-            assume forall v :: 0 <= v < |s.validators| 
-                    ==> 0 
-                        <= s.validators[v].effective_balance as nat 
-                            * adjusted_total_slashing_balance as nat 
-                            / total_balance  as nat
-                        < 0x10000000000000000;
-            assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
-            updateSlashings(s) == updateSlashingsHelper(s, 
-                                                        |s.validators|, 
-                                                        epoch, 
-                                                        total_balance, 
-                                                        adjusted_total_slashing_balance, 
-                                                        increment
-                                                       )
+        // ensures 
+        //     var epoch := get_current_epoch(s);
+        //     var total_balance := get_total_active_balance_full(s);
+        //     var sumSlashings := get_total_slashings(s.slashings);
+        //     var adjusted_total_slashing_balance 
+        //         := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat, 
+        //                 total_balance as nat
+        //               ) as Gwei;
+        //     var increment := EFFECTIVE_BALANCE_INCREMENT; 
+        //     assert total_balance > 0 as Gwei;
+        //     assert increment > 0 as Gwei;
+        //     assume forall v :: 0 <= v < |s.validators| 
+        //             ==> 0 
+        //                 <= s.validators[v].effective_balance as nat 
+        //                     * adjusted_total_slashing_balance as nat 
+        //                     / total_balance  as nat
+        //                 < 0x10000000000000000;
+        //     assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+        //     updateSlashings(s) == updateSlashingsHelper(s, 
+        //                                                 |s.validators|, 
+        //                                                 epoch, 
+        //                                                 total_balance, 
+        //                                                 adjusted_total_slashing_balance, 
+        //                                                 increment
+        //                                                )
         ensures is_valid_state_epoch_attestations(updateSlashings(s))
     {
         var epoch := get_current_epoch(s);
@@ -800,13 +800,15 @@ module EpochProcessingSpec {
         var increment := EFFECTIVE_BALANCE_INCREMENT; 
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
-        assume forall v :: 0 <= v < |s.validators| 
-                ==> 0 
-                    <= s.validators[v].effective_balance as nat 
+        
+        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        assert forall v :: 0 <= v < |s.validators| 
+                ==> 0 <= s.validators[v].effective_balance as nat 
                         * adjusted_total_slashing_balance as nat 
                         / total_balance  as nat 
                     < 0x10000000000000000;
-        assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
+        AssumeNoEpochOverflow(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2);
+        assert epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
         updateSlashingsHelper(s, 
                               |s.validators|, 
                               epoch, 
@@ -833,8 +835,7 @@ module EpochProcessingSpec {
         requires total_balance > 0 as Gwei
         requires increment > 0 as Gwei
         requires forall v :: 0 <= v < |s.validators| 
-                 ==> 0 
-                    <= s.validators[v].effective_balance as nat 
+                 ==> 0<= s.validators[v].effective_balance as nat 
                         * adjusted_total_slashing_balance as nat 
                         / total_balance  as nat 
                     < 0x10000000000000000

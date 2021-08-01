@@ -419,12 +419,8 @@ module EpochProcessing {
         
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
-        assume forall v :: 0 <= v < |s.validators| 
-                ==> 0 
-                <= s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat 
-                < 0x10000000000000000;
-        assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 
-                < 0x10000000000000000;
+        AssumeNoGweiOverflowToUpdateEffectiveBalance(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        AssumeNoEpochOverflow(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2);
 
         s' := s;
         var i := 0;
@@ -438,25 +434,8 @@ module EpochProcessing {
         while i < |s'.balances|
             invariant  |s.validators| == |s.balances| ==|s'.balances| == |s'.validators|
             invariant i <= |s'.validators| == |s'.balances| 
-            invariant s.validators == s'.validators
-            invariant forall v :: i <= v < |s.balances| ==> s'.balances[v] ==  s.balances[v]
-            invariant s' == s.(balances := s'.balances)
-            invariant s' == s.(balances := s'.balances)
-            invariant forall v :: 0 <= v < i ==> 
-                assert v < |s.balances|;
-                var new_bal := if (s.validators[v].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) 
-                                    == s.validators[v].withdrawable_epoch)
-                                    then decrease_balance(s, 
-                                                          v as ValidatorIndex, 
-                                                          (s.validators[v].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance as nat) as Gwei
-                                                         ).balances[v]
-                                    else s.balances[v];
-                updateSlashingsHelper(s, 
-                                      i, 
-                                      epoch, 
-                                      total_balance, 
-                                      adjusted_total_slashing_balance, increment
-                                     ).balances[v] == new_bal
+            //invariant forall v :: i <= v < |s.balances| ==> s'.balances[v] ==  s.balances[v]
+            //invariant s' == s.(balances := s'.balances)
             invariant s' == updateSlashingsHelper(s, i, epoch, total_balance, adjusted_total_slashing_balance, increment)
         {
             if (s'.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s'.validators[i].withdrawable_epoch) {
@@ -465,13 +444,6 @@ module EpochProcessing {
                                        (s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat) as Gwei);
             }
             
-            assert s'.balances[i] == if (s.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) 
-                                        == s.validators[i].withdrawable_epoch)
-                                        then decrease_balance(s, 
-                                                              i as ValidatorIndex, 
-                                                              (s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance as nat) as Gwei
-                                                             ).balances[i]
-                                        else s.balances[i];
             i := i + 1;
         }
         assert s' == updateSlashingsHelper(s, i, epoch, total_balance, adjusted_total_slashing_balance, increment);

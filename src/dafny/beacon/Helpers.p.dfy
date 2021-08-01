@@ -93,10 +93,11 @@ module BeaconHelperProofs {
     // {}
 
     /**
-     *  A proof that an amount (as a nat) doesn't cause a Gwei overflow.
+     *  A proof that an amount (as a nat) added to each balance doesn't cause a Gwei overflow.
      *
-     *  @param  i   A positive integer. 
-     *  @return     A proof that i < 0x10000000000000000.
+     *  @param  s   A beacon state. 
+     *  @param  r   A sqeuence of amounts. 
+     *  @return     A proof that s.balances[i] + r[i] < 0x10000000000000000.
      *
      *  @note       This proof is assumed.
      *  @note       A proof could be constructed on the basis of the total amount
@@ -104,7 +105,26 @@ module BeaconHelperProofs {
      */
     lemma {:axiom } AssumeNoGweiOverflowToAddRewards(s: BeaconState, r: seq<Gwei>)
         requires |r| <= |s.balances| 
-        ensures forall i :: 0 <= i < |r| ==> s.balances[i] + r[i] < 0x10000000000000000
+        ensures forall i :: 0 <= i < |r| ==> s.balances[i] as nat + r[i] as nat < 0x10000000000000000
+    // {}
+
+    /**
+     *  A proof that an amount (as a nat) added to each balance doesn't cause a Gwei overflow.
+     *
+     *  @param  sv      A sequence of validators. 
+     *  @param  adj     A positive integer. 
+     *  @param  total   A positive integer. 
+     *  @return         A proof that  s.validators[i].effective_balance as nat * adj / total
+     *                  < 0x10000000000000000.
+     *
+     *  @note           This proof is assumed.
+     *  @note           A proof could be constructed on the basis of the total amount
+     *                  of Eth in existence.
+     */
+    lemma {:axiom } AssumeNoGweiOverflowToUpdateEffectiveBalance(sv: seq<Validator>, adj: nat, total: nat)
+        requires total > 0
+        ensures forall i :: 0 <= i < |sv| 
+                ==> 0 <= sv[i].effective_balance as nat * adj / total < 0x10000000000000000
     // {}
 
     /**
