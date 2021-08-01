@@ -58,15 +58,14 @@ module StateTransitionSpec {
     function forwardStateToSlot(s: BeaconState, slot: Slot) : BeaconState 
         requires s.slot <= slot
         requires |s.validators| == |s.balances|
-        requires minimumActiveValidators(s)
+        requires is_valid_state_epoch_attestations(s)
 
         ensures forwardStateToSlot(s, slot).slot == slot
         ensures forwardStateToSlot(s, slot).eth1_deposit_index == s.eth1_deposit_index
         ensures |forwardStateToSlot(s, slot).validators| == |forwardStateToSlot(s, slot).balances|
-        ensures minimumActiveValidators(forwardStateToSlot(s, slot))
-        //ensures forwardStateToSlot(s, slot).validators == s.validators
-        //ensures forwardStateToSlot(s, slot).balances == s.balances
-        //ensures forwardStateToSlot(s, slot).eth1_data_votes == s.eth1_data_votes
+        ensures |forwardStateToSlot(s, slot).validators| == |s.validators|
+        ensures |forwardStateToSlot(s, slot).eth1_data_votes| <= |s.eth1_data_votes| 
+        ensures is_valid_state_epoch_attestations(forwardStateToSlot(s, slot))
         
         //  termination ranking function
         decreases slot - s.slot
@@ -77,7 +76,6 @@ module StateTransitionSpec {
             var s1 := forwardStateToSlot(s, slot - 1);
             assert |s1.validators| == |s1.balances|;
 
-            PreviousEpochAttestationsProperties(s1);
             nextSlot(s1)
     }
     
@@ -90,24 +88,15 @@ module StateTransitionSpec {
     function nextSlot(s: BeaconState) : BeaconState 
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         requires |s.validators| == |s.balances|
-        requires minimumActiveValidators(s)
+        requires is_valid_state_epoch_attestations(s)
 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> a.data.index 
-                        < get_committee_count_per_slot(s, compute_epoch_at_slot(a.data.slot)) 
-                        <= TWO_UP_6 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> TWO_UP_5 as nat 
-                        <= |get_active_validator_indices(s.validators, compute_epoch_at_slot(a.data.slot))| 
-                        <= TWO_UP_11 as nat * TWO_UP_11 as nat 
-        requires forall a :: a in s.previous_epoch_attestations 
-                    ==> 0 
-                        < |get_beacon_committee(s, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                        <= MAX_VALIDATORS_PER_COMMITTEE as nat 
-       
         ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
-        ensures minimumActiveValidators(nextSlot(s))
-        
+        ensures is_valid_state_epoch_attestations(nextSlot(s))
+        ensures |nextSlot(s).validators| == |nextSlot(s).balances| 
+        ensures |nextSlot(s).eth1_data_votes| <= |s.eth1_data_votes| 
+        ensures |nextSlot(s).validators| == |s.validators|
+        ensures nextSlot(s).eth1_deposit_index == s.eth1_deposit_index
+
         /** If s.slot is not at the boundary of an epoch, the 
             attestation/finality fields are unchanged. */
         ensures  (s.slot as nat + 1) %  SLOTS_PER_EPOCH as nat != 0  ==>
@@ -118,11 +107,8 @@ module StateTransitionSpec {
             && nextSlot(s).current_justified_checkpoint  == s.current_justified_checkpoint
             && nextSlot(s).validators  == s.validators
             && nextSlot(s).balances  == s.balances
-            && |nextSlot(s).validators| == |nextSlot(s).balances| 
             && nextSlot(s).eth1_data_votes ==  s.eth1_data_votes
-            &&  nextSlot(s).eth1_deposit_index  == s.eth1_deposit_index
-            // add remainging fields that are unchanged
-
+            && nextSlot(s).eth1_deposit_index  == s.eth1_deposit_index
     {
             if (s.slot + 1) %  SLOTS_PER_EPOCH == 0 then 
                 //  Apply update on partially resolved state, and then update slot
@@ -130,32 +116,29 @@ module StateTransitionSpec {
                 // updateJustification(resolveStateRoot(s).(slot := s.slot)).(slot := s.slot + 1)
                 var s1 := resolveStateRoot(s).(slot := s.slot);
                 assert s1.latest_block_header.state_root != DEFAULT_BYTES32;
-
                 assert |s1.validators| == |s1.balances|;
-
-                assert forall a :: a in s1.previous_epoch_attestations 
-                        ==> a.data.index 
-                            < get_committee_count_per_slot(s1, compute_epoch_at_slot(a.data.slot)) 
-                            <= TWO_UP_6 ;
-                assert forall a :: a in s1.previous_epoch_attestations 
-                        ==> TWO_UP_5 as nat 
-                            <= |get_active_validator_indices(s1.validators, compute_epoch_at_slot(a.data.slot))| 
-                            <= TWO_UP_11 as nat * TWO_UP_11 as nat ;
-                assert forall a :: a in s1.previous_epoch_attestations 
-                        ==> 0 
-                            < |get_beacon_committee(s1, a.data.slot, a.data.index)| == |a.aggregation_bits| 
-                            <= MAX_VALIDATORS_PER_COMMITTEE as nat ;
+                assert is_valid_state_epoch_attestations(s1);
        
                 var s2 := updateEpoch(s1);
                 assert s2.latest_block_header.state_root != DEFAULT_BYTES32;
+                assert is_valid_state_epoch_attestations(s2);
                 //var s3 := finalUpdates(s2);
                 //var s4 := s3.(slot := s.slot + 1);
                 var s3 := s2.(slot := s.slot + 1);
-                SetMinimumNumberOfValidators(s3);
+                nextSlotLemma(s2, s3);
+                assert is_valid_state_epoch_attestations(s3);
                 s3
             else 
                 //  @note: this captures advanceSlot as a special case of resolveStateRoot 
                 resolveStateRoot(s)
+    }
+
+    lemma nextSlotLemma(s: BeaconState, s1: BeaconState)
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        requires s1 == s.(slot := s.slot + 1)
+        requires is_valid_state_epoch_attestations(s)
+        ensures is_valid_state_epoch_attestations(s1)
+    {   // Thanks Dafny
     }
 
     /**
@@ -171,7 +154,7 @@ module StateTransitionSpec {
     function resolveStateRoot(s: BeaconState): BeaconState 
         //  Make sure s.slot does not  overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
-        requires minimumActiveValidators(s)
+        requires is_valid_state_epoch_attestations(s)
 
         //  parent_root of the state block header is preserved
         ensures s.latest_block_header.parent_root == resolveStateRoot(s).latest_block_header.parent_root
@@ -181,11 +164,13 @@ module StateTransitionSpec {
         ensures s.eth1_data_votes == resolveStateRoot(s).eth1_data_votes
         //  previous_epoch_attestations unchanged
         ensures s.previous_epoch_attestations == resolveStateRoot(s).previous_epoch_attestations
-
+        ensures |resolveStateRoot(s).eth1_data_votes| <= |s.eth1_data_votes| 
+        ensures |resolveStateRoot(s).validators| == |s.validators|
+        
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             resolveStateRoot(s) == advanceSlot(s)
         
-        ensures minimumActiveValidators(resolveStateRoot(s))
+        ensures is_valid_state_epoch_attestations(resolveStateRoot(s))
     {
         var new_latest_block_header := 
             if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
@@ -200,7 +185,6 @@ module StateTransitionSpec {
                 block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
                 state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
             );
-        SetMinimumNumberOfValidators(s');
         s'
     }
 
@@ -249,28 +233,19 @@ module StateTransitionSpec {
         //  Check that number of deposits in b.body can be processed
         && s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
         && |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
-        // note that |b.body.deposits| is larger than required, only existing + new validators need to obey this bound
-        && total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
-        // note that the |b.body.deposits| and total_deposits should refer to valid deposits
         && |s.validators| == |s.balances|
         && |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
-        // && b.parent_root == 
-        //     hash_tree_root(
-        //         forwardStateToSlot(nextSlot(s), 
-        //         b.slot
-        //     ).latest_block_header) 
-        // //  Check that the block provides the correct hash for the state.
-        // &&  b.state_root == hash_tree_root(
-        //         updateDeposits(
-        //             updateEth1Data(
-        //                 addBlockToState(
-        //                     forwardStateToSlot(nextSlot(s), b.slot), 
-        //                     b
-        //                 ),
-        //                 b.body),
-        //             b.body.deposits
-        //         )
-        //     )
+        && is_valid_state_epoch_attestations(s)
+    
+        && total_balances(forwardStateToSlot(nextSlot(s), b.slot).balances) + total_deposits(b.body.deposits) < 0x10000000000000000
+        && minimumActiveValidators(forwardStateToSlot(nextSlot(s), b.slot))
+        && b.parent_root == 
+            hash_tree_root(forwardStateToSlot(nextSlot(s), b.slot).latest_block_header) 
+        && isValidBeaconBlockBody(updateEth1Data(updateRandao(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot), b), b.body), b.body), b.body)
+        // Check that the block provides the correct hash for the state.
+        &&  b.state_root == hash_tree_root(
+                updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b) 
+            )
     }
 
     /**
@@ -288,35 +263,30 @@ module StateTransitionSpec {
         requires |s.validators| == |s.balances|
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
         requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
-        requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
-        requires isValidBeaconBlockBody(s, b.body)
+        //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
+        requires minimumActiveValidators(s)
+        requires isValidBeaconBlockBody(updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body), b.body)
 
-        // ensures updateBlock(s,b).slot == b.slot
-        // ensures updateBlock(s,b).latest_block_header 
-        //          == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
-        // ensures |updateBlock(s,b).validators| == |updateBlock(s,b).balances|
-        // ensures updateBlock(s,b) 
-        //          == updateOperations(updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body), b.body)
+        ensures updateBlock(s,b).slot == b.slot
+        ensures updateBlock(s,b).latest_block_header 
+                == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
+        ensures |updateBlock(s,b).validators| == |updateBlock(s,b).balances|
+        ensures updateBlock(s,b) 
+                  == updateOperations(updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body), b.body)
     {
         //  Start by creating a block header from the ther actual block.
         var s1 := addBlockToState(s, b); 
         assert s1 == addBlockToState(s, b);
-        assert (s1.balances == s.balances);
-        assert (s1.validators == s.validators);
+        assert s1.slot == s.slot == b.slot;
         
         var s2 := updateRandao(s1, b.body);
         assert s2 == updateRandao(addBlockToState(s, b), b.body);
-        assert (s2.balances == s.balances);
-        assert (s2.validators == s.validators);
         
         var s3 := updateEth1Data(s2, b.body);
-        assert (s3.balances == s.balances);
-        assert (s3.validators == s.validators);
-        assert |s3.validators| == |s3.balances|;
         assert s3 == updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body);
 
-        assert |get_active_validator_indices(s3.validators, get_current_epoch(s3))| > 0;
-        assume isValidBeaconBlockBody(s3, b.body);
+        assert minimumActiveValidators(s3);
+        assert isValidBeaconBlockBody(s3, b.body);
         
         var s4 := updateOperations(s3, b.body);
         assert s4 == updateOperations(
@@ -325,10 +295,10 @@ module StateTransitionSpec {
                                          b.body), 
                             b.body), 
                         b.body);
+        assert s4.slot == b.slot;
         s4
     }
 
-    
     /**
      *  Result of processing a block to update the latest block header.
      *  
@@ -342,13 +312,17 @@ module StateTransitionSpec {
         // Verify that the parent matches
         requires b.parent_root == hash_tree_root(s.latest_block_header) 
         requires |s.validators| == |s.balances| 
+        requires minimumActiveValidators(s)
         
+        ensures addBlockToState(s,b).slot == s.slot == b.slot
         ensures |addBlockToState(s,b).validators| == |addBlockToState(s,b).balances|
         ensures addBlockToState(s,b).eth1_data_votes == s.eth1_data_votes
-        // ensures |addBlockToState(s,b).eth1_data_votes| == |s.eth1_data_votes|
         ensures addBlockToState(s,b).eth1_deposit_index == s.eth1_deposit_index
         ensures addBlockToState(s,b).validators == s.validators
         ensures addBlockToState(s,b).balances == s.balances
+        ensures minimumActiveValidators(addBlockToState(s,b))
+        ensures addBlockToState(s,b).latest_block_header 
+                == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
     {
         s.(
             latest_block_header := BeaconBlockHeader(
@@ -370,10 +344,13 @@ module StateTransitionSpec {
      */
     function updateRandao(s: BeaconState, b: BeaconBlockBody) : BeaconState
         requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
         
         ensures |updateRandao(s,b).validators| == |updateRandao(s,b).balances|
         ensures updateRandao(s,b) == s.(randao_mixes := updateRandao(s,b).randao_mixes)
+        ensures updateRandao(s,b).slot == s.slot
         ensures updateRandao(s,b).latest_block_header == s.latest_block_header
+        ensures minimumActiveValidators(updateRandao(s,b))
     {
         var epoch := get_current_epoch(s);
 
@@ -399,11 +376,15 @@ module StateTransitionSpec {
     function updateEth1Data(s: BeaconState, b: BeaconBlockBody) :  BeaconState 
         requires |s.validators| == |s.balances| 
         requires |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
+        requires minimumActiveValidators(s)
         
         ensures |updateEth1Data(s,b).validators| == |updateEth1Data(s,b).balances|
         ensures updateEth1Data(s,b).eth1_deposit_index == s.eth1_deposit_index
         ensures updateEth1Data(s,b).validators == s.validators
         ensures updateEth1Data(s,b).balances == s.balances
+        ensures updateEth1Data(s,b).slot == s.slot
+        ensures updateEth1Data(s,b).latest_block_header == s.latest_block_header
+        ensures minimumActiveValidators(updateEth1Data(s,b))
     {
         s.( eth1_data_votes := s.eth1_data_votes + [b.eth1_data],
             eth1_data := if (count_eth1_data_votes(s.eth1_data_votes + [b.eth1_data], b.eth1_data) * 2) 
