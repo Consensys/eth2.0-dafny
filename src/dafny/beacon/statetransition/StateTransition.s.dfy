@@ -57,6 +57,25 @@ module StateTransitionSpec {
         ensures |forwardStateToSlot(s, slot).validators| == |forwardStateToSlot(s, slot).balances|
         ensures |forwardStateToSlot(s, slot).validators| == |s.validators|
         ensures |forwardStateToSlot(s, slot).eth1_data_votes| <= |s.eth1_data_votes| 
+
+        ensures forwardStateToSlot(s, slot)
+                == s.(slot := forwardStateToSlot(s, slot).slot,
+                      latest_block_header := forwardStateToSlot(s, slot).latest_block_header,
+                      block_roots := forwardStateToSlot(s, slot).block_roots,
+                      state_roots := forwardStateToSlot(s, slot).state_roots,
+                      validators := forwardStateToSlot(s, slot).validators,
+                      balances := forwardStateToSlot(s, slot).balances,
+                      slashings := forwardStateToSlot(s, slot).slashings,
+                      eth1_data_votes := forwardStateToSlot(s, slot).eth1_data_votes,
+                      randao_mixes := forwardStateToSlot(s, slot).randao_mixes,
+                      historical_roots := forwardStateToSlot(s, slot).historical_roots,
+                      previous_epoch_attestations := forwardStateToSlot(s, slot).previous_epoch_attestations,
+                      current_epoch_attestations := forwardStateToSlot(s, slot).current_epoch_attestations,
+                      current_justified_checkpoint := forwardStateToSlot(s, slot).current_justified_checkpoint,
+                      previous_justified_checkpoint := forwardStateToSlot(s, slot).previous_justified_checkpoint,
+                      justification_bits := forwardStateToSlot(s, slot).justification_bits,
+                      finalised_checkpoint := forwardStateToSlot(s, slot).finalised_checkpoint
+                     )
         ensures is_valid_state_epoch_attestations(forwardStateToSlot(s, slot))
         
         //  termination ranking function
@@ -101,8 +120,27 @@ module StateTransitionSpec {
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
 
-        ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
+        ensures nextSlot(s)
+                == s.(slot := nextSlot(s).slot,
+                      latest_block_header := nextSlot(s).latest_block_header,
+                      block_roots := nextSlot(s).block_roots,
+                      state_roots := nextSlot(s).state_roots,
+                      validators := nextSlot(s).validators,
+                      balances := nextSlot(s).balances,
+                      slashings := nextSlot(s).slashings,
+                      eth1_data_votes := nextSlot(s).eth1_data_votes,
+                      randao_mixes := nextSlot(s).randao_mixes,
+                      historical_roots := nextSlot(s).historical_roots,
+                      previous_epoch_attestations := nextSlot(s).previous_epoch_attestations,
+                      current_epoch_attestations := nextSlot(s).current_epoch_attestations,
+                      current_justified_checkpoint := nextSlot(s).current_justified_checkpoint,
+                      previous_justified_checkpoint := nextSlot(s).previous_justified_checkpoint,
+                      justification_bits := nextSlot(s).justification_bits,
+                      finalised_checkpoint := nextSlot(s).finalised_checkpoint
+                     )
         ensures is_valid_state_epoch_attestations(nextSlot(s))
+        
+        ensures nextSlot(s).latest_block_header.state_root != DEFAULT_BYTES32
         ensures |nextSlot(s).validators| == |nextSlot(s).balances| 
         ensures |nextSlot(s).eth1_data_votes| <= |s.eth1_data_votes| 
         ensures |nextSlot(s).validators| == |s.validators|
@@ -331,6 +369,20 @@ module StateTransitionSpec {
                                 b.body), 
                             b.body), 
                         b.body)
+
+        ensures updateBlock(s,b)
+                == s.(latest_block_header := updateBlock(s,b).latest_block_header,
+                      validators := updateBlock(s,b).validators,
+                      balances := updateBlock(s,b).balances,
+                      slashings := updateBlock(s,b).slashings,
+                      randao_mixes := updateBlock(s,b).randao_mixes,
+                      current_epoch_attestations := updateBlock(s,b).current_epoch_attestations,
+                      previous_epoch_attestations := updateBlock(s,b).previous_epoch_attestations,
+                      eth1_deposit_index := updateBlock(s,b).eth1_deposit_index,
+                      eth1_data_votes := updateBlock(s,b).eth1_data_votes,
+                      eth1_data := updateBlock(s,b).eth1_data
+                     )
+        ensures minimumActiveValidators(updateBlock(s,b))
     {
         //  Start by creating a block header from the ther actual block.
         var s1 := addBlockToState(s, b); 
@@ -378,6 +430,8 @@ module StateTransitionSpec {
         ensures addBlockToState(s,b).eth1_deposit_index == s.eth1_deposit_index
         ensures addBlockToState(s,b).validators == s.validators
         ensures addBlockToState(s,b).balances == s.balances
+        
+        ensures addBlockToState(s,b) == s.(latest_block_header := addBlockToState(s,b).latest_block_header)
         ensures minimumActiveValidators(addBlockToState(s,b))
         ensures addBlockToState(s,b).latest_block_header 
                 == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
@@ -405,9 +459,10 @@ module StateTransitionSpec {
         requires minimumActiveValidators(s)
         
         ensures |updateRandao(s,b).validators| == |updateRandao(s,b).balances|
-        ensures updateRandao(s,b) == s.(randao_mixes := updateRandao(s,b).randao_mixes)
         ensures updateRandao(s,b).slot == s.slot
         ensures updateRandao(s,b).latest_block_header == s.latest_block_header
+
+        ensures updateRandao(s,b) == s.(randao_mixes := updateRandao(s,b).randao_mixes)
         ensures minimumActiveValidators(updateRandao(s,b))
     {
         var epoch := get_current_epoch(s);
@@ -442,6 +497,10 @@ module StateTransitionSpec {
         ensures updateEth1Data(s,b).balances == s.balances
         ensures updateEth1Data(s,b).slot == s.slot
         ensures updateEth1Data(s,b).latest_block_header == s.latest_block_header
+
+        ensures updateEth1Data(s,b) == s.(eth1_data_votes := updateEth1Data(s,b).eth1_data_votes,
+                                          eth1_data := updateEth1Data(s,b).eth1_data
+                                         )
         ensures minimumActiveValidators(updateEth1Data(s,b))
     {
         s.( eth1_data_votes := s.eth1_data_votes + [b.eth1_data],
