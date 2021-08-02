@@ -44,7 +44,7 @@ module EpochProcessing {
      *  @param  s   A beacon state.
      *  @returns    
      */
-    method process_epoch(s: BeaconState, store: Store) returns (s' : BeaconState) 
+    method  {:verify false} process_epoch(s: BeaconState, store: Store) returns (s' : BeaconState) 
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         //  And we should only execute this method when:
@@ -140,7 +140,7 @@ module EpochProcessing {
      *
      *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#justification-and-finalization}
      */
-    method process_justification_and_finalization(s : BeaconState, store: Store) returns (s' : BeaconState) 
+    method {:verify false} process_justification_and_finalization(s : BeaconState, store: Store) returns (s' : BeaconState) 
         requires (s.slot as nat + 1) % SLOTS_PER_EPOCH as nat == 0
 
         /** Store is well-formed. */

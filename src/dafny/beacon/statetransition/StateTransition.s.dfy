@@ -284,7 +284,7 @@ module StateTransitionSpec {
      *  
      *  Std: 163secs, split 1100secs   
      *  @todo The case  (s.slot + 1) %  SLOTS_PER_EPOCH == 0 seems to take a huge amount of time.
-     *  so it is disabled (and can be verified separately.
+     *  So verification is disabled (and can be verified separately.
      */
     function {:verify false} nextSlot(s: BeaconState, store: Store): (s': BeaconState) 
         /** Store is well-formed. */
@@ -297,8 +297,6 @@ module StateTransitionSpec {
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
 
         requires |s.validators| == |s.balances|
-
-        requires  (s.slot + 1) %  SLOTS_PER_EPOCH != 0
 
         ensures s'.latest_block_header.state_root != DEFAULT_BYTES32
         /** If s.slot is not at the boundary of an epoch, the 
