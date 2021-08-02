@@ -12,6 +12,9 @@
  * under the License.
  */
 
+ //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+
+
 include "../ssz/Constants.dfy"
 include "../utils/NativeTypes.dfy"
 include "../utils/Eth2Types.dfy"
@@ -20,7 +23,7 @@ include "validators/Validators.dfy"
 include "attestations/AttestationsTypes.dfy"
 
 /**
- *  Provide types used in the Beacon Chain.
+ *  Provide types (and their defaults) used in the Beacon Chain.
  */
 module BeaconChainTypes { 
     
