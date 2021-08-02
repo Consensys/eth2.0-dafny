@@ -12,13 +12,14 @@
  * under the License.
  */
 
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+
 include "../../utils/Eth2Types.dfy"
 include "../../ssz/Constants.dfy"
 include "../../utils/Helpers.dfy"
-include "../../utils/SetHelpers.dfy"
 
 /**
- *  Provide datatype for fork choice rule (and LMD-GHOST)
+ *  Provide datatypes (and their defaults) for fork choice rule (and LMD-GHOST)
  */
 module AttestationsTypes {
 
@@ -26,9 +27,7 @@ module AttestationsTypes {
     import opened Eth2Types
     import opened Constants
     import opened Helpers
-    import opened SetHelpers
 
-    // Misc dependencies
 
     /** 
      *  A Checkpoint. 
@@ -100,7 +99,12 @@ module AttestationsTypes {
 
     /** The default value for AttestationData. */
     const DEFAULT_ATTESTATION_DATA := 
-        AttestationData(0 as Slot,  0 as CommitteeIndex, DEFAULT_BYTES32, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT)
+        AttestationData(0 as Slot,  
+                        0 as CommitteeIndex, 
+                        DEFAULT_BYTES32, 
+                        DEFAULT_CHECKPOINT, 
+                        DEFAULT_CHECKPOINT
+                       )
 
     /** The AttestingIndices type. */
     type AttestingIndices = x : seq<ValidatorIndex> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat
@@ -112,7 +116,7 @@ module AttestationsTypes {
     /**
      *  An indexed attestation (including a delay slot).
      *  
-     *  @param  attesting_indices       The actual data i.e. vote of the attestation.
+     *  @param  attesting_indices       
      *  @param  data                    The actual data i.e. vote of the attestation.
      */
     datatype IndexedAttestation = IndexedAttestation(
@@ -125,7 +129,8 @@ module AttestationsTypes {
     type AggregationBits = x : seq<bool> | |x| <= MAX_VALIDATORS_PER_COMMITTEE as nat 
         witness DEFAULT_AGGREGATION_BITS
 
-    /** The default AggregrationBits. Note the default is set to a length of MAX_VALIDATORS_PER_COMMITTEE. */
+    /** The default AggregrationBits. 
+        Note the default is set to a length of MAX_VALIDATORS_PER_COMMITTEE. */
     const DEFAULT_AGGREGATION_BITS := timeSeq(false, MAX_VALIDATORS_PER_COMMITTEE as nat)
 
     
@@ -151,17 +156,19 @@ module AttestationsTypes {
     const DEFAULT_PROPOSER_INDEX := 0 as ValidatorIndex;
 
     /** The default value for PendingAttestation. */
-    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_AGGREGATION_BITS, DEFAULT_ATTESTATION_DATA, DEFAULT_INCLUSION_DELAY, DEFAULT_PROPOSER_INDEX)
+    const DEFAULT_PENDING_ATTESTATION := PendingAttestation(DEFAULT_AGGREGATION_BITS, 
+                                                            DEFAULT_ATTESTATION_DATA, 
+                                                            DEFAULT_INCLUSION_DELAY, 
+                                                            DEFAULT_PROPOSER_INDEX
+                                                           )
 
     /** A list of PendingAttestations, max length is (MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat ). */
-    type ListOfAttestations = x : seq<PendingAttestation> | |x| <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
+    type ListOfAttestations = x : seq<PendingAttestation> 
+        | |x| <= MAX_ATTESTATIONS as nat * SLOTS_PER_EPOCH as nat 
         witness DEFAULT_LIST_ATTESTATIONS
 
     /** The default list of PendingAttestations. */
     const DEFAULT_LIST_ATTESTATIONS : seq<PendingAttestation> := []
-
-
-    // Beacon operations
 
     /**
      *  An attester slashing.
