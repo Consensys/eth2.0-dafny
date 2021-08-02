@@ -13,19 +13,15 @@
  */
 
 include "../../utils/Eth2Types.dfy"
-include "../../utils/Helpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
-include "../validators/Validators.dfy"
-include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
 include "EpochProcessing.s.dfy"
 include "ProcessOperations.s.dfy"
-include "ProcessOperations.dfy"
-include "StateTransition.p.dfy"
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:? /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+
 
 /**
  * State transition functional specification for the Beacon Chain.
@@ -36,14 +32,10 @@ module StateTransitionSpec {
     import opened Eth2Types
     import opened Constants
     import opened BeaconChainTypes
-    import opened Validators
-    import opened AttestationsTypes
     import opened BeaconHelpers
     import opened BeaconHelperSpec
     import opened EpochProcessingSpec
     import opened ProcessOperationsSpec
-    import opened ProcessOperations
-    import opened StateTransitionProofs
     
     //  Specifications of finalisation of a state and forward to future slot.
 
@@ -77,6 +69,25 @@ module StateTransitionSpec {
             assert |s1.validators| == |s1.balances|;
 
             nextSlot(s1)
+    }
+
+    /**
+     *  This lemma establishes the result of applying nextSlot to forwardStateToSlot.
+     *
+     *  @param  s   A beacon state. 
+     *  @param  i   A positive integer.
+     *  @return     A proof that if s.slot <= i then
+     *              forwardStateToSlot(s, (i+1) as Slot) 
+     *                  == nextSlot(forwardStateToSlot(s, i as Slot)).
+     */
+    lemma helperForwardStateToSlotLemma(s: BeaconState, i: nat)
+        requires s.slot as nat <= i
+        requires i + 1 < 0x10000000000000000 as nat
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures forwardStateToSlot(s, (i+1) as Slot) == nextSlot(forwardStateToSlot(s, i as Slot)) 
+    { // Thanks Dafny
     }
     
     /**
@@ -122,10 +133,8 @@ module StateTransitionSpec {
                 var s2 := updateEpoch(s1);
                 assert s2.latest_block_header.state_root != DEFAULT_BYTES32;
                 assert is_valid_state_epoch_attestations(s2);
-                //var s3 := finalUpdates(s2);
-                //var s4 := s3.(slot := s.slot + 1);
                 var s3 := s2.(slot := s.slot + 1);
-                nextSlotLemma(s2, s3);
+                helperNextSlotLemma(s2, s3);
                 assert is_valid_state_epoch_attestations(s3);
                 s3
             else 
@@ -133,7 +142,18 @@ module StateTransitionSpec {
                 resolveStateRoot(s)
     }
 
-    lemma nextSlotLemma(s: BeaconState, s1: BeaconState)
+    /**
+     *  This lemma establishes that if the only difference between two states is that s1 
+     *  has a slot one higher than s, then the is_valid_state_epoch_attestations
+     *  property is invariant.
+     *
+     *  @param  s   A beacon state. 
+     *  @param  s1  A beacon state.
+     *  @return     A proof that if s1 == s.(slot := s.slot + 1) and
+     *              is_valid_state_epoch_attestations(s) then
+     *              is_valid_state_epoch_attestations(s1).
+     */
+    lemma helperNextSlotLemma(s: BeaconState, s1: BeaconState)
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
         requires s1 == s.(slot := s.slot + 1)
         requires is_valid_state_epoch_attestations(s)
@@ -171,6 +191,11 @@ module StateTransitionSpec {
             resolveStateRoot(s) == advanceSlot(s)
         
         ensures is_valid_state_epoch_attestations(resolveStateRoot(s))
+
+        ensures resolveStateRoot(s) == s.(slot := resolveStateRoot(s).slot,
+                                          latest_block_header := resolveStateRoot(s).latest_block_header,
+                                          block_roots := resolveStateRoot(s).block_roots,
+                                          state_roots := resolveStateRoot(s).state_roots)
     {
         var new_latest_block_header := 
             if (s.latest_block_header.state_root == DEFAULT_BYTES32 ) then 
@@ -182,8 +207,11 @@ module StateTransitionSpec {
         var s' := s.(
                 slot := s.slot + 1,
                 latest_block_header := new_latest_block_header,
-                block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(new_latest_block_header)],
-                state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)]
+                block_roots 
+                    := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int 
+                                        := hash_tree_root(new_latest_block_header)],
+                state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int 
+                                                := hash_tree_root(s)]
             );
         s'
     }
@@ -201,11 +229,19 @@ module StateTransitionSpec {
     function advanceSlot(s : BeaconState) : BeaconState 
         //  Make sure s.slot does not overflow
         requires s.slot as nat + 1 < 0x10000000000000000 as nat
+
+        ensures advanceSlot(s) == s.(slot := advanceSlot(s).slot,
+                                     block_roots := advanceSlot(s).block_roots,
+                                     state_roots := advanceSlot(s).state_roots)
     {
         //  Add header root to history of block_roots
-        var new_block_roots := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s.latest_block_header)];
+        var new_block_roots
+                := s.block_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int 
+                                    := hash_tree_root(s.latest_block_header)];
         //  Add state root to history of state roots
-        var new_state_roots := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int := hash_tree_root(s)];
+        var new_state_roots 
+                := s.state_roots[(s.slot % SLOTS_PER_HISTORICAL_ROOT) as int 
+                                    := hash_tree_root(s)];
         //  Increment slot and copy latest_block_header
         s.(
             slot := s.slot + 1,
@@ -231,17 +267,26 @@ module StateTransitionSpec {
         //  Fast forward s to b.slot and check `b` can be attached to the
         //  resulting state's latest_block_header.
         //  Check that number of deposits in b.body can be processed
-        && s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
-        && |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
+        && (s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000)  
+        && (|s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int)
         && |s.validators| == |s.balances|
-        && |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
+        && (|s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int)
         && is_valid_state_epoch_attestations(s)
     
-        && total_balances(forwardStateToSlot(nextSlot(s), b.slot).balances) + total_deposits(b.body.deposits) < 0x10000000000000000
+        && (total_balances(forwardStateToSlot(nextSlot(s), b.slot).balances) 
+                + total_deposits(b.body.deposits) 
+            < 0x10000000000000000)
         && minimumActiveValidators(forwardStateToSlot(nextSlot(s), b.slot))
         && b.parent_root == 
             hash_tree_root(forwardStateToSlot(nextSlot(s), b.slot).latest_block_header) 
-        && isValidBeaconBlockBody(updateEth1Data(updateRandao(addBlockToState(forwardStateToSlot(nextSlot(s), b.slot), b), b.body), b.body), b.body)
+        && isValidBeaconBlockBody(updateEth1Data(
+                                    updateRandao(
+                                        addBlockToState(
+                                            forwardStateToSlot(nextSlot(s), b.slot), 
+                                            b), 
+                                        b.body), 
+                                    b.body), 
+                                  b.body)
         // Check that the block provides the correct hash for the state.
         &&  b.state_root == hash_tree_root(
                 updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b) 
@@ -259,20 +304,33 @@ module StateTransitionSpec {
         requires b.slot == s.slot
         requires b.parent_root == hash_tree_root(s.latest_block_header)
         requires s.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  
-        requires |s.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
+        requires |s.eth1_data_votes| 
+                    < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int
         requires |s.validators| == |s.balances|
         requires |s.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
-        requires total_balances(s.balances) + total_deposits(b.body.deposits) < 0x10000000000000000
+        requires total_balances(s.balances) + total_deposits(b.body.deposits) 
+                    < 0x10000000000000000
         //requires |get_active_validator_indices(s.validators, get_current_epoch(s))| > 0
         requires minimumActiveValidators(s)
-        requires isValidBeaconBlockBody(updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body), b.body)
+        requires isValidBeaconBlockBody(updateEth1Data(
+                                            updateRandao(
+                                                addBlockToState(s, b), 
+                                                b.body), 
+                                            b.body), 
+                                        b.body)
 
         ensures updateBlock(s,b).slot == b.slot
         ensures updateBlock(s,b).latest_block_header 
                 == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
         ensures |updateBlock(s,b).validators| == |updateBlock(s,b).balances|
         ensures updateBlock(s,b) 
-                  == updateOperations(updateEth1Data(updateRandao(addBlockToState(s, b), b.body), b.body), b.body)
+                  == updateOperations(
+                        updateEth1Data(
+                            updateRandao(
+                                addBlockToState(s, b), 
+                                b.body), 
+                            b.body), 
+                        b.body)
     {
         //  Start by creating a block header from the ther actual block.
         var s1 := addBlockToState(s, b); 
@@ -339,8 +397,8 @@ module StateTransitionSpec {
      *  
      *  @param  s   A state.
      *  @param  b   A block body to process.
-     *  @returns    The state `s` updated to reflect a new mix at the epoch % EPOCHS_PER_HISTORICAL_VECTOR
-     *              % EPOCHS_PER_HISTORICAL_VECTOR position.
+     *  @returns    The state `s` updated to reflect a new mix at the 
+     *              epoch % EPOCHS_PER_HISTORICAL_VECTOR position.
      */
     function updateRandao(s: BeaconState, b: BeaconBlockBody) : BeaconState
         requires |s.validators| == |s.balances|
