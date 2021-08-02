@@ -12,7 +12,7 @@
  * under the License.
  */
 
- //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:400 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:400 /noCheating:1
 
 include "../../utils/NativeTypes.dfy"
 include "../../utils/SeqHelpers.dfy"
