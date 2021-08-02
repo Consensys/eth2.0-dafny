@@ -15,10 +15,6 @@
  //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:400 /noCheating:0
 
 include "../../utils/NativeTypes.dfy"
-include "../../utils/NonNativeTypes.dfy"
-include "../../utils/Eth2Types.dfy"
-include "../forkchoice/ForkChoiceTypes.dfy"
-include "../../utils/Helpers.dfy"
 include "../../utils/SeqHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
@@ -37,14 +33,10 @@ module ProcessOperations {
     
     //  Import some constants, types and beacon chain helpers.
     import opened NativeTypes
-    import opened NonNativeTypes
-    import opened Eth2Types
-    import opened ForkChoiceTypes
     import opened Constants
     import opened BeaconChainTypes
     import opened Validators
     import opened AttestationsTypes
-    import opened Helpers
     import opened BeaconHelperSpec
     import opened SeqHelpers
     import opened BeaconHelpers
