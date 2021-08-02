@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:400 /noCheating:1
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../../utils/NativeTypes.dfy"
 include "../../utils/SeqHelpers.dfy"
@@ -67,9 +67,78 @@ module ProcessOperations {
         ensures s'.slot == s.slot
         ensures s'.latest_block_header == s.latest_block_header
     {
-        s':= s;
         var slashed_any := false;
 
+        s':= process_proposer_slashings(s, bb);
+        assert s'  == updateProposerSlashings(s, bb.proposer_slashings);
+
+        // process attester slashings
+        //assert isValidAttesterSlashings(s1, bb);
+        s' := process_attester_slashings(s', bb);
+        assert s' == updateAttesterSlashings(
+                        updateProposerSlashings(s, 
+                                                bb.proposer_slashings), 
+                        bb.attester_slashings
+                    );
+
+        // process attestations
+        //assert isValidAttestations(s2, bb);
+        s' := process_attestations(s', bb);
+        assert s' == updateAttestations(
+                        updateAttesterSlashings(
+                            updateProposerSlashings(s, 
+                                                    bb.proposer_slashings), 
+                            bb.attester_slashings), 
+                        bb.attestations
+                     );
+        
+        //  process deposits in the beacon block body.
+        //assert isValidDeposits(s3, bb);
+        s' := process_deposits(s', bb);
+        assert s' == updateDeposits(
+                        updateAttestations(
+                            updateAttesterSlashings(
+                                updateProposerSlashings(s, 
+                                                        bb.proposer_slashings), 
+                                bb.attester_slashings), 
+                            bb.attestations), 
+                        bb.deposits
+                     );
+
+        // process voluntary exits
+        //assert isValidVoluntaryExits(s4, bb);
+        s' := process_voluntary_exits(s', bb);
+        assert s' == updateVoluntaryExits(
+                        updateDeposits(
+                            updateAttestations(
+                                updateAttesterSlashings(
+                                    updateProposerSlashings(s, 
+                                                            bb.proposer_slashings), 
+                                    bb.attester_slashings), 
+                                bb.attestations), 
+                            bb.deposits), 
+                        bb.voluntary_exits
+                     );
+        
+        assert s' == updateOperations(s,bb);
+    }
+
+    /**
+     *  Process a sequence of proposer slashings.
+     *
+     *  @param  s   A state.
+     *  @param  bb  A beacon block body.  
+     *  @returns    The state obtained applying `bb.proposer_slashings` to `s`.
+     */
+    method process_proposer_slashings(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+        requires isValidProposerSlashings(s, bb)
+        
+        ensures s' == updateProposerSlashings(s,bb.proposer_slashings)
+    {
+        s':= s;
+        
         // process the proposer slashings
         var i := 0;
         assert isValidProposerSlashings(s, bb);
@@ -101,138 +170,6 @@ module ProcessOperations {
         }
         fullSeq<ProposerSlashing>(bb.proposer_slashings, i);
         assert bb.proposer_slashings[..i] == bb.proposer_slashings;
-        // store intermediate state to assist with final post condition check
-        ghost var s1 := updateProposerSlashings(s, bb.proposer_slashings);
-        assert s' == s1;
-
-        // process attester slashings
-        i := 0;
-        assert isValidAttesterSlashings(s1, bb);
-        assert s' == updateAttesterSlashings(s1, bb.attester_slashings[..i]);
-        assert |s'.validators| == |s'.balances|;
-        assert s'.slot == s.slot;
-        assert s'.latest_block_header == s.latest_block_header;
-
-        while i < |bb.attester_slashings| 
-            decreases |bb.attester_slashings| - i
-
-            invariant 0 <= i <= |bb.attester_slashings| 
-            invariant |s'.validators| ==  |s.validators| 
-            invariant s' == updateAttesterSlashings(s1, bb.attester_slashings[..i])
-            invariant s'.slot == s.slot
-            invariant s'.latest_block_header == s.latest_block_header
-        {
-            assert 1 <= |bb.attester_slashings|; 
-            seqInitLast<AttesterSlashing>(bb.attester_slashings, i);
-            assert bb.attester_slashings[..i+1] 
-                    == bb.attester_slashings[..i] + [bb.attester_slashings[i]];
-            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_1);
-            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_2);
-            assert |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, 
-                                        bb.attester_slashings[i].attestation_2.attesting_indices)| > 0;
-            s', slashed_any := process_attester_slashing(s', bb.attester_slashings[i]);
-            i := i + 1;
-        }
-        fullSeq<AttesterSlashing>(bb.attester_slashings, i);
-        assert bb.attester_slashings[..i] == bb.attester_slashings;
-        ghost var s2 := updateAttesterSlashings(s1, bb.attester_slashings);
-        assert s' == s2;
-
-        // process attestations
-        i := 0;
-        assert isValidAttestations(s2, bb);
-        assert s' == updateAttestations(s2, bb.attestations[..i]);
-        assert |s'.validators| == |s'.balances|;
-        assert s'.slot == s.slot;
-        assert s'.latest_block_header == s.latest_block_header;
-
-        while i < |bb.attestations| 
-            decreases |bb.attestations| - i
-
-            invariant 0 <= i <= |bb.attestations|
-            invariant s' == updateAttestations(s2, bb.attestations[..i])
-            invariant |s'.validators| ==  |s.validators| 
-            invariant s'.slot == s.slot
-            invariant s'.latest_block_header == s.latest_block_header
-        {
-            assert 1 <= |bb.attestations|; 
-            seqInitLast<Attestation>(bb.attestations, i);
-            assert bb.attestations[..i+1] == bb.attestations[..i] + [bb.attestations[i]];
-            s':= process_attestation(s', bb.attestations[i]); 
-            i := i+1;
-        }
-        fullSeq<Attestation>(bb.attestations, i);
-        assert bb.attestations[..i] == bb.attestations;
-        ghost var s3 := updateAttestations(s2, bb.attestations);
-        assert s3 == s';
-
-        //  process deposits in the beacon block body.
-        i := 0;
-        assert s'.eth1_deposit_index == s.eth1_deposit_index;
-        assert isValidDeposits(s3, bb);
-        assert s' == updateDeposits(s3, bb.deposits[..i]);
-        assert |s'.validators| == |s'.balances|;
-        assert s'.slot == s.slot;
-        assert s'.latest_block_header == s.latest_block_header;
-        assert s' == updateDeposits(s3, bb.deposits[..i]);
-        assert total_balances(s'.balances) + total_deposits(bb.deposits[..i]) 
-                < 0x10000000000000000;
-        
-        while i < |bb.deposits| 
-            decreases |bb.deposits| - i
-
-            invariant 0 <= i <= |bb.deposits|
-            invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
-            invariant total_balances(s3.balances) + total_deposits(bb.deposits[..i]) 
-                        < 0x10000000000000000 
-            invariant |s'.validators| == |s'.balances| 
-            invariant s' == updateDeposits(s3, bb.deposits[..i])
-            invariant s'.slot == s.slot
-            invariant s'.latest_block_header == s.latest_block_header
-        {
-            assert 1 <= |bb.deposits|; 
-            seqInitLast<Deposit>(bb.deposits, i);
-            assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
-            subsetDepositSumProp(bb.deposits, i+1);
-            s':= process_deposit(s', bb.deposits[i]); 
-            i := i+1;
-        }
-        assert i == |bb.deposits|;
-        fullSeq<Deposit>(bb.deposits, i);
-        assert bb.deposits[..i] == bb.deposits;
-        ghost var s4 := updateDeposits(s3, bb.deposits);
-        assert s4 == s';
-
-        // process voluntary exits
-        i := 0;
-        assert isValidVoluntaryExits(s4, bb);
-        assert s' == updateVoluntaryExits(s4, bb.voluntary_exits[..i]);
-        assert s'.slot == s.slot;
-        assert s'.latest_block_header == s.latest_block_header;
-        assert |s'.validators| == |s'.balances|;
-        assert s'.eth1_deposit_index == s.eth1_deposit_index + |bb.deposits| as uint64;
-        
-        while i < |bb.voluntary_exits| 
-            decreases |bb.voluntary_exits| - i
-
-            invariant 0 <= i <= |bb.voluntary_exits|
-            invariant s' == updateVoluntaryExits(s4, bb.voluntary_exits[..i])
-            invariant s'.slot == s.slot
-            invariant s'.latest_block_header == s.latest_block_header
-        {
-            VEHelperLemma3(bb.voluntary_exits[..i+1]);
-            assert 1 <= |bb.voluntary_exits|; 
-            seqInitLast<VoluntaryExit>(bb.voluntary_exits, i);
-            assert bb.voluntary_exits[..i+1] == bb.voluntary_exits[..i] + [bb.voluntary_exits[i]];
-            s' := process_voluntary_exit(s', bb.voluntary_exits[i]);
-            i := i + 1;
-        }
-        assert i == |bb.voluntary_exits|;
-        fullSeq<VoluntaryExit>(bb.voluntary_exits, i);
-        assert bb.voluntary_exits[..i] == bb.voluntary_exits;
-        ghost var s5 := updateVoluntaryExits(s4, bb.voluntary_exits);
-        assert s5 == s';
-        assert s' == updateOperations(s,bb);
     }
 
     /**
@@ -280,6 +217,54 @@ module ProcessOperations {
         // As 'None' isn't possible in Dafny, set the parameter to get_beacon_proposer_index(s)
         // as it would be set to that for 'None' within slash_validator.
         s' := slash_validator(s, ps.header_1.proposer_index, get_beacon_proposer_index(s));
+    }
+
+    /**
+     *  Process a sequence of attester slashings.
+     *
+     *  @param  s   A state.
+     *  @param  bb  A beacon block body.  
+     *  @returns    The state obtained applying `bb.attester_slashings` to `s`.
+     */
+    method process_attester_slashings(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+        requires isValidAttesterSlashings(s, bb)
+
+        ensures s' == updateAttesterSlashings(s, bb.attester_slashings)
+    {
+        var i := 0;
+        var slashed_any := false;
+        s'  := s;
+
+        assert isValidAttesterSlashings(s, bb);
+        assert s' == updateAttesterSlashings(s, bb.attester_slashings[..i]);
+        assert |s'.validators| == |s'.balances|;
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+
+        while i < |bb.attester_slashings| 
+            decreases |bb.attester_slashings| - i
+
+            invariant 0 <= i <= |bb.attester_slashings| 
+            invariant |s'.validators| ==  |s.validators| 
+            invariant s' == updateAttesterSlashings(s, bb.attester_slashings[..i])
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+        {
+            assert 1 <= |bb.attester_slashings|; 
+            seqInitLast<AttesterSlashing>(bb.attester_slashings, i);
+            assert bb.attester_slashings[..i+1] 
+                    == bb.attester_slashings[..i] + [bb.attester_slashings[i]];
+            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_1);
+            assert is_valid_indexed_attestation(bb.attester_slashings[i].attestation_2);
+            assert |sorted_intersection(bb.attester_slashings[i].attestation_1.attesting_indices, 
+                                        bb.attester_slashings[i].attestation_2.attesting_indices)| > 0;
+            s', slashed_any := process_attester_slashing(s', bb.attester_slashings[i]);
+            i := i + 1;
+        }
+        fullSeq<AttesterSlashing>(bb.attester_slashings, i);
+        assert bb.attester_slashings[..i] == bb.attester_slashings;
     }
 
     /**
@@ -393,6 +378,48 @@ module ProcessOperations {
     }
 
     /**
+     *  Process a sequence of attestations.
+     *
+     *  @param  s   A state.
+     *  @param  bb  A beacon block body.  
+     *  @returns    The state obtained applying `bb.attestations` to `s`.
+     */
+    method process_attestations(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+        requires isValidAttestations(s, bb)
+
+        ensures s' == updateAttestations(s, bb.attestations)
+    {
+        var i := 0;
+        s' := s;
+
+        assert isValidAttestations(s, bb);
+        assert s' == updateAttestations(s, bb.attestations[..i]);
+        assert |s'.validators| == |s'.balances|;
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+
+        while i < |bb.attestations| 
+            decreases |bb.attestations| - i
+
+            invariant 0 <= i <= |bb.attestations|
+            invariant s' == updateAttestations(s, bb.attestations[..i])
+            invariant |s'.validators| ==  |s.validators| 
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+        {
+            assert 1 <= |bb.attestations|; 
+            seqInitLast<Attestation>(bb.attestations, i);
+            assert bb.attestations[..i+1] == bb.attestations[..i] + [bb.attestations[i]];
+            s':= process_attestation(s', bb.attestations[i]); 
+            i := i+1;
+        }
+        fullSeq<Attestation>(bb.attestations, i);
+        assert bb.attestations[..i] == bb.attestations;
+    }
+
+    /**
      *
      *  Example.
      *  epoch   0             1                 k               k + 1       
@@ -474,6 +501,56 @@ module ProcessOperations {
     }
 
     /**
+     *  Process a sequence of deposits.
+     *
+     *  @param  s   A state.
+     *  @param  bb  A beacon block body.  
+     *  @returns    The state obtained applying `bb.deposits` to `s`.
+     */
+    method process_deposits(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+        requires isValidDeposits(s, bb)
+
+        ensures s' == updateDeposits(s, bb.deposits)
+    {
+        var i := 0;
+        s' := s;
+        assert s'.eth1_deposit_index == s.eth1_deposit_index;
+        assert isValidDeposits(s, bb);
+        assert s' == updateDeposits(s, bb.deposits[..i]);
+        assert |s'.validators| == |s'.balances|;
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+        assert s' == updateDeposits(s, bb.deposits[..i]);
+        assert total_balances(s'.balances) + total_deposits(bb.deposits[..i]) 
+                < 0x10000000000000000;
+        
+        while i < |bb.deposits| 
+            decreases |bb.deposits| - i
+
+            invariant 0 <= i <= |bb.deposits|
+            invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
+            invariant total_balances(s.balances) + total_deposits(bb.deposits[..i]) 
+                        < 0x10000000000000000 
+            invariant |s'.validators| == |s'.balances| 
+            invariant s' == updateDeposits(s, bb.deposits[..i])
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+        {
+            assert 1 <= |bb.deposits|; 
+            seqInitLast<Deposit>(bb.deposits, i);
+            assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
+            subsetDepositSumProp(bb.deposits, i+1);
+            s':= process_deposit(s', bb.deposits[i]); 
+            i := i+1;
+        }
+        assert i == |bb.deposits|;
+        fullSeq<Deposit>(bb.deposits, i);
+        assert bb.deposits[..i] == bb.deposits;
+    }
+
+    /**
      *  Process a deposit operation.
      *
      *  @param  s   A state.
@@ -509,6 +586,50 @@ module ProcessOperations {
                                     s.balances + [d.data.amount]
         );
     }
+
+    /**
+     *  Process a sequence of voluntary exits.
+     *
+     *  @param  s   A state.
+     *  @param  bb  A beacon block body.  
+     *  @returns    The state obtained applying `bb.voluntary_exits` to `s`.
+     */
+    method process_voluntary_exits(s: BeaconState, bb: BeaconBlockBody)  returns (s' : BeaconState)  
+        requires |s.validators| == |s.balances|
+        requires minimumActiveValidators(s)
+        requires isValidVoluntaryExits(s, bb)
+
+        ensures s' == updateVoluntaryExits(s, bb.voluntary_exits)
+    {
+        var i := 0;
+        s' := s;
+
+        assert isValidVoluntaryExits(s, bb);
+        assert s' == updateVoluntaryExits(s, bb.voluntary_exits[..i]);
+        assert s'.slot == s.slot;
+        assert s'.latest_block_header == s.latest_block_header;
+        assert |s'.validators| == |s'.balances|;
+        
+        while i < |bb.voluntary_exits| 
+            decreases |bb.voluntary_exits| - i
+
+            invariant 0 <= i <= |bb.voluntary_exits|
+            invariant s' == updateVoluntaryExits(s, bb.voluntary_exits[..i])
+            invariant s'.slot == s.slot
+            invariant s'.latest_block_header == s.latest_block_header
+        {
+            VEHelperLemma3(bb.voluntary_exits[..i+1]);
+            assert 1 <= |bb.voluntary_exits|; 
+            seqInitLast<VoluntaryExit>(bb.voluntary_exits, i);
+            assert bb.voluntary_exits[..i+1] == bb.voluntary_exits[..i] + [bb.voluntary_exits[i]];
+            s' := process_voluntary_exit(s', bb.voluntary_exits[i]);
+            i := i + 1;
+        }
+        assert i == |bb.voluntary_exits|;
+        fullSeq<VoluntaryExit>(bb.voluntary_exits, i);
+        assert bb.voluntary_exits[..i] == bb.voluntary_exits;
+    }
+
 
     /**
      *  Process a voluntary exit.
