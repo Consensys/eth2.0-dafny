@@ -12,13 +12,10 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
-include "../../utils/Helpers.dfy"
-include "../../utils/MathHelpers.dfy"
-include "../../utils/SeqHelpers.dfy"
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
@@ -26,7 +23,6 @@ include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
 include "../Helpers.p.dfy"
-include "../../ssz/Serialise.dfy"
 include "ProcessOperations.p.dfy"
 
 
@@ -45,9 +41,6 @@ module ProcessOperationsSpec {
     import opened BeaconHelpers
     import opened BeaconHelperProofs
     import opened BeaconHelperSpec
-    import opened MathHelpers
-    import opened SeqHelpers
-    import opened SSZ
     import opened ProcessOperationsProofs
 
     //  Specifications of predicates and functions related to the process operation methods.
@@ -254,7 +247,17 @@ module ProcessOperationsSpec {
                                                     bb.attestations), 
                                                 bb.deposits), 
                                             bb.voluntary_exits)
+
+        ensures updateOperations(s,bb) 
+                == s.(validators := updateOperations(s,bb).validators,
+                      balances := updateOperations(s,bb).balances,
+                      slashings := updateOperations(s,bb).slashings,
+                      current_epoch_attestations := updateOperations(s,bb).current_epoch_attestations,
+                      previous_epoch_attestations := updateOperations(s,bb).previous_epoch_attestations,
+                      eth1_deposit_index := updateOperations(s,bb).eth1_deposit_index
+                     )
         ensures minimumActiveValidators(updateOperations(s, bb))
+
         ensures updateOperations(s, bb).slot == s.slot;
         ensures updateOperations(s, bb).latest_block_header == s.latest_block_header;
     {
@@ -333,6 +336,12 @@ module ProcessOperationsSpec {
         ensures updateProposerSlashing(s, ps).slot == s.slot
         ensures updateProposerSlashing(s, ps).eth1_deposit_index == s.eth1_deposit_index
         ensures updateProposerSlashing(s, ps).latest_block_header == s.latest_block_header
+
+        ensures updateProposerSlashing(s,ps) 
+                == s.(validators := updateProposerSlashing(s,ps).validators,
+                      balances := updateProposerSlashing(s,ps).balances,
+                      slashings := updateProposerSlashing(s,ps).slashings
+                     )
         ensures minimumActiveValidators(updateProposerSlashing(s, ps))
     {
         var s' := slash_validator(s, ps.header_1.proposer_index, get_beacon_proposer_index(s));
@@ -363,7 +372,6 @@ module ProcessOperationsSpec {
         requires |s.validators| == |s.balances|
         
         ensures updateProposerSlashings(s, ps).slot == s.slot
-        //ensures get_current_epoch(updateProposerSlashings(s, ps)) == get_current_epoch(s)
         ensures updateProposerSlashings(s, ps).eth1_deposit_index == s.eth1_deposit_index
         ensures updateProposerSlashings(s, ps).latest_block_header == s.latest_block_header
         ensures |updateProposerSlashings(s, ps).validators| == |s.validators|
@@ -374,6 +382,12 @@ module ProcessOperationsSpec {
         ensures forall i :: 0 <= i < |s.validators| && i !in get_PS_validator_indices(ps) 
                     ==> updateProposerSlashings(s, ps).validators[i] 
                         == s.validators[i]
+
+        ensures updateProposerSlashings(s,ps) 
+                == s.(validators := updateProposerSlashings(s,ps).validators,
+                      balances := updateProposerSlashings(s,ps).balances,
+                      slashings := updateProposerSlashings(s,ps).slashings
+                     )
         ensures minimumActiveValidators(updateProposerSlashings(s, ps))
 
         decreases |ps|
@@ -492,11 +506,16 @@ module ProcessOperationsSpec {
         ensures |updateAttesterSlashingComp(s, slash_index).validators| 
                 == |updateAttesterSlashingComp(s, slash_index).balances| 
         ensures updateAttesterSlashingComp(s, slash_index).slot == s.slot
-        ensures updateAttesterSlashingComp(s, slash_index).latest_block_header == s.latest_block_header
-        ensures updateAttesterSlashingComp(s, slash_index).eth1_deposit_index == s.eth1_deposit_index
-        // ensures 
-        //     var s1 := updateAttesterSlashingComp(s, slash_index);
-        //     |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        ensures updateAttesterSlashingComp(s, slash_index).latest_block_header 
+                == s.latest_block_header
+        ensures updateAttesterSlashingComp(s, slash_index).eth1_deposit_index 
+                == s.eth1_deposit_index
+        
+        ensures updateAttesterSlashingComp(s,slash_index) 
+                    == s.(validators := updateAttesterSlashingComp(s,slash_index).validators,
+                          balances := updateAttesterSlashingComp(s,slash_index).balances,
+                          slashings := updateAttesterSlashingComp(s,slash_index).slashings
+                         )
         ensures minimumActiveValidators(updateAttesterSlashingComp(s, slash_index))
     {
         if is_slashable_validator(s.validators[slash_index], get_current_epoch(s)) then
@@ -527,9 +546,12 @@ module ProcessOperationsSpec {
         ensures updateAttesterSlashing(s, indices).slot == s.slot
         ensures updateAttesterSlashing(s, indices).eth1_deposit_index == s.eth1_deposit_index
         ensures updateAttesterSlashing(s, indices).latest_block_header == s.latest_block_header
-        //ensures 
-        //    var s1 := updateAttesterSlashing(s, indices);
-        //    |get_active_validator_indices(s1.validators, get_current_epoch(s1))| > 0
+        
+        ensures updateAttesterSlashing(s,indices) 
+                == s.(validators := updateAttesterSlashing(s,indices).validators,
+                      balances := updateAttesterSlashing(s,indices).balances,
+                      slashings := updateAttesterSlashing(s,indices).slashings
+                     )
         ensures minimumActiveValidators(updateAttesterSlashing(s, indices))
         decreases indices
     {
@@ -577,6 +599,11 @@ module ProcessOperationsSpec {
         ensures updateAttesterSlashings(s, a).slot == s.slot
         ensures updateAttesterSlashings(s, a).eth1_deposit_index == s.eth1_deposit_index
         ensures updateAttesterSlashings(s, a).latest_block_header == s.latest_block_header
+
+        ensures updateAttesterSlashings(s,a) == s.(validators := updateAttesterSlashings(s,a).validators,
+                                                   balances := updateAttesterSlashings(s,a).balances,
+                                                   slashings := updateAttesterSlashings(s,a).slashings
+                                                )
         ensures minimumActiveValidators(updateAttesterSlashings(s, a))
     {
         if |a| == 0 then 
@@ -624,6 +651,12 @@ module ProcessOperationsSpec {
         ensures updateAttestation(s, a).previous_justified_checkpoint 
                 == s.previous_justified_checkpoint
         ensures updateAttestation(s, a).eth1_deposit_index == s.eth1_deposit_index
+
+        ensures updateAttestation(s,a) == s.(current_epoch_attestations 
+                                                := updateAttestation(s,a).current_epoch_attestations,
+                                             previous_epoch_attestations 
+                                                := updateAttestation(s,a).previous_epoch_attestations)
+        ensures minimumActiveValidators(updateAttestation(s, a))
     {
         // data = attestation.data
         assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
@@ -689,7 +722,13 @@ module ProcessOperationsSpec {
                     <= |s.current_epoch_attestations| + |a|;
         ensures |updateAttestations(s,a).previous_epoch_attestations| 
                     <= |s.previous_epoch_attestations| + |a|;
+
+        ensures updateAttestations(s,a) == s.(current_epoch_attestations 
+                                                := updateAttestations(s,a).current_epoch_attestations,
+                                              previous_epoch_attestations 
+                                                := updateAttestations(s,a).previous_epoch_attestations)
         ensures minimumActiveValidators(updateAttestations(s, a))
+
         ensures updateAttestations(s, a).validators == s.validators
         ensures updateAttestations(s, a).slot == s.slot
         ensures updateAttestations(s, a).latest_block_header == s.latest_block_header
@@ -739,6 +778,10 @@ module ProcessOperationsSpec {
                 < 0x10000000000000000
         ensures forall i :: 0 <= i < |s.validators| 
                 ==> s.validators[i] == updateDeposit(s,d).validators[i]
+
+        ensures updateDeposit(s, d) == s.(validators := updateDeposit(s, d).validators,
+                                          balances := updateDeposit(s, d).balances,
+                                          eth1_deposit_index := updateDeposit(s, d).eth1_deposit_index)
         ensures minimumActiveValidators(updateDeposit(s,d))
         
     {
@@ -798,6 +841,13 @@ module ProcessOperationsSpec {
                 == get_current_epoch(s)
         ensures updateDeposits(s, deposits).slot == s.slot
         ensures updateDeposits(s, deposits).latest_block_header == s.latest_block_header
+
+        ensures updateDeposits(s, deposits) == s.(validators 
+                                                    := updateDeposits(s, deposits).validators,
+                                                  balances 
+                                                    := updateDeposits(s, deposits).balances,
+                                                  eth1_deposit_index 
+                                                    := updateDeposits(s, deposits).eth1_deposit_index)
         ensures minimumActiveValidators(updateDeposits(s, deposits))
         
         decreases |deposits|
@@ -841,6 +891,8 @@ module ProcessOperationsSpec {
         ensures forall i :: 0 <= i < |s.validators| 
                 ==> updateVoluntaryExit(s, ve).validators[i].activation_epoch 
                     == s.validators[i].activation_epoch
+        
+        ensures updateVoluntaryExit(s, ve) == s.(validators := updateVoluntaryExit(s, ve).validators)
         ensures minimumActiveValidators(updateVoluntaryExit(s, ve))
     {
         var s' := initiate_validator_exit(s, ve.validator_index);
@@ -881,6 +933,8 @@ module ProcessOperationsSpec {
                 ==> updateVoluntaryExits(s, ve).validators[i].activation_epoch == s.validators[i].activation_epoch
         ensures forall i :: 0 <= i < |s.validators| && i !in get_VolExit_validator_indices(ve) 
                 ==> updateVoluntaryExits(s, ve).validators[i] == s.validators[i]
+
+        ensures updateVoluntaryExits(s, ve) == s.(validators := updateVoluntaryExits(s, ve).validators)
         ensures minimumActiveValidators(updateVoluntaryExits(s, ve))
         
         decreases |ve|
@@ -921,7 +975,6 @@ module ProcessOperationsSpec {
             assert minimumActiveValidators(s2);
 
             s2
-
     }
     
 }
