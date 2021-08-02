@@ -22,7 +22,7 @@ include "../ssz/IntSeDes.dfy"
 include "../ssz/BoolSeDes.dfy"
 include "../ssz/BitListSeDes.dfy"
 include "../ssz/BytesAndBits.dfy"
-include "../beacon/helpers/Crypto.dfy"
+include "../helpers/Crypto.dfy"
 
 /**
  *  SSZ_Merkleise library.
