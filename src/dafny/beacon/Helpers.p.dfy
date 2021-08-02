@@ -12,12 +12,11 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:1
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
-include "../utils/NativeTypes.dfy"
 include "BeaconChainTypes.dfy"
 include "../ssz/Constants.dfy"
 include "validators/Validators.dfy"
@@ -32,7 +31,6 @@ module BeaconHelperProofs {
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
     import opened MathHelpers
-    import opened NativeTypes
     import opened BeaconChainTypes
     import opened Constants
     import opened Validators
@@ -156,6 +154,9 @@ module BeaconHelperProofs {
      *  @return     A proof that e < 0x10000000000000000.
      *
      *  @note       This proof is assumed.
+     *  @note       This axiom is best left as an assumption, however it should
+     *              be used carefully to make sure that it isn't applied to a
+     *              spurious calculation.
      */
     lemma {:axiom } AssumeNoEpochOverflow(e: nat)
         ensures e < 0x10000000000000000
@@ -169,6 +170,9 @@ module BeaconHelperProofs {
      *  @return     A proof that s.finalised_checkpoint.epoch <= get_previous_epoch(s).
      *
      *  @note       This proof is assumed.
+     *  @note       A strategy to remove use of this axiom would be show that it is
+     *              true at the time s.finalised_checkpoint.epoch is set or changed,
+     *              and then thus that it remains invariant.
      */
     lemma {:axiom } AssumeFinalisedCheckpointBeforeCurrentEpoch(s: BeaconState, pe: Epoch)
         ensures s.finalised_checkpoint.epoch <= pe
@@ -181,6 +185,9 @@ module BeaconHelperProofs {
      *  @return     A proof that a.inclusion_delay > 0.
      *
      *  @note       This proof is assumed.
+     *  @note       A strategy to remove use of this axiom would be show that it is
+     *              true at the time a.inclusion_delay is set or changed,
+     *              and then thus that it remains invariant.
      */
     lemma {:axiom } AssumeAttesttionInclusionDelayGreaterThanZero(a: PendingAttestation)
         ensures a.inclusion_delay > 0
