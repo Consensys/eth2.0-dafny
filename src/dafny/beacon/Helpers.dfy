@@ -12,8 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:1
-
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
@@ -21,9 +20,7 @@ include "../utils/NativeTypes.dfy"
 include "../utils/SetHelpers.dfy"
 include "../utils/SeqHelpers.dfy"
 include "../utils/Helpers.dfy"
-
 include "../ssz/Constants.dfy"
-include "../ssz/Serialise.dfy"
 
 include "BeaconChainTypes.dfy"
 include "Helpers.s.dfy"
@@ -33,9 +30,9 @@ include "attestations/AttestationsTypes.dfy"
 include "validators/Validators.dfy"
 
 /**
- * Misc helpers.
+ *  Misc helpers, ordered as per the Beacon chain spec, and additional functions to facilitate 
+ *  the Dafny implementation.
  */
- // TODO: provide a list of functions that are additional to those in the spec.
 
 module BeaconHelpers {
 
@@ -46,9 +43,7 @@ module BeaconHelpers {
     import opened SetHelpers
     import opened SeqHelpers
     import opened Helpers
-
     import opened Constants
-    import opened SSZ
 
     import opened BeaconChainTypes
     import opened BeaconHelperSpec
@@ -86,10 +81,10 @@ module BeaconHelpers {
     /**
      *  Compute Root/Hash/Bytes32 for different types.
      *  
-     *  @todo   Use the hash_tree_root from Merkle?.
      *  @note   The property of hash_tree_root below is enough for 
      *          proving some invariants. So we may use a module refinement
-     *          to integrate the actual hash_tree_root from Merkle module.
+     *          to integrate the actual hash_tree_root from Merkle module
+     *          at a later stage if needed.
      */
     function method {:axiom} hash_tree_root<T(==)>(t : T) : Bytes32 
         ensures hash_tree_root(t) != DEFAULT_BYTES32
@@ -164,9 +159,11 @@ module BeaconHelpers {
                                                    data_2: AttestationData)
     {
         // Double vote
-        (data_1 != data_2 && data_1.target.epoch == data_2.target.epoch) ||
+        (data_1 != data_2 
+            && data_1.target.epoch == data_2.target.epoch) 
         // Surround vote
-        (data_1.source.epoch < data_2.source.epoch && data_2.target.epoch < data_1.target.epoch)
+        || (data_1.source.epoch < data_2.source.epoch 
+            && data_2.target.epoch < data_1.target.epoch)
     }
 
     /**
@@ -720,6 +717,8 @@ module BeaconHelpers {
      *  @param  state   A beacon state.
      *  @param  indices A set of validator indices.
      *  @returns        The combined effective balance of the ``indices``.
+     *
+     *  @note   This function uses axiom AssumeNoGweiOverflow.
      */
     function method get_total_balance_helper(s: BeaconState, indices: set<ValidatorIndex>) : Gwei
         requires forall i : ValidatorIndex :: i in indices ==> i as nat < |s.validators|
@@ -860,6 +859,7 @@ module BeaconHelpers {
         requires s.balances[index] as int + delta as int < 0x10000000000000000
         ensures |s.balances| == |increase_balance(s,index,delta).balances|
         ensures increase_balance(s,index,delta).balances[index] == s.balances[index] + delta
+        ensures increase_balance(s,index,delta) == s.(balances := increase_balance(s,index,delta).balances)
     {
         s.(
             balances := s.balances[index as int := (s.balances[index] + delta)]
@@ -884,6 +884,7 @@ module BeaconHelpers {
                 then decrease_balance(s,index,delta).balances[index] == s.balances[index] - delta
                 else decrease_balance(s,index,delta).balances[index] == 0
         ensures s.validators == decrease_balance(s,index,delta).validators
+        ensures decrease_balance(s,index,delta) == s.(balances := decrease_balance(s,index,delta).balances)
     {
         if s.balances[index] > delta then
             s.(
@@ -902,6 +903,8 @@ module BeaconHelpers {
      *  @param  index   A validator index.
      *  @returns        A new state where the validator at index ``index`` has its exitEpoch
      *                  and withdrawable_epoch brought forward, so long as it hasn't already.
+     *
+     *  @note   This function uses axiom AssumeNoEpochOverflow.
      */
     function method initiate_validator_exit(s: BeaconState, index: ValidatorIndex) : BeaconState
         requires |s.validators| == |s.balances|
@@ -919,16 +922,13 @@ module BeaconHelpers {
         ensures s.validators[index].exitEpoch != FAR_FUTURE_EPOCH 
                     ==> initiate_validator_exit(s,index).validators[index].exitEpoch 
                         == s.validators[index].exitEpoch
-        // ensures initiate_validator_exit(s,index).validators[index].exitEpoch 
-        //             > get_current_epoch(s) + MAX_SEED_LOOKAHEAD
-        //         || initiate_validator_exit(s,index).validators[index].exitEpoch 
-        //             == s.validators[index].exitEpoch
         ensures forall i :: (0 <= i < |s.validators|) && (i != index as nat) ==> 
                 initiate_validator_exit(s,index).validators[i].exitEpoch == s.validators[i].exitEpoch
         ensures initiate_validator_exit(s,index).validators[index].exitEpoch < FAR_FUTURE_EPOCH
         ensures initiate_validator_exit(s,index).slot == s.slot
         ensures initiate_validator_exit(s,index).latest_block_header == s.latest_block_header
         ensures minimumActiveValidators(initiate_validator_exit(s,index))
+        ensures initiate_validator_exit(s,index) == s.(validators := initiate_validator_exit(s,index).validators)
     {
         // # Return if validator already initiated exit
         if s.validators[index].exitEpoch != FAR_FUTURE_EPOCH then
@@ -962,6 +962,8 @@ module BeaconHelpers {
      *  @param  s               A beacon state.
      *  @param  slashed_index   A validator index.
      *  @returns                A new state where the ``slashed_index`` validator is slashed.
+     *
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      */
     function method slash_validator(s: BeaconState, 
                                     slashed_index: ValidatorIndex, 
@@ -980,6 +982,10 @@ module BeaconHelpers {
                 == |s.validators|
         ensures |slash_validator(s, slashed_index, whistleblower_index).validators| 
                 ==  |slash_validator(s, slashed_index, whistleblower_index).balances| 
+        ensures slash_validator(s, slashed_index, whistleblower_index) 
+                == s.(validators := slash_validator(s, slashed_index, whistleblower_index).validators,
+                      balances := slash_validator(s, slashed_index, whistleblower_index).balances,
+                      slashings := slash_validator(s, slashed_index, whistleblower_index).slashings)
     {
         var epoch : Epoch := get_current_epoch(s);
         var proposer_index := get_beacon_proposer_index(s);
@@ -1072,8 +1078,6 @@ module BeaconHelpers {
         else 
             state.previous_epoch_attestations
     }  
-
-
 
     /**
      * Return the matching target attestations.
@@ -1314,7 +1318,8 @@ module BeaconHelpers {
      *  @param  index   A sequence of pending attestations.
      *  @returns        The base reward.
      *
-     *  @note   Consider adding  a lower bound.
+     *  @note   Consider adding a lower bound.
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      */
     function method get_base_reward(s: BeaconState, index: ValidatorIndex) : Gwei
         requires index as nat < |s.validators|
@@ -1363,6 +1368,8 @@ module BeaconHelpers {
      *
      *  @param  s       A beacon state.
      *  @returns        The finality delay.
+     *
+     *  @note   This function uses the axiom AssumeFinalisedCheckpointBeforeCurrentEpoch.
      */
     function method get_finality_delay(s: BeaconState): uint64
         //requires s.finalised_checkpoint.epoch <= get_previous_epoch(s) 
@@ -1376,6 +1383,8 @@ module BeaconHelpers {
      *
      *  @param  s       A beacon state.
      *  @returns        True if finality delay > MIN_EPOCHS_TO_INACTIVITY_PENALTY.
+     *
+     *  @note   This function uses the axiom AssumeFinalisedCheckpointBeforeCurrentEpoch.
      */
     predicate method is_in_inactivity_leak(s: BeaconState)
         //requires s.finalised_checkpoint.epoch <= get_previous_epoch(s) 
@@ -1465,6 +1474,8 @@ module BeaconHelpers {
      *  @param  penalties                   A sequence of penalties.
      *  @returns                            The updated rewards and penalties.
      *  
+     *
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      *  @note   The AssumeNoGweiOverflow() statements could potentially be removed by
      *          providing further lower/upper bounds on the components.
      */
@@ -1628,6 +1639,8 @@ module BeaconHelpers {
      *  @param  penalties                       A sequence of penalties.
      *  @returns                                The updated rewards and penalties.
      *  
+     *
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      *  @note   The AssumeNoGweiOverflow() statements could potentially be removed by
      *          providing further lower/upper bounds on the components.
      */
@@ -1733,6 +1746,7 @@ module BeaconHelpers {
      *  @param  penalties           A sequence of penalties.
      *  @returns                    The updated rewards and penalties.
      *  
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      *  @note   The AssumeNoGweiOverflow() statements could potentially be removed by
      *          providing further lower/upper bounds on the components.
      */
@@ -1822,6 +1836,7 @@ module BeaconHelpers {
     /** 
      * Helper to recurse through the rewards updates in get_attestation_deltas. 
      *  
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      *  @note   The AssumeNoGweiOverflow() statements could potentially be removed by
      *          providing further lower/upper bounds on the components.
      */
@@ -1852,6 +1867,7 @@ module BeaconHelpers {
     /** 
      * Helper to recurse through the penalties updates in get_attestation_deltas. 
      *  
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      *  @note   The AssumeNoGweiOverflow() statements could potentially be removed by
      *          providing further lower/upper bounds on the components.
      */
@@ -2125,6 +2141,8 @@ module BeaconHelpers {
      *
      *  @param  slashings   A sequence of gwei.
      *  @returns            The sum of ``slashings``.
+     *
+     *  @note   This function uses the axiom AssumeNoGweiOverflow.
      */
     function method get_total_slashings(slashings: seq<Gwei>): Gwei
     {
@@ -2174,6 +2192,7 @@ module BeaconHelpers {
         requires eb as nat < 0x10000000000000000
         ensures |s.validators| == |set_effective_balance(s, index, eb).validators|
         ensures set_effective_balance(s,index,eb).validators[index].effective_balance == eb
+        ensures set_effective_balance(s,index,eb) == s.(validators := set_effective_balance(s,index,eb).validators)
     {
         s.(validators := s.validators[index as nat := s.validators[index].(effective_balance := eb as Gwei)])
     }
@@ -2433,6 +2452,7 @@ module BeaconHelpers {
         requires s1.slot == s.slot
         requires s1.current_justified_checkpoint == s.current_justified_checkpoint
         requires s1.previous_justified_checkpoint == s.previous_justified_checkpoint
+
         ensures attestationIsWellFormed(s1, a);
     { // Thanks Dafny
     }
@@ -2461,12 +2481,17 @@ module BeaconHelpers {
     } 
 
     /**
-     *  A proof that a new maintains the status of is_valid_state_epoch_attestations.
+     *  A proof that a state maintains the status of is_valid_state_epoch_attestations.
      *
      *  @param  s   A beacon state. 
      *  @return     A proof that is_valid_state_epoch_attestations(s) is true.
      *
-     *  @note       This proof is assumed.
+     *  @note       This proof is assumed. A strategy to remove the use of this axiom
+     *              could be to examine more carefully the state fields use to determine
+     *              is_valid_state_epoch_attestations so as to better assess whether
+     *              the is_valid_state_epoch_attestations property holds after a state is
+     *              updated.
+     *  @note       This axiom is used in updateEffectiveBalanceHelper.
      */
     lemma {:axiom } AssumeIsValidStateEpoch_Attestations(s: BeaconState)
         ensures is_valid_state_epoch_attestations(s)
