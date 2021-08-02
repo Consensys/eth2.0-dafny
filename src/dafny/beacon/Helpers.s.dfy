@@ -15,7 +15,6 @@
 //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../utils/Eth2Types.dfy"
-include "../utils/MathHelpers.dfy"
 include "../utils/NativeTypes.dfy"
 include "../utils/SetHelpers.dfy"
 include "../ssz/Constants.dfy"
@@ -30,7 +29,6 @@ module BeaconHelperSpec {
 
     //  Import some constants, types and beacon chain helpers.
     import opened Eth2Types
-    import opened MathHelpers
     import opened NativeTypes
     import opened SetHelpers
     import opened Constants
@@ -291,6 +289,5 @@ module BeaconHelperSpec {
         (0 < len_bc <= len_bits <= MAX_VALIDATORS_PER_COMMITTEE as nat)
     }
 
-    
 
 }
