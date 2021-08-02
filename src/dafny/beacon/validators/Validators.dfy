@@ -11,16 +11,20 @@
  * License for the specific language governing permissions and limitations 
  * under the License.
  */
+
+ //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+
  
 include "../../ssz/Constants.dfy"
-include "../../utils/NativeTypes.dfy"
 include "../../utils/Eth2Types.dfy"
 
+/**
+ *  Provide validator types (and their defaults) used in the Beacon Chain.
+ */
 module Validators {
 
     //  Import some constants and types
     import opened Constants
-    import opened NativeTypes
     import opened Eth2Types
    
     // Misc dependencies
