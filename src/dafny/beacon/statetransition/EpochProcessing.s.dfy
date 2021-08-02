@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1c
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
@@ -20,11 +20,6 @@ include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.p.dfy"
 include "../../utils/Eth2Types.dfy"
-include "../helpers/helper_lemmas/MathHelper.dfy"
-include "../../utils/NativeTypes.dfy"
-include "../../libraries/integers/power.i.dfy"
-include "../statetransition/ProcessOperations.s.dfy"
-include "../../utils/Helpers.dfy"
 include "../../utils/MathHelpers.dfy"
 
 /**
@@ -39,12 +34,7 @@ module EpochProcessingSpec {
     import opened BeaconHelpers
     import opened BeaconHelperProofs
     import opened Eth2Types
-    import opened MathHelperLemmas
-    import opened NativeTypes
-    import opened Math__power_i
-    import opened Math__power_s
-    import opened ProcessOperationsSpec
-    import opened Helpers
+    
     import opened MathHelpers
 
     //  Specifications of functions related to the process epoch methods.
@@ -90,6 +80,21 @@ module EpochProcessingSpec {
                                 )
                             )
         ensures updateEpoch(s).latest_block_header == s.latest_block_header
+
+        ensures updateEpoch(s)
+                == s.(validators := updateEpoch(s).validators,
+                      balances := updateEpoch(s).balances,
+                      slashings := updateEpoch(s).slashings,
+                      eth1_data_votes := updateEpoch(s).eth1_data_votes,
+                      randao_mixes := updateEpoch(s).randao_mixes,
+                      historical_roots := updateEpoch(s).historical_roots,
+                      previous_epoch_attestations := updateEpoch(s).previous_epoch_attestations,
+                      current_epoch_attestations := updateEpoch(s).current_epoch_attestations,
+                      current_justified_checkpoint := updateEpoch(s).current_justified_checkpoint,
+                      previous_justified_checkpoint := updateEpoch(s).previous_justified_checkpoint,
+                      justification_bits := updateEpoch(s).justification_bits,
+                      finalised_checkpoint := updateEpoch(s).finalised_checkpoint
+                     )
         ensures is_valid_state_epoch_attestations(updateEpoch(s))
         ensures |updateEpoch(s).validators| == |s.validators|
     {
@@ -287,6 +292,12 @@ module EpochProcessingSpec {
         ensures |updateJustificationPrevEpoch(s).validators| == |updateJustificationPrevEpoch(s).balances|
         ensures updateJustificationPrevEpoch(s).previous_epoch_attestations == s.previous_epoch_attestations 
         ensures updateJustificationPrevEpoch(s).current_epoch_attestations == s.current_epoch_attestations
+
+        ensures updateJustificationPrevEpoch(s)
+                == s.(current_justified_checkpoint := updateJustificationPrevEpoch(s).current_justified_checkpoint,
+                      previous_justified_checkpoint := updateJustificationPrevEpoch(s).previous_justified_checkpoint,
+                      justification_bits := updateJustificationPrevEpoch(s).justification_bits
+                )
         ensures is_valid_state_epoch_attestations(updateJustificationPrevEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -382,12 +393,21 @@ module EpochProcessingSpec {
                 (s.justification_bits)[1..|s.justification_bits|]
         
         ensures updateJustificationCurrentEpoch(s).slot == s.slot
-        ensures updateJustificationCurrentEpoch(s).eth1_deposit_index == s.eth1_deposit_index
+        ensures updateJustificationCurrentEpoch(s).eth1_deposit_index 
+                == s.eth1_deposit_index
         ensures updateJustificationCurrentEpoch(s).validators == s.validators
         ensures updateJustificationCurrentEpoch(s).balances == s.balances
-        ensures |updateJustificationCurrentEpoch(s).validators| == |updateJustificationCurrentEpoch(s).balances|
-        ensures updateJustificationCurrentEpoch(s).previous_epoch_attestations == s.previous_epoch_attestations 
-        ensures updateJustificationCurrentEpoch(s).current_epoch_attestations == s.current_epoch_attestations
+        ensures |updateJustificationCurrentEpoch(s).validators| 
+                == |updateJustificationCurrentEpoch(s).balances|
+        ensures updateJustificationCurrentEpoch(s).previous_epoch_attestations 
+                == s.previous_epoch_attestations 
+        ensures updateJustificationCurrentEpoch(s).current_epoch_attestations 
+                == s.current_epoch_attestations
+
+        ensures updateJustificationCurrentEpoch(s)
+                == s.(current_justified_checkpoint := updateJustificationCurrentEpoch(s).current_justified_checkpoint,
+                      justification_bits := updateJustificationCurrentEpoch(s).justification_bits
+                )
         ensures is_valid_state_epoch_attestations(updateJustificationCurrentEpoch(s))
     {
         if  get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -436,9 +456,17 @@ module EpochProcessingSpec {
         ensures updateJustification(s).validators == s.validators
         ensures updateJustification(s).balances == s.balances
         ensures |updateJustification(s).validators| == |updateJustification(s).balances|
-        ensures updateJustification(s).previous_epoch_attestations == s.previous_epoch_attestations 
-        ensures updateJustification(s).current_epoch_attestations == s.current_epoch_attestations 
+        ensures updateJustification(s).previous_epoch_attestations 
+                == s.previous_epoch_attestations 
+        ensures updateJustification(s).current_epoch_attestations 
+                == s.current_epoch_attestations 
         
+        ensures updateJustification(s)
+                == s.(current_justified_checkpoint := updateJustification(s).current_justified_checkpoint,
+                      previous_justified_checkpoint := updateJustification(s).previous_justified_checkpoint,
+                      justification_bits := updateJustification(s).justification_bits,
+                      finalised_checkpoint := updateJustification(s).finalised_checkpoint
+                     )
         ensures is_valid_state_epoch_attestations(updateJustification(s))
     {
         if get_current_epoch(s) > GENESIS_EPOCH + 1 then 
@@ -602,11 +630,18 @@ module EpochProcessingSpec {
         ensures updateFinalisedCheckpoint(s', s).eth1_deposit_index == s.eth1_deposit_index
         ensures updateFinalisedCheckpoint(s', s).validators == s.validators == s'.validators
         ensures updateFinalisedCheckpoint(s', s).balances == s.balances == s'.balances
-        ensures |updateFinalisedCheckpoint(s', s).validators| == |updateFinalisedCheckpoint(s', s).balances|
-        ensures updateFinalisedCheckpoint(s', s).previous_epoch_attestations == s.previous_epoch_attestations == s'.previous_epoch_attestations
-        ensures updateFinalisedCheckpoint(s', s).current_epoch_attestations == s.current_epoch_attestations == s'.current_epoch_attestations
+        ensures |updateFinalisedCheckpoint(s', s).validators| 
+                == |updateFinalisedCheckpoint(s', s).balances|
+        ensures updateFinalisedCheckpoint(s', s).previous_epoch_attestations 
+                == s.previous_epoch_attestations 
+                == s'.previous_epoch_attestations
+        ensures updateFinalisedCheckpoint(s', s).current_epoch_attestations 
+                == s.current_epoch_attestations 
+                == s'.current_epoch_attestations
         //ensures get_previous_epoch(updateFinalisedCheckpoint(s', s)) == get_previous_epoch(s)
-        ensures updateFinalisedCheckpoint(s', s) == s'.(finalised_checkpoint := updateFinalisedCheckpoint(s', s).finalised_checkpoint)
+        
+        ensures updateFinalisedCheckpoint(s', s) 
+                == s'.(finalised_checkpoint := updateFinalisedCheckpoint(s', s).finalised_checkpoint)
         ensures is_valid_state_epoch_attestations(updateFinalisedCheckpoint(s', s))
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then 
@@ -650,6 +685,12 @@ module EpochProcessingSpec {
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
 
+        ensures updateJustificationAndFinalisation(s)
+                == s.(current_justified_checkpoint := updateJustificationAndFinalisation(s).current_justified_checkpoint,
+                      previous_justified_checkpoint := updateJustificationAndFinalisation(s).previous_justified_checkpoint,
+                      justification_bits := updateJustificationAndFinalisation(s).justification_bits,
+                      finalised_checkpoint := updateJustificationAndFinalisation(s).finalised_checkpoint
+                     )
         ensures is_valid_state_epoch_attestations(updateJustificationAndFinalisation(s))       
     {
         updateFinalisedCheckpoint(updateJustification(s), s)
@@ -663,13 +704,18 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the epoch slashings.
      *
-     *  @note       This function uses assume statement as a simplification to ensure
-     *              that get_previous_epoch(s) >= s.finalised_checkpoint.epoch. 
+     *  @note       This function uses axiom AssumeNoGweiOverflowToAddRewards.
+     *  @note       This axiom is used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied.       
      */
     function updateRAndP(s: BeaconState): BeaconState
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
          
+        ensures updateRAndP(s)
+                == s.(validators := updateRAndP(s).validators,
+                      balances := updateRAndP(s).balances)
         ensures is_valid_state_epoch_attestations(updateRAndP(s))
     {
         if get_current_epoch(s) <= GENESIS_EPOCH + 1 then s
@@ -716,6 +762,10 @@ module EpochProcessingSpec {
                     ==> updateRewardsAndPenalties(s, rewards, penalties).validators[i] == s.validators[i]
         ensures updateRewardsAndPenalties(s, rewards, penalties) 
                 == s.(balances := updateRewardsAndPenalties(s, rewards, penalties).balances)
+
+        ensures updateRewardsAndPenalties(s, rewards, penalties) 
+                == s.(validators := updateRewardsAndPenalties(s, rewards, penalties).validators,
+                      balances := updateRewardsAndPenalties(s, rewards, penalties).balances)
         ensures is_valid_state_epoch_attestations(updateRewardsAndPenalties(s, rewards, penalties))
 
         decreases |rewards|, |penalties|
@@ -746,6 +796,8 @@ module EpochProcessingSpec {
      */
     function updateRegistry(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures is_valid_state_epoch_attestations(updateRegistry(s))   
     {
         s
     }
@@ -756,52 +808,33 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the epoch slashings.
      *
-     *  @note       This function uses assume statements as a simplification to ensure
-     *              that balance and epoch overflows don't occur. To remove these assume 
-     *              statements a strategy similar to that applied within the deposit 
-     *              processing could be applied.
+     *  @note       This function uses axiom AssumeNoEpochOverflow and 
+     *              AssumeNoGweiOverflowToUpdateSlashings.
+     *  @note       These axioms are used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied. 
      */
     function updateSlashings(s: BeaconState) : BeaconState
         requires |s.balances| == |s.validators|
         requires is_valid_state_epoch_attestations(s)
-        // ensures 
-        //     var epoch := get_current_epoch(s);
-        //     var total_balance := get_total_active_balance_full(s);
-        //     var sumSlashings := get_total_slashings(s.slashings);
-        //     var adjusted_total_slashing_balance 
-        //         := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat, 
-        //                 total_balance as nat
-        //               ) as Gwei;
-        //     var increment := EFFECTIVE_BALANCE_INCREMENT; 
-        //     assert total_balance > 0 as Gwei;
-        //     assert increment > 0 as Gwei;
-        //     assume forall v :: 0 <= v < |s.validators| 
-        //             ==> 0 
-        //                 <= s.validators[v].effective_balance as nat 
-        //                     * adjusted_total_slashing_balance as nat 
-        //                     / total_balance  as nat
-        //                 < 0x10000000000000000;
-        //     assume epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
-        //     updateSlashings(s) == updateSlashingsHelper(s, 
-        //                                                 |s.validators|, 
-        //                                                 epoch, 
-        //                                                 total_balance, 
-        //                                                 adjusted_total_slashing_balance, 
-        //                                                 increment
-        //                                                )
+        
+        ensures updateSlashings(s) == s.(balances := updateSlashings(s).balances)
         ensures is_valid_state_epoch_attestations(updateSlashings(s))
     {
         var epoch := get_current_epoch(s);
         var total_balance := get_total_active_balance_full(s);
         var sumSlashings := get_total_slashings(s.slashings);
-        var adjusted_total_slashing_balance := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat,
-                                                    total_balance as nat
-                                                  ) as Gwei;
+        var adjusted_total_slashing_balance 
+                := min((sumSlashings as nat * PROPORTIONAL_SLASHING_MULTIPLIER as nat) as nat,
+                        total_balance as nat
+                      ) as Gwei;
         var increment := EFFECTIVE_BALANCE_INCREMENT; 
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
         
-        AssumeNoGweiOverflowToUpdateSlashings(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        AssumeNoGweiOverflowToUpdateSlashings(s.validators, 
+                                              adjusted_total_slashing_balance as nat, 
+                                              total_balance as nat);
         assert forall v :: 0 <= v < |s.validators| 
                 ==> 0 <= s.validators[v].effective_balance as nat 
                         * adjusted_total_slashing_balance as nat 
@@ -842,50 +875,24 @@ module EpochProcessingSpec {
         requires epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2 < 0x10000000000000000;
         requires is_valid_state_epoch_attestations(s)
             
-        ensures |updateSlashingsHelper(s, 
-                                       len, 
-                                       epoch, 
-                                       total_balance, 
-                                       adjusted_total_slashing_balance, 
-                                       increment
-                                      ).validators| == |s.validators| 
-        ensures |updateSlashingsHelper(s, 
-                                       len, 
-                                       epoch, 
-                                       total_balance, 
-                                       adjusted_total_slashing_balance, 
-                                       increment
-                                      ).balances| == |s.balances| 
-        ensures forall v :: 0 <= v < |s.validators| 
-                ==> updateSlashingsHelper(s, 
-                                          len, 
-                                          epoch, 
-                                          total_balance, 
-                                          adjusted_total_slashing_balance, 
-                                          increment
-                                         ).validators[v]  == s.validators[v]
-        ensures updateSlashingsHelper(s, 
-                                      len, 
-                                      epoch, 
-                                      total_balance, 
-                                      adjusted_total_slashing_balance, 
-                                      increment
-                                     ) 
-                    == s.(balances := updateSlashingsHelper(s, 
-                                                            len, 
-                                                            epoch, 
-                                                            total_balance, 
-                                                            adjusted_total_slashing_balance, 
-                                                            increment
-                                                           ).balances)
-        ensures forall v :: len <= v < |s.balances| 
-                ==> updateSlashingsHelper(s, 
-                                          len, 
-                                          epoch, 
-                                          total_balance,
-                                          adjusted_total_slashing_balance, 
-                                          increment
-                                         ).balances[v]  == s.balances[v]
+        ensures 
+            var updatedState := updateSlashingsHelper(s, 
+                                                    len, 
+                                                    epoch, 
+                                                    total_balance, 
+                                                    adjusted_total_slashing_balance, 
+                                                    increment
+                                                    );
+            |updatedState.validators| == |s.validators| 
+            && |updatedState.balances| == |s.balances| 
+            && (forall v :: 0 <= v < |s.validators| 
+                ==> updatedState.validators[v]  == s.validators[v])
+            && updatedState == s.(balances := updatedState.balances)
+            && (forall v :: len <= v < |s.balances| 
+                ==> updatedState.balances[v]  == s.balances[v])
+            && is_valid_state_epoch_attestations(updatedState)
+            && updatedState == s.(balances := updatedState.balances)
+            
         ensures forall v :: 0 <= v < len ==> 
             assert v < |s.balances|;
             var new_bal := if (s.validators[v].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) 
@@ -904,14 +911,7 @@ module EpochProcessingSpec {
                                   adjusted_total_slashing_balance, 
                                   increment
                                  ).balances[v] == new_bal
-       
-        ensures is_valid_state_epoch_attestations(updateSlashingsHelper(s, 
-                                                                        len, 
-                                                                        epoch, 
-                                                                        total_balance, 
-                                                                        adjusted_total_slashing_balance, 
-                                                                        increment
-                                                                        ))
+        
         decreases len
     {
         if len == 0 then s
@@ -959,6 +959,9 @@ module EpochProcessingSpec {
      */
     function updateEth1DataReset(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures updateEth1DataReset(s) 
+                == s.(eth1_data_votes := updateEth1DataReset(s).eth1_data_votes)
         ensures is_valid_state_epoch_attestations(updateEth1DataReset(s))
     {
         var next_epoch := get_current_epoch(s) + 1;
@@ -973,13 +976,18 @@ module EpochProcessingSpec {
      *
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the epoch effective balance updates.
-     *  @note       This function matches to the simplified method currently being used 
-     *              and should be updated to if process_effective_balance_updates changes.
+     *
+     *  @note       This function uses axiom AssumeNoGweiOverflowToUpdateEffectiveBalance.
+     *  @note       This axiom is used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied.  
      */
     function updateEffectiveBalance(s: BeaconState) : BeaconState
         requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
 
+        ensures updateEffectiveBalance(s) 
+                == s.(validators := updateEffectiveBalance(s).validators)
         ensures is_valid_state_epoch_attestations(updateEffectiveBalance(s))
     {
         AssumeNoGweiOverflowToUpdateEffectiveBalance(s.balances);
@@ -995,6 +1003,8 @@ module EpochProcessingSpec {
      *
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the effective balance updates.
+     *
+     *  @note       This function uses axiom AssumeIsValidStateEpoch_Attestations.
      */
     function updateEffectiveBalanceHelper(s: BeaconState, len: nat, up: nat, down: nat) : BeaconState
         requires len <= |s.balances| == |s.validators| 
@@ -1006,8 +1016,6 @@ module EpochProcessingSpec {
         ensures |updateEffectiveBalanceHelper(s,len, up, down).validators| == |s.validators|  
         ensures |updateEffectiveBalanceHelper(s, len, up, down).balances| == |s.balances| 
         ensures updateEffectiveBalanceHelper(s, len, up, down).balances == s.balances
-        ensures updateEffectiveBalanceHelper(s, len, up, down) 
-                == s.(validators := updateEffectiveBalanceHelper(s, len, up, down).validators)
         ensures forall v :: len <= v < |s.validators| 
                 ==> updateEffectiveBalanceHelper(s,len, up, down).validators[v]  == s.validators[v]
         ensures forall v :: 0 <= v < len ==> 
@@ -1015,11 +1023,17 @@ module EpochProcessingSpec {
             var new_val := if (s.balances[v] as nat + down < s.validators[v].effective_balance as nat) 
                         || (s.validators[v].effective_balance as nat + up < s.balances[v] as nat)
                         then 
-                            set_effective_balance(s, v as ValidatorIndex, min((s.balances[v] - s.balances[v] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei).validators[v] 
+                            set_effective_balance(s, 
+                                                  v as ValidatorIndex, 
+                                                  min((s.balances[v] - s.balances[v] % EFFECTIVE_BALANCE_INCREMENT) as nat, 
+                                                      MAX_EFFECTIVE_BALANCE as nat) as Gwei
+                                                  ).validators[v] 
                         else 
                             s.validators[v]; 
             updateEffectiveBalanceHelper(s,len, up, down).validators[v] == new_val
        
+        ensures updateEffectiveBalanceHelper(s, len, up, down) 
+                == s.(validators := updateEffectiveBalanceHelper(s, len, up, down).validators)
         ensures is_valid_state_epoch_attestations(updateEffectiveBalanceHelper(s,len, up, down))
 
         decreases len
@@ -1033,16 +1047,23 @@ module EpochProcessingSpec {
             var s1 := if (s.balances[i] as nat + down < s.validators[i].effective_balance as nat) 
                         || (s.validators[i].effective_balance as nat + up < s.balances[i] as nat)
                         then 
-                            var new_bal := min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat);
+                            var new_bal 
+                                := min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, 
+                                        MAX_EFFECTIVE_BALANCE as nat);
                             set_effective_balance(s, i as ValidatorIndex, new_bal as Gwei)
                         else s;   
 
-            assert s1.validators[i] == if (s.balances[i] as nat + down < s.validators[i].effective_balance as nat) 
-                                        || (s.validators[i].effective_balance as nat + up < s.balances[i] as nat)
-                                        then 
-                                            set_effective_balance(s, i as ValidatorIndex, min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei).validators[i] 
-                                        else 
-                                            s.validators[i];
+            assert s1.validators[i] 
+                    == if (s.balances[i] as nat + down < s.validators[i].effective_balance as nat) 
+                        || (s.validators[i].effective_balance as nat + up < s.balances[i] as nat)
+                        then 
+                            set_effective_balance(s, 
+                                                  i as ValidatorIndex, 
+                                                  min((s.balances[i] - s.balances[i] % EFFECTIVE_BALANCE_INCREMENT) as nat, 
+                                                      MAX_EFFECTIVE_BALANCE as nat) as Gwei
+                                                  ).validators[i] 
+                        else 
+                            s.validators[i];
             AssumeIsValidStateEpoch_Attestations(s1);
             updateEffectiveBalanceHelper(s1, len-1, up, down)
     }
@@ -1055,6 +1076,9 @@ module EpochProcessingSpec {
      */
     function updateSlashingsReset(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures updateSlashingsReset(s) 
+                == s.(slashings := updateSlashingsReset(s).slashings)
         ensures is_valid_state_epoch_attestations(updateSlashingsReset(s))
     {
         var next_epoch := get_current_epoch(s) + 1;
@@ -1072,6 +1096,9 @@ module EpochProcessingSpec {
      */
     function updateRandaoMixes(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures updateRandaoMixes(s) 
+                == s.(randao_mixes := updateRandaoMixes(s).randao_mixes)
         ensures is_valid_state_epoch_attestations(updateRandaoMixes(s))
     {
         var current_epoch := get_current_epoch(s);
@@ -1093,6 +1120,9 @@ module EpochProcessingSpec {
      */
     function updateHistoricalRoots(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures updateHistoricalRoots(s) 
+                == s.(historical_roots := updateHistoricalRoots(s).historical_roots)
         ensures is_valid_state_epoch_attestations(updateHistoricalRoots(s))
     {
        var next_epoch := (get_current_epoch(s) + 1) as Epoch;
@@ -1113,6 +1143,11 @@ module EpochProcessingSpec {
      */
     function updateParticipationRecords(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
+
+        ensures updateParticipationRecords(s) 
+                == s.(previous_epoch_attestations := updateParticipationRecords(s).previous_epoch_attestations,
+                     current_epoch_attestations := updateParticipationRecords(s).current_epoch_attestations
+                     )
         ensures is_valid_state_epoch_attestations(updateParticipationRecords(s))
     {
         //  rotate the attestations.

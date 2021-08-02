@@ -20,7 +20,6 @@ include "../attestations/AttestationsTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.p.dfy"
 include "EpochProcessing.s.dfy"
-include "ProcessOperations.s.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/MathHelpers.dfy"
 
@@ -37,7 +36,6 @@ module EpochProcessing {
     import opened BeaconHelpers
     import opened BeaconHelperProofs
     import opened EpochProcessingSpec
-    import opened ProcessOperationsSpec
     import opened Eth2Types
     import opened MathHelpers
 
@@ -220,7 +218,8 @@ module EpochProcessing {
             s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
 
             //  Right-Shift of justification bits and initialise first to false
-            s' := s'.(justification_bits := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
+            s' := s'.(justification_bits 
+                        := [false] + (s.justification_bits)[..JUSTIFICATION_BITS_LENGTH - 1]); 
             //  Determine whether ??
             assert(get_previous_epoch(s') <= previous_epoch <= get_current_epoch(s'));
             assert(s'.slot == s.slot);
@@ -234,7 +233,8 @@ module EpochProcessing {
             //  Compute the attestations in s.previous_epoch_attestations that 
             //  vote for get_block_root(state, previous_epoch) i.e. the block root at the beginning
             //  of the previous epoch. (retrieve in the historical roots).
-            var matching_target_attestations_prev := get_matching_target_attestations(s', previous_epoch) ;  
+            var matching_target_attestations_prev 
+                    := get_matching_target_attestations(s', previous_epoch) ;  
             //  @note should be the same as get_matching_target_attestations(s, previous_epoch) ;  
             // Previous epoch
             if get_attesting_balance(s', matching_target_attestations_prev) as uint128 * 3 >=       
@@ -245,10 +245,12 @@ module EpochProcessing {
                                         get_block_root(s', previous_epoch)));
                 s' := s'.(justification_bits := s'.justification_bits[1 := true]);
             }
-            assert(s'.slot == updateJustificationPrevEpoch(s).slot);
-            assert(s'.current_justified_checkpoint == updateJustificationPrevEpoch(s).current_justified_checkpoint);
-            assert(s'.previous_justified_checkpoint == updateJustificationPrevEpoch(s).previous_justified_checkpoint);
-            assert(s' == updateJustificationPrevEpoch(s)); 
+            assert s'.slot == updateJustificationPrevEpoch(s).slot;
+            assert s'.current_justified_checkpoint 
+                    == updateJustificationPrevEpoch(s).current_justified_checkpoint;
+            assert s'.previous_justified_checkpoint 
+                    == updateJustificationPrevEpoch(s).previous_justified_checkpoint;
+            assert s' == updateJustificationPrevEpoch(s); 
 
             ghost var s2 := s';
             //  Current epoch
@@ -283,7 +285,8 @@ module EpochProcessing {
             //  if current_epoch == 2, s.previous_justified_checkpoint.epoch + 3 >= 3 so the 
             //  following condition is false. As a result we do not need to compute 
             //  s.previous_justified_checkpoint.epoch + 3 and can avoid a possible overflow.
-            //  We assume here that the target language is such that AND conditions are evaluated ///   short-circuit i.e. unfolded as nested ifs
+            //  We assume here that the target language is such that AND conditions are evaluated 
+            ///   short-circuit i.e. unfolded as nested ifs
             //  
             //  The 2nd/3rd/4th most recent epochs are justified, the 2nd using the 4th as source
             if (all(bits[1..4]) && current_epoch >= 3 && s.previous_justified_checkpoint.epoch  == current_epoch - 3) {
@@ -314,10 +317,10 @@ module EpochProcessing {
      *  @param  s   A state.
      *  @returns    The state obtained after applying the epoch rewards and penalties.
      *
-     *  @note       This function uses assume statements as a simplification to ensure
-     *              that balance overflows don't occur. To remove these assume statements
-     *              a strategy similar to that applied within the deposit processing
-     *              could be applied.
+     *  @note       This function uses axiom AssumeNoGweiOverflowToAddRewards.
+     *  @note       This axiom is used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied.          
      */
     method process_rewards_and_penalties(s: BeaconState)  returns (s' : BeaconState)
         requires |s.validators| == |s.balances|
@@ -395,10 +398,11 @@ module EpochProcessing {
      *  @param  s   A state.
      *  @returns    The state obtained after applying the epoch slashings.
      *
-     *  @note       This function uses assume statements as a simplification to ensure
-     *              that balance overflows don't occur. To remove these assume statements
-     *              a strategy similar to that applied within the deposit processing
-     *              could be applied.
+     *  @note       This function uses axiom AssumeNoEpochOverflow and 
+     *              AssumeNoGweiOverflowToUpdateSlashings.
+     *  @note       These axioms are used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied.        
      */
     method process_slashings(s: BeaconState) returns (s' : BeaconState)
         requires |s.validators| == |s.balances| 
@@ -419,7 +423,9 @@ module EpochProcessing {
         
         assert total_balance > 0 as Gwei;
         assert increment > 0 as Gwei;
-        AssumeNoGweiOverflowToUpdateSlashings(s.validators, adjusted_total_slashing_balance as nat, total_balance as nat);
+        AssumeNoGweiOverflowToUpdateSlashings(s.validators, 
+                                              adjusted_total_slashing_balance as nat, 
+                                              total_balance as nat);
         AssumeNoEpochOverflow(epoch as nat + EPOCHS_PER_SLASHINGS_VECTOR as nat / 2);
 
         s' := s;
@@ -436,17 +442,31 @@ module EpochProcessing {
             invariant i <= |s'.validators| == |s'.balances| 
             //invariant forall v :: i <= v < |s.balances| ==> s'.balances[v] ==  s.balances[v]
             //invariant s' == s.(balances := s'.balances)
-            invariant s' == updateSlashingsHelper(s, i, epoch, total_balance, adjusted_total_slashing_balance, increment)
+            invariant s' == updateSlashingsHelper(s, 
+                                                  i, 
+                                                  epoch, 
+                                                  total_balance, 
+                                                  adjusted_total_slashing_balance, 
+                                                  increment)
         {
-            if (s'.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) == s'.validators[i].withdrawable_epoch) {
-                s' := decrease_balance(s', 
-                                       i as ValidatorIndex, 
-                                       (s.validators[i].effective_balance as nat * adjusted_total_slashing_balance as nat / total_balance  as nat) as Gwei);
+            if (s'.validators[i].slashed && (epoch + EPOCHS_PER_SLASHINGS_VECTOR / 2) 
+                == s'.validators[i].withdrawable_epoch) {
+                    s' := decrease_balance(s', 
+                                           i as ValidatorIndex, 
+                                           (s.validators[i].effective_balance as nat 
+                                            * adjusted_total_slashing_balance as nat 
+                                            / total_balance  as nat) as Gwei
+                                          );
             }
             
             i := i + 1;
         }
-        assert s' == updateSlashingsHelper(s, i, epoch, total_balance, adjusted_total_slashing_balance, increment);
+        assert s' == updateSlashingsHelper(s, 
+                                           i, 
+                                           epoch, 
+                                           total_balance, 
+                                           adjusted_total_slashing_balance, 
+                                           increment);
         assert i == |s'.validators|;
         assert s' == updateSlashings(s);
     }
@@ -477,7 +497,10 @@ module EpochProcessing {
      *  @param  s   A state.
      *  @returns    The state obtained after applying the epoch effective balance updates
      *
-     *  @note       This component has been simplified.
+     *  @note       This function uses axiom AssumeNoGweiOverflowToUpdateEffectiveBalance.
+     *  @note       This axiom is used as a simplification to ensure that balance 
+     *              overflows don't occur. To remove this axiom a strategy similar
+     *              to that applied within the deposit processing could be applied.      
      */
     method process_effective_balance_updates(s: BeaconState) returns (s' : BeaconState)
         requires |s.validators| == |s.balances| 
@@ -509,7 +532,9 @@ module EpochProcessing {
             
             if (s.balances[i] as nat + down as nat < s.validators[i].effective_balance as nat) 
                 || (s.validators[i].effective_balance as nat + up as nat < s.balances[i] as nat) {
-                    var new_bal := min((s.balances[i] - (s.balances[i] % EFFECTIVE_BALANCE_INCREMENT)) as nat, MAX_EFFECTIVE_BALANCE as nat);
+                    var new_bal 
+                        := min((s.balances[i] - (s.balances[i] % EFFECTIVE_BALANCE_INCREMENT)) as nat, 
+                                MAX_EFFECTIVE_BALANCE as nat);
                     s' := set_effective_balance(s', i as ValidatorIndex, new_bal as Gwei);
             }
             
@@ -537,7 +562,8 @@ module EpochProcessing {
         var next_epoch := get_current_epoch(s) + 1;
         // Reset slashings
         s' := s.(
-                slashings := s.slashings[(next_epoch % EPOCHS_PER_SLASHINGS_VECTOR) as nat := 0 as Gwei]
+                slashings 
+                    := s.slashings[(next_epoch % EPOCHS_PER_SLASHINGS_VECTOR) as nat := 0 as Gwei]
             );
     }
 
@@ -602,6 +628,5 @@ module EpochProcessing {
             current_epoch_attestations := []
         );
     }
-
     
 }
