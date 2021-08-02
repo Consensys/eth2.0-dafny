@@ -74,12 +74,7 @@ module StateTransition {
                 forwardStateToSlot(nextSlot(s), b.slot)
                 .latest_block_header
             )
-        // @note Add additional postconditions to understand how the modified state has been formed.
-        // ensures s'.eth1_deposit_index as int == s.eth1_deposit_index as int + |b.body.deposits|
-        // ensures s'.validators == ...
-        // ensures s'.balances == ...
         ensures |s'.validators| == |s'.balances|
-        
     {
         // Finalise slots before b.slot.
         s' := process_slots(s, b.slot);
