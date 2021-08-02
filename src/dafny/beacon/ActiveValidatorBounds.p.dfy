@@ -12,15 +12,11 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
 
-include "../utils/Eth2Types.dfy"
 include "../utils/MathHelpers.dfy"
-include "../utils/NativeTypes.dfy"
-include "BeaconChainTypes.dfy"
 include "../ssz/Constants.dfy"
-include "validators/Validators.dfy"
 include "attestations/AttestationsTypes.dfy"
 
 /**
@@ -29,14 +25,9 @@ include "attestations/AttestationsTypes.dfy"
 module ActiveValidatorBounds {
 
     //  Import some constants, types and beacon chain helpers.
-    import opened Eth2Types
     import opened MathHelpers
-    import opened NativeTypes
-    import opened BeaconChainTypes
     import opened Constants
-    import opened Validators
-    import opened AttestationsTypes
-
+    
     /**
      *  A proof that if len_indices > 2^22 then at least one committee formed will be of a length 
      *  that breaches the upper bound of MAX_VALIDATORS_PER_COMMITTEE.
