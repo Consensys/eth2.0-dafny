@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -151,40 +151,18 @@ module ProcessOperationsSpec {
         requires s.eth1_deposit_index as int +  |deposits| < 0x10000000000000000 
         requires |s.validators| == |s.balances|
         requires |s.validators| + |deposits| <= VALIDATOR_REGISTRY_LIMIT as int
-        //requires forall i,j :: 0 <= i < j < |s.validators| ==> s.validators[i].pubkey != s.validators[j].pubkey
 
         requires total_balances(s.balances) + total_deposits(deposits) < 0x10000000000000000 // less than total eth
-        //requires forall i :: 0 <= i < |s.validators| ==> s.balances[i] as int + get_deposit_total(s.validators[i].pubkey, deposits) as int < 0x10000000000000000
-        
-        //ensures updateDeposits(s, deposits).slot == s.slot 
-        //ensures updateDeposits(s, deposits).latest_block_header == s.latest_block_header
-        //ensures updateDeposits(s, deposits).block_roots == s.block_roots
-        //ensures updateDeposits(s, deposits).state_roots == s.state_roots
 
         ensures updateDeposits(s, deposits).eth1_deposit_index == s.eth1_deposit_index  + |deposits| as uint64 
         ensures |s.validators| <= |updateDeposits(s,deposits).validators| <= |s.validators| + |deposits| 
         
-        // include properties ???
-        //ensures |updateDeposits(s,deposits).validators| == |updateDeposits(s,deposits).balances|        
-        //ensures |s.balances| <= |updateDeposits(s,deposits).balances| <= |s.balances| + |deposits| 
-
         ensures total_balances(updateDeposits(s,deposits).balances) == total_balances(s.balances) + total_deposits(deposits)
         
          decreases |deposits|
     {
         if |deposits| == 0 then s
         else 
-            //assert |deposits| > 0;
-            //assert forall i :: 0 <= i < |s.validators| ==> s.balances[i] as int + get_deposit_total(s.validators[i].pubkey, deposits) as int < 0x10000000000000000
-            //assert total_balances(s.balances) + total_deposits(deposits[..|deposits|-1]) < 0x10000000000000000 ;
-            //assert total_deposits(deposits[..|deposits|-1]) + total_deposits([deposits[|deposits|-1]]) == total_deposits(deposits) ;
-            //updateDeposits(s,deposits[..|deposits|-1])
-            //assert total_balances(s.balances) + total_deposits([deposits[|deposits|-1]]) < 0x10000000000000000;
-            //updateBalancesLemma(s,deposits);
-            //assert total_balances(s.balances) + total_deposits(deposits[..|deposits|-1]) < 0x10000000000000000;
-            //assert deposits[|deposits|-1].data.amount as int < total_deposits(deposits);
-            //assert total_balances(updateDeposits(s,deposits[..|deposits|-1]).balances) + deposits[|deposits|-1].data.amount as int < 0x10000000000000000;
-
             updateBalTotalBySingleDeposit(updateDeposits(s,deposits[..|deposits|-1]), deposits[|deposits|-1]);
 
             updateDeposit(updateDeposits(s,deposits[..|deposits|-1]),deposits[|deposits|-1])
@@ -203,23 +181,15 @@ module ProcessOperationsSpec {
         requires |s.validators| + 1 <= VALIDATOR_REGISTRY_LIMIT as int
         requires total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
         
-        //requires d.data.pubkey in seqKeysInValidators(s.validators) ==> s.balances[get_validator_index(seqKeysInValidators(s.validators), d.data.pubkey)] as int + d.data.amount as int < 0x10000000000000000
-        
         ensures d.data.pubkey !in seqKeysInValidators(s.validators) ==> updateDeposit(s,d).validators == s.validators + [get_validator_from_deposit(d)]
         ensures d.data.pubkey in seqKeysInValidators(s.validators)  ==> updateDeposit(s,d).validators == s.validators 
         
         ensures updateDeposit(s,d).eth1_deposit_index == s.eth1_deposit_index + 1
-        //ensures updateDeposit(s,d).slot == s.slot
-        //ensures updateDeposit(s,d).latest_block_header == s.latest_block_header
-        //ensures updateDeposit(s,d).block_roots == s.block_roots
-        //ensures updateDeposit(s,d).state_roots == s.state_roots
 
         ensures |updateDeposit(s,d).validators| == |updateDeposit(s,d).balances|        // maybe include in property lemmas
         ensures |s.validators| <= |updateDeposit(s,d).validators| <= |s.validators| + 1 // maybe include in property lemmas
         ensures |s.balances| <= |updateDeposit(s,d).balances| <= |s.balances| + 1 // maybe include in property lemmas
         ensures forall i :: 0 <= i < |s.balances| ==> s.balances[i] <= updateDeposit(s,d).balances[i]
-        //ensures total_balances(updateDeposit(s,d).balances) == total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
-        // in lemma
         
     {
         var pk := seqKeysInValidators(s.validators); 
@@ -239,20 +209,7 @@ module ProcessOperationsSpec {
         )
     }
 
-    // function total_deposits(deposits: seq<Deposit>): nat
-    // {
-    //     if |deposits| == 0 then 0
-    //     //else deposits[0].data.amount as nat + total_deposits(deposits[1..])
-    //     else total_deposits(deposits[..|deposits|-1]) + deposits[|deposits|-1].data.amount as nat
-    // }
-
-    // function total_balances(bal: seq<Gwei>): nat
-    // {
-    //     if |bal| == 0 then 0
-    //     else bal[0] as nat + total_balances(bal[1..])
-    // }
-
-        /**
+    /**
      * Extract a validator from a single deposit.
      *
      *  @param  d       A single deposit.
@@ -329,9 +286,6 @@ module ProcessOperationsSpec {
         )
     }
     
-    
-
-
     // Beacon State Mutators
 
     /** increase_balance
@@ -354,7 +308,7 @@ module ProcessOperationsSpec {
     // }
 
     
-lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
+    lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
         requires total_balances(sb) + d.data.amount as int < 0x10000000000000000
         ensures forall i :: 0 <= i < |sb| ==> sb[i] as int + d.data.amount as int < 0x10000000000000000
     {
@@ -362,9 +316,6 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
             // Thanks Dafny
         }
         else {
-            //assert total_balances(sb) == sb[0] as int + total_balances(sb[1..]);
-            //assert sb[0] as int + d.data.amount as int < 0x10000000000000000;
-            //assert total_balances(sb[1..]) + d.data.amount as int < 0x10000000000000000;
             individualBalanceBoundMaintained(sb[1..],d);
         }
     } 
@@ -376,7 +327,6 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
         requires total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
         
         ensures total_balances(updateDeposit(s,d).balances) == total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
-        //ensures total_balances(updateDeposit(s,d).balances) == total_balances(s.balances) + total_deposits([d]) 
     {
         var pk := seqKeysInValidators(s.validators); 
         if |s.balances| == 0 {
@@ -386,17 +336,10 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
             if d.data.pubkey in pk {
                 var index := get_validator_index(pk, d.data.pubkey);
                 individualBalanceBoundMaintained(s.balances,d);
-                //assert updateDeposit(s,d).balances ==  increase_balance(s,index,d.data.amount).balances;
-                //assert increase_balance(s,index,d.data.amount).balances[index] == s.balances[index] + d.data.amount;
-                //assert forall i :: 0 <= i < |s.balances| && i != index as int ==> increase_balance(s,index,d.data.amount).balances[i] == s.balances[i];
-                //assert total_balances(updateDeposit(s,d).balances) == total_balances(increase_balance(s,index,d.data.amount).balances) ;
                 updateExistingBalance(s, index, d.data.amount);
-                //assert total_balances(updateDeposit(s,d).balances) == total_balances(s.balances) + d.data.amount as int ;
             }
             else {
-                //assert updateDeposit(s,d).balances == s.balances + [d.data.amount];
                 distBalancesProp(s.balances,[d.data.amount]);
-                //assert total_balances(s.balances + [d.data.amount]) == total_balances(s.balances) + total_balances([d.data.amount]);
             }
         }
     }
@@ -408,60 +351,29 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
 
         ensures total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances) + delta as int
     {
-        //assert increase_balance(s,index,delta).balances[index] == s.balances[index] + delta;
-        //assert forall i :: 0 <= i < |s.balances| && i != index as int ==> increase_balance(s,index,delta).balances[i] == s.balances[i];
-
         if index as int < |s.balances|-1 {
             assert increase_balance(s,index,delta).balances == increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]] + increase_balance(s,index,delta).balances[(index+1)..];
                                                                 
-            //assert total_balances(increase_balance(s,index,delta).balances[..index]) == total_balances(s.balances[..index]);
-            //assert total_balances([increase_balance(s,index,delta).balances[index]]) == total_balances([s.balances[index]]) + delta as int;
-            //assert total_balances(increase_balance(s,index,delta).balances[(index+1)..]) == total_balances(s.balances[(index+1)..]);
-
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]] + increase_balance(s,index,delta).balances[(index+1)..]);
-
             distBalancesProp(increase_balance(s,index,delta).balances[..index], [increase_balance(s,index,delta).balances[index]]);
-            //assert total_balances(increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]]) == total_balances(increase_balance(s,index,delta).balances[..index]) + total_balances([increase_balance(s,index,delta).balances[index]]);
+
             distBalancesProp(increase_balance(s,index,delta).balances[..index]+[increase_balance(s,index,delta).balances[index]], increase_balance(s,index,delta).balances[(index+1)..]);
-            //assert total_balances(increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]] + increase_balance(s,index,delta).balances[(index+1)..]) == total_balances(increase_balance(s,index,delta).balances[..index]) + total_balances([increase_balance(s,index,delta).balances[index]]) + total_balances(increase_balance(s,index,delta).balances[index+1..]);
-
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(increase_balance(s,index,delta).balances[..index]) + total_balances([increase_balance(s,index,delta).balances[index]]) + total_balances(increase_balance(s,index,delta).balances[index+1..]);
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]) + delta as int + total_balances(s.balances[(index+1)..]);
-
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]) + total_balances(s.balances[(index+1)..]) + delta as int;
 
             assert s.balances == s.balances[..index] + [s.balances[index]] + s.balances[(index+1)..];
-            //assert total_balances(s.balances) == total_balances(s.balances[..index] + [s.balances[index]] + s.balances[(index+1)..]);
 
             distBalancesProp(s.balances[..index], [s.balances[index]]);
-            //assert total_balances(s.balances[..index] + [s.balances[index]]) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]);
-            distBalancesProp(s.balances[..index]+[s.balances[index]], s.balances[(index+1)..]);
-            //assert total_balances(s.balances[..index] + [s.balances[index]] + s.balances[(index+1)..]) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]) + total_balances(s.balances[index+1..]);
 
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances) + delta as int;
+            distBalancesProp(s.balances[..index]+[s.balances[index]], s.balances[(index+1)..]);
+
         }
         else {
-            //assert index as int == |s.balances| - 1;
+
             assert increase_balance(s,index,delta).balances == increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]];
                                                                 
-            //assert total_balances(increase_balance(s,index,delta).balances[..index]) == total_balances(s.balances[..index]);
-            //assert total_balances([increase_balance(s,index,delta).balances[index]]) == total_balances([s.balances[index]]) + delta as int;
-            
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]]);
-
             distBalancesProp(increase_balance(s,index,delta).balances[..index], [increase_balance(s,index,delta).balances[index]]);
-            //assert total_balances(increase_balance(s,index,delta).balances[..index] + [increase_balance(s,index,delta).balances[index]]) == total_balances(increase_balance(s,index,delta).balances[..index]) + total_balances([increase_balance(s,index,delta).balances[index]]);
-            
-            
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]) + delta as int;
 
             assert s.balances == s.balances[..index] + [s.balances[index]] ;
-            //assert total_balances(s.balances) == total_balances(s.balances[..index] + [s.balances[index]]);
 
             distBalancesProp(s.balances[..index], [s.balances[index]]);
-            //assert total_balances(s.balances[..index] + [s.balances[index]]) == total_balances(s.balances[..index]) + total_balances([s.balances[index]]);
-            
-            //assert total_balances(increase_balance(s,index,delta).balances) == total_balances(s.balances) + delta as int;
         }
     }
 
@@ -473,10 +385,8 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
         }
         else {
             var sb := sb1 + sb2;
-            //assert sb == [sb1[0]] +  sb1[1..] + sb2;
             assert sb[1..] == sb1[1..] + sb2;
             assert total_balances(sb) == sb[0] as int + total_balances(sb[1..]);
-            //assert total_balances(sb1 + sb2) == sb[0] as int + total_balances(sb1[1..] + sb2);
             distBalancesProp(sb1[1..],sb2);
 
         }
@@ -490,10 +400,8 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
         }
         else {
             var sd := sd1 + sd2;
-            //assert sd == sd1 + sd2[..|sd2|-1] +  [sd2[|sd2|-1]];
             assert sd[..|sd|-1] == sd1 + sd2[..|sd2|-1] ;
             assert total_deposits(sd) == total_deposits(sd[..|sd|-1]) + sd2[|sd2|-1].data.amount as int;
-            //assert total_deposits(sd1 + sd2) == total_deposits(sd1 + sd2[..|sd2|-1] ) + sd2[|sd2|-1].data.amount as int;
             distDepositsProp(sd1, sd2[..|sd2|-1] );
         }
     }
@@ -505,13 +413,10 @@ lemma individualBalanceBoundMaintained(sb: seq<Gwei>, d: Deposit)
             assert deposits[..i] == deposits;
         }
         else {
-            //assert i < |deposits|;
             assert deposits == deposits[..i] + deposits[i..];
             assert total_deposits(deposits) == total_deposits(deposits[..i] + deposits[i..]);
             distDepositsProp(deposits[..i], deposits[i..]);
-            //assert total_deposits(deposits[..i] + deposits[i..]) == total_deposits(deposits[..i]) + total_deposits(deposits[i..]); 
         }
     }
-
 
 }

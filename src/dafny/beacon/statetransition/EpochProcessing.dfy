@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -37,16 +37,6 @@ module EpochProcessing {
     import opened ForkChoiceTypes
     import opened GasperJustification
 
-
-// # Attestations
-//     previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
-//     current_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
-//     # Finality
-//     justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]  # Bit set for every recent justified epoch
-//     previous_justified_checkpoint: Checkpoint  # Previous epoch snapshot
-//     current_justified_checkpoint: Checkpoint
-//     finalized_checkpoint: Checkpoint
-
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,
      *  registry, slashing, and final updates.
@@ -70,8 +60,6 @@ module EpochProcessing {
         requires get_current_epoch(s) * SLOTS_PER_EPOCH < s.slot  
         requires get_previous_epoch(s) * SLOTS_PER_EPOCH < s.slot  
 
-        // requires foo606(s, store)
-        
         requires blockRootsValidWeak(s, store)
 
         /** Block root at current epoc is in store. */
@@ -104,9 +92,6 @@ module EpochProcessing {
 
         requires |s.validators| == |s.balances|
 
-
-        // requires |s.validators| == |s.balances|
-
         /** Update justification and finalisation accodring to functional spec. */
         ensures s' == finalUpdates(updateFinalisedCheckpoint(updateJustification(s, store), s, store), store)
 
@@ -138,7 +123,6 @@ module EpochProcessing {
      *              the attestations updates.
      */
     method process_final_updates(s: BeaconState, ghost store: Store)  returns (s' : BeaconState)
-        // requires blockRootsValidWeak(s, store)
         ensures s' == finalUpdates(s, store)
     {
         s' := s.(
@@ -228,7 +212,6 @@ module EpochProcessing {
                         <=  SLOTS_PER_HISTORICAL_ROOT as int );
 
             //  Process justifications and update justification bits
-            // state.previous_justified_checkpoint = state.current_justified_checkpoint
             s' := s.(previous_justified_checkpoint := s.current_justified_checkpoint);
 
             //  Right-Shift of justification bits and initialise first to false

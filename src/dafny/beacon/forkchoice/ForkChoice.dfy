@@ -429,7 +429,7 @@ module ForkChoice {
             /**  The decreasing property guarantees that this function terminates. */
             requires isSlotDecreasing(store)
 
-            requires foo606(pre_state, store)
+            requires justificationInvariant(pre_state, store)
 
             //  Do not process duplicates and check that the block is not already in.
             requires hash_tree_root(b) !in store.blocks.Keys

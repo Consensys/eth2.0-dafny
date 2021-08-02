@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -54,7 +54,6 @@ module StateTransition {
     import opened ProcessOperationsSpec
     import opened GasperJustification
 
-
     /**
      *  Whether a block is valid in a given state.
      *
@@ -69,7 +68,7 @@ module StateTransition {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        requires foo606(s, store)
+        requires justificationInvariant(s, store)
 
     {
         //  The block slot should be in the future.
@@ -102,43 +101,7 @@ module StateTransition {
                     b.body.deposits
                 )
             )
-        // &&  // assume(s.eth1_deposit_index as int +  1 < 0x10000000000000000);
-        //     b.state_root == hash_tree_root(
-        //         updateDeposits(
-        //             updateEth1Data(
-        //                 addBlockToState(
-        //                     forwardStateToSlot(nextSlot(s, store), b.slot, store),
-        //                     // nextSlot(s, store), 
-        //                     b
-        //                 ),
-        //                 b.body
-        //             ),
-        //             b.body.deposits
-        //         )
-        //     )
     }
-
-    /**
-     *  THe validity of a block does solely depends on the reference state.
-     */
-    // lemma isValidBlockIsNotStoreDependent(s: BeaconState, b : BeaconBlock, store1: Store, store2 : Store)
-    //     /** Store is well-formed. */
-    //     requires isClosedUnderParent(store1)
-    //     requires isClosedUnderParent(store2)
-    //     /**  The decreasing property guarantees that this function terminates. */
-    //     requires isSlotDecreasing(store1)
-    //     requires isSlotDecreasing(store2)
-
-    //     requires foo606(s, store1)
-    //     requires foo606(s, store2)
-
-    //     requires isValidBlock(s, b, store1)
-    //     ensures isValidBlock(s, b, store2)
-    // {
-    //     nextSlotIsNotStoreDependent(s, store1, store2);
-    //     assume(nextSlot(s, store1) == nextSlot(s, store2));
-    //     forwardStateIsNotStoreDependent(nextSlot(s, store1), b.slot, store1, store2);
-    // }
 
     /**
      *  Compute the state obtained after adding a block.
@@ -154,7 +117,7 @@ module StateTransition {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        requires foo606(s, store)
+        requires justificationInvariant(s, store)
         //  make sure the last state was one right after addition of new block
         requires isValidBlock(s, b, store)
 
@@ -187,15 +150,6 @@ module StateTransition {
         assert (s1.slot == b.slot);
         assert (s1.balances == s.balances);
 
-        // assume b.slot == s1.slot;
-        // assume b.parent_root == hash_tree_root(s1.latest_block_header);
-        // assume s1.eth1_deposit_index as int + |b.body.deposits| < 0x10000000000000000  ;
-        // assume |s1.eth1_data_votes| < EPOCHS_PER_ETH1_VOTING_PERIOD as int * SLOTS_PER_EPOCH as int;
-        // assume |s1.validators| == |s1.balances|;
-        // assume |s1.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int;
-        // assume total_balances(s1.balances) + total_deposits(b.body.deposits) < 0x10000000000000000;
-
-        // assume processBlock.requires(s1, b);
         //  Process block and compute the new state.
         s' := processBlock(s1, b);  
         assert (s'.slot == b.slot);  
@@ -208,6 +162,8 @@ module StateTransition {
     }  
 
     /**
+     *  Does not verify after changes to process_epoch.
+     *
      *  Advance current state to a given slot.
      *
      *  This mainly consists in advancing the slot number to
@@ -239,14 +195,10 @@ module StateTransition {
         /**  The decreasing property guarantees that this function terminates. */
         requires isSlotDecreasing(store)
 
-        // requires foo606(s, store)
-
         requires s.slot < slot  //  update in 0.12.0 (was <= before)
         requires |s.validators| == |s.balances|
         
-        // requires validCurrentAttestations(updateJustificationPrevEpoch(s, store), store)
-
-        ensures  foo606(s, store)
+        ensures  justificationInvariant(s, store)
         ensures forwardStateToSlot.requires(nextSlot(s, store), slot, store)
         ensures s' == forwardStateToSlot(nextSlot(s,store), slot, store)   //  I1
         // The next one is a direct consequence of I1
@@ -263,20 +215,14 @@ module StateTransition {
         //  This is the first iteration of the loop in process_slots (Eth2-specs)
         assume blockRootsValidWeak(s, store);
         s' := processSlot(s, store);
-        // assert(s'.slot == s.slot);
-        // assert blockRootsValidWeak(s'.(slot := s.slot + 1), store);
-        // assert s' == resolveStateRoot(s, store).(slot := s.slot);
 
-        // ensures blockRootsValidWeak(s'.(slot := s.slot + 1), store)
         if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-            assume foo606(s', store);
+            assume justificationInvariant(s', store);
             assume validCurrentAttestations(updateJustificationPrevEpoch(s', store), store);
 
             s' := process_epoch(s', store);
         } 
         s':= s'.(slot := s'.slot + 1) ;
-        // assume foo606(s', store);
-        // assume s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store);
 
         //  s'.block header state_root should now be resolved
         assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
@@ -285,7 +231,6 @@ module StateTransition {
         while (s'.slot < slot)  
             invariant s'.slot <= slot
             invariant s'.latest_block_header.state_root != DEFAULT_BYTES32
-            // invariant foo606(s', store)
             // invariant s' == forwardStateToSlot(nextSlot(s, store), s'.slot, store) 
             invariant s'.eth1_deposit_index == s.eth1_deposit_index
             invariant s'.validators == s.validators
@@ -297,7 +242,7 @@ module StateTransition {
             s':= processSlot(s', store);
             // //  Process epoch on the start slot of the next epoch
             if (s'.slot + 1) % SLOTS_PER_EPOCH  == 0 {
-                assume foo606(s', store);
+                assume justificationInvariant(s', store);
                 // assume updateJustificationPrevEpoch.requires(s', store);
                 assume validCurrentAttestations(updateJustificationPrevEpoch(s', store), store);
                 s' := process_epoch(s', store);
@@ -306,8 +251,7 @@ module StateTransition {
             //  The state's slot is processed and we can advance to the next slot.
             s':= s'.(slot := s'.slot + 1) ;
         }
-        assume foo606(s, store);
-        // assume 
+        assume justificationInvariant(s, store);
         assume forwardStateToSlot.requires(nextSlot(s, store), slot, store);
         assume s' == forwardStateToSlot(nextSlot(s, store), slot, store);
     }
@@ -464,10 +408,9 @@ module StateTransition {
         ensures |s'.validators| == |s'.balances|
         //ensures |s'.validators| + |b.body.deposits| <= VALIDATOR_REGISTRY_LIMIT as int
     {
-        //state.eth1_data_votes.append(body.eth1_data)
         s' := s.(eth1_data_votes := s.eth1_data_votes + [b.eth1_data]);
 
-        //if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
+        // if state.eth1_data_votes.count(body.eth1_data) * 2 > EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH:
         if count_eth1_data_votes(s'.eth1_data_votes, b.eth1_data) * 2 > (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH) as int{
             //state.eth1_data = body.eth1_data
             s' := s'.(eth1_data := b.eth1_data);
@@ -492,7 +435,6 @@ module StateTransition {
         ensures s'.slot == s.slot
         ensures s'.latest_block_header == s.latest_block_header
         //ensures s'.validators == s.validators + get_new_validators(s, [], bb.deposits)
-        //ensures false
     {
         //  process deposits in the beacon block body.
         s':= s;
@@ -508,39 +450,16 @@ module StateTransition {
             invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
             
             invariant total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 
-            //invariant s'.validators == updateDeposits(s, bb.deposits[..i]).validators
-            //invariant s'.balances == updateDeposits(s, bb.deposits[..i]).balances
-            
-            //invariant total_balances(updateDeposits(s,bb.deposits[..i]).balances) == total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000
-            
-            //invariant s'.slot == s.slot 
-            //invariant s'.latest_block_header == s.latest_block_header
-            //invariant s'.block_roots == s.block_roots
-            //invariant s'.state_roots == s.state_roots
 
-            //invariant |s'.validators| == |s'.balances| 
-            //invariant |s'.validators| <= |s.validators| + i
-            //invariant |s.validators| + i <= VALIDATOR_REGISTRY_LIMIT as int
             invariant s' == updateDeposits(s, bb.deposits[..i])
             invariant s'.slot == s.slot
             invariant s'.latest_block_header == s.latest_block_header
-            //invariant |bb.deposits[..i]| == i
-
-            //invariant |s'.validators| <= |updateDeposits(s,bb.deposits[..i]).validators| <= |s'.validators| + i 
         {
             assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
 
             s':= process_attestations(s', bb.attestations);
 
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
-            //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i+1]);
-            //assert i + 1  <= |bb.deposits|;
             subsetDepositSumProp(bb.deposits, i+1);
-            //assert total_deposits(bb.deposits[..i+1]) <= total_deposits(bb.deposits);
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int < 0x10000000000000000;
-
-            //assert updateDeposit(updateDeposits(s, bb.deposits[..i]),bb.deposits[i]) == updateDeposits(s, bb.deposits[..i+1]);
             
             s':= process_deposit(s', bb.deposits[i]); 
             i := i+1;
@@ -564,15 +483,8 @@ module StateTransition {
         requires total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
 
         ensures s'.eth1_deposit_index == s.eth1_deposit_index + 1
-        //ensures d.data.pubkey !in seqKeysInValidators(s.validators) ==> s'.validators == s.validators + [get_validator_from_deposit(d)]
-        //ensures d.data.pubkey in seqKeysInValidators(s.validators) ==> s'.validators == s.validators 
         ensures s' == updateDeposit(s,d)
 
-        //ensures |s'.validators| == |s'.balances|        // maybe include in property lemmas
-        //ensures |s.validators| <= |s'.validators| <= |s.validators| + 1 // maybe include in property lemmas
-        //ensures |s.balances| <= |s'.balances| <= |s.balances| + 1 // maybe include in property lemmas
-        //ensures |s'.validators| <= VALIDATOR_REGISTRY_LIMIT
-        
     {
         // note that it is assumed that all new validator deposits are verified
         // ie the step # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
@@ -605,25 +517,6 @@ module StateTransition {
         return s;
     }
      
-    // predicate isValidAttestationInState(s: BeaconState, a: PendingAttestation)
-    // {
-    //     && get_previous_epoch(s) <= a.data.target.epoch <= get_current_epoch(s)
-    //     && a.data.target.epoch == compute_epoch_at_slot(a.data.slot)
-    //     //  attestation is not too recent
-    //     && a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat  
-    //     //  attestation is not old
-    //     && a.data.slot as nat + SLOTS_PER_EPOCH as nat >= s.slot as nat 
-    //     //  if attestation target is current epoch, then the source must
-    //     //  be the current justified checkpoint
-    //     && (a.data.target.epoch == get_current_epoch(s) ==> 
-    //         a.data.source == s.current_justified_checkpoint)
-    //     //  if attestation target is previous epoch, then the source must
-    //     //  be the the previous justified checkpoint
-    //     && (a.data.target.epoch == get_previous_epoch(s) ==> 
-    //         a.data.source == s.previous_justified_checkpoint)
-        
-    // }
-
     /**
      *  Process attestation section of a block.
      *  @param  s   A beacon state.
@@ -660,28 +553,14 @@ module StateTransition {
      *          use a PendingAttestation.
      */
     method process_attestation(s: BeaconState, a: PendingAttestation) returns (s' : BeaconState)
-        // requires forall a :: a in s.current_epoch_attestations ==> 
         requires attestationIsWellFormed(s, a)
         requires |s.current_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
         requires |s.previous_epoch_attestations| < MAX_ATTESTATIONS * SLOTS_PER_EPOCH as int 
-        // ensures 
-
     {
         // data = attestation.data
         assert get_previous_epoch(s) <= a.data.target.epoch <=  get_current_epoch(s);
         assert a.data.target.epoch == compute_epoch_at_slot(a.data.slot);
         assert a.data.slot as nat + MIN_ATTESTATION_INCLUSION_DELAY as nat <= s.slot as nat <= a.data.slot as nat + SLOTS_PER_EPOCH as nat;
-        // assert data.index < get_committee_count_per_slot(state, data.target.epoch)
-
-        // committee = get_beacon_committee(state, data.slot, data.index)
-        // assert len(attestation.aggregation_bits) == len(committee)
-
-        // pending_attestation = PendingAttestation(
-        //     data=data,
-        //     aggregation_bits=attestation.aggregation_bits,
-        //     inclusion_delay=state.slot - data.slot,
-        //     proposer_index=get_beacon_proposer_index(state),
-        // )
 
         if a.data.target.epoch == get_current_epoch(s) {
             //  Add a to current attestations
@@ -689,7 +568,6 @@ module StateTransition {
             s' := s.(
                 current_epoch_attestations := s.current_epoch_attestations + [a]
             );
-            // s.current_epoch_attestations.append(pending_attestation)
         }
         else {
             assert a.data.source == s.previous_justified_checkpoint;
@@ -697,11 +575,6 @@ module StateTransition {
                 previous_epoch_attestations := s.previous_epoch_attestations + [a]
             );
         }
-            // s.previous_epoch_attestations.append(pending_attestation)
-            
-        // # Verify signature
-        // assert is_valid_indexed_attestation(state, get_indexed_attestation(state, attestation))
-        // s'
     }
 
     /**

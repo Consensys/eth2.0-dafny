@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 ConsenSys Software Inc.
+ * Copyright 2021 ConsenSys Software Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may 
  * not use this file except in compliance with the License. You may obtain 
@@ -64,8 +64,6 @@ module ProcessOperations {
         ensures s' == updateDeposits(s, bb.deposits)
         ensures s'.slot == s.slot
         ensures s'.latest_block_header == s.latest_block_header
-        //ensures s'.validators == s.validators + get_new_validators(s, [], bb.deposits)
-        //ensures false
     {
         //  process deposits in the beacon block body.
         s':= s;
@@ -81,43 +79,20 @@ module ProcessOperations {
             invariant s'.eth1_deposit_index == s.eth1_deposit_index + i as uint64
             
             invariant total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000 
-            //invariant s'.validators == updateDeposits(s, bb.deposits[..i]).validators
-            //invariant s'.balances == updateDeposits(s, bb.deposits[..i]).balances
-            
-            //invariant total_balances(updateDeposits(s,bb.deposits[..i]).balances) == total_balances(s.balances) + total_deposits(bb.deposits[..i]) < 0x10000000000000000
-            
-            //invariant s'.slot == s.slot 
-            //invariant s'.latest_block_header == s.latest_block_header
-            //invariant s'.block_roots == s.block_roots
-            //invariant s'.state_roots == s.state_roots
 
-            //invariant |s'.validators| == |s'.balances| 
-            //invariant |s'.validators| <= |s.validators| + i
-            //invariant |s.validators| + i <= VALIDATOR_REGISTRY_LIMIT as int
             invariant s' == updateDeposits(s, bb.deposits[..i])
             invariant s'.slot == s.slot
             invariant s'.latest_block_header == s.latest_block_header
-            //invariant |bb.deposits[..i]| == i
-
-            //invariant |s'.validators| <= |updateDeposits(s,bb.deposits[..i]).validators| <= |s'.validators| + i 
         {
             assert bb.deposits[..i+1] == bb.deposits[..i] + [bb.deposits[i]];
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int;
-            //assert total_deposits(bb.deposits[..i]) + bb.deposits[i].data.amount as int == total_deposits(bb.deposits[..i+1]);
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int == total_balances(s.balances) + total_deposits(bb.deposits[..i+1]);
-            //assert i + 1  <= |bb.deposits|;
-            subsetDepositSumProp(bb.deposits, i+1);
-            //assert total_deposits(bb.deposits[..i+1]) <= total_deposits(bb.deposits);
-            //assert total_balances(updateDeposits(s, bb.deposits[..i]).balances) + bb.deposits[i].data.amount as int < 0x10000000000000000;
 
-            //assert updateDeposit(updateDeposits(s, bb.deposits[..i]),bb.deposits[i]) == updateDeposits(s, bb.deposits[..i+1]);
+            subsetDepositSumProp(bb.deposits, i+1);
             
             s':= process_deposit(s', bb.deposits[i]); 
             i := i+1;
 
         }
         assert bb.deposits[..i] == bb.deposits;
-
     }
 
     /**
@@ -135,15 +110,8 @@ module ProcessOperations {
         requires total_balances(s.balances) + d.data.amount as int < 0x10000000000000000
 
         ensures s'.eth1_deposit_index == s.eth1_deposit_index + 1
-        //ensures d.data.pubkey !in seqKeysInValidators(s.validators) ==> s'.validators == s.validators + [get_validator_from_deposit(d)]
-        //ensures d.data.pubkey in seqKeysInValidators(s.validators) ==> s'.validators == s.validators 
         ensures s' == updateDeposit(s,d)
 
-        //ensures |s'.validators| == |s'.balances|        // maybe include in property lemmas
-        //ensures |s.validators| <= |s'.validators| <= |s.validators| + 1 // maybe include in property lemmas
-        //ensures |s.balances| <= |s'.balances| <= |s.balances| + 1 // maybe include in property lemmas
-        //ensures |s'.validators| <= VALIDATOR_REGISTRY_LIMIT
-        
     {
         // note that it is assumed that all new validator deposits are verified
         // ie the step # Verify the deposit signature (proof of possession) which is not checked by the deposit contract
@@ -163,5 +131,4 @@ module ProcessOperations {
         );
     }
 
-    
 }

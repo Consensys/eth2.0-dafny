@@ -1,72 +1,50 @@
 
-[![Build Status](https://circleci.com/gh/ConsenSys/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/ConsenSys/workflows/eth2.0-dafny) 
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
 <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
 
  [![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
- [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
-
-[![HitCount](http://hits.dwyl.com/https://githubcom/ConsenSys/eth20-dafny.svg)](http://hits.dwyl.com/https://githubcom/ConsenSys/eth20-dafny)
+ [![Checks](https://img.shields.io/badge/DafnyVerify-NotVerified-red.svg)](https://shields.io/) 
 
 # Overview 
 
-## Objectives
+This branch of the project aims to provide a proof that the computed justified (resp. finalised) check points are indeed justified (resp. finalised).
 
-The objective of this project is to write a **formal specification** of the Eth2.0 specification in the verification-aware programming language [Dafny](https://github.com/dafny-lang/dafny/wiki).
-
-More specifically, our goals in this project are many-fold:
-
-1. Write a **formal (non-ambiguous and functional) specification** of the Eth2.0 specification.
-This specification is written with pre/post-conditions using the [Hoare logic](https://en.wikipedia.org/wiki/Hoare_logic) style proof.
-2. Write an **implementation** for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
-3. **Formally prove** that our implementation satisfies the specification. The formal proof is provided in the form of mathematical proofs of lemmas written in Dafny.
-
-To achieve this, we use the capabilities of the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
-
-
-## Methodology
-
-Dafny provides extensive support for automated reasoning leveraging the power of state-of-start automated reasoning engines (SMT-solvers).
-As a result, Dafny can assist in proving the lemmas that specify **correctness**.
-Moreover, as the lemmas are written as Dafny programs, they provide a **non-ambiguous mathematical proof** that the code is correct with respect to a specification.
-All the proofs can be **mechanically verified** using theorem provers.
+This project was started by ConsenSys R&D and was also supported by the Ethereum Foundation under grant [FY20-285, Q4-2020](https://blog.ethereum.org/2021/03/22/esp-allocation-update-q4-2020/).
 
 ## Results
 
-We are gradually adding the Dafny specifications, implementations and proofs.
-Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain. 
+The current state of this branch (as of August 2nd 2021) is as follows:
 
-An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
+1. a [specification and proof](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/src/dafny/beacon/gasper) of the GasperFFG protocol.
+    This package is fully proved (Dafny verification succeeds with no assumptions).
+2. functional specifications and implementations of the state updates (Epoch) in [package stattransition](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/src/dafny/beacon/statetransition). This package does not fully verify. There are assumptions that could not be discharged in the [top level specification file](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/statetransition/StateTransition.s.dfy) and its [implementation](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/statetransition/StateTransition.dfy).
+  
 
-* [Introduction](./wiki/overview.md) to the Beacon Chain,
-* [Notes on SSZ](./wiki/ssz-notes.md) specifications, implementations and proofs,
-* [Notes on Merkleisation](./wiki/merkleise-notes.md)  specifications, implementations and proofs,
-* [Notes  on Beacon Chain](./wiki/beacon-notes.md) specifications, implementations and proofs.
+## Assumptions
 
-Here is a recent youtube video with a presentation 
+The main assumptions used in the Gasper proof are:
+1. the **set of validators is fixed and has size equal to MAX_VALIDATORS_PER_COMMITTEE**.
+2. each validator's stake is 1 (one) ETH.
 
-[![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
+The proof establishes lemmas 4 and lemma 5 from the GasperFFG paper [Combining GHOST and Casper](https://arxiv.org/abs/2003.03052).
 
+The proof should work for a non fixed set of validators (the conclusion is weaker in that case) but this would require adding ``indexedAttestations`` instead of ``PendingAttestation``. 
 
-# Why We Should Formally Verify the Eth2.0 Specs
+The assumption on the unit stake does has no impact on the proof. This assumption is also made in  [Combining GHOST and Casper](https://arxiv.org/abs/2003.03052). As the computations using the stakes are linear this does not affect the correctness result.
 
-## Background & Context
+# Contributing to this branch and merging into Master
 
-The Eth2.0 specifications are subtle and sometimes complex.
-As a consequence, bugs, glitches or inconsistencies can creep into the specification and the implementation code.
+This branch has diverged from master.
+The main issue is that the number of assumptions ``requires`` needed for the proof of ``stateTransition`` cannot be easily discharged.
 
-Testing and code peer reviews can help keeping the bugs count low.
-However, testing can find some bugs but in general _cannot guarantee the absence of bugs_ ([Edsger W. Dijkstra](https://en.wikiquote.org/wiki/Edsger_W._Dijkstra)).
+Before attempting a merge, it may be helpful to provide a functional definition of valid attestations [here](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/attestations/AttestationsHelpers.dfy) in a given state.
 
-These bugs remain uncovered ... until they manifest, resulting in crashes.
-Worse, they can be exploited as _security vulnerabilities_.
-An example of critical vulnerability is the OutOfBounds exception where a non-existent index in an array is accessed. This is one of the most common _zero day_ attacks, and can occur in heavily tested code bases
-[e.g. in the web browser Chromium](https://latesthackingnews.com/2020/02/26/google-patch-serious-chrome-bugs-including-a-zero-day-under-active-exploit/).
+1. the use of the ``opaque`` attribute may help speeding up some proofs. 
+2. re-factoring the code and providing defintions with weaker pre-conditions.  
 
-You can read more about the specific case of the Beacon Chain in our [Wiki section](./wiki/overview.md).
-
-## Related Work
+# Related Work
 
 Runtime Verification Inc. have reported some work on:
 <!-- 
@@ -84,8 +62,7 @@ This work presents a formal semantics of the Eth2.0 specifications in the K-fram
 The semantics are executable and can be used for testing e.g. symbolic execution. 
 * the [initial formal verification of the Casper protocol](https://runtimeverification.com/blog/runtime-verification-completes-formal-verification-of-ethereum-casper-protocol/).
 * the [verification of the deposit smart contract](https://blog.ethereum.org/2020/02/04/eth2-quick-update-no-8/)
-
-More recently, a [security audit](https://blog.ethereum.org/2020/03/31/eth2-quick-update-no-10/) was performed by LeastAuthority. 
+* a [security audit](https://blog.ethereum.org/2020/03/31/eth2-quick-update-no-10/) was performed by LeastAuthority. 
 The code was manually reviewed and some potential security vulnerabilities highlighted.
 
 Our work aims to complement the previous work by providing a thorough formal verification of the Eth2.0 phase 0 specifications.
@@ -98,6 +75,36 @@ Our work aims to complement the previous work by providing a thorough formal ver
 * [Other resources](wiki/other-resources.md), K-framework resources.
 
 # How to check the proofs?
+
+We have checked the proofs with Dafny 3.0.0 and Dafny 3.2.0.
+
+The bash scripts ``verifyAll.sh`` can be used to verify the files in a given directory (e.g. using the Docker container, see below).
+
+For example checking the ``attestations`` package can be done by:
+
+```[bash]
+/home/user1/eth2.0-dafny $ time ./verifyAll.sh src/dafny/beacon/attestations   -------------------------------------------------------
+Processing src/dafny/beacon/attestations/AttestationsHelpers.dfy with config /dafnyVerify:1 /compile:0  /noCheating:1
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(38,17): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(60,22): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../gasper/GasperEBBs.dfy(91,16): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../gasper/GasperEBBs.dfy(159,16): Warning: /!\ No terms found to trigger on.
+
+Dafny program verifier finished with 24 verified, 0 errors
+No errors in src/dafny/beacon/attestations/AttestationsHelpers.dfy
+-------------------------------------------------------
+Processing src/dafny/beacon/attestations/AttestationsTypes.dfy with config /dafnyVerify:1 /compile:0  /noCheating:1
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(38,17): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(60,22): Warning: /!\ No terms found to trigger on.
+
+Dafny program verifier finished with 12 verified, 0 errors
+No errors in src/dafny/beacon/attestations/AttestationsTypes.dfy
+-------------------------------------------------------
+[OK] src/dafny/beacon/attestations/AttestationsHelpers.dfy
+[OK] src/dafny/beacon/attestations/AttestationsTypes.dfy
+Summary: 2 files processed - No errors occured! Great job.
+./verifyAll.sh src/dafny/beacon/attestations  29.27s user 0.54s system 102% cpu 29.138 total
+```
 
 ## Using a Docker container
 
@@ -151,14 +158,3 @@ To run the tests, you can issue the following command from the root directory (i
 
  For an even  better experience you may install VSCode and the Dafny plugin see [our Dafny wiki](https://github.com/PegaSysEng/eth2.0-dafny/wiki/Eth2.0-verification-in-Dafny).
 
-## How to compile to C#, Go
-
-To compile to Go:
-
-```sh
-dafny /compileTarget:go /spillTargetCode:1 src/dafny/ssz/BitListSeDes.dfy
-```
-
-C# can be targeted by changing `compileTarget` to `cs`.
-
-<!-- * video with how to see verified or bugs. -->

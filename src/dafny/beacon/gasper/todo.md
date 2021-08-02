@@ -1,10 +1,58 @@
 
+verificaiton status:
+- forkchoice V
+- attestations V
+- helpers V
+- validators V
+- crypto V
+- merkle V
+- beacon V
+- ssz V
+- utils V
+- gasper V
+- statetransition
+
+
+- clean up files (remove comments)
+    - forkchoice V + doc [DONE]
+    - attestations V + doc [DONE]
+    - helpers [X]
+    - validators V + doc [DONE]
+    - crypto [X]
+    - merkle V + doc [DONE]
+    - beacon V + doc [DONE]
+    - ssz V + doc [DONE]
+    - utils V + doc [DONE]
+    - gasper V + doc [DONE]
+    - statetransition
+- documentation V
+- update copyright to 2021 V
+
+- build call graphs
+- forkchoice V + doc [DONE]
+    - attestations 
+    - helpers 
+    - validators 
+    - crypto 
+    - merkle 
+    - beacon 
+    - ssz 
+    - utils 
+    - gasper 
+    - statetransition
+
+
+- readme with limitations
+
+- docker with correct Dafnhy machine toi check
+- remove square_root code
+
 
 
 - prove stateTransition + justification
-- prove on_block
-- remove two assumes (get_block_root in nextSlot
-- try to localise assume in magic lemma: remove from resolveStateRoot
+- prove on_block [cannot be done]
+- remove two assumes (get_block_root in nextSlot [try?]
+- try to localise assume in magic lemma: remove from resolveStateRoot [not possible]
 
 - nice to have: 
     - add teo justification proof to Gasper
