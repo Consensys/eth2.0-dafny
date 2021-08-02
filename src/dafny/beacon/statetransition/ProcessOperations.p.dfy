@@ -12,35 +12,22 @@
  * under the License.
  */
 
- //  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:0
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
 
-include "../../utils/NativeTypes.dfy"
-include "../../utils/Eth2Types.dfy"
-include "../../utils/Helpers.dfy"
-include "../../utils/MathHelpers.dfy"
 include "../../utils/SeqHelpers.dfy"
-include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../validators/Validators.dfy"
-include "../attestations/AttestationsTypes.dfy"
-include "../Helpers.dfy"
 include "../Helpers.s.dfy"
 
 /**
- *  Proofs for process operations
+ *  Proofs for process operations.
  */
 module ProcessOperationsProofs {
     
     //  Import some constants, types and beacon chain helpers.
-    import opened NativeTypes
-    import opened Eth2Types
-    import opened Constants
     import opened BeaconChainTypes
     import opened Validators
-    import opened AttestationsTypes
-    import opened BeaconHelpers
     import opened BeaconHelperSpec
-    import opened MathHelpers
     import opened SeqHelpers
  
     
