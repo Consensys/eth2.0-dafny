@@ -75,6 +75,27 @@ module StateTransition {
                 .latest_block_header
             )
         ensures |s'.validators| == |s'.balances|
+
+        ensures s'
+                == s.(slot := forwardStateToSlot(nextSlot(s), b.slot).slot,
+                      latest_block_header := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).latest_block_header,
+                      block_roots := forwardStateToSlot(nextSlot(s), b.slot).block_roots,
+                      state_roots := forwardStateToSlot(nextSlot(s), b.slot).state_roots,
+                      validators := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).validators,
+                      balances := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).balances,
+                      slashings := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).slashings,
+                      eth1_deposit_index := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).eth1_deposit_index,
+                      eth1_data_votes := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).eth1_data_votes,
+                      eth1_data := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).eth1_data,
+                      randao_mixes := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).randao_mixes,
+                      historical_roots := forwardStateToSlot(nextSlot(s), b.slot).historical_roots,
+                      previous_epoch_attestations := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).previous_epoch_attestations,
+                      current_epoch_attestations := updateBlock(forwardStateToSlot(nextSlot(s), b.slot), b).current_epoch_attestations,
+                      current_justified_checkpoint := forwardStateToSlot(nextSlot(s), b.slot).current_justified_checkpoint,
+                      previous_justified_checkpoint := forwardStateToSlot(nextSlot(s), b.slot).previous_justified_checkpoint,
+                      justification_bits := forwardStateToSlot(nextSlot(s), b.slot).justification_bits,
+                      finalised_checkpoint := forwardStateToSlot(nextSlot(s), b.slot).finalised_checkpoint
+                     )
     {
         // Finalise slots before b.slot.
         s' := process_slots(s, b.slot);
@@ -178,19 +199,19 @@ module StateTransition {
             decreases slot as nat - i 
         {     
             var orig := s';
-            s' := process_slots_iteration(orig);
-
-            assert s' == nextSlot(orig);
             assert orig == forwardStateToSlot(nextSlot(s), i as Slot);
-            assert nextSlot(s).slot as nat <= i;
-            assert i + 1 < 0x10000000000000000 as nat;
-            helperForwardStateToSlotLemma(nextSlot(s), i);
-            assert nextSlot(forwardStateToSlot(nextSlot(s), i as Slot)) 
-                    == forwardStateToSlot(nextSlot(s), (i+1) as Slot);
-            assert s' == nextSlot(forwardStateToSlot(nextSlot(s), i as Slot));
-            assert s' == forwardStateToSlot(nextSlot(s), (i+1)  as Slot);
 
+            s' := process_slots_iteration(orig);
+            calc == {
+                s' == nextSlot(orig);
+                {assert orig == forwardStateToSlot(nextSlot(s), i as Slot);}
+                s' == nextSlot(forwardStateToSlot(nextSlot(s), i as Slot));
+                {helperForwardStateToSlotLemma(nextSlot(s), i);}
+                s' == forwardStateToSlot(nextSlot(s), (i+1) as Slot);
+            }
+            
             i := i + 1;
+            assert s' == forwardStateToSlot(nextSlot(s), i as Slot);
             assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
         }
         assert s' == forwardStateToSlot(nextSlot(s), slot); 
