@@ -142,19 +142,18 @@ include "../beacon/helpers/Crypto.dfy"
     }
 
      /** 
-     *  Properties of EMPTY_CHUNK.
-     */
+      * Properties of EMPTY_CHUNK.
+      */
      lemma emptyChunkIsSeq()
         // Ensure that the defined EMPTY_CHUNK constant is treated by Dafny as a seq.
         ensures EMPTY_CHUNK == timeSeq<byte>(0,32)
-    {
-        // Thanks Dafny
+    { // Thanks Dafny
     }
 
     lemma emptyChunkIs32BytesOfZeros()
         ensures is32BytesChunk(EMPTY_CHUNK) 
         ensures forall i :: 0 <= i < |EMPTY_CHUNK| ==> EMPTY_CHUNK[i]== 0 //as byte 
-    {   //  Thanks Dafny
+    { //  Thanks Dafny
     }
 
     /** Pack.
@@ -210,14 +209,13 @@ include "../beacon/helpers/Crypto.dfy"
     } 
 
     /** 
-    *   Properties of pack 
-    */
+     *  Properties of pack 
+     */
     lemma basicTypesPackToChunkCountChunks(s:Serialisable)
         // basic types, uintN and bool, pack into chunkCount(s) chunks
         requires isBasicTipe(typeOf(s))
         ensures |pack(s)| == chunkCount(s)
-    {
-        // Thanks Dafny
+    { // Thanks Dafny
     }
 
     lemma byteVectorsPackToChunkCountChunks(s:Serialisable)
@@ -294,7 +292,9 @@ include "../beacon/helpers/Crypto.dfy"
         }
     }
 
-    /** Pack helper functions. */
+    /** 
+     * Pack helper functions. 
+     */
 
     /** rightPadZeros.
      *
@@ -337,9 +337,9 @@ include "../beacon/helpers/Crypto.dfy"
      *  @returns    A sequence of 32-byte chunks, right padded with zero bytes if b % 32 != 0 
      *
      *  @note       The py-ssz implementation can result in a 0 chunk output (empty seq)
-     *              and therefore 
-     *              doesn't satisfy the toChunksProp1 and toChunksProp2 lemmas. It also causes
-     *              an error in the Pack function, which should reutrn at least one chunk.
+     *              and therefore doesn't satisfy the toChunksProp1 and toChunksProp2 lemmas.
+     *              It also causes an error in the Pack function, which should reutrn at least one chunk.
+     *  @note       DO NOT USE: This version has been kept for reference in a commented form.
      */
     // function method toChunks(b: bytes): seq<chunk>
     //     ensures |toChunks2(b)| >= 0
@@ -356,15 +356,13 @@ include "../beacon/helpers/Crypto.dfy"
     lemma {:induction b} toChunksProp1(b: bytes)
         requires |b| == 0
         ensures |toChunks(b)| == 1
-    {
-        // Thanks Dafny
+    { // Thanks Dafny
     }
 
     lemma  {:induction b} toChunksProp2(b: bytes)
         requires |b| > 0
         ensures 1 <= |toChunks(b)| == ceil(|b|, 32) 
-    {
-        // Thanks Dafny
+    { // Thanks Dafny
     }
 
 
@@ -377,6 +375,7 @@ include "../beacon/helpers/Crypto.dfy"
      *
      *  @note       Return the bits of the bitlist or bitvector, packed in bytes, aligned to the start. 
      *              Length-delimiting bit for bitlists is excluded [1].
+     *
      *  @note       Not that the spec [1] was updated and the original function of bitfield_bytes was
      *              changed to pack_bits as the specification of bitfield_bytes didn't return chunks.
      *
@@ -392,8 +391,8 @@ include "../beacon/helpers/Crypto.dfy"
     }
 
     /** 
-    *   Property of packBits 
-    */
+     * Property of packBits 
+     */
     lemma packBitsToChunkCountProp(xl: seq<bool>, limit: nat)
         requires |xl| <= limit
         ensures |packBits(xl)| <= chunkCountBitlist(limit)
@@ -420,14 +419,6 @@ include "../beacon/helpers/Crypto.dfy"
             }
         }
     }
-
-    // // TODO: complete once bitvectors are available
-    // lemma bitvectorPackBitsToChunkCountProp(s:Serialisable)
-    //     requires s.BitVector?
-    //     ensures |packBits(s.v)| == chunkCount(s)
-    // {
-        
-    // }
 
     /** merkleise.
      *
@@ -471,9 +462,9 @@ include "../beacon/helpers/Crypto.dfy"
             merkleiseChunks(padChunks(chunks, get_next_power_of_two(limit)))
     }
 
-    /** Helper functions for merkleise. */
-    
-    // TODO: add documentation
+    /** 
+     * Helper functions for merkleise. 
+     */
     function method padChunks(chunks: seq<chunk>, padLength: nat): seq<chunk>
         requires 1 <= padLength  // since padLength must be a power of two
         requires 0 <= |chunks| 
@@ -486,7 +477,6 @@ include "../beacon/helpers/Crypto.dfy"
         else chunks + timeSeq(EMPTY_CHUNK, padLength-|chunks|)
     }
 
-    // TODO: add documentation
     function method merkleiseChunks(chunks: seq<chunk>): hash32
         requires 1 <= |chunks| 
         requires isPowerOf2(|chunks|)
@@ -500,7 +490,7 @@ include "../beacon/helpers/Crypto.dfy"
             hash(merkleiseChunks(chunks[..(|chunks|/2)]) + merkleiseChunks(chunks[|chunks|/2..]))
     }
 
-    
+
     /** getHashTreeRoot.
      *
      *  @param  s   A serialisable object.
@@ -557,7 +547,9 @@ include "../beacon/helpers/Crypto.dfy"
                                    merkleise(prepareSeqOfSerialisableForMerkleisation(v),-1)
     }
 
-    /** Helper functions for getHashTreeRoot. */
+    /** 
+     * Helper functions for getHashTreeRoot. 
+     */
 
     /**
      * Prepare a sequence of `Serialisable` objects for merkleisation.
@@ -578,14 +570,15 @@ include "../beacon/helpers/Crypto.dfy"
             prepareSeqOfSerialisableForMerkleisation(ss[1..])
     }   
 
-    // TODO: add documentation
+    /** 
+     * Helper functions related to mixInLength. 
+     */
     function method uint256_to_bytes(n: nat) : chunk
         ensures |uint256_to_bytes(n)| == 32
     {
         uint256_to_bytes_helper(n,0)
     }
 
-    // TODO: add documentation
     function method uint256_to_bytes_helper(n: nat, byte_number: nat) : bytes
         requires byte_number <= 32
         decreases 32  - byte_number
@@ -598,11 +591,11 @@ include "../beacon/helpers/Crypto.dfy"
             uint256_to_bytes_helper(n / 256, byte_number+1)
     }
 
-    // TODO: add documentation
     function method mixInLength(root: hash32, length: nat) : hash32
         requires is32BytesChunk(root)
         ensures is32BytesChunk(mixInLength(root, length))
     {
         hash(root + uint256_to_bytes(length))
     }  
+
  }
