@@ -12,7 +12,7 @@
  * under the License.
  */
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:1
 
 
 include "../utils/Eth2Types.dfy"

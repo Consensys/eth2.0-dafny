@@ -20,7 +20,7 @@ include "../Helpers.s.dfy"
 include "EpochProcessing.s.dfy"
 include "ProcessOperations.s.dfy"
 
-//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:50 /noCheating:1
+//  @dafny /dafnyVerify:1 /compile:0 /tracePOs /traceTimes /timeLimit:100 /noCheating:1
 
 
 /**
