@@ -24,7 +24,6 @@ The Merkleise library aims at providing the following functionality:
 Given an object `value`, its hash tree root, `hash_tree_root(value)`, is a `BYTES_PER_CHUNK` byte sequence. 
 
 `BYTES_PER_CHUNK`, 32, is a defined constant to represent the number of bytes per chunk. Hence it is equivalent to refer to the output of `hash_tree_root(O)` as being a single _chunk_.
-
 ## Background
 
 **TODO**: Add notes, including: <!-- _merkleize_, return the root of a binary merkle tree representing a serialised data structure, and -->
