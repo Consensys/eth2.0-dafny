@@ -1,0 +1,35 @@
+|    | Files                   | Folder                 |   #LoC |   Theorems |   Implementations |   Documentation |   #Doc/#LoC (%) |   Proved |
+|----|-------------------------|------------------------|--------|------------|-------------------|-----------------|-----------------|----------|
+|  0 | BeaconChainTypes.dfy    | beacon                 |     43 |          0 |                 1 |             166 |             386 |        1 |
+|  1 | Helpers.dfy             | beacon                 |     96 |          2 |                 8 |              35 |              36 |       10 |
+|  2 | AttestationsHelpers.dfy | beacon/attestations    |    255 |          9 |                11 |             159 |              62 |       20 |
+|  3 | AttestationsTypes.dfy   | beacon/attestations    |     36 |          0 |                 1 |              89 |             247 |        1 |
+|  4 | ForkChoice.dfy          | beacon/forkchoice      |    238 |          3 |                15 |             176 |              74 |       18 |
+|  5 | ForkChoiceTypes.dfy     | beacon/forkchoice      |     87 |          3 |                 4 |              87 |             100 |        7 |
+|  6 | GasperEBBs.dfy          | beacon/gasper          |     64 |          5 |                 0 |              78 |             122 |        5 |
+|  7 | GasperFinalisation.dfy  | beacon/gasper          |     48 |          0 |                 2 |              21 |              44 |        2 |
+|  8 | GasperJustification.dfy | beacon/gasper          |     63 |          2 |                 3 |              56 |              89 |        5 |
+|  9 | GasperProofs.p.dfy      | beacon/gasper          |    268 |          2 |                 8 |             159 |              59 |       10 |
+| 10 | EpochProcessing.dfy     | beacon/statetransition |     20 |          0 |                 3 |              81 |             405 |        3 |
+| 11 | EpochProcessing.s.dfy   | beacon/statetransition |    292 |          9 |                 2 |             308 |             105 |       11 |
+| 12 | ProcessOperations.dfy   | beacon/statetransition |     60 |          0 |                 2 |              16 |              27 |        2 |
+| 13 | ProcessOperations.s.dfy | beacon/statetransition |    211 |         10 |                 7 |              95 |              45 |       17 |
+| 14 | StateTransition.dfy     | beacon/statetransition |    260 |          0 |                12 |             162 |              62 |       12 |
+| 15 | StateTransition.s.dfy   | beacon/statetransition |    136 |          9 |                 1 |              85 |              62 |       10 |
+| 16 | Validators.dfy          | beacon/validators      |     14 |          0 |                 0 |              55 |             393 |        0 |
+| 17 | BitListSeDes.dfy        | ssz                    |    260 |          7 |                 3 |              64 |              25 |       10 |
+| 18 | BitVectorSeDes.dfy      | ssz                    |    153 |          4 |                 3 |              53 |              35 |        7 |
+| 19 | BoolSeDes.dfy           | ssz                    |     20 |          0 |                 2 |               3 |              15 |        2 |
+| 20 | BytesAndBits.dfy        | ssz                    |     88 |          7 |                 6 |              44 |              50 |       13 |
+| 21 | Constants.dfy           | ssz                    |     88 |          0 |                 0 |              28 |              32 |        0 |
+| 22 | IntSeDes.dfy            | ssz                    |    128 |          2 |                 2 |              20 |              16 |        4 |
+| 23 | Serialise.dfy           | ssz                    |    512 |          3 |                 5 |              36 |               7 |        8 |
+| 24 | DafTests.dfy            | utils                  |     60 |          0 |                 4 |              25 |              42 |        4 |
+| 25 | Eth2Types.dfy           | utils                  |    218 |          1 |                 3 |              60 |              28 |        4 |
+| 26 | Helpers.dfy             | utils                  |    218 |         11 |                 3 |              64 |              29 |       14 |
+| 27 | MathHelpers.dfy         | utils                  |    193 |         10 |                 4 |              32 |              17 |       14 |
+| 28 | NativeTypes.dfy         | utils                  |     30 |          0 |                 0 |              14 |              47 |        0 |
+| 29 | NonNativeTypes.dfy      | utils                  |      6 |          0 |                 0 |               6 |             100 |        0 |
+| 30 | SeqHelpers.dfy          | utils                  |     61 |          7 |                 2 |              17 |              28 |        9 |
+| 31 | SetHelpers.dfy          | utils                  |     87 |          7 |                 0 |              27 |              31 |        7 |
+| 32 |                         | TOTAL                  |   4313 |        113 |               117 |            2321 |              54 |      230 |
