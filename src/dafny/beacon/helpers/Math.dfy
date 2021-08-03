@@ -12,7 +12,7 @@
  * under the License.
  */
 
-// Requires the Ironclas math library
+// Requires the Ironclad math library
 
 // include "../libraries/integers/power.i.dfy"
 // include "../utils/NativeTypes.dfy"
