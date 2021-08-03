@@ -7,11 +7,9 @@
 
  <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 
-
-
 # Overview 
 
-This project was started by ConsenSys R&D and was also supported by the Ethereum Foundation under grant [FY20-285, Q4-2020](https://blog.ethereum.org/2021/03/22/esp-allocation-update-q4-2020/).
+This project was started by ConsenSys R&D and was also supported by the Ethereum Foundation under grant [FY20-285, Q4-2020](https://blog.ethereum.org/2021/03/22/esp-allocation-update-q4-2020/)
 
 ## Objectives
 
@@ -40,6 +38,13 @@ This repository contains two main branches:
 
 * [master](https://github.com/ConsenSys/eth2.0-dafny) with a substantial part of the verified Eth2.0 specs. The verified Dafny code guarantees the absence of runtime errors like array-out-of-bounds, division-by-zero. It also provides some functional proofs captured by the invariants in the [ForkChoice.dfy](https://github.com/ConsenSys/eth2.0-dafny/blob/master/src/dafny/beacon/forkchoice/ForkChoice.dfy) file: 
 * [goal1](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1) with some proofs related to justification and finalisation. This branch has diverged from [master](https://github.com/ConsenSys/eth2.0-dafny) and may not be easily merged into it.
+
+Some statistics about the project can be found in
+
+* the master stats [table](./wiki/stats.md),
+* the goal1 stats [table](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/wiki/stats.md).
+
+Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
 
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
