@@ -41,7 +41,7 @@ module EpochProcessing {
 
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,
-     *  resgistry, slashing, and final updates, etc.
+     *  registry, slashing, and final updates, etc.
      *
      *  @param  s   A beacon state.
      *  @returns    A new state resulting from the processing of the epoch components.
