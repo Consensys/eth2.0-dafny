@@ -2,8 +2,8 @@
 <!-- [![Build Status](https://circleci.com/gh/ConsenSys/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/ConsenSys/workflows/eth2.0-dafny)  -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
- [![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
- [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
+[![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
+[![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
 
  <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 
@@ -45,6 +45,7 @@ Some statistics about the project can be found in
 * the goal1 stats [table](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/wiki/stats.md).
 
 Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
+A birds-eye view is given by the [top-level call graph](./top-level-call-graph.svg).
 
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
