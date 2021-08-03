@@ -111,13 +111,14 @@ class Visualizer():
     # Create subgraphs
     i = 0 # current colour
     for module in graph.modules.values():
-      displayName = re.search("_(.*)_(.*)", module.name)
-      if displayName == None:
-        labName = "System"
-      else:
-        labName = displayName.group(2)
+      # displayName = re.search("\,(.*)=", module.name)
+      # displayName = module.name
+      # if displayName == None:
+      #   labName = "System"
+      # else:
+      #   labName = displayName.group(2)
       module.colour = colours[i % len(colours)]
-      module.cluster = pydot.Cluster(module.name,  style="filled", fillcolor=module.colour[1], label=labName,penwidth="2", fontcolor=module.colour[0], fontsize="20.0")
+      module.cluster = pydot.Cluster(module.name,  style="filled", fillcolor=module.colour[1], label=module.name,penwidth="2", fontcolor=module.colour[0], fontsize="20.0")
       dot.add_subgraph(module.cluster)
       i = i + 1
 

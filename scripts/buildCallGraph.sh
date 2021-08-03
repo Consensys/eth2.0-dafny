@@ -16,7 +16,9 @@ else
         exit 1
     else
         # use the python script to generate a dot file
-        python $SCRIPTDIR/call_graph.py --func tmp.cfg --out $1.dot
+        date1=`date +"%Y-%m-%d-%T"`
+        # echo $date1
+        python $SCRIPTDIR/call_graph.py --func tmp.cfg --out $1-$date1.dot
         if [ $? -ne 0 ]; then
         echo "Could not run command $SCRIPTDIR/call_graph.py"
         exit 2
