@@ -1,0 +1,16 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+seqInter -> seqInter;
+seqToSet -> seqToSet;
+}

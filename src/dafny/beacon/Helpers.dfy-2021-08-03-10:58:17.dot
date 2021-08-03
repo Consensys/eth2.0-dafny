@@ -1,0 +1,116 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=MathHelpers;
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_BeaconChainTypes {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=BeaconChainTypes;
+hash__tree__root [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster_BeaconHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=BeaconHelpers;
+count__eth1__data__votes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+compute__start__slot__at__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+compute__epoch__at__slot [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__block__root__at__slot [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__block__root [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__previous__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__current__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#e0f3db";
+fontcolor=darkolivegreen3;
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+timeSeq -> timeSeq;
+count__eth1__data__votes -> count__eth1__data__votes;
+compute__epoch__at__slot -> compute__epoch__at__slot;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+get__prev__power__of__two -> get__prev__power__of__two;
+get__block__root -> compute__start__slot__at__epoch;
+get__block__root -> get__block__root__at__slot;
+flatten -> flatten;
+flatten -> flattenLength;
+isPowerOf2 -> power2;
+power2 -> power2;
+get__previous__epoch -> get__current__epoch;
+get__previous__epoch -> get__previous__epoch;
+ceil -> ceil;
+flattenLength -> flattenLength;
+seqToSet -> seqToSet;
+get__current__epoch -> compute__epoch__at__slot;
+get__current__epoch -> get__current__epoch;
+get__next__power__of__two -> get__next__power__of__two;
+hash__tree__root -> hash__tree__root;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+seqInter -> seqInter;
+}

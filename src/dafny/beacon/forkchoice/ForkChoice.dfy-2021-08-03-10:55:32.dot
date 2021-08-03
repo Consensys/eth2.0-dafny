@@ -1,0 +1,501 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_ForkChoiceTypes {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=ForkChoiceTypes;
+isChain [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+height [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+chainRoots [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isChain2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isSlotDecreasing [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isClosedUnderParent [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_GasperEBBs {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=GasperEBBs;
+lastEBB [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+computeAllEBBsFromRoot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+computeEBBsForAllEpochs [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_ForkChoice {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=ForkChoice;
+get__forkchoice__store [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant0a [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+genesisTimeInvariant [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant4 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeIsValid [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+ancestors [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant5 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant6 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant7 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant0 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant1 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+storeInvariant3 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_EpochProcessingSpec {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=EpochProcessingSpec;
+blockRootsValid [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+updateFinalisedCheckpoint [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+updateJustificationPrevEpoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+updateJustification [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+blockRootsValidWeak [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+updateJustificationCurrentEpoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+updateJustificationAndFinalisation [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+finalUpdates [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=Eth2Types;
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#e0f3db";
+fontcolor=darkolivegreen3;
+penwidth=2;
+label=MathHelpers;
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+min [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+}
+
+subgraph cluster_BeaconChainTypes {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor=orchid3;
+penwidth=2;
+label=BeaconChainTypes;
+hash__tree__root [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+}
+
+subgraph cluster_AttestationsHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor=snow2;
+fontcolor=slategrey;
+penwidth=2;
+label=AttestationsHelpers;
+filterAttestations [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+get__total__active__balance [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+collectValidatorsAttestatingForLink [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+countAttestationsForTgt [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+countAttestationsForLink [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+get__matching__target__attestations [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+get__matching__source__attestations [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+collectValidatorsIndicesAttestatingForTarget [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+get__attesting__balance [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+collectValidatorsIndices [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+trueBitsCount [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+validCurrentAttestations [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+validPrevAttestations [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#f0f9e8";
+fontcolor=palegreen4;
+penwidth=2;
+label=Helpers;
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+}
+
+subgraph cluster_StateTransition {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=StateTransition;
+attestationIsWellFormed [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+isValidBlock [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_GasperJustification {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=GasperJustification;
+lastJustified [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isJustified [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isJustifiedEpochFromRoot [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isJustifiedEpoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_StateTransitionSpec {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=StateTransitionSpec;
+updateEth1Data [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+keysInValidators [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+nextSlot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+justificationInvariant [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+advanceSlot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+resolveStateRoot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+addBlockToState [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+forwardStateToSlot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_BeaconHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=BeaconHelpers;
+all [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+get__current__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+compute__epoch__at__slot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+get__previous__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+compute__start__slot__at__epoch [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+count__eth1__data__votes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+get__block__root__at__slot [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+get__block__root [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster_ProcessOperationsSpec {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=ProcessOperationsSpec;
+get__validator__index [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+updateDeposit [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+seqKeysInValidators [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+total__deposits [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+balance__append [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+total__balances [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+validator__append [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+seqKeysInDeposits [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__validator__from__deposit [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+increase__balance [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+updateDeposits [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+lastEBB -> computeAllEBBsFromRoot;
+lastEBB -> isClosedUnderParent;
+lastEBB -> isSlotDecreasing;
+updateEth1Data -> count__eth1__data__votes;
+updateEth1Data -> updateEth1Data;
+blockRootsValid -> chainRoots;
+blockRootsValid -> get__block__root;
+blockRootsValid -> get__current__epoch;
+blockRootsValid -> get__previous__epoch;
+blockRootsValid -> isClosedUnderParent;
+blockRootsValid -> isSlotDecreasing;
+updateFinalisedCheckpoint -> all;
+updateFinalisedCheckpoint -> blockRootsValidWeak;
+updateFinalisedCheckpoint -> chainRoots;
+updateFinalisedCheckpoint -> get__block__root;
+updateFinalisedCheckpoint -> get__current__epoch;
+updateFinalisedCheckpoint -> get__previous__epoch;
+updateFinalisedCheckpoint -> isClosedUnderParent;
+updateFinalisedCheckpoint -> isJustified;
+updateFinalisedCheckpoint -> isSlotDecreasing;
+updateFinalisedCheckpoint -> updateFinalisedCheckpoint;
+updateFinalisedCheckpoint -> updateJustification;
+updateFinalisedCheckpoint -> updateJustificationPrevEpoch;
+updateFinalisedCheckpoint -> validCurrentAttestations;
+updateFinalisedCheckpoint -> validPrevAttestations;
+get__prev__power__of__two -> get__prev__power__of__two;
+keysInValidators -> keysInValidators;
+get__forkchoice__store -> compute__epoch__at__slot;
+get__forkchoice__store -> hash__tree__root;
+nextSlot -> blockRootsValidWeak;
+nextSlot -> chainRoots;
+nextSlot -> finalUpdates;
+nextSlot -> get__block__root;
+nextSlot -> get__current__epoch;
+nextSlot -> get__previous__epoch;
+nextSlot -> hash__tree__root;
+nextSlot -> isClosedUnderParent;
+nextSlot -> isJustified;
+nextSlot -> isSlotDecreasing;
+nextSlot -> justificationInvariant;
+nextSlot -> resolveStateRoot;
+nextSlot -> updateJustificationAndFinalisation;
+nextSlot -> updateJustificationPrevEpoch;
+nextSlot -> validCurrentAttestations;
+nextSlot -> validPrevAttestations;
+get__validator__index -> get__validator__index;
+lastJustified -> computeAllEBBsFromRoot;
+lastJustified -> isClosedUnderParent;
+lastJustified -> isJustifiedEpochFromRoot;
+lastJustified -> isSlotDecreasing;
+isChain -> isChain;
+updateDeposit -> balance__append;
+updateDeposit -> get__validator__from__deposit;
+updateDeposit -> get__validator__index;
+updateDeposit -> increase__balance;
+updateDeposit -> seqKeysInValidators;
+updateDeposit -> total__balances;
+updateDeposit -> updateDeposit;
+updateDeposit -> validator__append;
+ceil -> ceil;
+filterAttestations -> countAttestationsForTgt;
+filterAttestations -> filterAttestations;
+justificationInvariant -> blockRootsValidWeak;
+justificationInvariant -> chainRoots;
+justificationInvariant -> get__block__root;
+justificationInvariant -> get__current__epoch;
+justificationInvariant -> get__previous__epoch;
+justificationInvariant -> isClosedUnderParent;
+justificationInvariant -> isJustified;
+justificationInvariant -> isSlotDecreasing;
+justificationInvariant -> validCurrentAttestations;
+justificationInvariant -> validPrevAttestations;
+seqToSet -> seqToSet;
+updateJustificationPrevEpoch -> blockRootsValidWeak;
+updateJustificationPrevEpoch -> chainRoots;
+updateJustificationPrevEpoch -> get__attesting__balance;
+updateJustificationPrevEpoch -> get__block__root;
+updateJustificationPrevEpoch -> get__current__epoch;
+updateJustificationPrevEpoch -> get__matching__target__attestations;
+updateJustificationPrevEpoch -> get__previous__epoch;
+updateJustificationPrevEpoch -> get__total__active__balance;
+updateJustificationPrevEpoch -> isClosedUnderParent;
+updateJustificationPrevEpoch -> isJustified;
+updateJustificationPrevEpoch -> isSlotDecreasing;
+updateJustificationPrevEpoch -> validPrevAttestations;
+advanceSlot -> hash__tree__root;
+get__current__epoch -> compute__epoch__at__slot;
+get__current__epoch -> get__current__epoch;
+seqInter -> seqInter;
+seqMap -> requires;
+seqMap -> seqMap;
+timeSeq -> timeSeq;
+compute__epoch__at__slot -> compute__epoch__at__slot;
+flatten -> flatten;
+flatten -> flattenLength;
+resolveStateRoot -> advanceSlot;
+resolveStateRoot -> blockRootsValidWeak;
+resolveStateRoot -> hash__tree__root;
+resolveStateRoot -> isClosedUnderParent;
+resolveStateRoot -> isSlotDecreasing;
+seqKeysInValidators -> seqKeysInValidators;
+updateJustification -> blockRootsValidWeak;
+updateJustification -> chainRoots;
+updateJustification -> get__block__root;
+updateJustification -> get__current__epoch;
+updateJustification -> get__previous__epoch;
+updateJustification -> isClosedUnderParent;
+updateJustification -> isJustified;
+updateJustification -> isSlotDecreasing;
+updateJustification -> updateJustificationCurrentEpoch;
+updateJustification -> updateJustificationPrevEpoch;
+updateJustification -> validCurrentAttestations;
+updateJustification -> validPrevAttestations;
+total__deposits -> total__deposits;
+blockRootsValidWeak -> blockRootsValidWeak;
+blockRootsValidWeak -> chainRoots;
+blockRootsValidWeak -> get__block__root;
+blockRootsValidWeak -> get__current__epoch;
+blockRootsValidWeak -> get__previous__epoch;
+blockRootsValidWeak -> isClosedUnderParent;
+blockRootsValidWeak -> isSlotDecreasing;
+get__previous__epoch -> get__current__epoch;
+get__previous__epoch -> get__previous__epoch;
+isJustified -> chainRoots;
+isJustified -> collectValidatorsAttestatingForLink;
+isJustified -> isClosedUnderParent;
+isJustified -> isJustified;
+isJustified -> isSlotDecreasing;
+hash__tree__root -> hash__tree__root;
+collectValidatorsAttestatingForLink -> collectValidatorsAttestatingForLink;
+collectValidatorsAttestatingForLink -> trueBitsCount;
+updateJustificationCurrentEpoch -> chainRoots;
+updateJustificationCurrentEpoch -> get__attesting__balance;
+updateJustificationCurrentEpoch -> get__block__root;
+updateJustificationCurrentEpoch -> get__current__epoch;
+updateJustificationCurrentEpoch -> get__matching__target__attestations;
+updateJustificationCurrentEpoch -> get__total__active__balance;
+updateJustificationCurrentEpoch -> isClosedUnderParent;
+updateJustificationCurrentEpoch -> isJustified;
+updateJustificationCurrentEpoch -> isSlotDecreasing;
+updateJustificationCurrentEpoch -> validCurrentAttestations;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+updateJustificationAndFinalisation -> blockRootsValidWeak;
+updateJustificationAndFinalisation -> chainRoots;
+updateJustificationAndFinalisation -> get__block__root;
+updateJustificationAndFinalisation -> get__current__epoch;
+updateJustificationAndFinalisation -> get__previous__epoch;
+updateJustificationAndFinalisation -> isClosedUnderParent;
+updateJustificationAndFinalisation -> isJustified;
+updateJustificationAndFinalisation -> isSlotDecreasing;
+updateJustificationAndFinalisation -> updateFinalisedCheckpoint;
+updateJustificationAndFinalisation -> updateJustification;
+updateJustificationAndFinalisation -> updateJustificationPrevEpoch;
+updateJustificationAndFinalisation -> validCurrentAttestations;
+updateJustificationAndFinalisation -> validPrevAttestations;
+height -> height;
+height -> isClosedUnderParent;
+height -> isSlotDecreasing;
+storeIsValid -> genesisTimeInvariant;
+storeIsValid -> storeInvariant0;
+storeIsValid -> storeInvariant0a;
+storeIsValid -> storeInvariant1;
+storeIsValid -> storeInvariant2;
+storeIsValid -> storeInvariant3;
+storeIsValid -> storeInvariant4;
+storeIsValid -> storeInvariant5;
+storeIsValid -> storeInvariant6;
+storeIsValid -> storeInvariant7;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+countAttestationsForTgt -> countAttestationsForTgt;
+count__eth1__data__votes -> count__eth1__data__votes;
+flattenLength -> flattenLength;
+attestationIsWellFormed -> compute__epoch__at__slot;
+attestationIsWellFormed -> get__current__epoch;
+attestationIsWellFormed -> get__previous__epoch;
+get__block__root -> compute__start__slot__at__epoch;
+get__block__root -> get__block__root__at__slot;
+countAttestationsForLink -> countAttestationsForLink;
+power2 -> power2;
+get__matching__target__attestations -> filterAttestations;
+get__matching__target__attestations -> get__block__root;
+get__matching__target__attestations -> get__current__epoch;
+get__matching__target__attestations -> get__matching__source__attestations;
+get__matching__target__attestations -> get__previous__epoch;
+get__matching__target__attestations -> isClosedUnderParent;
+get__matching__target__attestations -> isSlotDecreasing;
+get__matching__target__attestations -> validCurrentAttestations;
+get__matching__target__attestations -> validPrevAttestations;
+get__matching__source__attestations -> get__current__epoch;
+get__matching__source__attestations -> get__matching__source__attestations;
+get__matching__source__attestations -> get__previous__epoch;
+computeAllEBBsFromRoot -> chainRoots;
+computeAllEBBsFromRoot -> computeAllEBBsFromRoot;
+computeAllEBBsFromRoot -> computeEBBsForAllEpochs;
+computeAllEBBsFromRoot -> isClosedUnderParent;
+computeAllEBBsFromRoot -> isSlotDecreasing;
+get__next__power__of__two -> get__next__power__of__two;
+isValidBlock -> addBlockToState;
+isValidBlock -> forwardStateToSlot;
+isValidBlock -> hash__tree__root;
+isValidBlock -> isClosedUnderParent;
+isValidBlock -> isSlotDecreasing;
+isValidBlock -> justificationInvariant;
+isValidBlock -> nextSlot;
+isValidBlock -> total__balances;
+isValidBlock -> total__deposits;
+isValidBlock -> updateDeposits;
+isValidBlock -> updateEth1Data;
+total__balances -> total__balances;
+addBlockToState -> addBlockToState;
+addBlockToState -> hash__tree__root;
+seqBinOpMap -> seqBinOpMap;
+seqKeysInDeposits -> seqKeysInDeposits;
+chainRoots -> chainRoots;
+chainRoots -> isChain;
+chainRoots -> isClosedUnderParent;
+chainRoots -> isSlotDecreasing;
+isChain2 -> isChain2;
+collectValidatorsIndicesAttestatingForTarget -> collectValidatorsIndicesAttestatingForTarget;
+collectValidatorsIndicesAttestatingForTarget -> trueBitsCount;
+get__validator__from__deposit -> get__validator__from__deposit;
+get__validator__from__deposit -> min;
+ancestors -> ancestors;
+ancestors -> storeIsValid;
+get__attesting__balance -> collectValidatorsIndices;
+collectValidatorsIndices -> collectValidatorsIndices;
+collectValidatorsIndices -> trueBitsCount;
+increase__balance -> increase__balance;
+isPowerOf2 -> power2;
+trueBitsCount -> trueBitsCount;
+isSlotDecreasing -> isClosedUnderParent;
+validCurrentAttestations -> get__block__root;
+validCurrentAttestations -> get__current__epoch;
+validCurrentAttestations -> isClosedUnderParent;
+validCurrentAttestations -> isSlotDecreasing;
+computeEBBsForAllEpochs -> computeEBBsForAllEpochs;
+computeEBBsForAllEpochs -> isChain;
+storeInvariant7 -> hash__tree__root;
+storeInvariant1 -> hash__tree__root;
+storeInvariant2 -> hash__tree__root;
+isJustifiedEpochFromRoot -> computeAllEBBsFromRoot;
+isJustifiedEpochFromRoot -> isClosedUnderParent;
+isJustifiedEpochFromRoot -> isJustifiedEpoch;
+isJustifiedEpochFromRoot -> isSlotDecreasing;
+forwardStateToSlot -> forwardStateToSlot;
+forwardStateToSlot -> isClosedUnderParent;
+forwardStateToSlot -> isSlotDecreasing;
+forwardStateToSlot -> justificationInvariant;
+forwardStateToSlot -> nextSlot;
+updateDeposits -> total__balances;
+updateDeposits -> total__deposits;
+updateDeposits -> updateDeposit;
+updateDeposits -> updateDeposits;
+validPrevAttestations -> get__block__root;
+validPrevAttestations -> get__previous__epoch;
+validPrevAttestations -> isClosedUnderParent;
+validPrevAttestations -> isSlotDecreasing;
+isJustifiedEpoch -> collectValidatorsAttestatingForLink;
+isJustifiedEpoch -> isJustifiedEpoch;
+}

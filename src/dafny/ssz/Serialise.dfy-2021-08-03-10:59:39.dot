@@ -1,0 +1,211 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_BitListSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=BitListSeDes;
+fromBytesToBitList [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+largestIndexOfOne [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+fromBitlistToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_SSZ {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=SSZ;
+serialiseSeqOfBasics [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+deserialise [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+serialise [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+default [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+sizeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_BytesAndBits {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=BytesAndBits;
+fromBitsToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+byteTo8Bits [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+boolToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+list8BitsToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+isNull [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+isBasicTipe [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=MathHelpers;
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+subgraph cluster_IntSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor="#e0f3db";
+fontcolor=darkolivegreen3;
+penwidth=2;
+label=IntSeDes;
+uintSe [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+uintDes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor=orchid3;
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=orchid3];
+}
+
+subgraph cluster_BoolSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor=snow2;
+fontcolor=slategrey;
+penwidth=2;
+label=BoolSeDes;
+boolToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+byteToBool [shape=rectangle, style=filled, fontname=helvetica, fillcolor=slategrey];
+}
+
+subgraph cluster_BitVectorSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor="#f0f9e8";
+fontcolor=palegreen4;
+penwidth=2;
+label=BitVectorSeDes;
+isValidBitVectorEncoding [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+fromBytesToBitVector [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+fromBitvectorToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=palegreen4];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+timeSeq -> timeSeq;
+get__prev__power__of__two -> get__prev__power__of__two;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+fromBitsToBytes -> ceil;
+fromBitsToBytes -> fromBitsToBytes;
+fromBitsToBytes -> list8BitsToByte;
+byteTo8Bits -> byteTo8Bits;
+byteTo8Bits -> byteToBool;
+isValidBitVectorEncoding -> byteTo8Bits;
+isValidBitVectorEncoding -> ceil;
+isValidBitVectorEncoding -> timeSeq;
+fromBytesToBitList -> byteTo8Bits;
+fromBytesToBitList -> fromBytesToBitList;
+fromBytesToBitList -> isNull;
+fromBytesToBitList -> largestIndexOfOne;
+boolToBytes -> boolToBytes;
+flatten -> flatten;
+flatten -> flattenLength;
+serialiseSeqOfBasics -> isBasicTipe;
+serialiseSeqOfBasics -> serialise;
+serialiseSeqOfBasics -> serialiseSeqOfBasics;
+serialiseSeqOfBasics -> typeOf;
+boolToByte -> boolToByte;
+isPowerOf2 -> power2;
+power2 -> power2;
+fromBytesToBitVector -> byteTo8Bits;
+fromBytesToBitVector -> fromBytesToBitVector;
+fromBytesToBitVector -> isValidBitVectorEncoding;
+uintSe -> power2;
+uintSe -> uintSe;
+ceil -> ceil;
+list8BitsToByte -> boolToByte;
+list8BitsToByte -> isNull;
+list8BitsToByte -> list8BitsToByte;
+flattenLength -> flattenLength;
+deserialise -> byteToBool;
+deserialise -> deserialise;
+deserialise -> fromBytesToBitList;
+deserialise -> fromBytesToBitVector;
+deserialise -> isValidBitVectorEncoding;
+deserialise -> uintDes;
+deserialise -> wellTyped;
+uintDes -> power2;
+uintDes -> uintDes;
+serialise -> boolToBytes;
+serialise -> fromBitlistToBytes;
+serialise -> fromBitvectorToBytes;
+serialise -> isBasicTipe;
+serialise -> serialiseSeqOfBasics;
+serialise -> typeOf;
+serialise -> uintSe;
+seqToSet -> seqToSet;
+default -> timeSeq;
+largestIndexOfOne -> largestIndexOfOne;
+fromBitvectorToBytes -> fromBitvectorToBytes;
+fromBitvectorToBytes -> isValidBitVectorEncoding;
+fromBitvectorToBytes -> list8BitsToByte;
+fromBitvectorToBytes -> timeSeq;
+get__next__power__of__two -> get__next__power__of__two;
+fromBitlistToBytes -> ceil;
+fromBitlistToBytes -> fromBitlistToBytes;
+fromBitlistToBytes -> list8BitsToByte;
+sizeOf -> isBasicTipe;
+sizeOf -> serialise;
+sizeOf -> sizeOf;
+sizeOf -> typeOf;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+seqInter -> seqInter;
+}

@@ -1,0 +1,20 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=MathHelpers;
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+get__next__power__of__two -> get__next__power__of__two;
+get__prev__power__of__two -> get__prev__power__of__two;
+isPowerOf2 -> power2;
+power2 -> power2;
+}

@@ -1,0 +1,49 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+seqToSet -> seqToSet;
+timeSeq -> timeSeq;
+ceil -> ceil;
+seqInter -> seqInter;
+flattenLength -> flattenLength;
+flatten -> flatten;
+flatten -> flattenLength;
+}
