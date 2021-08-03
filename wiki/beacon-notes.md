@@ -21,7 +21,6 @@ If these two conditions are satisfied, we say that the transaction `Tx` is **val
 To implement the recording of the sequence of transactions we use a standard data structure, 
 a _linked list_, the elements of which we call **blocks**. A (beacon) **block** is a pair comprising a transaction and a link to a parent block that contains the previous transaction (except of course the first block, `block 0`, called the _genesis block_ that does not have a parent transaction.) 
 Figure 1 depicts the linked list of blocks which is called a **blockchain**, the **Beacon Chain**.
-
 <figure>
     <img src="blockchain1.jpg"
          alt="A Block Chain">
