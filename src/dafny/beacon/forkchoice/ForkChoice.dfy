@@ -20,9 +20,9 @@ include "../../utils/NativeTypes.dfy"
 include "../attestations/AttestationsTypes.dfy"
 include "../BeaconChainTypes.dfy"
 include "ForkChoiceTypes.dfy"
+include "../statetransition/StateTransition.s.dfy"
 include "../statetransition/StateTransition.dfy"
 include "../Helpers.dfy"
-include "../attestations/AttestationsHelpers.dfy"
   
 /**
  * Fork choice rule for the Beacon Chain.
@@ -35,9 +35,9 @@ module ForkChoice {
     import opened BeaconChainTypes
     import opened ForkChoiceTypes
     import opened StateTransition
+    import opened StateTransitionSpec
     import opened BeaconHelpers
     import opened AttestationsTypes
-    import opened AttestationsHelpers
 
     /**
      *  This function provides the genesis store.
@@ -70,6 +70,7 @@ module ForkChoice {
         //  block header.
         var anchor_block := BeaconBlock(
             anchor_state.latest_block_header.slot,
+            0 as ValidatorIndex,
             anchor_state.latest_block_header.parent_root,
             //  as per specification of get_forkchoice_store
             hash_tree_root(anchor_state),   //  state_root
@@ -83,7 +84,7 @@ module ForkChoice {
             CheckPoint(anchor_epoch, anchor_root),
             CheckPoint(anchor_epoch, anchor_root),
             map[anchor_root := anchor_block],           // blocks
-            map[anchor_root := anchor_state],            //  block_states
+            map[anchor_root := anchor_state],           //  block_states
             |anchor_state.validators|,
             []
         )
@@ -121,6 +122,7 @@ module ForkChoice {
          */
         const GENESIS_BLOCK_HEADER := BeaconBlockHeader(
             0 as Slot,  
+            0 as ValidatorIndex,
             DEFAULT_BYTES32, 
             hash_tree_root(GENESIS_STATE)
         )
@@ -137,6 +139,14 @@ module ForkChoice {
          *  All fields initialised to default values except the state_root.
          */
         const GENESIS_BLOCK :=  DEFAULT_BLOCK.(state_root := HASH_TREE_ROOT_GENESIS_STATE)
+
+        /**
+         *  Genesis block root
+         *
+         *  @link{https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#genesis-block}
+         *  All fields initialised to default values except the state_root.
+         */
+        const GENESIS_BLOCK_ROOT := hash_tree_root(GENESIS_BLOCK)
 
         /**
          *  The genesis store.
@@ -244,7 +254,7 @@ module ForkChoice {
             forall b :: b in acceptedBlocks ==> 
                 hash_tree_root(b) in store.block_states.Keys 
                 && store.block_states[hash_tree_root(b)].latest_block_header == 
-                        BeaconBlockHeader(b.slot, b.parent_root, DEFAULT_BYTES32)
+                        BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32)
         }
 
         /**
@@ -349,7 +359,7 @@ module ForkChoice {
         }
        
         /**
-         *  The proof that a store is chain follows directly from the properties
+         *  The proof that a store is a chain follows directly from the properties
          *  of ancestors.
          *  
          *  @param  r       A root.
@@ -395,16 +405,6 @@ module ForkChoice {
             && storeInvariant6(store)
             && storeInvariant7(store)
         }
-
-        /**
-         *  Canonical chain property.
-         */
-        // lemma atMostOneCanonicalChain(store: Store) 
-        //     ensures forall r :: r in store.blocks.Keys && 
-
-        // {
-        //     assume(forall r :: r in store.blocks.Keys ==> true);
-        // }
 
         /**
          *  Add a block to the store.
@@ -460,6 +460,7 @@ module ForkChoice {
             store := store.(blocks := store.blocks[hash_tree_root(b) := b] );
             acceptedBlocks := acceptedBlocks + { b };
 
+            // Python specs
             // Check that block is later than the finalized epoch slot (optimization to reduce calls to get_ancestor)
             // finalized_slot = compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)
             // assert block.slot > finalized_slot
@@ -467,7 +468,7 @@ module ForkChoice {
             // assert get_ancestor(store, hash_tree_root(block), finalized_slot) == store.finalized_checkpoint.root
 
             // Check the block is valid and compute the post-state
-            var new_state := stateTransition(pre_state, b);
+            var new_state := state_transition(pre_state, b);
            
             // Add new state for this block to the store
             store := store.(block_states := store.block_states[hash_tree_root(b) := new_state] );
@@ -475,6 +476,7 @@ module ForkChoice {
             //  Update justified checkpoint
             //  We assume that store.best_justified is the same as store.current_justified for now.
             if new_state.current_justified_checkpoint.epoch > store.justified_checkpoint.epoch {
+                // Python specs
                 // store.best_justified_checkpoint = state.current_justified_checkpoint 
                 //  This test is always true in the current over-approximation.
                 if should_update_justified_checkpoint(store, new_state.current_justified_checkpoint) {
@@ -483,6 +485,16 @@ module ForkChoice {
             }
         }
 
+        /**
+         *  This function is not implemented.
+         *  
+         *  @param      store       A store.
+         *  @param      block_root  The block roots vector of a state.
+         *  @param      blocks      The map from root to blocks.
+         *  @returns                false. 
+         *
+         *  @todo                   Implement this method.
+         */
         method filter_block_tree(store: Store, block_root: Root, blocks: map<Root, BeaconBlock>) returns (r : bool) 
         {
             //  Collect children of block block_root
