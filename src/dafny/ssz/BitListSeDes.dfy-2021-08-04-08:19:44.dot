@@ -1,0 +1,127 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_BitListSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=BitListSeDes;
+fromBytesToBitList [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+largestIndexOfOne [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+fromBitlistToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_BytesAndBits {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=BytesAndBits;
+byteTo8Bits [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+fromBitsToBytes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+boolToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+byteToBool [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+list8BitsToByte [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+isNull [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=MathHelpers;
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+range [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#e0f3db";
+fontcolor=darkolivegreen3;
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=darkolivegreen3];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+timeSeq -> timeSeq;
+byteTo8Bits -> byteTo8Bits;
+byteTo8Bits -> byteToBool;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+fromBitsToBytes -> ceil;
+fromBitsToBytes -> fromBitsToBytes;
+fromBitsToBytes -> list8BitsToByte;
+get__prev__power__of__two -> get__prev__power__of__two;
+fromBytesToBitList -> byteTo8Bits;
+fromBytesToBitList -> fromBytesToBitList;
+fromBytesToBitList -> isNull;
+fromBytesToBitList -> largestIndexOfOne;
+flatten -> flatten;
+flatten -> flattenLength;
+boolToByte -> boolToByte;
+isPowerOf2 -> power2;
+power2 -> power2;
+ceil -> ceil;
+list8BitsToByte -> boolToByte;
+list8BitsToByte -> isNull;
+list8BitsToByte -> list8BitsToByte;
+flattenLength -> flattenLength;
+seqToSet -> seqToSet;
+largestIndexOfOne -> largestIndexOfOne;
+get__next__power__of__two -> get__next__power__of__two;
+range -> range;
+fromBitlistToBytes -> ceil;
+fromBitlistToBytes -> fromBitlistToBytes;
+fromBitlistToBytes -> list8BitsToByte;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+seqInter -> seqInter;
+}

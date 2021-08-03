@@ -1,0 +1,83 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=MathHelpers;
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+range [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+seqToSet -> seqToSet;
+timeSeq -> timeSeq;
+ceil -> ceil;
+get__next__power__of__two -> get__next__power__of__two;
+range -> range;
+seqInter -> seqInter;
+get__prev__power__of__two -> get__prev__power__of__two;
+flattenLength -> flattenLength;
+isPowerOf2 -> power2;
+power2 -> power2;
+flatten -> flatten;
+flatten -> flattenLength;
+}

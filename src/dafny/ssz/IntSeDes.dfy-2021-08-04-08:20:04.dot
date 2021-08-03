@@ -1,0 +1,98 @@
+digraph G {
+fontname=helvetica;
+subgraph cluster_SeqHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#d0d1e6";
+fontcolor="#3690c0";
+penwidth=2;
+label=SeqHelpers;
+seqToSet [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+seqInter [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#3690c0"];
+}
+
+subgraph cluster_Eth2Types {
+style=filled;
+fontsize="20.0";
+fillcolor=cornsilk;
+fontcolor=bisque3;
+penwidth=2;
+label=Eth2Types;
+typeOf [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+wellTyped [shape=rectangle, style=filled, fontname=helvetica, fillcolor=bisque3];
+}
+
+subgraph cluster_MathHelpers {
+style=filled;
+fontsize="20.0";
+fillcolor="#fee6ce";
+fontcolor="#fd8d3c";
+penwidth=2;
+label=MathHelpers;
+isPowerOf2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+get__next__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+range [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+get__prev__power__of__two [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+power2 [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#fd8d3c"];
+}
+
+subgraph cluster_IntSeDes {
+style=filled;
+fontsize="20.0";
+fillcolor="#fde0ef";
+fontcolor="#de77ae";
+penwidth=2;
+label=IntSeDes;
+uintSe [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+uintDes [shape=rectangle, style=filled, fontname=helvetica, fillcolor="#de77ae"];
+}
+
+subgraph cluster_Helpers {
+style=filled;
+fontsize="20.0";
+fillcolor=lightpink;
+fontcolor=tomato;
+penwidth=2;
+label=Helpers;
+seqBinOpMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+seqMap [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+timeSeq [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+ceil [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+flattenLength [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+flatten [shape=rectangle, style=filled, fontname=helvetica, fillcolor=tomato];
+}
+
+subgraph cluster__System {
+style=filled;
+fontsize="20.0";
+fillcolor="#ffffdd";
+fontcolor=gold;
+penwidth=2;
+label=_System;
+requires [shape=rectangle, style=filled, fontname=helvetica, fillcolor=gold];
+}
+
+seqBinOpMap -> seqBinOpMap;
+seqMap -> requires;
+seqMap -> seqMap;
+typeOf -> typeOf;
+typeOf -> wellTyped;
+wellTyped -> typeOf;
+wellTyped -> wellTyped;
+seqToSet -> seqToSet;
+timeSeq -> timeSeq;
+isPowerOf2 -> power2;
+uintSe -> power2;
+uintSe -> uintSe;
+ceil -> ceil;
+get__next__power__of__two -> get__next__power__of__two;
+range -> range;
+uintDes -> power2;
+uintDes -> uintDes;
+seqInter -> seqInter;
+get__prev__power__of__two -> get__prev__power__of__two;
+flattenLength -> flattenLength;
+power2 -> power2;
+flatten -> flatten;
+flatten -> flattenLength;
+}
