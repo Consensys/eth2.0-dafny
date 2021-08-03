@@ -108,6 +108,29 @@ module StateTransitionSpec {
         ensures forwardStateToSlot(s, (i+1) as Slot) == nextSlot(forwardStateToSlot(s, i as Slot)) 
     { // Thanks Dafny
     }
+
+    /**
+     *  This lemma helps solve an issue related to the Slot type in process_slots.
+     *
+     *  @param  s   A beacon state. 
+     *  @param  i   A positive integer.
+     *  @param  j   A positive integer.
+     *  @return     A proof that if various preconditions hold then
+     *              forwardStateToSlot(nextSlot(s), (i+1) as Slot) 
+     *              == forwardStateToSlot(nextSlot(s), j as Slot).
+     */
+    lemma helperForwardStteToSlotLemma2(s: BeaconState, i: nat, j: nat)
+        requires s.slot as nat + 1 < 0x10000000000000000 as nat
+        requires j == (i + 1) < 0x10000000000000000
+        requires s.slot <= i as Slot
+        requires |s.validators| == |s.balances| 
+        requires is_valid_state_epoch_attestations(s)
+        
+        ensures forwardStateToSlot(nextSlot(s), (i+1) as Slot) == forwardStateToSlot(nextSlot(s), j as Slot)
+    {
+        //assert nextSlot(s).slot == s.slot + 1 as Slot <= (i+1) as Slot;
+    }
+
     
     /**
      *  Defines the value of state at next slot.
@@ -145,6 +168,7 @@ module StateTransitionSpec {
         ensures |nextSlot(s).eth1_data_votes| <= |s.eth1_data_votes| 
         ensures |nextSlot(s).validators| == |s.validators|
         ensures nextSlot(s).eth1_deposit_index == s.eth1_deposit_index
+        ensures nextSlot(s).slot == s.slot + 1 as Slot
 
         /** If s.slot is not at the boundary of an epoch, the 
             attestation/finality fields are unchanged. */
@@ -224,6 +248,7 @@ module StateTransitionSpec {
         ensures s.previous_epoch_attestations == resolveStateRoot(s).previous_epoch_attestations
         ensures |resolveStateRoot(s).eth1_data_votes| <= |s.eth1_data_votes| 
         ensures |resolveStateRoot(s).validators| == |s.validators|
+        ensures resolveStateRoot(s).slot == s.slot + 1 as Slot
         
         ensures  s.latest_block_header.state_root != DEFAULT_BYTES32 ==>
             resolveStateRoot(s) == advanceSlot(s)
