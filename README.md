@@ -49,7 +49,7 @@ The main issue is that the number of assumptions ``requires`` needed for the pro
 Before attempting a merge, it may be helpful to provide a functional definition of valid attestations [here](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/attestations/AttestationsHelpers.dfy) in a given state.
 
 1. the use of the ``opaque`` attribute may help speeding up some proofs. 
-2. re-factoring the code and providing defintions with weaker pre-conditions.  
+2. re-factoring the code and providing definitions with weaker pre-conditions.  
 
 # Related Work
 
