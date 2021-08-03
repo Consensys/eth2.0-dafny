@@ -209,12 +209,13 @@ module StateTransition {
                 {helperForwardStateToSlotLemma(nextSlot(s), i);}
                 s' == forwardStateToSlot(nextSlot(s), (i+1) as Slot);
             }
-            
-            i := i + 1;
-            assert s' == forwardStateToSlot(nextSlot(s), i as Slot);
+            assert s' == forwardStateToSlot(nextSlot(s), (i+1) as Slot);
+            helperForwardStteToSlotLemma2(s, i, (i+1));
+            i := (i + 1);
+            //assert s' == forwardStateToSlot(nextSlot(s), i as Slot);
             assert(s'.latest_block_header.state_root != DEFAULT_BYTES32);
         }
-        assert s' == forwardStateToSlot(nextSlot(s), slot); 
+        //assert s' == forwardStateToSlot(nextSlot(s), slot); 
     }
 
     /**
