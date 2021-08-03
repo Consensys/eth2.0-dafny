@@ -61,6 +61,7 @@ module EpochProcessing {
         ensures s'.eth1_deposit_index == s.eth1_deposit_index
         ensures |s'.validators| == |s'.balances|
         ensures s' == updateEpoch(s)
+        ensures is_valid_state_epoch_attestations(s')
     {
         assert(s.slot as nat + 1 < 0x10000000000000000 as nat);
         s' := process_justification_and_finalization(s);

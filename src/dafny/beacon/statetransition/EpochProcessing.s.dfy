@@ -98,6 +98,7 @@ module EpochProcessingSpec {
                       justification_bits := updateEpoch(s).justification_bits,
                       finalised_checkpoint := updateEpoch(s).finalised_checkpoint
                      )
+        ensures |updateEpoch(s).validators| == |updateEpoch(s).balances|
         ensures is_valid_state_epoch_attestations(updateEpoch(s))
         ensures |updateEpoch(s).validators| == |s.validators|
     {
