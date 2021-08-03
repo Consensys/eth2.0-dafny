@@ -22,6 +22,7 @@ include "../Helpers.p.dfy"
 include "EpochProcessing.s.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/MathHelpers.dfy"
+include "../../utils/NativeTypes.dfy"
 
 /**
  * Epoch processing and related functions for the Beacon Chain.
@@ -38,6 +39,7 @@ module EpochProcessing {
     import opened EpochProcessingSpec
     import opened Eth2Types
     import opened MathHelpers
+    import opened NativeTypes
 
     /**
      *  At epoch boundaries, update justifications, rewards, penalities,

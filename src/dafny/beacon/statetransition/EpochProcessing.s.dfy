@@ -70,8 +70,10 @@ module EpochProcessingSpec {
                                             updateEffectiveBalance(
                                                 updateEth1DataReset(
                                                     updateSlashings(
-                                                        updateRAndP(
-                                                            updateJustificationAndFinalisation(s)
+                                                        updateRegistry(
+                                                            updateRAndP(
+                                                                updateJustificationAndFinalisation(s)
+                                                            )
                                                         )
                                                     )
                                                 )
