@@ -21,6 +21,7 @@ include "../Helpers.dfy"
 include "../Helpers.p.dfy"
 include "../../utils/Eth2Types.dfy"
 include "../../utils/MathHelpers.dfy"
+include "../../utils/NativeTypes.dfy"
 
 /**
  *  Provide a functional specification of epoch processing components.
@@ -34,8 +35,8 @@ module EpochProcessingSpec {
     import opened BeaconHelpers
     import opened BeaconHelperProofs
     import opened Eth2Types
-    
     import opened MathHelpers
+    import opened NativeTypes
 
     //  Specifications of functions related to the process epoch methods.
     //  e.g. process_rewards_and_penalties, process_slashings, etc
@@ -792,14 +793,229 @@ module EpochProcessingSpec {
      *  @param  s   A beacon state.
      *  @returns    The state obtained after applying the epoch registy updates.
      *  @note       This function matches to the simplified method currently being used 
-     *              and should be updated to if  process_registry_updates changes.
+     *              and should be updated to if process_registry_updates changes.
+     *              i.e the activation queue within updateQueueValidators is not 
+     *              sorted. Please refer to process_queue_validators and updateQueueValidators.
+     *  @note       This component uses the axiom AssumeMinimumActiveValidators.
      */
     function updateRegistry(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
         requires is_valid_state_epoch_attestations(s)
 
         ensures is_valid_state_epoch_attestations(updateRegistry(s))   
+        ensures updateRegistry(s) 
+                == s.(validators := updateRegistry(s).validators)
     {
-        s
+        var s1 := updateActivationEligibility(s);
+        AssumeMinimumActiveValidators(s1);
+        var s2 := updateEjections(s1);
+        updateQueueValidators(s2)
+    }
+
+    /** 
+     *  A helper to process the first component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the activation eligibility updates
+     */
+    function updateActivationEligibility(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures updateActivationEligibility(s) 
+                == s.(validators := updateActivationEligibility(s).validators)
+        ensures is_valid_state_epoch_attestations(updateActivationEligibility(s))
+    {
+        updateActivationEligibilityHelper(s, |s.validators|)
+    }
+
+    /** 
+     *  A helper to process the first component of the registry updates recursively.
+     *  
+     *  @param  s   A state.
+     *  @param  len A positive integer.
+     *  @returns    The state obtained after applying the activation eligibility updates
+     */
+    function updateActivationEligibilityHelper(s: BeaconState, len: nat) : BeaconState
+        requires len <= |s.balances| == |s.validators| 
+        requires is_valid_state_epoch_attestations(s)
+            
+        ensures |updateActivationEligibilityHelper(s,len).validators| == |s.validators|  
+        ensures |updateActivationEligibilityHelper(s, len).balances| == |s.balances| 
+        ensures forall v :: len <= v < |s.validators| 
+                ==> updateActivationEligibilityHelper(s,len).validators[v]  == s.validators[v]
+        ensures forall v :: 0 <= v < len ==> 
+            assert v < |s.validators|;
+            var new_val := if is_eligible_for_activation_queue(s.validators[v])
+                        then 
+                            set_activation_eligibility_epoch(s, 
+                                                             v as ValidatorIndex, 
+                                                             get_current_epoch(s) + 1 as Epoch
+                                                            ).validators[v] 
+                        else 
+                            s.validators[v]; 
+            updateActivationEligibilityHelper(s,len).validators[v] == new_val
+       
+        ensures updateActivationEligibilityHelper(s, len) 
+                == s.(validators := updateActivationEligibilityHelper(s, len).validators)
+        ensures is_valid_state_epoch_attestations(updateActivationEligibilityHelper(s,len))
+
+        decreases len
+    {
+        if len == 0 then s
+
+        else
+            var i := len - 1;
+            assert i < |s.balances|;
+            
+            var s1 := if is_eligible_for_activation_queue(s.validators[i])
+                        then 
+                            set_activation_eligibility_epoch(s, 
+                                                             i as ValidatorIndex, 
+                                                             get_current_epoch(s) + 1 as Epoch
+                                                            ) 
+                        else 
+                            s; 
+
+            AssumeIsValidStateEpoch_Attestations(s1);
+            updateActivationEligibilityHelper(s1, len-1)
+    }
+
+    /** 
+     *  A helper to process the second component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the ejection updates
+     */
+    function updateEjections(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+        requires minimumActiveValidators(s)
+
+        ensures updateEjections(s) 
+                == s.(validators := updateEjections(s).validators)
+        ensures is_valid_state_epoch_attestations(updateEjections(s))
+    {
+        updateEjectionsHelper(s, |s.validators|)
+    }
+
+    /** 
+     *  A helper to process the second component of the registry updates recursively.
+     *  
+     *  @param  s   A state.
+     *  @param  len A positive integer.
+     *  @returns    The state obtained after applying the ejection updates
+     */
+    function updateEjectionsHelper(s: BeaconState, len: nat) : BeaconState
+        requires len <= |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+        requires minimumActiveValidators(s)
+            
+        ensures |updateEjectionsHelper(s,len).validators| == |s.validators|  
+        ensures |updateEjectionsHelper(s,len).balances| == |s.balances| 
+        ensures forall v :: len <= v < |s.validators| 
+                ==> updateEjectionsHelper(s,len).validators[v]  == s.validators[v]
+       
+        ensures updateEjectionsHelper(s, len) 
+                == s.(validators := updateEjectionsHelper(s, len).validators)
+        ensures is_valid_state_epoch_attestations(updateEjectionsHelper(s,len))
+        ensures minimumActiveValidators(updateEjectionsHelper(s,len))
+
+        decreases len
+    {
+        if len == 0 then s
+
+        else
+            var i := len - 1;
+            var s1 := updateEjectionsHelper(s, i); 
+            
+            assert i < |s.validators|;
+        
+            var s2 := if ((is_active_validator(s1.validators[i], get_current_epoch(s1)))
+                        && (s1.validators[i].effective_balance <= EJECTION_BALANCE))
+                            then    
+                                initiate_validator_exit(s1, i as ValidatorIndex)
+                            else
+                                s1;
+            AssumeIsValidStateEpoch_Attestations(s2);
+            s2
+    }
+
+    /** 
+     *  A helper to process the final component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the dequeue updates
+     */
+    function updateQueueValidators(s: BeaconState) : BeaconState
+        requires |s.validators| == |s.balances|
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures updateQueueValidators(s) 
+                == s.(validators := updateQueueValidators(s).validators)
+        ensures is_valid_state_epoch_attestations(updateQueueValidators(s))
+    {
+        var activation_queue := get_validator_indices_activation_eligible(s.validators, s.finalised_checkpoint.epoch); 
+        var churn_limit := get_validator_churn_limit(s) as nat;
+
+        var dequeue := if churn_limit <= |activation_queue| 
+                        then activation_queue[..churn_limit]
+                        else [];
+            
+        updateQueueValidatorsHelper(s, dequeue, |s.validators|)
+    }
+
+    /** 
+     *  A helper to process the final component of the registry updates recursively.
+     *  
+     *  @param  s           A state.
+     *  @param  dequeue     A sequence of indices.
+     *  @param  len         A positive integer.
+     *  @returns    The state obtained after applying the dequeue updates
+     */
+    function updateQueueValidatorsHelper(s: BeaconState, dequeue: seq<uint64>, len: nat) : BeaconState
+        requires len <= |s.balances| == |s.validators| 
+        requires is_valid_state_epoch_attestations(s)
+            
+        ensures |updateQueueValidatorsHelper(s,dequeue, len).validators| == |s.validators|  
+        ensures |updateQueueValidatorsHelper(s,dequeue, len).balances| == |s.balances| 
+        ensures forall v :: len <= v < |s.validators| 
+                ==> updateQueueValidatorsHelper(s,dequeue, len).validators[v]  == s.validators[v]
+        ensures forall v :: 0 <= v < len ==> 
+            assert v < |s.validators|;
+            var new_val := if v as uint64 in dequeue
+                        then 
+                            set_activation_epoch(s, 
+                                                 v as ValidatorIndex, 
+                                                 compute_activation_exit_epoch(get_current_epoch(s))
+                                                ).validators[v] 
+                        else 
+                            s.validators[v]; 
+            updateQueueValidatorsHelper(s,dequeue, len).validators[v] == new_val
+       
+        ensures updateQueueValidatorsHelper(s,dequeue, len)
+                == s.(validators := updateQueueValidatorsHelper(s,dequeue, len).validators)
+        ensures is_valid_state_epoch_attestations(updateQueueValidatorsHelper(s,dequeue, len))
+
+        decreases len
+    {
+        if len == 0 then s
+
+        else
+            var i := len - 1;
+            assert i < |s.balances|;
+            
+            var s1 := if i as uint64 in dequeue
+                        then 
+                            set_activation_epoch(s, 
+                                                i as ValidatorIndex, 
+                                                compute_activation_exit_epoch(get_current_epoch(s))
+                                                ) 
+                        else 
+                            s; 
+
+            AssumeIsValidStateEpoch_Attestations(s1);
+            updateQueueValidatorsHelper(s1,dequeue, len-1)
     }
 
     /**

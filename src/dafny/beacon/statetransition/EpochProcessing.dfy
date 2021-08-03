@@ -72,53 +72,55 @@ module EpochProcessing {
         assert s' == updateRAndP(updateJustificationAndFinalisation(s));
     
         assert |s'.validators| == |s'.balances| == |s.validators|;
+
+        s' := process_registry_updates(s');
+        assert s' == updateRegistry(
+                        updateRAndP(
+                            updateJustificationAndFinalisation(s)
+                        )
+                    );
+
+
         s' := process_slashings(s');
         assert s' == updateSlashings(
-                        updateRAndP(
-                                updateJustificationAndFinalisation(s)
-                        )
-                     );
-
-        s' := process_eth1_data_reset(s');
-        assert s' == updateEth1DataReset(
-                        updateSlashings(
+                        updateRegistry(
                             updateRAndP(
                                 updateJustificationAndFinalisation(s)
                             )
                         )
-                     );
+                    );
+
+        s' := process_eth1_data_reset(s');
+        assert s' == updateEth1DataReset(
+                        updateSlashings(
+                            updateRegistry(
+                                updateRAndP(
+                                    updateJustificationAndFinalisation(s)
+                                )
+                            )
+                        )
+                    );
 
         assert |s'.validators| == |s'.balances| == |s.validators|;
         s' := process_effective_balance_updates(s');
         assert s' == updateEffectiveBalance(
                         updateEth1DataReset(
                             updateSlashings(
-                                updateRAndP(
-                                    updateJustificationAndFinalisation(s)
-                                )
-                            )
-                        )
-                     );
-
-        s' := process_slashings_reset(s');
-        assert s' == updateSlashingsReset(
-                        updateEffectiveBalance(
-                            updateEth1DataReset(
-                                updateSlashings(
+                                updateRegistry(
                                     updateRAndP(
                                         updateJustificationAndFinalisation(s)
                                     )
                                 )
                             )
                         )
-                     );
+                    );
 
-        s' := process_randao_mixes_reset(s');
-        assert s' == updateRandaoMixes(
-                        updateSlashingsReset(  
-                            updateEffectiveBalance(
-                                updateEth1DataReset(
-                                    updateSlashings(
+        s' := process_slashings_reset(s');
+        assert s' == updateSlashingsReset(
+                        updateEffectiveBalance(
+                            updateEth1DataReset(
+                                updateSlashings(
+                                    updateRegistry(
                                         updateRAndP(
                                             updateJustificationAndFinalisation(s)
                                         )
@@ -126,15 +128,16 @@ module EpochProcessing {
                                 )
                             )
                         )
-                     );
+                    );
 
-        s' := process_historical_roots_update(s');
-        assert s' == updateHistoricalRoots(
-                        updateRandaoMixes( 
-                            updateSlashingsReset(
-                                updateEffectiveBalance(
-                                    updateEth1DataReset(
-                                        updateSlashings(
+
+        s' := process_randao_mixes_reset(s');
+        assert s' == updateRandaoMixes(
+                        updateSlashingsReset(
+                            updateEffectiveBalance(
+                                updateEth1DataReset(
+                                    updateSlashings(
+                                        updateRegistry(
                                             updateRAndP(
                                                 updateJustificationAndFinalisation(s)
                                             )
@@ -143,16 +146,16 @@ module EpochProcessing {
                                 )
                             )
                         )
-                     );
+                    );
 
-        s' := process_participation_record_updates(s');
-        assert s' == updateParticipationRecords(
-                        updateHistoricalRoots(
-                            updateRandaoMixes(
-                                updateSlashingsReset(
-                                    updateEffectiveBalance(
-                                        updateEth1DataReset(
-                                            updateSlashings(
+        s' := process_historical_roots_update(s');
+        assert s' == updateHistoricalRoots(
+                        updateRandaoMixes(
+                            updateSlashingsReset(
+                                updateEffectiveBalance(
+                                    updateEth1DataReset(
+                                        updateSlashings(
+                                            updateRegistry(
                                                 updateRAndP(
                                                     updateJustificationAndFinalisation(s)
                                                 )
@@ -162,7 +165,28 @@ module EpochProcessing {
                                 )
                             )
                         )
-                     );
+                    );
+
+        s' := process_participation_record_updates(s');
+        assert s' == updateParticipationRecords(
+                        updateHistoricalRoots(
+                            updateRandaoMixes(
+                                updateSlashingsReset(
+                                    updateEffectiveBalance(
+                                        updateEth1DataReset(
+                                            updateSlashings(
+                                                updateRegistry(
+                                                    updateRAndP(
+                                                        updateJustificationAndFinalisation(s)
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    );
 
         assert s' == updateEpoch(s);
         return s';
@@ -382,14 +406,156 @@ module EpochProcessing {
      *  @returns    The state obtained after applying the epoch registry updates
      *
      *  @note       This component has been simplified.
+     *              i.e the activation queue within process_queue_validators is not 
+     *              sorted. Please refer to process_queue_validators and updateQueueValidators.
+     *  @note       This component uses the axiom AssumeMinimumActiveValidators.
      */
     method process_registry_updates(s: BeaconState) returns (s' : BeaconState)
+        requires |s.validators| == |s.balances| 
         requires is_valid_state_epoch_attestations(s)
 
+        ensures |s'.validators| == |s'.balances| 
         ensures s' == updateRegistry(s)
         ensures is_valid_state_epoch_attestations(s')
     {
+        s' := process_activation_eligibility(s);
+        AssumeMinimumActiveValidators(s');
+        s' := process_ejections(s');
+        s' := process_queue_validators(s');
+    }
+
+    /** 
+     *  A helper to process the first component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the activation eligibility updates
+     */
+    method process_activation_eligibility(s: BeaconState) returns (s' : BeaconState)
+        requires |s.validators| == |s.balances| 
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures |s'.validators| == |s'.balances| 
+        ensures is_valid_state_epoch_attestations(s')
+        ensures s' == updateActivationEligibility(s)
+    {
         s' := s;
+        var i := 0;
+        assert s' == updateActivationEligibilityHelper(s, i);
+
+        while i < |s'.validators|
+            invariant i <= |s'.validators| == |s'.balances| == |s.validators|
+            invariant is_valid_state_epoch_attestations(s')
+            invariant s' == updateActivationEligibilityHelper(s, i)
+        {
+            if is_eligible_for_activation_queue(s.validators[i]) {
+                    s' := set_activation_eligibility_epoch(s', 
+                                                            i as ValidatorIndex, 
+                                                            get_current_epoch(s) + 1 as Epoch
+                                                            );
+            }
+            i := i + 1;
+            assert s' == updateActivationEligibilityHelper(s, i);
+
+        }
+        assert s' == updateActivationEligibilityHelper(s, i);
+        assert i == |s'.validators|;
+        assert s' == updateActivationEligibility(s);
+    }
+    
+    /** 
+     *  A helper to process the second component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the ejection updates
+     */
+    method process_ejections(s: BeaconState) returns (s' : BeaconState)
+        requires |s.validators| == |s.balances| 
+        requires is_valid_state_epoch_attestations(s)
+        requires minimumActiveValidators(s)
+
+        ensures |s'.validators| == |s'.balances| 
+        ensures is_valid_state_epoch_attestations(s')
+        ensures s' == updateEjections(s)
+    {
+        s' := s;
+        var i := 0;
+        assert s' == updateEjectionsHelper(s, i);
+
+        while i < |s'.validators|
+            invariant i <= |s'.validators| == |s'.balances| == |s.validators| 
+            invariant is_valid_state_epoch_attestations(s')
+            invariant s' == updateEjectionsHelper(s, i)
+        {
+            if ((is_active_validator(s'.validators[i], get_current_epoch(s')))
+                && (s'.validators[i].effective_balance <= EJECTION_BALANCE))
+                {  
+                    s' := initiate_validator_exit(s', i as ValidatorIndex);
+                }
+            i := i + 1;
+            assert s' == updateEjectionsHelper(s, i);
+
+        }
+        assert s' == updateEjectionsHelper(s, i);
+        assert i == |s'.validators|;
+        assert s' == updateEjections(s);
+    }
+
+    /** 
+     *  A helper to process the final component of the registry updates.
+     *  
+     *  @param  s   A state.
+     *  @returns    The state obtained after applying the dequeue updates
+     */
+    method process_queue_validators(s: BeaconState) returns (s' : BeaconState)
+        requires |s.validators| == |s.balances| 
+        requires is_valid_state_epoch_attestations(s)
+
+        ensures |s'.validators| == |s'.balances| 
+        ensures is_valid_state_epoch_attestations(s')
+        ensures s' == updateQueueValidators(s)
+    {
+        s' := s;
+        var i := 0;
+
+        // # Queue validators eligible for activation and not yet dequeued for activation
+        var activation_queue := get_validator_indices_activation_eligible(s.validators, s.finalised_checkpoint.epoch); 
+        // @note The activation queue is not sorted as per the spec. 
+        //       This simplification could be removed at a future point.
+        // i.e. 
+        // activation_queue = sorted([
+        //     index for index, validator in enumerate(state.validators)
+        //     if is_eligible_for_activation(state, validator)
+        //     # Order by the sequence of activation_eligibility_epoch setting and then index
+        // ], key=lambda index: (state.validators[index].activation_eligibility_epoch, index))
+        var churn_limit := get_validator_churn_limit(s) as nat;
+
+        // # Dequeued validators for activation up to churn limit
+        var dequeue := if churn_limit <= |activation_queue| 
+                        then activation_queue[..churn_limit]
+                        else [];
+
+        assert s' == updateQueueValidatorsHelper(s, dequeue, i);
+
+        while i < |s'.validators|
+            invariant i <= |s'.validators| ==  |s.validators|
+            invariant is_valid_state_epoch_attestations(s')
+            invariant get_current_epoch(s') == get_current_epoch(s)
+            invariant compute_activation_exit_epoch(get_current_epoch(s')) == compute_activation_exit_epoch(get_current_epoch(s))
+            invariant s' == updateQueueValidatorsHelper(s, dequeue, i)
+        {
+            if i as uint64 in dequeue {
+                s' := set_activation_epoch(s', 
+                                           i as ValidatorIndex, 
+                                           compute_activation_exit_epoch(get_current_epoch(s'))
+                                          );
+            }
+            i := i + 1;
+            assert s' == updateQueueValidatorsHelper(s, dequeue, i);
+
+        }
+        assert s' == updateQueueValidatorsHelper(s, dequeue, i);
+        assert i == |s'.validators|;
+        assert s' == updateQueueValidators(s);
     }
 
     /** 

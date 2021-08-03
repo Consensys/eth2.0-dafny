@@ -924,6 +924,8 @@ module BeaconHelpers {
                         == s.validators[index].exitEpoch
         ensures forall i :: (0 <= i < |s.validators|) && (i != index as nat) ==> 
                 initiate_validator_exit(s,index).validators[i].exitEpoch == s.validators[i].exitEpoch
+        ensures forall i :: (0 <= i < |s.validators|) && (i != index as nat) ==> 
+                initiate_validator_exit(s,index).validators[i] == s.validators[i]
         ensures initiate_validator_exit(s,index).validators[index].exitEpoch < FAR_FUTURE_EPOCH
         ensures initiate_validator_exit(s,index).slot == s.slot
         ensures initiate_validator_exit(s,index).latest_block_header == s.latest_block_header
@@ -2176,8 +2178,6 @@ module BeaconHelpers {
             ) + countAttestationsForLink(xa[1..], src, tgt)
     }
 
-
-
     /** 
      *  Sete the effective balance at index ``index`` to ``eb``.
      *
@@ -2197,6 +2197,68 @@ module BeaconHelpers {
         s.(validators := s.validators[index as nat := s.validators[index].(effective_balance := eb as Gwei)])
     }
 
+    /** 
+     *  Sete the activation_eligibility_epoch at index ``index`` to ``e``.
+     *
+     *  @param  s       A beacon state.
+     *  @param  index   A validator index.
+     *  @param     e    An epoch.
+     *  @returns        A new state where the validator activation_eligibility_epoch at ``index`` is 
+     *                  set to ``e``.
+     */
+    function method set_activation_eligibility_epoch(s: BeaconState, index: ValidatorIndex, e: Epoch): BeaconState 
+        requires index as int < |s.validators| 
+        requires e as nat < 0x10000000000000000
+        ensures |s.validators| == |set_activation_eligibility_epoch(s, index, e).validators|
+        ensures set_activation_eligibility_epoch(s,index,e).validators[index].activation_eligibility_epoch == e
+        ensures set_activation_eligibility_epoch(s,index,e) == s.(validators := set_activation_eligibility_epoch(s,index,e).validators)
+    {
+        s.(validators := s.validators[index as nat := s.validators[index].(activation_eligibility_epoch := e)])
+    }
+
+    /** 
+     *  Sete the activation_epoch at index ``index`` to ``e``.
+     *
+     *  @param  s       A beacon state.
+     *  @param  index   A validator index.
+     *  @param     e    An epoch.
+     *  @returns        A new state where the validator activation_epoch at ``index`` is 
+     *                  set to ``e``.
+     */
+    function method set_activation_epoch(s: BeaconState, index: ValidatorIndex, e: Epoch): BeaconState 
+        requires index as int < |s.validators| 
+        requires e as nat < 0x10000000000000000
+        ensures |s.validators| == |set_activation_epoch(s, index, e).validators|
+        ensures set_activation_epoch(s,index,e).validators[index].activation_epoch == e
+        ensures set_activation_epoch(s,index,e) == s.(validators := set_activation_epoch(s,index,e).validators)
+    {
+        s.(validators := s.validators[index as nat := s.validators[index].(activation_epoch := e)])
+    }
+
+    /**
+     *  Return the sequence of validator eligible for activation.
+     *
+     *  @param  s       A beacon state.
+     *  @returns        The the sequence of validator indices such that for all indices returned 
+     *                  is_eligible_for_activation is true. 
+     */
+    function method get_validator_indices_activation_eligible(sv: ListOfValidators, fce: Epoch) : seq<ValidatorIndex>
+        ensures |get_validator_indices_activation_eligible(sv, fce)| <= |sv|
+        ensures forall i :: 0 <= i < |get_validator_indices_activation_eligible(sv, fce)| 
+                ==> get_validator_indices_activation_eligible(sv, fce)[i] as nat < |sv|
+        ensures forall i :: 0 <= i < |get_validator_indices_activation_eligible(sv, fce)| 
+                ==> sv[get_validator_indices_activation_eligible(sv, fce)[i] ].activation_eligibility_epoch 
+                    <= fce 
+                    && sv[get_validator_indices_activation_eligible(sv, fce)[i]].activation_epoch == FAR_FUTURE_EPOCH
+    {
+        if |sv| == 0 then []
+        else 
+            //if is_eligible_for_activation()
+            if sv[|sv|-1].activation_eligibility_epoch <= fce 
+                    && sv[|sv|-1].activation_epoch == FAR_FUTURE_EPOCH 
+            then get_validator_indices_activation_eligible(sv[..|sv|-1], fce) + [(|sv|-1) as ValidatorIndex]
+            else get_validator_indices_activation_eligible(sv[..|sv|-1], fce)
+    }
 
     
     /**
@@ -2495,6 +2557,23 @@ module BeaconHelpers {
      */
     lemma {:axiom } AssumeIsValidStateEpoch_Attestations(s: BeaconState)
         ensures is_valid_state_epoch_attestations(s)
+    // {}
+
+    /**
+     *  A proof that a state maintains at least one active validator.
+     *
+     *  @param  s   A beacon state. 
+     *  @return     A proof that is_valid_state_epoch_attestations(s) is true.
+     *
+     *  @note       This proof is assumed. A strategy to remove the use of this axiom
+     *              could be to examine more carefully the state fields use to determine
+     *              is_valid_state_epoch_attestations so as to better assess whether
+     *              the is_valid_state_epoch_attestations property holds after a state is
+     *              updated.
+     *  @note       This axiom is used in updateEffectiveBalanceHelper.
+     */
+    lemma {:axiom } AssumeMinimumActiveValidators(s: BeaconState)
+        ensures minimumActiveValidators(s)
     // {}
 
 
