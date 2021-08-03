@@ -4,8 +4,8 @@
 <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
 
- [![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
- [![Checks](https://img.shields.io/badge/DafnyVerify-NotVerified-red.svg)](https://shields.io/) 
+ [![lemmas](https://img.shields.io/badge/Lemmas-230-yellow.svg)](https://shields.io/) 
+ [![Checks](https://img.shields.io/badge/DafnyVerify-VerifiedWithAssumes-orange.svg)](https://shields.io/) 
 
 # Overview 
 
