@@ -1,11 +1,12 @@
 
-[![Build Status](https://circleci.com/gh/ConsenSys/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/ConsenSys/workflows/eth2.0-dafny) 
+<!-- [![Build Status](https://circleci.com/gh/ConsenSys/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/ConsenSys/workflows/eth2.0-dafny)  -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
 <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
 
  [![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
  [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
+
 
 
 # Overview 
@@ -33,8 +34,10 @@ All the proofs can be **mechanically verified** using theorem provers.
 
 ## Results
 
-We are gradually adding the Dafny specifications, implementations and proofs.
-Our current focus is on Phase 0 of the Eth2 specifications: SSZ, Merkleisation and Beacon chain. 
+This repository contains two main branches:
+
+* [master](https://github.com/ConsenSys/eth2.0-dafny) with a substantial part of the verified Eth2.0 specs. The verified Dafny code guarantees the absence of runtime errors like array-out-of-bounds, division-by-zero. It also provides some functional proofs captured by the invariants in the [ForkChoice.dfy](https://github.com/ConsenSys/eth2.0-dafny/blob/master/src/dafny/beacon/forkchoice/ForkChoice.dfy) file: 
+* [goal1](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1) with some proofs related to justification and finalisation. This branch has diverged from [master](https://github.com/ConsenSys/eth2.0-dafny) and may not be easily merged into it.
 
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
@@ -83,8 +86,7 @@ This work presents a formal semantics of the Eth2.0 specifications in the K-fram
 The semantics are executable and can be used for testing e.g. symbolic execution. 
 * the [initial formal verification of the Casper protocol](https://runtimeverification.com/blog/runtime-verification-completes-formal-verification-of-ethereum-casper-protocol/).
 * the [verification of the deposit smart contract](https://blog.ethereum.org/2020/02/04/eth2-quick-update-no-8/)
-
-More recently, a [security audit](https://blog.ethereum.org/2020/03/31/eth2-quick-update-no-10/) was performed by LeastAuthority. 
+* a [security audit](https://blog.ethereum.org/2020/03/31/eth2-quick-update-no-10/) was performed by LeastAuthority. 
 The code was manually reviewed and some potential security vulnerabilities highlighted.
 
 Our work aims to complement the previous work by providing a thorough formal verification of the Eth2.0 phase 0 specifications.
@@ -97,6 +99,36 @@ Our work aims to complement the previous work by providing a thorough formal ver
 * [Other resources](wiki/other-resources.md), K-framework resources.
 
 # How to check the proofs?
+
+We have checked the proofs with Dafny 3.0.0 and Dafny 3.2.0.
+
+The bash scripts ``verifyAll.sh`` can be used to verify the files in a given directory (e.g. using the Docker container, see below).
+
+For example checking the ``attestations`` package can be done by:
+
+```[bash]
+/home/user1/eth2.0-dafny $ time ./verifyAll.sh src/dafny/beacon/attestations   -------------------------------------------------------
+Processing src/dafny/beacon/attestations/AttestationsHelpers.dfy with config /dafnyVerify:1 /compile:0  /noCheating:1
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(38,17): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(60,22): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../gasper/GasperEBBs.dfy(91,16): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../gasper/GasperEBBs.dfy(159,16): Warning: /!\ No terms found to trigger on.
+
+Dafny program verifier finished with 24 verified, 0 errors
+No errors in src/dafny/beacon/attestations/AttestationsHelpers.dfy
+-------------------------------------------------------
+Processing src/dafny/beacon/attestations/AttestationsTypes.dfy with config /dafnyVerify:1 /compile:0  /noCheating:1
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(38,17): Warning: /!\ No terms found to trigger on.
+/home/user1/eth2.0-dafny/src/dafny/beacon/attestations/../../utils/SetHelpers.dfy(60,22): Warning: /!\ No terms found to trigger on.
+
+Dafny program verifier finished with 12 verified, 0 errors
+No errors in src/dafny/beacon/attestations/AttestationsTypes.dfy
+-------------------------------------------------------
+[OK] src/dafny/beacon/attestations/AttestationsHelpers.dfy
+[OK] src/dafny/beacon/attestations/AttestationsTypes.dfy
+Summary: 2 files processed - No errors occured! Great job.
+./verifyAll.sh src/dafny/beacon/attestations  29.27s user 0.54s system 102% cpu 29.138 total
+```
 
 ## Using a Docker container
 
