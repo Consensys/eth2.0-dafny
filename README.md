@@ -45,7 +45,7 @@ Some statistics about the project can be found in
 * the goal1 stats [table](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/wiki/stats.md).
 
 Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
-A birds-eye view is given by the [top-level call graph](./top-level-call-graph.svg).
+A birds-eye view of the function we have implemented is given by the [top-level call graph](./top-level-call-graph.svg).
 
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
