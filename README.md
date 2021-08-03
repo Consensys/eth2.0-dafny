@@ -21,6 +21,13 @@ The current state of this branch (as of August 2nd 2021) is as follows:
     This package is fully proved (Dafny verification succeeds with no assumptions).
 2. functional specifications and implementations of the state updates (Epoch) in [package stattransition](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/src/dafny/beacon/statetransition). This package does not fully verify. There are assumptions that could not be discharged in the [top level specification file](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/statetransition/StateTransition.s.dfy) and its [implementation](https://github.com/ConsenSys/eth2.0-dafny/blob/goal1/src/dafny/beacon/statetransition/StateTransition.dfy).
   
+Some statistics about the project can be found in
+
+* the master stats [table](https://github.com/ConsenSys/eth2.0-dafny/tree/master/wiki/stats.md),
+* the goal1 stats [table](./wiki/stats.md).
+
+Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
+
 
 ## Assumptions
 
