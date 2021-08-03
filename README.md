@@ -22,7 +22,7 @@ This specification is written with pre/post-conditions using the [Hoare logic](h
 2. Write an **implementation** for each function to demonstrate that the specification _can be implemented_, in other words, it is not inconsistent.
 3. **Formally prove** that our implementation satisfies the specification. The formal proof is provided in the form of mathematical proofs of lemmas written in Dafny.
 
-To achieve this, we use the capabilities of the verification-aware programming language Dafny to write the specification, the implementation, and the proofs.
+To achieve this, we use the capabilities of the verification-aware programming language [Dafny](https://github.com/dafny-lang/dafny) to write the specification, the implementation, and the proofs.
 
 
 ## Methodology
