@@ -1,15 +1,17 @@
 
 <!-- [![Build Status](https://circleci.com/gh/ConsenSys/eth2.0-dafny.svg?style=shield)](https://circleci.com/gh/ConsenSys/workflows/eth2.0-dafny)  -->
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0) 
-<!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 [![made-for-VSCode](https://img.shields.io/badge/Made%20for-VSCode-1f425f.svg)](https://code.visualstudio.com/)
-
  [![lemmas](https://img.shields.io/badge/Lemmas-101-yellow.svg)](https://shields.io/) 
  [![Checks](https://img.shields.io/badge/DafnyVerify-Verified-orange.svg)](https://shields.io/) 
+
+ <!-- ![GitHub commit activity](https://img.shields.io/github/commit-activity/w/PegaSysEng/eth2.0-dafny?style=flat) -->
 
 
 
 # Overview 
+
+This project was started by ConsenSys R&D and was also supported by the Ethereum Foundation under grant [FY20-285, Q4-2020](https://blog.ethereum.org/2021/03/22/esp-allocation-update-q4-2020/).
 
 ## Objectives
 
