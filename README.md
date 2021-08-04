@@ -41,7 +41,7 @@ This repository contains two main branches:
 
 Some statistics about the project can be found in
 
-* the master stats [table](./wiki/stats.md),
+* the master stats [table](./wiki/stats-master.md),
 * the goal1 stats [table](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1/wiki/stats.md).
 
 Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
