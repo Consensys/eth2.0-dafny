@@ -24,27 +24,11 @@ The Merkleise library aims at providing the following functionality:
 Given an object `value`, its hash tree root, `hash_tree_root(value)`, is a `BYTES_PER_CHUNK` byte sequence. 
 
 `BYTES_PER_CHUNK`, 32, is a defined constant to represent the number of bytes per chunk. Hence it is equivalent to refer to the output of `hash_tree_root(O)` as being a single _chunk_.
-## Background
-
-**TODO**: Add notes, including: <!-- _merkleize_, return the root of a binary merkle tree representing a serialised data structure, and -->
- 1. define a binary merkle tree
- 2. note about hashing of leaves
- 3. the hash function used in Eth2.0
-
-## Expected Properties of Merkleisation
-
-**TODO**: Add notes, including:
- 1. find reference to different hash root for different values of the same type 
- 2. other properties relating to helper functions (i.e. look to lemmas)
- 3. list any open questions about other properties
 
 ### Summaries and Expansions
 
-```
-Let A be an object derived from another object B by replacing some of the (possibly nested) values of B by their hash_tree_root. We say A is a "summary" of B, and that B is an "expansion" of A. Notice hash_tree_root(A) == hash_tree_root(B).
-```
+ >Let A be an object derived from another object B by replacing some of the (possibly nested) values of B by their hash_tree_root. We say A is a "summary" of B, and that B is an "expansion" of A. Notice hash_tree_root(A) == hash_tree_root(B).
 
-**TODO**: Add notes
 
 ## Merkleisation in Eth2
 
@@ -52,7 +36,7 @@ In the Eth2.0 specifications, the Merkleise provides `hash_tree_root` for
 
 - **Basic types** i.e. unsigned integers of N bytes, known as uintNs, as well as Booleans,
 - **List** and **vectors of bits**, known as BitLists and BitVectors,
-- **Lists** and **vectors** of `Serialisable` i.e. either basic or composite types, **TODO**: add link to compositie types
+- **Lists** and **vectors** of `Serialisable` i.e. either basic or composite types, 
 - **Containers** with `Serialisable` fields,
 - and **Unions** that we omit in this project.
 
@@ -94,10 +78,6 @@ The Eth2.0 specification says
 
 It is important to note that whether a `value` is of a **fixed** or **variable length** type will impact upon the specification of its `hash_tree_root`.
 
-<!-- As such for reference, note that -->
-
-**TODO**: maybe add a table to summarise fixed vs variable
-
 Also, although the `merkleize(chunks, limit=None)` helper function will be discussed in further detail below, it is important to note that this function takes as input a series of 32-byte _chunks_ that represent the value being processed and hence become the leaves of the binary merkle tree formed by merkleisation.
 
 In this section any helper functions mentioned will be described at a high level and then further detail relating to their formal specification will be presented in the following section.
@@ -107,8 +87,6 @@ In this section any helper functions mentioned will be described at a high level
 Let's start by looking at more detail at the procedure for basic objects (i.e. **basic type** values) or vectors of basic objects. Here `hash_tree_root(value)` = `merkleize(pack(value))`.
 
 In this case the process is relatively simple as the value being merkleised will be either a uintN, boolean, vector of uintNs, or vector of booleans, and hence will be of a fixed length. Note that a vector of booleans is distinct from a bit vector. 
-
-**TODO**: add reference to the relevant issue (or add notes)
 
 The `pack` function takes the value, serialises it into bytes and right pads with zeros to create a multiple of `BYTES_PER_CHUNK`-byte chunks. These chunks are then merkleised as a binary tree and the root is returned.
 
@@ -128,17 +106,13 @@ The other noticable difference is the inclusion of the `limit` parameter, here s
 
 In this case `hash_tree_root(value)` = `mix_in_length(merkleize(pack(value), limit=chunk_count(type)), len(value))`.
 
-The value being merkleised will be either a list of uintNs, or list of booleans. Note that a list of booleans is distinct from a bitlist. (**TODO** add reference to issue or add notes????)
+The value being merkleised will be either a list of uintNs, or list of booleans. Note that a list of booleans is distinct from a bitlist. 
 
 If we focus initially on the `merkleize(pack(value), limit=chunk_count(type))` part we can see that the value gets packed into chunks and we also have the `limit` parameter. 
 
 Lists are a variable length type and so in this case the `limit` represents an upper bound on the length; the number of chunks that would be required to represent a value of maximum length. In particular, the inclusion of this upper bound means that the packed value will be padded with zero chunks up to the `limit` during merkleisation, to ensure that the number of leaves being included is that for a maximum length value of that type.
 
 To generate the `hash_tree_root(value)` the root that results from the merkleisation function is then hashed with the actual length of the value within the `mix_in_length` function to yield the final hash tree root.
-
-**TODO**: include a diagram similar to merkle-proofs.md
-
-**TODO**: mention lists of zero length??? maybe in the helper function section??
 
 #### Bitlist (variable length type)
 
@@ -191,9 +165,6 @@ As this function is only applicable to a basic type, the input must be a uintN o
 
 The output must be the length, in bytes, of the serialized form of the basic type. Thus the function must return a minimum of 1 byte (i.e. for boolean and uint8) and a maximum of 32 bytes (i.e. for a uint256). `1 <= size_of(B) <= 32` therefore represents a **post-condition** of the function.
 
-[Dafny reference.]()
-**TODO**: add link
-
 2.  `chunk_count`
 
 Defined in the Eth2.0 spec as:
@@ -207,23 +178,15 @@ Defined in the Eth2.0 spec as:
 
 Intended to represent _the amount of leafs for merkleization of the type_ it is important to note that there is an exception if the wording is to be interupted strictly. The worded definition suggests the **post-condtion** `1 <= chunk_count(type)` given that a binary merkle tree must at a minimum include the root node, and hence at least one leaf.
 
-However, since it is possible to define a bitlist or list (basic or composite) such that `N=0`, in these cases the formula provided yields an output of `chunk_count(type)=0`. As this is the intended outcome (**TODO**: include issue reference), the **post-condtion** is actually `0 <= chunk_count(type)` and hence we should view the `N=0` case for bitlists and lists to be an exception to the worded definition. Though, strictly speaking, giving rise to somewhat of an inconsistency between the worded definition and the corresponding formulas, we can resolve this inconsistency on the basis that we would not want to allocate 1 `EMPTY_CHUNK` to represent this type where it forms part of a larger structure and efficiencies can be gained by treating it as being _0 chunks_, only creating the minimum 1 leaf to form a merkle tree hash root as a final step. For example, if a list with N=0 were to be a field within a container, we can treat this field as a placeholder.
-
-**TODO**: double check the issue reply explanation and compare to the hash tree root procedure for a container. As each field is merkleised separately, I don't think in this case it makes any difference with regard to minimising storage??
+However, since it is possible to define a bitlist or list (basic or composite) such that `N=0`, in these cases the formula provided yields an output of `chunk_count(type)=0`. As this is the intended outcome, the **post-condtion** is actually `0 <= chunk_count(type)` and hence we should view the `N=0` case for bitlists and lists to be an exception to the worded definition. Though, strictly speaking, giving rise to somewhat of an inconsistency between the worded definition and the corresponding formulas, we can resolve this inconsistency on the basis that we would not want to allocate 1 `EMPTY_CHUNK` to represent this type where it forms part of a larger structure and efficiencies can be gained by treating it as being _0 chunks_, only creating the minimum 1 leaf to form a merkle tree hash root as a final step. For example, if a list with N=0 were to be a field within a container, we can treat this field as a placeholder.
 
 Any maximum bound on the output of `chunk_count` would require specification of a maximum tree depth for `merkelization`/`hash_tree_root`, which doesn't form part of this spec.
 
 Further, the `chunk_count` function is related to both the `pack` and `pack_bits` functions. For basic types, or lists or vectors of basic types, the number of chunks returned by `chunk_count` should equal the number of chunks returned by the `pack` function. This includes for an empty list i.e. `list[B, N=0]`.
 
-**TODO**: add reference or notes regarding the pack function returning 0 chunks for an empty list.
-**TODO**: check which one is wrong in PySsz.
-
 For bitvectors and bitlists, the number of chunks returned by `chunk_count` should equal the number of chunks returned by the `pack_bits` function, again this will be true even for an empty bitlist i.e. `bitlist[N=0]`.
 
 For these types, that `len(pack(value)) = chunk_count(type)` or `len(pack_bits(value)) = chunk_count(type)` can be seen as an additional **post-condition** to the `chunk_count` function or as a **property** relating the functions.
-
-[Dafny reference.]()
-**TODO**: add link
 
 3.  `pack`
 
@@ -248,8 +211,6 @@ The output of the `pack` function is therefore a series of 32 byte chunks and we
 - `0 <= len(pack(values))`
 - `len(pack(values))` == `chunk_count(type)`
 
-[Dafny reference.]()
-**TODO**: add link
 
 4.  `pack_bits`
 
@@ -269,9 +230,6 @@ The **post-conditions** of the `pack_bits` are the same as for the `pack` functi
 
 - `0 <= len(pack(values))`
 - `len(pack(values))` == `chunk_count(type)`
-
-[Dafny reference.]()
-**TODO**: add link
 
 5.  `next_pow_of_two`
 
@@ -293,10 +251,6 @@ and the following **post-conditions** and **properties**:
 - `next_pow_of_two(i) == next_pow_of_two(next_pow_of_two(i))`
 - `is_power2(next_pow_of_two(i)) == true`
 
-**TODO**: add addition properties
-
-[Dafny reference.]()
-**TODO**: add link
 
 6.  `merkleize`
 
@@ -321,8 +275,6 @@ At this point in the processing the number of chunks, i.e. leaves, is a power of
 
 This second step completes the processing: if we have 1 chunk then that is the root and can be returned, if we have more than 1 chunk then we implement merkelization as a binary tree.
 
-[Dafny reference.]()
-**TODO**: add link
 
 7.  `mix_in_length`
 
@@ -332,17 +284,7 @@ Defined in the Eth2.0 spec as:
 
 This function is used for variable length types i.e. where the length of the value may be less than the maximum specified. The _maximum_ is encoded into the binary merkle tree be the provision of sufficient leaves to store a value of this maximum length, however the _actual length_ must also be represented and is done so through the `mix_in_length` function. The merkle root generated from the `merkleize` function is concatenated with the actual length (i.e. where length is represented as a `uint256` using little-endian serialization) and then hashed.
 
-**TODO**: add diagram similar to that in merkle-proofs.md
-
-[Dafny reference.]()
-**TODO**: add link
 
 8.  `mix_in_type`
 
 Used in the context of unions.
-
-# Other TODOs:
-
-**TODO**: Check that all pre and post conditions are referenced.
-**TODO**: Check that all properties are referenced.
-**TODO**: Check markdown formatting and links.
