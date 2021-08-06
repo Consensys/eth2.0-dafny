@@ -24,6 +24,19 @@ This specification is written with pre/post-conditions using the [Hoare logic](h
 
 To achieve this, we use the capabilities of the verification-aware programming language [Dafny](https://github.com/dafny-lang/dafny) to write the specification, the implementation, and the proofs.
 
+## How to use the verified code?
+
+Depending on your inclination you may use the verified code in different ways:
+
+* you can find **function specifications**  (usually in ``.s.dfy`` files). They describe state changes as functions mapping a state (and other parameters like blocks) to a new state;
+These specifications can help to write your own client in your preferred language (including functional programming languages); we have provided an example of implementation for each function, adapted from the [Eth2.0 reference spec](https://github.com/ethereum/eth2.0-specs).
+
+* you may **contribute new code and proofs** by either adding functions we have not implemented yet or even test that new ideas and optimisations do not break the proofs;
+
+* you may use Dafny to **generate target code** (e.g. Go, Java, C#, JavaScript) and see how the automated generated code can replace or complement your code base;
+
+* you may use the specifications to help in **unit testing** your own code. The specifications contain **unambiguous pre and post conditions** that clearly specify the effect of a function/method.  They can be used to write property-drive tests.
+
 
 ## Methodology
 
@@ -36,8 +49,10 @@ All the proofs can be **mechanically verified** using theorem provers.
 
 This repository contains two main branches:
 
-* [master](https://github.com/ConsenSys/eth2.0-dafny) with a substantial part of the verified Eth2.0 specs. The verified Dafny code guarantees the absence of runtime errors like array-out-of-bounds, division-by-zero. It also provides some functional proofs captured by the invariants in the [ForkChoice.dfy](https://github.com/ConsenSys/eth2.0-dafny/blob/master/src/dafny/beacon/forkchoice/ForkChoice.dfy) file: 
+* [master](https://github.com/ConsenSys/eth2.0-dafny) with a substantial part of the verified Eth2.0 specs. The verified Dafny code **guarantees the absence of runtime errors** like array-out-of-bounds, division-by-zero. It also provides some functional proofs captured by the **invariants** in the top-level [ForkChoice.dfy](https://github.com/ConsenSys/eth2.0-dafny/blob/master/src/dafny/beacon/forkchoice/ForkChoice.dfy) file: 
 * [goal1](https://github.com/ConsenSys/eth2.0-dafny/tree/goal1) with some proofs related to justification and finalisation. This branch has diverged from [master](https://github.com/ConsenSys/eth2.0-dafny) and may not be easily merged into it.
+
+## Statistics
 
 Some statistics about the project can be found in
 
@@ -47,6 +62,7 @@ Some statistics about the project can be found in
 Some **call graphs** are also available (DOT-Graphviz format) alongside the corresponding Dafny files.
 
 A birds-eye view of the (more than 200) functions we have implemented is given by the [top-level call graph](https://raw.githubusercontent.com/ConsenSys/eth2.0-dafny/master/top-level-call-graph.svg).
+## Notes
 
 An introduction (WIP) to the different components of Phase 0 is available in the Wiki section of this repo:
 
@@ -60,9 +76,9 @@ Here is a recent youtube video with a presentation
 [![EEG Meet-up Dafny](EEG-Meetup-Dafny.jpg)](https://www.youtube.com/watch?v=UCSwkUQO_no "EEG: Verification of Eth2.0 using Dafny")
 
 
-# Why We Should Formally Verify the Eth2.0 Specs
+# Why we should formally verify the Eth2.0 specs
 
-## Background & Context
+## Background & context
 
 The Eth2.0 specifications are subtle and sometimes complex.
 As a consequence, bugs, glitches or inconsistencies can creep into the specification and the implementation code.
@@ -77,7 +93,7 @@ An example of critical vulnerability is the OutOfBounds exception where a non-ex
 
 You can read more about the specific case of the Beacon Chain in our [Wiki section](./wiki/overview.md).
 
-## Related Work
+## Related work
 
 Runtime Verification Inc. have reported some work on:
 <!-- 
@@ -100,7 +116,7 @@ The code was manually reviewed and some potential security vulnerabilities highl
 
 Our work aims to complement the previous work by providing a thorough formal verification of the Eth2.0 phase 0 specifications.
 
-# Useful Resources
+# Useful resources
 
 * [Eth2.0 resources](wiki/eth2-specs.md) resources, specifications and implementations.
 * [Dafny resources](wiki/dafny.md), install and learn.
