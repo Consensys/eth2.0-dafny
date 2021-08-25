@@ -93,7 +93,7 @@ An example of critical vulnerability is the OutOfBounds exception where a non-ex
 
 You can read more about the specific case of the Beacon Chain in our [Wiki section](./wiki/overview.md).
 
-We have also put together a [video series](./wiki/video_series.md) to introduce this project. 
+We have also put together a [video series](./wiki/videos.md) to introduce this project. 
 The videos include discussions on the state transition, fork choice and process operations components of the project.
 
 ## Related work
