@@ -101,6 +101,24 @@ module Validators {
         data: DepositData
     )
 
+
+    /**
+     *  Withdraw.
+     *  
+     *  A Withdraw represents a validator withdrawal request.
+     *
+     *  @param  index               The index of the validator in the validator registry.
+     *  @param  validator_index     The index of the validator in the validator registry.
+     *  @param  address             The address of the validator.
+     *  @param  amount              The amount of the withdrawal.
+     */
+    datatype Withdraw = Withdraw(
+        index: WithdrawalIndex,
+        validator_index: ValidatorIndex,
+        address: ExecutionAddress,
+        amount: Gwei
+    )
+
     /**
      *  Voluntary Exit.
      *

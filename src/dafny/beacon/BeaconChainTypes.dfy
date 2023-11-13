@@ -39,6 +39,30 @@ module BeaconChainTypes {
     // Misc dependencies
 
     /**
+     * Fork.
+     *
+     * @param        previous_version: Version
+     * @param        current_version: Version
+     * @param        epoch: Epoch
+     */
+     datatype Fork = Fork(
+        previous_version: Version,
+        current_version: Version,
+        epoch: Epoch
+     )
+    
+    /**
+     * ForkData.
+    
+     * @param        current_version: Version
+     * @param        genesis_validator_root: Root     
+     */
+    datatype ForkData = ForkData(
+        current_version: Version,
+        genesis_validators_root: Root
+    )
+
+    /**
      *  Eth1Data2.
      *
      *  @param      deposit_root
@@ -61,13 +85,26 @@ module BeaconChainTypes {
     /** Empty vector of historical roots. */
     const DEFAULT_HIST_ROOTS := timeSeq<Bytes32>(DEFAULT_BYTES32, SLOTS_PER_HISTORICAL_ROOT as int)
 
+    // /**
+    //  * Historical Batch.
+    //  * 
+    //  *  @param      block_roots
+    //  *  @paran      state_roots
+    //  */
+    // datatype HistoricalBatch = HistoricalBatch(
+    //     block_roots: VectorOfHistRoots,
+    //     state_roots: VectorOfHistRoots
+    // )
+
     /**
-     * Historical Batch.
-     * 
-     *  @param      block_roots
-     *  @paran      state_roots
+     *  HistoricalSummary.
+     *     
+     *  Which will replace HistoricalBatch above.
+     *
+     *  @param        block_roots
+     *  @param        state_roots
      */
-    datatype HistoricalBatch = HistoricalBatch(
+    datatype HistoricalSummary = HistoricalSummary(
         block_roots: VectorOfHistRoots,
         state_roots: VectorOfHistRoots
     )
@@ -252,6 +289,9 @@ module BeaconChainTypes {
     /** The default bitvector of size 4 initialised with false. */
     const DEFAULT_JUSTIFICATION_BITVECTOR := [false, false, false, false]
 
+    /** A list of inactivity scores */
+    type ListOfInactivityScores = x : seq<uint64> | |x| <= VALIDATOR_REGISTRY_LIMIT as int 
+        witness DEFAULT_LIST_INACTIVITY_SCORES
     
     /** 
      *  The Beacon state type.
@@ -377,7 +417,11 @@ module BeaconChainTypes {
         justification_bits: JustificationBitVector,
         previous_justified_checkpoint: CheckPoint,
         current_justified_checkpoint: CheckPoint,
-        finalised_checkpoint: CheckPoint
+        finalised_checkpoint: CheckPoint,
+        //  Inactivity
+        inactivity_score: ListOfInactivityScores
+        //  Sync
+        
     )
 
     /** Default value for BeaconState. */
