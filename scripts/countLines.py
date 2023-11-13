@@ -23,58 +23,47 @@ class DafnyFile:
     self.proof = 0
 
   def __repr__(self):
-    return "%s %s secs %s spec %s impl %s proof" % (self.filename, self.verify_time, self.spec, self.impl, self.proof)
+    return f"{self.filename} {self.verify_time} secs {self.spec} spec {self.impl} impl {self.proof} proof"
 
   def is_spec(self):
     return self.filename.endswith(".s.dfy")
 
 def parse_nubuild(nubuild_output_file):
   dafny_files = []
-  nubuild_output = open(nubuild_output_file, "r")
-  for line in nubuild_output.readlines():
-    result = re.search("DafnyVerifyOneVerb\(#\d+,(.*),\) Success\s+([.0-9]+)s", line)
-    if result:
-      filename = result.group(1)
-      time = result.group(2)
-      dfile = DafnyFile(filename, time)
-      dafny_files += [dfile]
-  
-  nubuild_output.close()
+  with open(nubuild_output_file, "r") as nubuild_output:
+    for line in nubuild_output:
+      if result := re.search(
+          "DafnyVerifyOneVerb\(#\d+,(.*),\) Success\s+([.0-9]+)s", line):
+        filename = result.group(1)
+        time = result.group(2)
+        dfile = DafnyFile(filename, time)
+        dafny_files += [dfile]
+
   return dafny_files
 
 def run_dafny(iron_base, show_ghost, dafny_filename, tmp_filename):
 #   executable = iron_base + "/tools/Dafny/Dafny.exe"
   executable = "dafny"
-  args  = [] 
+  args  = []
   args += ["/rprint:-"]
   args += ["/noAutoReq"]
   args += ["/noVerify"]
   args += ["/nologo"]
   args += ["/env:0"]
-  if show_ghost:
-    args += ["/printMode:NoIncludes"]
-  else:
-    args += ["/printMode:NoGhost"]
+  args += ["/printMode:NoIncludes"] if show_ghost else ["/printMode:NoGhost"]
   args += [dafny_filename]
 
-  tmp_file = open(tmp_filename, "w")
-  #print [executable] + args
-  subprocess.call([executable] + args, shell=False, stdout=tmp_file)
-  tmp_file.close()
+  with open(tmp_filename, "w") as tmp_file:
+    #print [executable] + args
+    subprocess.call([executable] + args, shell=False, stdout=tmp_file)
 
 # Remove detritus from running Dafny
 def clean_dafny_output(filename):
-  file = open(filename, "r")
-  clean = ""
-  for line in file.readlines():
-    if line.startswith("Dafny program verifier finished"):
-      pass
-    else:
-      clean += line + "\n"
-  file.close()
-  file = open(filename, "w")
-  file.write(clean)
-  file.close()
+  with open(filename, "r") as file:
+    clean = "".join(line + "\n" for line in file
+                    if not line.startswith("Dafny program verifier finished"))
+  with open(filename, "w") as file:
+    file.write(clean)
 
 def run_sloccount(iron_base, tmp_dir):
 #   executable = "sloccount"
@@ -82,7 +71,7 @@ def run_sloccount(iron_base, tmp_dir):
 #   args += ["--details"]
 #   args += [tmp_dir]
 
-  executable = "csh_count"  
+  executable = "csh_count"
   args = []
 #   args += ["/"] 
   args +=  [tmp_dir] 
@@ -104,9 +93,7 @@ def run_sloccount(iron_base, tmp_dir):
 #   print(output.stderr)
   output = output.decode("utf-8")
   for line in output.split('\n'):
-    # print(line)
-    result = re.search("(\d+)\s+tmp/(\S+)", line)
-    if result:
+    if result := re.search("(\d+)\s+tmp/(\S+)", line):
       sloc = result.group(1)
       filename = result.group(2)
       totalLoc += int(sloc)
@@ -116,11 +103,10 @@ def run_sloccount(iron_base, tmp_dir):
 
   if sloc == -1:
     raise Exception("Failed to find sloccount result!")
-  else:
-    tab.add_row(["", ""])
-    tab.add_row(["Total ", totalLoc])
-    print(tab)
-    return totalLoc
+  tab.add_row(["", ""])
+  tab.add_row(["Total ", totalLoc])
+  print(tab)
+  return totalLoc
 
 def compute_sloc(iron_base, show_ghost, dafny_file, tmp_dir):
   tmp_file = tmp_dir + dafny_file
@@ -131,16 +117,16 @@ def compute_sloc(iron_base, show_ghost, dafny_file, tmp_dir):
 #   print("--", sloc)
 #   os.remove(tmp_file)
 #   sloc = 0
-  return int(0)
+  return 0
 
 def collect_line_counts(iron_base, dafny_files):
   tmp_dir = "tmp/"
 
   if not os.path.exists(tmp_dir):
     os.makedirs(tmp_dir)
-  
+
   for f in dafny_files:
-    print("Processing %s" % f.filename)
+    print(f"Processing {f.filename}")
     ghost_sloc = compute_sloc(iron_base, True, f.filename, tmp_dir)
 
   run_sloccount("", "tmp/*.*")
@@ -156,57 +142,75 @@ def collect_line_counts(iron_base, dafny_files):
     #   f.proof = ghost_sloc - impl_sloc
 
 def define_categories():
-  dir_categories = {\
-    'src/Dafny/Distributed/Impl/LiveSHT': 'kv_impl',\
-    'src/Dafny/Distributed/Impl/SHT': 'kv_impl',\
-    \
-    'src/Dafny/Distributed/Impl/Paxos': 'rsl_impl',\
-    \
-    'src/Dafny/Distributed/Common': 'Common Libraries',\
-    'src/Dafny/Distributed/Impl/Common': 'Common Libraries',\
-    'src/Dafny/Distributed/Protocol/Common': 'Common Libraries',\
-    'src/Dafny/Libraries': 'Common Libraries',\
-    'src/Dafny/Drivers': 'Common Libraries',\
-    \
-    'src/Dafny/Distributed/Common/Logic/Temporal': 'TLA Library',\
-    \
-    'src/Dafny/Distributed/Common/Logic/Temporal/Temporal.s.dfy': 'Temporal Logic',\
-    'src/Dafny/Distributed/Common/Logic/Temporal/Time.s.dfy': 'Temporal Logic',\
-    \
-    'src/Dafny/Distributed/Protocol/Paxos/Common': 'rsl_proto',\
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL': 'rsl_proto',\
-    \
-    'src/Dafny/Distributed/Protocol/SHT': 'kv_proto',\
-    'src/Dafny/Distributed/Protocol/LiveSHT/Scheduler.i.dfy': 'kv_proto',\
-    \
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/DirectRefinement': 'rsl_refine',\
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/CommonProof': 'rsl_refine',\
-    #'src/Dafny/Distributed/Protocol/Paxos/RSL/': 'rsl_refine',\
-    #'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/RefinementProof': 'rsl_refine',\
-    \
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/LivenessProof': 'rsl_live',\
-    \
-    'src/Dafny/Distributed/Protocol/SHT/InvProof.i.dfy': 'kv_refine',\
-    'src/Dafny/Distributed/Protocol/SHT/InvDefs.i.dfy': 'kv_refine',\
-    'src/Dafny/Distributed/Protocol/SHT/Refinement.i.dfy': 'kv_refine',\
-    'src/Dafny/Distributed/Protocol/SHT/RefinementProof.i.dfy': 'kv_refine',\
-    'src/Dafny/Distributed/Protocol/LiveSHT/': 'kv_refine',\
-    \
-    'src/Dafny/Distributed/Protocol/LiveSHT/CommonProof': 'kv_live',\
-    'src/Dafny/Distributed/Protocol/LiveSHT/LivenessProof': 'kv_live',\
-    \
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/StateMachine.s.dfy': 'rsl_spec',\
-    'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/DirectRefinement/StateMachine.i.dfy': 'rsl_spec',\
-    'src/Dafny/Distributed/Protocol/SHT/HT.s.dfy': 'kv_spec',\
-    \
-    'src/Dafny/Distributed/Common/Native/Io.s.dfy' : 'IO/Native Interface',\
-    'src/Dafny/Distributed/Common/Native/NativeTypes.s.dfy' : 'IO/Native Interface',\
-    'src/Dafny/Distributed/Protocol/Common/Liveness/Environment.s.dfy' : 'IO/Native Interface',\
-    'src/Dafny/Distributed/Protocol/Common/Liveness/EnvironmentSynchrony.s.dfy': 'IO/Native Interface',\
-    'src/Dafny/Distributed/Protocol/Common/NodeIdentity.s.dfy' : 'IO/Native Interface',\
-    }
-
-  return dir_categories
+  return {
+      'src/Dafny/Distributed/Impl/LiveSHT':
+      'kv_impl',
+      'src/Dafny/Distributed/Impl/SHT':
+      'kv_impl',
+      'src/Dafny/Distributed/Impl/Paxos':
+      'rsl_impl',
+      'src/Dafny/Distributed/Common':
+      'Common Libraries',
+      'src/Dafny/Distributed/Impl/Common':
+      'Common Libraries',
+      'src/Dafny/Distributed/Protocol/Common':
+      'Common Libraries',
+      'src/Dafny/Libraries':
+      'Common Libraries',
+      'src/Dafny/Drivers':
+      'Common Libraries',
+      'src/Dafny/Distributed/Common/Logic/Temporal':
+      'TLA Library',
+      'src/Dafny/Distributed/Common/Logic/Temporal/Temporal.s.dfy':
+      'Temporal Logic',
+      'src/Dafny/Distributed/Common/Logic/Temporal/Time.s.dfy':
+      'Temporal Logic',
+      'src/Dafny/Distributed/Protocol/Paxos/Common':
+      'rsl_proto',
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL':
+      'rsl_proto',
+      'src/Dafny/Distributed/Protocol/SHT':
+      'kv_proto',
+      'src/Dafny/Distributed/Protocol/LiveSHT/Scheduler.i.dfy':
+      'kv_proto',
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/DirectRefinement':
+      'rsl_refine',
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/CommonProof':
+      'rsl_refine',  #'src/Dafny/Distributed/Protocol/Paxos/RSL/': 'rsl_refine',\
+      #'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/RefinementProof': 'rsl_refine',\
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/LivenessProof':
+      'rsl_live',
+      'src/Dafny/Distributed/Protocol/SHT/InvProof.i.dfy':
+      'kv_refine',
+      'src/Dafny/Distributed/Protocol/SHT/InvDefs.i.dfy':
+      'kv_refine',
+      'src/Dafny/Distributed/Protocol/SHT/Refinement.i.dfy':
+      'kv_refine',
+      'src/Dafny/Distributed/Protocol/SHT/RefinementProof.i.dfy':
+      'kv_refine',
+      'src/Dafny/Distributed/Protocol/LiveSHT/':
+      'kv_refine',
+      'src/Dafny/Distributed/Protocol/LiveSHT/CommonProof':
+      'kv_live',
+      'src/Dafny/Distributed/Protocol/LiveSHT/LivenessProof':
+      'kv_live',
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/StateMachine.s.dfy':
+      'rsl_spec',
+      'src/Dafny/Distributed/Protocol/Paxos/LiveRSL/DirectRefinement/StateMachine.i.dfy':
+      'rsl_spec',
+      'src/Dafny/Distributed/Protocol/SHT/HT.s.dfy':
+      'kv_spec',
+      'src/Dafny/Distributed/Common/Native/Io.s.dfy':
+      'IO/Native Interface',
+      'src/Dafny/Distributed/Common/Native/NativeTypes.s.dfy':
+      'IO/Native Interface',
+      'src/Dafny/Distributed/Protocol/Common/Liveness/Environment.s.dfy':
+      'IO/Native Interface',
+      'src/Dafny/Distributed/Protocol/Common/Liveness/EnvironmentSynchrony.s.dfy':
+      'IO/Native Interface',
+      'src/Dafny/Distributed/Protocol/Common/NodeIdentity.s.dfy':
+      'IO/Native Interface',
+  }
 
 def categorize_files(dafny_files):
   categorized_files = {}
@@ -219,7 +223,7 @@ def categorize_files(dafny_files):
       if dfile.filename.startswith(prefix) and len(prefix) > len(best_match_prefix):
         best_match_prefix = prefix
         best_match_cat = dir_categories[prefix]
-    if not(best_match_cat in categorized_files):
+    if best_match_cat not in categorized_files:
       categorized_files[best_match_cat] = [dfile]
     else:
       categorized_files[best_match_cat] += [dfile]
@@ -240,40 +244,25 @@ class SubTable:
     self.allow_impl = allow_impl
 
 def amt(string, pos='c'):
-  if int(string) == 0:
-    return "--" 
-    #return "\\multicolumn{1}{r}{--}" 
-
-#    if pos == 'l':
-#      return "\\multicolumn{1}{c}{--}" 
-#    elif pos == 'r':
-#      return "\\multicolumn{1}{c|}{--}" 
-#    else:
-#      return "\\multicolumn{1}{c}{--}" 
-  else:
-    return string
+  return "--" if int(string) == 0 else string
 
 def define_labels():
-  labels = {\
-      'rsl_spec':   "IronRSL",\
-      'kv_spec':    "IronKV",\
-      'rsl_proto':  "IronRSL Protocol",\
-      'rsl_refine': "\hspace{11mm}Refinement",\
-      'rsl_live':   "\hspace{11mm}Liveness",\
-      'kv_proto':   "IronKV Protocol",\
-      'kv_refine':  "\hspace{10mm}Refinement",\
-      'kv_live':    "\hspace{10mm}Liveness",\
-      'rsl_impl':   "IronRSL",\
-      'kv_impl':    "IronKV"\
-      }
-  return labels
+  return {
+      'rsl_spec': "IronRSL",
+      'kv_spec': "IronKV",
+      'rsl_proto': "IronRSL Protocol",
+      'rsl_refine': "\hspace{11mm}Refinement",
+      'rsl_live': "\hspace{11mm}Liveness",
+      'kv_proto': "IronKV Protocol",
+      'kv_refine': "\hspace{10mm}Refinement",
+      'kv_live': "\hspace{10mm}Liveness",
+      'rsl_impl': "IronRSL",
+      'kv_impl': "IronKV",
+  }
 
 def table_label(key):
   labels = define_labels()
-  if key in labels:
-    return labels[key]
-  else:
-    return key
+  return labels[key] if key in labels else key
 
 def build_table(categorized_files, latex_file):
   spec = SubTable("High-Level Spec", ['rsl_spec', 'kv_spec', 'Temporal Logic'], allow_impl=False)
@@ -364,9 +353,8 @@ def build_table(categorized_files, latex_file):
 
   print
   print (latex)
-  latex_out = open(latex_file, "w")
-  latex_out.write(latex)
-  latex_out.close()
+  with open(latex_file, "w") as latex_out:
+    latex_out.write(latex)
 
 
 def main():
@@ -387,17 +375,16 @@ def main():
 #    ]
 
   files = None
-  if args.cache == None or not os.path.exists(args.cache):
+  if args.cache is None or not os.path.exists(args.cache):
     # files = parse_nubuild(args.nubuild)
     files = [DafnyFile('/Users/franck/development/eth2.0-dafny/src/dafny/ssz/BitListSeDes.dfy', 0)]
     collect_line_counts(args.root, files)
     pickler = open(args.cache, "w")
     pickle.dump(files, pickler)
-    pickler.close()
   else:
     pickler = open(args.cache, "r")
     files = pickle.load(pickler)
-    pickler.close()
+  pickler.close()
   cats = categorize_files(files)
   build_table(cats, args.latex)
 

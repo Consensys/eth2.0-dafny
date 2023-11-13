@@ -38,7 +38,7 @@ if __name__ == "__main__":
     # Binary read from stdin
     stdin = sys.stdin.buffer.read()    
 
-    bl = tuple(False if b == 0 else True for b in stdin)
+    bl = tuple(b != 0 for b in stdin)
 
     # Execute function/method to test
     hash = Bitlist(args.limit).get_hash_tree_root(bl)
