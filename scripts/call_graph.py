@@ -26,7 +26,7 @@ class Function():
   def __str__(self):
 #    if (self.module == None) :
 #      return "%s has no module!!! Why?" % self.name
-    return "%s,%s" % (self.name, self.module.name)
+    return f"{self.name},{self.module.name}"
 
 class CallGraph():
   def __init__(self):
@@ -34,20 +34,17 @@ class CallGraph():
     self.functions = {}
 
   def get_module(self, name):
-    if not (name in self.modules):
+    if name not in self.modules:
       self.modules[name] = Module(name)
     return self.modules[name]
 
   def get_function(self, name):
-    if not (name in self.functions):
+    if name not in self.functions:
       self.functions[name] = Function(name)
     return self.functions[name]
 
   def __str__(self):
-    ret = ""
-    for func in self.functions.values():
-      ret += "%s\n" % func
-    return ret
+    return "".join("%s\n" % func for func in self.functions.values())
 
 class Parser():
   def __init__(self, filename):
@@ -58,8 +55,7 @@ class Parser():
 
     file_in = fileinput.input([self.filename])
     for line in file_in:
-      result = re.search("(.*),(.*)=(.*)", line)
-      if result:
+      if result := re.search("(.*),(.*)=(.*)", line):
         func_name = result.group(1)
         module_name = result.group(2)
         callee_names = result.group(3).strip().split(" ")
@@ -67,15 +63,14 @@ class Parser():
 
         func = graph.get_function(func_name)
         module = graph.get_module(module_name)
-        
-        callees = []
-        for name in unique_callee_names:
-          if not name == "":
-            callees += [graph.get_function(name)]
 
+        callees = [
+            graph.get_function(name) for name in unique_callee_names
+            if name != ""
+        ]
         func.module = module
         func.callees = callees
-        
+
     file_in.close()
 
     return graph
