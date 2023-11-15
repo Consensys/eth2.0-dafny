@@ -126,6 +126,20 @@ module BeaconChainTypes {
         // body_root: Root
     )
 
+    type VectorOfPubkeys = x: seq<BLSPubkey> | |x| == SYNC_COMMITTEE_SIZE as int
+        witness DEFAULT_VECTOR_OF_PUBKEYS
+
+    /**
+        *  SyncCommittee.
+        *
+        *  @param  pubkeys
+        *  @param  aggregate_pubkey
+     */
+    datatype SyncCommittee = SyncCommittee(
+        pubkeys: VectorOfPubkeys,
+        aggregate_pubkey: BLSPubkey
+    )
+
     /** The zeroed (default) block header. */
     const DEFAULT_BLOCK_HEADER := BeaconBlockHeader(
         0 as Slot,
@@ -176,12 +190,15 @@ module BeaconChainTypes {
     datatype BeaconBlockBody = BeaconBlockBody(
         randao_reveal: Bytes32, // In spec: BLSSignature
         eth1_data: Eth1Data,
-        // graffiti: uint32,                          //  In K: Bytes32
+        graffiti: uint32,                          //  In K & spec: Bytes32
         proposer_slashings: seq<ProposerSlashing>,
         attester_slashings: seq<AttesterSlashing>,
         attestations: seq<Attestation>,
         deposits: seq<Deposit>,
-        voluntary_exits: seq<VoluntaryExit>
+        voluntary_exits: seq<VoluntaryExit>,
+        sync_aggregate: SyncAggregate,
+        ExecutionPayload: ExecutionPayload,
+        bls_to_execution_changes: seq<BLSToExecutionChange>
     )
 
     /** The zeroed (default) block body. */
@@ -293,6 +310,10 @@ module BeaconChainTypes {
     type ListOfInactivityScores = x : seq<uint64> | |x| <= VALIDATOR_REGISTRY_LIMIT as int 
         witness DEFAULT_LIST_INACTIVITY_SCORES
     
+    /** A list of historical summaries */
+    type ListOfHistoricalSummaries = x : seq<HistoricalSummary> | |x| <= HISTORICAL_ROOTS_LIMIT as int 
+        witness DEFAULT_LIST_HISTORICAL_SUMMARIES
+
     /** 
      *  The Beacon state type.
      *
@@ -413,15 +434,27 @@ module BeaconChainTypes {
         //  Attestations
         previous_epoch_attestations: ListOfAttestations,
         current_epoch_attestations: ListOfAttestations,
+        //  Participation
+
+
+
         //  Finality
         justification_bits: JustificationBitVector,
         previous_justified_checkpoint: CheckPoint,
         current_justified_checkpoint: CheckPoint,
         finalised_checkpoint: CheckPoint,
         //  Inactivity
-        inactivity_score: ListOfInactivityScores
+        inactivity_score: ListOfInactivityScores,
         //  Sync
-        
+        current_sync_committee: SyncCommittee,
+        next_sync_committee: SyncCommittee,
+        //  Execution
+        latest_execution_payload_header: ExecutionPayloadHeader,
+        //  Withdrawals
+        next_withdrawal_index: WithdrawalIndex,
+        nexT_withdrawal_validator_index: ValidatorIndex,
+        //  Deep history valid from Capella onwards
+        historical_summaries: ListOfHistoricalSummaries
     )
 
     /** Default value for BeaconState. */
@@ -446,6 +479,140 @@ module BeaconChainTypes {
             DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT,
             DEFAULT_CHECKPOINT
+    )
+
+    type ByteVector = x : seq<Bytes> | |x| == BYTES_PER_LOGS_BLOOM as int 
+        witness DEFAULT_BYTEVECTOR
+
+    type ByteList = x : seq<Bytes> | |x| <= MAX_EXTRA_DATA_BYTES as int 
+        witness DEFAULT_BYTELIST
+
+    /** 
+        *  A list of Transactions
+        *  The maximum size of this list is MAX_TRANSACTIONS_PER_PAYLOAD (which is 2^16).
+     */
+    type ListOfTransactions = x : seq<transactions> | |x| <= MAX_TRANSACTIONS_PER_PAYLOAD as int 
+        witness DEFAULT_LIST_OF_TRANSACTIONS
+
+    /**
+        *  A list of Withdrawals
+        *  The maximum size of this list is MAX_WITHDRAWALS_PER_PAYLOAD (which is 2^16).
+     */
+    type ListOfWithdrawals = x : seq<Withdrawal> | |x| <= MAX_WITHDRAWALS_PER_PAYLOAD as int 
+        witness DEFAULT_LIST_OF_WITHDRAWALS
+    
+
+    /**
+     * The ExecutionPayload type.
+     *
+     * @link{https://eth2book.info/capella/part3/containers/execution/} 
+     * The ExecutionPayload is a key component of the merge between Ethereum's
+     * execution layer and consensus layer. It encapsulates all the information
+     * necessary for the execution of transactions, including:
+     *     - the state before transaction execution,
+     *     - the transactions themselves,
+     *     - the state after transaction execution, and
+     *     - various elements necessary for proof-of-stake consensus.
+     *
+     * The ExecutionPayload is created by the execution client and provided to
+     * the consensus client. It is used to propose a new block and contains all
+     * the necessary data for the consensus client to validate and agree upon
+     * the block contents without needing to execute transactions itself.
+     *
+     * @param parent_hash          Hash of the parent block, ensuring continuity in the blockchain.
+     * @param fee_recipient        The address to which transaction fees are paid.
+     * @param state_root           The post-transaction state root.
+     * @param receipts_root        The root of the receipts trie, summarizing the effect of transactions.
+     * @param logs_bloom           A bloom filter for the logs contained in the block, aiding in log retrieval.
+     * @param prev_randao          The RANDAO value of the previous block, used in randomness generation.
+     * @param block_number         The height of the block in the blockchain.
+     * @param gas_limit            The current limit of gas expenditure per block.
+     * @param gas_used             The total gas used by all transactions in this block.
+     * @param timestamp            The timestamp at which the block was proposed.
+     * @param extra_data           Additional data included by the proposer of the block.
+     * @param base_fee_per_gas     The minimum fee per gas required for a transaction to be included in this block.
+     * @param block_hash           The hash of the execution block, ensuring block uniqueness.
+     * @param transactions         The list of transactions included in the block.
+     * @param withdrawals          The list of withdrawals in the block, new in Capella upgrade.
+     *
+     * This datatype is essential in the post-merge Ethereum ecosystem, where the
+     * consensus layer relies on the execution layer to provide it with succinct
+     * proofs of the correct execution of transactions.
+     */
+    datatype ExecutionPayload = ExecutionPayload(
+        // Execution block header fields
+        parent_hash: hash32,
+        fee_recipient: ExecutionAddress,
+        state_root: Hash,
+        receipts_root: Hash,
+        logs_bloom: ByteVector,
+        prev_randao: Hash,
+        block_number: uint64,
+        gas_limit: uint64,
+        gas_used: uint64,
+        timestamp: uint64,
+        extra_data: ByteList,
+        base_fee_per_gas: uint64,
+        // Extra payload fields
+        block_hash: hash32,
+        transactions: ListOfTransactions,
+        withdrawals: ListOfWithdrawals
+    )
+
+
+    /**
+     * The ExecutionPayloadHeader type.
+     *
+     * @link{https://eth2book.info/capella/part3/containers/execution/}
+     * The ExecutionPayloadHeader represents a condensed version of the ExecutionPayload,
+     * containing all the critical header information of an execution block without the full
+     * transaction and withdrawals data. This header is crucial for the consensus layer to
+     * validate and agree upon block contents efficiently. It includes hashes of the transaction
+     * and withdrawals data, allowing for a compact proof of the full payload.
+     *
+     * The ExecutionPayloadHeader is used within the consensus layer to maintain a light
+     * reference to execution blocks, enabling validators to perform their duties without
+     * processing the entire content of the execution layer's data, thus optimizing the
+     * overall system performance.
+     *
+     * @param parent_hash          Hash of the parent block, establishing a link in the blockchain.
+     * @param fee_recipient        The address credited with transaction fees from this block.
+     * @param state_root           The root of the state trie after transaction execution.
+     * @param receipts_root        The root of the trie containing receipts of all transactions.
+     * @param logs_bloom           A bloom filter summarizing the event logs of the block.
+     * @param prev_randao          The previous block's RANDAO value, used for entropy.
+     * @param block_number         The sequential number of the block in the chain.
+     * @param gas_limit            The maximum gas allowed in this block for executing transactions.
+     * @param gas_used             The total gas used by transactions in this block.
+     * @param timestamp            The time at which the block was proposed.
+     * @param extra_data           Additional information provided by the block proposer.
+     * @param base_fee_per_gas     The base fee per gas in the block, part of EIP-1559.
+     * @param block_hash           The unique identifier of the block.
+     *
+     * Below are the main difference between ExecutionPayload and ExecutionPayloadHeader:
+     *     - ExecutionPayloadHeader contains the Merkle root of the transactions and withdrawals.
+     *
+     * @param transactions_root    The Merkle root of the transactions trie, representing all transactions.
+     * @param withdrawals_root     The Merkle root of the withdrawals trie, representing all withdrawals.
+     */
+    datatype ExecutionPayloadHeader = ExecutionPayloadHeader(
+        // Execution block header fields
+        parent_hash: hash32,
+        fee_recipient: ExecutionAddress,
+        state_root: Hash,
+        receipts_root: Hash,
+        logs_bloom: ByteVector,
+        prev_randao: Hash,
+        block_number: uint64,
+        gas_limit: uint64,
+        gas_used: uint64,
+        timestamp: uint64,
+        extra_data: ByteList,
+        base_fee_per_gas: uint64,
+        // Extra payload fields
+        block_hash: hash32,
+        transactions_root: Root,
+        withdrawals_root: Root
     )
 
  }

@@ -43,7 +43,7 @@ module Validators {
      */
     datatype Validator = Validator(
         pubkey: BLSPubkey,
-        // withdrawal_credentials: Hash,
+        withdrawal_credentials: Hash,
         effective_balance: Gwei,
         slashed: bool,
         activation_eligibility_epoch: Epoch,
@@ -77,7 +77,7 @@ module Validators {
      */
     datatype DepositData = DepositData(
         pubkey: BLSPubkey,
-        // withdrawal_credentials: Hash,
+        withdrawal_credentials: Bytes32,
         amount: Gwei
         // signature: BLSSignature
     )
@@ -140,6 +140,75 @@ module Validators {
     datatype VoluntaryExit = VoluntaryExit(
         epoch: Epoch,
         validator_index: ValidatorIndex,
+        signature: BLSSignature
+    )
+
+    /**
+    * The SyncAggregate type.
+    *
+    * @link{https://eth2book.info/capella/part3/containers/operations/}
+    * The SyncAggregate is a structure used within the Ethereum consensus layer to
+    * aggregate signatures from the sync committee members. This aggregate is used
+    * to prove that a significant portion of the sync committee attests to the same
+    * source of truth for the state of the chain during a sync committee period.
+    *
+    * @param sync_committee_bits       A bitvector indicating which members of the sync committee
+    *                                  have contributed to the signature.
+    * @param sync_committee_signature  The aggregate BLS signature from the sync committee members
+    *                                  that have been set to true in the sync_committee_bits.
+    *
+    * This datatype is critical for light client synchronization and contributes to the overall
+    * security and finality of the chain by ensuring that a quorum of the sync committee
+    * has attested to the same chain data.
+    */
+    datatype SyncAggregate = SyncAggregate(
+        sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
+        sync_committee_signature: BLSSignature
+    )
+
+    /**
+    * The BLSToExecutionChange type.
+    *
+    * @link{https://eth2book.info/capella/part3/containers/operations/}
+    * The BLSToExecutionChange is a structure representing a change of the execution layer
+    * address associated with a validator's BLS public key. This change is necessary when a
+    * validator wishes to update the execution address where their rewards are paid out or
+    * for other operational reasons.
+    *
+    * @param validator_index       The index of the validator requesting the change.
+    * @param from_bls_pubkey       The current BLS public key of the validator.
+    * @param to_execution_address  The new execution layer address to which the validator
+    *                              wishes to direct their rewards and operations.
+    *
+    * This datatype is part of the mechanism that allows validators to update their execution
+    * layer credentials without compromising the security or continuity of their validation
+    * responsibilities.
+    */
+    datatype BLSToExecutionChange = BLSToExecutionChange(
+        validator_index: ValidatorIndex,
+        from_bls_pubkey: BLSPubkey,
+        to_execution_address: ExecutionAddress
+    )
+
+    /**
+    * The SignedBLSToExecutionChange type.
+    *
+    * @link{https://eth2book.info/capella/part3/containers/operations/}
+    * The SignedBLSToExecutionChange is a structure that encapsulates a BLSToExecutionChange
+    * message along with its corresponding BLS signature. This signed message is used to
+    * authenticate the request for changing a validator's execution layer address associated
+    * with their BLS public key.
+    *
+    * @param message    The BLSToExecutionChange message containing the details of the change.
+    * @param signature  The BLS signature over the BLSToExecutionChange message, signed by the
+    *                   validator's current BLS public key.
+    *
+    * This datatype ensures that the request to change the execution layer address is indeed
+    * initiated by the rightful validator, thereby providing a secure way to update validator
+    * execution layer information.
+    */
+    datatype SignedBLSToExecutionChange = SignedBLSToExecutionChange(
+        message: BLSToExecutionChange,
         signature: BLSSignature
     )
 

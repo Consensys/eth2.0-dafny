@@ -43,8 +43,10 @@ module Constants {
   const TWO_UP_14 : uint64 := TWO_UP_1 * TWO_UP_13;
   const TWO_UP_16 : uint64 := TWO_UP_5 * TWO_UP_11;
   const TWO_UP_18 : uint64 := TWO_UP_2 * TWO_UP_16;
+  const TWO_UP_20 : uint64 := TWO_UP_10 * TWO_UP_10;
   const TWO_UP_24 : uint64 := TWO_UP_12 * TWO_UP_12;
   const TWO_UP_25 : uint64 := TWO_UP_1 * TWO_UP_24;
+  const TWO_UP_30 : uint64 := TWO_UP_14 * TWO_UP_16;
   const TWO_UP_32 : uint64 := TWO_UP_16 * TWO_UP_16;
   const TWO_UP_40 : uint64 := TWO_UP_10 * TWO_UP_10 * TWO_UP_10 * TWO_UP_10;
   const TWO_UP_64  := TWO_UP_32 as nat * TWO_UP_32 as nat;
@@ -80,7 +82,7 @@ module Constants {
   // TODO: check that the type is OK (as int and uints are bounded ints, should be OK.)
   const BLS_WITHDRAWAL_PREFIX := 0x00;
 
-  const ETH1_ADDRESS_WITHDRAWAL_PREFIX := 0x01;
+  const ETH1_ADDRESS_WITHDRAWAL_PREFIX: byte := 0x01; // Prefix is a single byte
 
   // Constants -- domain types
   // The following constants should be of type DomainType (String in types.k)
@@ -126,7 +128,11 @@ module Constants {
   const  MAX_SEED_LOOKAHEAD : uint64 := TWO_UP_2; // 2 ^ 2   
   const  MIN_EPOCHS_TO_INACTIVITY_PENALTY : uint64 := TWO_UP_2; // 2 ^ 2          
   const  EPOCHS_PER_ETH1_VOTING_PERIOD : uint64 := TWO_UP_6 as uint64; // (= 64)	epochs	~6.8 hours       
-  const  SLOTS_PER_HISTORICAL_ROOT : uint64 := TWO_UP_13 as uint64 ; // 2 ^ 13  (= 8,192)            
+  const  SLOTS_PER_HISTORICAL_ROOT : uint64 := TWO_UP_13 as uint64 ; // 2 ^ 13  (= 8,192)
+
+  // Preset -- Sync committee
+  const  SYNC_COMMITTEE_SIZE : uint64 := TWO_UP_9 as uint64; // 2 ^ 9 (= 512) validators
+  const  EPOCHS_PER_SYNC_COMMITTEE_PERIOD : uint64 := TWO_UP_8 as uint64; // 2 ^ 8 (= 256) epochs  ~27 hours            
   
   // Preset -- State list lengths
   const  EPOCHS_PER_HISTORICAL_VECTOR : uint64 := TWO_UP_16; // 2 ^ 16              
@@ -152,6 +158,13 @@ module Constants {
   
   const MAX_DEPOSITS := TWO_UP_4; // 2 ^ 4                               
   const MAX_VOLUNTARY_EXITS := TWO_UP_4; // 2 ^ 4  
+
+  // Preset -- Execution
+  const MAX_BYTES_PER_TRANSACTION := TWO_UP_30 as uint64; // 2 ^ 30  (= 1,073,741,824) bytes
+  const MAX_TRANSACTIONS_PER_PAYLOAD := TWO_UP_20 as uint64; // 2 ^ 20 (= 1,048,576) transactions
+  const BYTES_PER_LOGS_BLOOM := TWO_UP_8 as uint64; // 2 ^ 8 (= 256) bytes
+  const MAX_EXTRA_DATA_BYTES := TWO_UP_5 as uint64; // 2 ^ 5 (= 32) bytes
+  const MAX_WITHDRAWALS_PER_PAYLOAD := TWO_UP_4 as uint64; // 2 ^ 4 (= 16) withdrawals
 
   /**
    *  Beacon chain spec preset

@@ -151,6 +151,12 @@ module Eth2Types {
     type Bytes4 = s:Serialisable |  s.Bytes? && |s.bs| == 4
                                     witness Bytes(timeSeq(0 as byte, 4))
 
+    /** The type `Bytes20` corresponds to a Serialisable built using the
+     * `Bytes` constructor passing a sequence of 20 `byte`s to it
+     */
+    type Bytes20 = s:Serialisable | s.Bytes? && |s.bs| == 20
+                                    witness Bytes(timeSeq(0 as byte, 20))
+
     /** The type `Bytes32` corresponds to a Serialisable built using the
      * `Bytes` constructor passing a sequence of 32 `byte`s to it
      */
@@ -307,6 +313,13 @@ module Eth2Types {
     
     /** Validator registry index. */
     type ValidatorIndex = uint64
+
+    /** Withdrawal index keeps track of the total number of withdrawal transactions 
+        made from the consensus layer to the execution layer.  */
+    type WithdrawalIndex = uint64
+
+    /** Execution address */
+    type ExecutionAddress = Bytes20
 
     /** A fork version number */
     type Version = Bytes4
