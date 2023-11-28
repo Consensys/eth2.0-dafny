@@ -127,8 +127,10 @@ module BeaconChainTypes {
     )
 
     type VectorOfPubkeys = x: seq<BLSPubkey> | |x| == SYNC_COMMITTEE_SIZE as int
-        witness DEFAULT_VECTOR_OF_PUBKEYS
+        witness *
 
+    // const DEFAULT_VECTOR_OF_PUBKEYS := timeSeq<BLSPubkey>(DEFAULT_BYTES48, 0 as int)
+    
     /**
         *  SyncCommittee.
         *
@@ -196,14 +198,15 @@ module BeaconChainTypes {
         attestations: seq<Attestation>,
         deposits: seq<Deposit>,
         voluntary_exits: seq<VoluntaryExit>,
-        sync_aggregate: SyncAggregate,
-        ExecutionPayload: ExecutionPayload,
+        sync_aggregate: seq<SyncAggregate>,
+        ExecutionPayload: seq<ExecutionPayload>,
         bls_to_execution_changes: seq<BLSToExecutionChange>
     )
 
     /** The zeroed (default) block body. */
     const DEFAULT_BLOCK_BODY := BeaconBlockBody(
-        DEFAULT_BYTES32, DEFAULT_ETH1DATA, [], [], [], [], []
+        DEFAULT_BYTES32, DEFAULT_ETH1DATA, 0 as uint32, 
+        [], [], [], [], [], [], [], []
     )
 
     /**
@@ -295,10 +298,10 @@ module BeaconChainTypes {
 
     /** The slashings type.  */
     type VectorOfSlashings = x : seq<Gwei> |  |x| == EPOCHS_PER_SLASHINGS_VECTOR as int
-        witness DEFAULT_SLASHINGS
+        witness *
 
     /** Empty vector of slashings. */
-    const DEFAULT_SLASHINGS := timeSeq<Gwei>(0 as Gwei, EPOCHS_PER_SLASHINGS_VECTOR as int)
+    const DEFAULT_SLASHINGS := timeSeq<Gwei>(0 as Gwei, 0 as int)
 
     type JustificationBitVector = x : seq<bool> | |x| == JUSTIFICATION_BITS_LENGTH as int 
         witness DEFAULT_JUSTIFICATION_BITVECTOR
@@ -309,10 +312,17 @@ module BeaconChainTypes {
     /** A list of inactivity scores */
     type ListOfInactivityScores = x : seq<uint64> | |x| <= VALIDATOR_REGISTRY_LIMIT as int 
         witness DEFAULT_LIST_INACTIVITY_SCORES
+
+    const DEFAULT_LIST_INACTIVITY_SCORES := timeSeq<uint64>(0 as uint64, 0 as int)
     
     /** A list of historical summaries */
     type ListOfHistoricalSummaries = x : seq<HistoricalSummary> | |x| <= HISTORICAL_ROOTS_LIMIT as int 
         witness DEFAULT_LIST_HISTORICAL_SUMMARIES
+
+    const DEFAULT_HISTORICAL_SUMMARY := HistoricalSummary(DEFAULT_HIST_ROOTS, DEFAULT_HIST_ROOTS)
+
+    const DEFAULT_LIST_HISTORICAL_SUMMARIES := timeSeq<HistoricalSummary>(DEFAULT_HISTORICAL_SUMMARY, 0 as int)
+
 
     /** 
      *  The Beacon state type.
@@ -436,8 +446,6 @@ module BeaconChainTypes {
         current_epoch_attestations: ListOfAttestations,
         //  Participation
 
-
-
         //  Finality
         justification_bits: JustificationBitVector,
         previous_justified_checkpoint: CheckPoint,
@@ -457,50 +465,34 @@ module BeaconChainTypes {
         historical_summaries: ListOfHistoricalSummaries
     )
 
-    /** Default value for BeaconState. */
-    const DEFAULT_BEACON_STATE := 
-        BeaconState(
-            0,                  
-            0 as Slot,
-            DEFAULT_BLOCK_HEADER, 
-            DEFAULT_HIST_ROOTS, 
-            DEFAULT_HIST_ROOTS, 
-            DEFAULT_LIST_OF_HIST_ROOTS,
-            DEFAULT_ETH1DATA,
-            DEFAULT_LIST_ETH1DATA,
-            0,
-            DEFAULT_LIST_VALIDATORS,
-            DEFAULT_LIST_BALANCES,
-            DEFAULT_RANDAO_MIX,
-            DEFAULT_SLASHINGS,
-            DEFAULT_LIST_ATTESTATIONS,
-            DEFAULT_LIST_ATTESTATIONS,
-            DEFAULT_JUSTIFICATION_BITVECTOR,
-            DEFAULT_CHECKPOINT,
-            DEFAULT_CHECKPOINT,
-            DEFAULT_CHECKPOINT
-    )
+    // /** Default value for BeaconState. */
+    // const DEFAULT_BEACON_STATE := 
+    //     BeaconState(
+    //         0 as uint64, 0 as Slot, DEFAULT_BLOCK_HEADER, DEFAULT_HIST_ROOTS, DEFAULT_HIST_ROOTS, 
+    //         DEFAULT_LIST_OF_HIST_ROOTS, DEFAULT_ETH1DATA, DEFAULT_LIST_ETH1DATA, 0 as uint64, 
+    //         DEFAULT_LIST_VALIDATORS, DEFAULT_LIST_BALANCES, DEFAULT_RANDAO_MIX, DEFAULT_SLASHINGS, 
+    //         DEFAULT_LIST_ATTESTATIONS, DEFAULT_LIST_ATTESTATIONS, DEFAULT_JUSTIFICATION_BITVECTOR, 
+    //         DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT, DEFAULT_LIST_INACTIVITY_SCORES, 
+    //         DEFAULT_SYNC_COMMITTEE, DEFAULT_SYNC_COMMITTEE, DEFAULT_EXECUTION_PAYLOAD_HEADER, 
+    //         0 as WithdrawalIndex, 0 as ValidatorIndex, DEFAULT_LIST_HISTORICAL_SUMMARIES
+    // )
 
-    type ByteVector = x : seq<Bytes> | |x| == BYTES_PER_LOGS_BLOOM as int 
-        witness DEFAULT_BYTEVECTOR
+    
 
-    type ByteList = x : seq<Bytes> | |x| <= MAX_EXTRA_DATA_BYTES as int 
-        witness DEFAULT_BYTELIST
+    type ByteList = x : seq<byte> | |x| <= MAX_EXTRA_DATA_BYTES as int 
 
     /** 
         *  A list of Transactions
         *  The maximum size of this list is MAX_TRANSACTIONS_PER_PAYLOAD (which is 2^16).
      */
-    type ListOfTransactions = x : seq<transactions> | |x| <= MAX_TRANSACTIONS_PER_PAYLOAD as int 
-        witness DEFAULT_LIST_OF_TRANSACTIONS
+    type ListOfTransactions = x : seq<transaction> | |x| <= MAX_TRANSACTIONS_PER_PAYLOAD as int 
 
     /**
         *  A list of Withdrawals
         *  The maximum size of this list is MAX_WITHDRAWALS_PER_PAYLOAD (which is 2^16).
      */
-    type ListOfWithdrawals = x : seq<Withdrawal> | |x| <= MAX_WITHDRAWALS_PER_PAYLOAD as int 
-        witness DEFAULT_LIST_OF_WITHDRAWALS
-    
+    type ListOfWithdrawals = x : seq<withdrawal> | |x| <= MAX_WITHDRAWALS_PER_PAYLOAD as int 
+
 
     /**
      * The ExecutionPayload type.

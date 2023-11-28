@@ -200,50 +200,6 @@ module BeaconHelpers {
         forall i,j :: 0 <= i < j < |indices| ==> indices[i] < indices[j]
     }
 
-    /**
-     * Check if ``validator`` has an 0x01 prefixed "eth1" withdrawal credential.
-     *
-     * @param  validator                A validator.
-     * @return                          True if the validator has an 0x01 prefixed "eth1"
-     */
-    // Define a method to check if a validator has an 0x01 prefixed "eth1" withdrawal credential
-    predicate method has_eth1_withdrawal_credential(validator: Validator)
-    {
-        // Check if the first byte of withdrawal_credentials is equal to the ETH1_ADDRESS_WITHDRAWAL_PREFIX
-        (validator.withdrawal_credentials[0] == ETH1_ADDRESS_WITHDRAWAL_PREFIX)
-    }
-
-    /**
-     * Check if ``validator`` is fully withdrawable.
-     *
-     * @param validator                A validator.
-     * @param balance                  A Gwei amount.
-     * @param epoch                    An epoch.
-     * @return                         True if the validator is fully withdrawable.
-     */
-    predicate method is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch)
-    {   
-        has_eth1_withdrawal_credential &&
-         validator.withdrawable_epoch <= epoch &&
-          balance > 0
-    }
-
-    /**
-     * Check if ``validator`` is partially withdrawable.
-     *
-     * @param validator                A validator.
-     * @param balance                  A Gwei amount.
-     * @param epoch                    An epoch.
-     *
-     * @return                         True if the validator is partially withdrawable.
-     */
-    predicate method is_partially_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch)
-    {
-        has_eth1_withdrawal_credential(validator) &&
-         validator.effective_balance == MAX_EFFECTIVE_BALANCE &&
-          balance > MAX_EFFECTIVE_BALANCE
-    }
-
 
     ///////////////////////////////
     ////////////////////////////////////////////////////////////
@@ -1968,6 +1924,7 @@ module BeaconHelpers {
 
         Validator(
                 d.data.pubkey, 
+                d.data.withdrawal_credentials,
                 effective_balance as Gwei, 
                 false, 
                 FAR_FUTURE_EPOCH, 

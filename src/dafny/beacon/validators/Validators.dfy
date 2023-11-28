@@ -17,6 +17,7 @@
  
 include "../../ssz/Constants.dfy"
 include "../../utils/Eth2Types.dfy"
+include "../BeaconChainTypes.dfy"
 
 /**
  *  Provide validator types (and their defaults) used in the Beacon Chain.
@@ -54,7 +55,7 @@ module Validators {
     
     /** The default Validator. */
     const DEFAULT_VALIDATOR := Validator(
-        DEFAULT_BYTES48, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH
+        DEFAULT_BYTES48, DEFAULT_BYTES32, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH
     )
     
      /**
@@ -143,6 +144,11 @@ module Validators {
         signature: BLSSignature
     )
 
+    type ByteVector = x : seq<byte> | |x| == BYTES_PER_LOGS_BLOOM as int 
+      witness *
+
+    // const DEFAULT_BYTEVECTOR := timeSeq<byte>(Bytes, 0 as int)
+
     /**
     * The SyncAggregate type.
     *
@@ -162,7 +168,7 @@ module Validators {
     * has attested to the same chain data.
     */
     datatype SyncAggregate = SyncAggregate(
-        sync_committee_bits: Bitvector<SYNC_COMMITTEE_SIZE>,
+        sync_committee_bits: ByteVector,
         sync_committee_signature: BLSSignature
     )
 

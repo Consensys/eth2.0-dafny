@@ -53,6 +53,7 @@ module Eth2Types {
     /** Create type synonym for a hash 'root' */
     type hash32 = Seq32Byte
 
+
     /** The RawSerialisable type.
      *
      *  This datatype is an over-approximation of Serialisable for some
@@ -287,7 +288,7 @@ module Eth2Types {
     /* A String type. */
     type String = seq<char>
 
-    
+
     // Types used in the Phase 0 spec
 
     /** A hash is a sequence of 32 bytes. */
@@ -332,5 +333,16 @@ module Eth2Types {
 
     /** A signature domain. */
     type Domain	= Bytes32	
+
+    // Types used in the Phase Capella and before spec
+
+    /** Transactions 
+     * TransactionType is a positive unsigned 8-bit number between 0 and 0x7f that represents the type of the transaction.
+     */
+    type transaction = uint8
     
+    /** Withdrawals
+     * 
+     */
+    type withdrawal = Gwei
 }
