@@ -179,6 +179,9 @@ module Eth2Types {
     /** A root is a sequence of 32 bytes. */
     type Root = Bytes32
 
+    /** The default zeroed Bytes20. */
+    const SEQ_EMPTY_20_BYTES := timeSeq<byte>(0,20)
+
     /** The default zeroed Bytes32.  */
     const SEQ_EMPTY_32_BYTES := timeSeq<byte>(0,32)
 
@@ -321,6 +324,8 @@ module Eth2Types {
 
     /** Execution address */
     type ExecutionAddress = Bytes20
+
+    const DEFAULT_EXECUTION_ADDRESS : ExecutionAddress := Bytes(SEQ_EMPTY_20_BYTES)
 
     /** A fork version number */
     type Version = Bytes4

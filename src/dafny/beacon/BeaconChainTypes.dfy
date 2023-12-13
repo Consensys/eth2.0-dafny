@@ -188,6 +188,9 @@ module BeaconChainTypes {
      *  @param  attestations
      *  @param  deposits
      *  @param  voluntary_exits
+     *  @param  sync_aggregate
+     *  @param  execution_payload
+     *  @param  bls_to_execution_changes
      */
     datatype BeaconBlockBody = BeaconBlockBody(
         randao_reveal: Bytes32, // In spec: BLSSignature
@@ -199,7 +202,7 @@ module BeaconChainTypes {
         deposits: seq<Deposit>,
         voluntary_exits: seq<VoluntaryExit>,
         sync_aggregate: seq<SyncAggregate>,
-        ExecutionPayload: seq<ExecutionPayload>,
+        execution_payload: seq<ExecutionPayload>,
         bls_to_execution_changes: seq<BLSToExecutionChange>
     )
 
@@ -317,11 +320,11 @@ module BeaconChainTypes {
     
     /** A list of historical summaries */
     type ListOfHistoricalSummaries = x : seq<HistoricalSummary> | |x| <= HISTORICAL_ROOTS_LIMIT as int 
-        witness DEFAULT_LIST_HISTORICAL_SUMMARIES
+        witness DEFAULT_LIST_OF_HISTORICAL_SUMMARIES
 
     const DEFAULT_HISTORICAL_SUMMARY := HistoricalSummary(DEFAULT_HIST_ROOTS, DEFAULT_HIST_ROOTS)
 
-    const DEFAULT_LIST_HISTORICAL_SUMMARIES := timeSeq<HistoricalSummary>(DEFAULT_HISTORICAL_SUMMARY, 0 as int)
+    const DEFAULT_LIST_OF_HISTORICAL_SUMMARIES : seq<HistoricalSummary> := []
 
 
     /** 
@@ -460,7 +463,7 @@ module BeaconChainTypes {
         latest_execution_payload_header: ExecutionPayloadHeader,
         //  Withdrawals
         next_withdrawal_index: WithdrawalIndex,
-        nexT_withdrawal_validator_index: ValidatorIndex,
+        next_withdrawal_validator_index: ValidatorIndex,
         //  Deep history valid from Capella onwards
         historical_summaries: ListOfHistoricalSummaries
     )

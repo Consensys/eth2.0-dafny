@@ -64,7 +64,7 @@ module EpochProcessingSpec {
             assert is_valid_state_epoch_attestations(s1);
             assert s1 == updateJustificationAndFinalisation(s);
             updateEpoch(s) == updateParticipationRecords(
-                                updateHistoricalRoots(
+                                updateHistoricalSummaries(
                                     updateRandaoMixes(
                                         updateSlashingsReset(
                                             updateEffectiveBalance(
@@ -191,8 +191,8 @@ module EpochProcessingSpec {
                         )
                     );
 
-        var s9 := updateHistoricalRoots(s8);
-        assert s9 == updateHistoricalRoots(
+        var s9 := updateHistoricalSummaries(s8);
+        assert s9 == updateHistoricalSummaries(
                         updateRandaoMixes(
                             updateSlashingsReset(
                                 updateEffectiveBalance(
@@ -212,7 +212,7 @@ module EpochProcessingSpec {
 
         var s10 := updateParticipationRecords(s9);
         assert s10 == updateParticipationRecords(
-                        updateHistoricalRoots(
+                        updateHistoricalSummaries(
                             updateRandaoMixes(
                                 updateSlashingsReset(
                                     updateEffectiveBalance(
@@ -1331,24 +1331,42 @@ module EpochProcessingSpec {
         )
     }
     
-    /**
-     *  The functional equivalent of process_historical_roots_update.
-     *
-     *  @param  s   A beacon state.
-     *  @returns    The state obtained after applying the epoch historical roots update.
-     */
-    function updateHistoricalRoots(s: BeaconState) : BeaconState
+    // /**
+    //  *  The functional equivalent of process_historical_roots_update.
+    //  *
+    //  *  @param  s   A beacon state.
+    //  *  @returns    The state obtained after applying the epoch historical roots update.
+    //  */
+    // function updateHistoricalRoots(s: BeaconState) : BeaconState
+    //     requires is_valid_state_epoch_attestations(s)
+
+    //     ensures updateHistoricalRoots(s) 
+    //             == s.(historical_roots := updateHistoricalRoots(s).historical_roots)
+    //     ensures is_valid_state_epoch_attestations(updateHistoricalRoots(s))
+    // {
+    //    var next_epoch := (get_current_epoch(s) + 1) as Epoch;
+    //    if next_epoch % (SLOTS_PER_HISTORICAL_ROOT / SLOTS_PER_EPOCH) == 0 then
+    //         var historical_batch := HistoricalBatch(s.block_roots, s.state_roots);
+    //         s.(
+    //             historical_roots := s.historical_roots + [hash(historical_batch)]
+    //         )
+        
+    //     else s
+    // }
+
+
+    function updateHistoricalSummaries(s: BeaconState) : BeaconState
         requires is_valid_state_epoch_attestations(s)
 
-        ensures updateHistoricalRoots(s) 
-                == s.(historical_roots := updateHistoricalRoots(s).historical_roots)
-        ensures is_valid_state_epoch_attestations(updateHistoricalRoots(s))
+        ensures updateHistoricalSummaries(s)
+                == s.(historical_summaries := updateHistoricalSummaries(s).historical_summaries)
+        ensures is_valid_state_epoch_attestations(updateHistoricalSummaries(s))
     {
-       var next_epoch := (get_current_epoch(s) + 1) as Epoch;
-       if next_epoch % (SLOTS_PER_HISTORICAL_ROOT / SLOTS_PER_EPOCH) == 0 then
-            var historical_batch := HistoricalBatch(s.block_roots, s.state_roots);
+        var next_epoch := (get_current_epoch(s) + 1) as Epoch;
+        if next_epoch % (SLOTS_PER_HISTORICAL_ROOT / SLOTS_PER_EPOCH) == 0 then
+            var historical_summary := HistoricalSummary(s.block_roots, s.state_roots);
             s.(
-                historical_roots := s.historical_roots + [hash(historical_batch)]
+                historical_summaries := s.historical_summaries + [(historical_summary)]
             )
         
         else s

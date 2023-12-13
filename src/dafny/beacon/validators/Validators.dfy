@@ -50,12 +50,13 @@ module Validators {
         activation_eligibility_epoch: Epoch,
         activation_epoch: Epoch,
         exitEpoch: Epoch,
-        withdrawable_epoch: Epoch
+        withdrawable_epoch: Epoch,
+        execution_address: ExecutionAddress
     )
     
     /** The default Validator. */
     const DEFAULT_VALIDATOR := Validator(
-        DEFAULT_BYTES48, DEFAULT_BYTES32, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH
+        DEFAULT_BYTES48, DEFAULT_BYTES32, 0, false, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, FAR_FUTURE_EPOCH, DEFAULT_EXECUTION_ADDRESS
     )
     
      /**
@@ -113,7 +114,7 @@ module Validators {
      *  @param  address             The address of the validator.
      *  @param  amount              The amount of the withdrawal.
      */
-    datatype Withdraw = Withdraw(
+    datatype Withdrawal = Withdrawal(
         index: WithdrawalIndex,
         validator_index: ValidatorIndex,
         address: ExecutionAddress,

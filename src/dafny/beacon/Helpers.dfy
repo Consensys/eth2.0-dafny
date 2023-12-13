@@ -1930,8 +1930,9 @@ module BeaconHelpers {
                 FAR_FUTURE_EPOCH, 
                 FAR_FUTURE_EPOCH, 
                 FAR_FUTURE_EPOCH, 
-                FAR_FUTURE_EPOCH
-        )
+                FAR_FUTURE_EPOCH,
+                DEFAULT_EXECUTION_ADDRESS
+                )
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////

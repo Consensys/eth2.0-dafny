@@ -19,6 +19,7 @@ include "../../ssz/Constants.dfy"
 include "../BeaconChainTypes.dfy"
 include "../Helpers.dfy"
 include "../Helpers.s.dfy"
+include "../Helpers.cap.dfy"
 include "StateTransition.s.dfy"
 include "EpochProcessing.dfy"
 include "ProcessOperations.dfy"
@@ -35,6 +36,7 @@ module StateTransition {
     import opened BeaconChainTypes
     import opened BeaconHelpers
     import opened BeaconHelperSpec
+    import opened BeaconHelpersCapella
     import opened StateTransitionSpec
     import opened EpochProcessing
     import opened ProcessOperations
@@ -332,6 +334,9 @@ module StateTransition {
         //assert s'.latest_block_header 
         //      == BeaconBlockHeader(b.slot, b.proposer_index, b.parent_root, DEFAULT_BYTES32);
         
+        // s' := process_withdrawals(s, b.body.execution_payload);
+
+
         s' := process_randao(s', b.body);
         assert s' == updateRandao(addBlockToState(s, b), b.body);
         assert (s'.balances == s.balances);

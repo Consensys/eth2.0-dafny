@@ -81,8 +81,8 @@ module Constants {
   // This should be of type Bytes in types.k
   // TODO: check that the type is OK (as int and uints are bounded ints, should be OK.)
   const BLS_WITHDRAWAL_PREFIX := 0x00;
-
   const ETH1_ADDRESS_WITHDRAWAL_PREFIX: byte := 0x01; // Prefix is a single byte
+  const MAX_VALIDATORS_PER_WITHDRAWAL_SWEEP := TWO_UP_14; // 2 ^ 14
 
   // Constants -- domain types
   // The following constants should be of type DomainType (String in types.k)
@@ -165,6 +165,7 @@ module Constants {
   const BYTES_PER_LOGS_BLOOM := TWO_UP_8 as uint64; // 2 ^ 8 (= 256) bytes
   const MAX_EXTRA_DATA_BYTES := TWO_UP_5 as uint64; // 2 ^ 5 (= 32) bytes
   const MAX_WITHDRAWALS_PER_PAYLOAD := TWO_UP_4 as uint64; // 2 ^ 4 (= 16) withdrawals
+  const MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP := TWO_UP_14 as uint64; // 2 ^ 14 (= 16,384) validators
 
   /**
    *  Beacon chain spec preset
