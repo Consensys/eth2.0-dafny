@@ -494,7 +494,7 @@ module BeaconChainTypes {
         *  A list of Withdrawals
         *  The maximum size of this list is MAX_WITHDRAWALS_PER_PAYLOAD (which is 2^16).
      */
-    type ListOfWithdrawals = x : seq<withdrawal> | |x| <= MAX_WITHDRAWALS_PER_PAYLOAD as int 
+    type ListOfWithdrawals = x : seq<Withdrawal> | |x| <= MAX_WITHDRAWALS_PER_PAYLOAD as int 
 
 
     /**

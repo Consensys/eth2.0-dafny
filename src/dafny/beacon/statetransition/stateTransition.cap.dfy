@@ -82,47 +82,49 @@ module  StateTransitionCapella {
             }
 
 
-    
-        
-    // method process_withdrawals(state: BeaconState, payload: ExecutionPayload)
+    method process_withdrawals(state: BeaconState, payload: ExecutionPayload)
+    {
+        var expected_withdrawals := get_expected_withdrawals(state);
+        assert |payload.withdrawals| == |expected_withdrawals|;
+
+        var newNextWithdrawalIndex := (state.next_withdrawal_index) as int;
+        var newNextValidatorIndex := (state.next_withdrawal_validator_index) as int;
+
+
+        for i := 0 to |expected_withdrawals| - 1 {
+            var expected_withdrawal := expected_withdrawals[i];
+            var withdrawal := payload.withdrawals[i];
+            assert withdrawal == expected_withdrawal; // Verify that elements match
+
+            // Call decrease_balance method with state, withdrawal.validator_index, and withdrawal.amount
+            var state := decrease_balance(state, expected_withdrawal.validator_index, expected_withdrawal.amount);
+        }
+
+        // Update the next withdrawal index if this block contained withdrawals
+        if |expected_withdrawals| != 0 {
+            var latest_withdrawal := expected_withdrawals[|expected_withdrawals| - 1];
+            newNextWithdrawalIndex := ((latest_withdrawal.index as int) + 1) as int;
+        }
+
+        // Update the next validator index to start the next withdrawal sweep
+        if |expected_withdrawals| == MAX_WITHDRAWALS_PER_PAYLOAD as int {
+            // Next sweep starts after the latest withdrawal's validator index
+            var next_validator_index := (expected_withdrawals[|expected_withdrawals| - 1].validator_index + 1) as int % |state.validators|;
+            newNextValidatorIndex := next_validator_index;
+        } else {
+            // Advance sweep by the max length of the sweep if there was not a full set of withdrawals
+            var next_index := (state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) as int;
+            var next_validator_index := next_index % |state.validators|;
+            newNextValidatorIndex := next_validator_index; 
+        }
+
+    }
+
+
+    // method process_execution_payload(state: BeaconState, body: BeaconBlockBody)
     // {
-    //     var expected_withdrawals := get_expected_withdrawals(state);
-    //     assert |payload.withdrawals| == |expected_withdrawals|;
-
-    //     var newNextWithdrawalIndex := state.next_withdrawal_index;
-    //     var newNextValidatorIndex := state.next_withdrawal_validator_index;
-
-
-    //     for i := 0 to |expected_withdrawals| - 1 {
-    //         var expected_withdrawal := expected_withdrawals[i];
-    //         var withdrawal := payload.withdrawals[i];
-    //         assert withdrawal == expected_withdrawal; // Verify that elements match
-
-    //         // Call decrease_balance method with state, withdrawal.validator_index, and withdrawal.amount
-    //         BeaconState() := decrease_balance(state, expected_withdrawal.validator_index, expected_withdrawal.amount);
-    //     }
-
-    //     // Update the next withdrawal index if this block contained withdrawals
-    //     if |expected_withdrawals| != 0 {
-    //         var latest_withdrawal := expected_withdrawals[|expected_withdrawals| - 1];
-    //         newNextWithdrawalIndex := latest_withdrawal.index + 1;
-    //     }
-
-    //     // Update the next validator index to start the next withdrawal sweep
-    //     if |expected_withdrawals| == MAX_WITHDRAWALS_PER_PAYLOAD as int {
-    //         // Next sweep starts after the latest withdrawal's validator index
-    //         var next_validator_index := (expected_withdrawals[|expected_withdrawals| - 1].validator_index + 1) % |state.validators|;
-    //         newNextValidatorIndex := next_validator_index;
-    //     } else {
-    //         // Advance sweep by the max length of the sweep if there was not a full set of withdrawals
-    //         var next_index := (state.next_withdrawal_validator_index + MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP) as int;
-    //         var next_validator_index := next_index % |state.validators|;
-    //         newNextValidatorIndex := next_validator_index; 
-    //     }
+    //     payload := body.execution_payload;
     // }
-
-
-    // method process_
 
 }
     
