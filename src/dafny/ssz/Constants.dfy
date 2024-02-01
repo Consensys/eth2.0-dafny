@@ -152,12 +152,14 @@ module Constants {
   
   // Preset -- Max operations per block
   const MAX_PROPOSER_SLASHINGS := TWO_UP_4; // 2 ^ 4                     
-  const MAX_ATTESTER_SLASHINGS := TWO_UP_0; // 2 ^ 0                     
+  const MAX_ATTESTER_SLASHINGS := TWO_UP_1; // 2 ^ 1                     
   
   const MAX_ATTESTATIONS := TWO_UP_7; // 2 ^ 7  MAximum number of (aggregated) attestations in a block.                         
   
   const MAX_DEPOSITS := TWO_UP_4; // 2 ^ 4                               
   const MAX_VOLUNTARY_EXITS := TWO_UP_4; // 2 ^ 4  
+
+  const MAX_BLS_TO_EXECUTION_CHANGES := TWO_UP_4; // 2 ^ 4
 
   // Preset -- Execution
   const MAX_BYTES_PER_TRANSACTION := TWO_UP_30 as uint64; // 2 ^ 30  (= 1,073,741,824) bytes
