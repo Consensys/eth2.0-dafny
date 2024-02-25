@@ -1,7 +1,0 @@
-Folder,#Files,#LoC,Theorems,Implementations,Documentation,#Doc/#LoC (%),Proved
-beacon/validators,17,2191,54,80,1828,83,83
-beacon/attestations,2,291,9,12,248,85,21
-beacon/forkchoice,2,325,6,19,263,81,7
-beacon/gasper,4,443,9,13,314,71,22
-beacon/statetransition,6,979,28,27,747,76,22
-beacon/validators,1,14,0,0,55,393,0

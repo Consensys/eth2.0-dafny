@@ -1,5 +1,0 @@
-Folder,#Files,#LoC,Theorems,Implementations,Documentation,#Doc/#LoC (%),Proved
-/src/dafny/merkle,1,97,7,4,60,62,11
-/src/dafny/ssz,5,333,14,15,112,34,29
-/src/dafny/utils,6,494,25,9,154,31,34
-/test/dafny/utils,3,46,0,3,34,74,3
