@@ -67,7 +67,7 @@ module BeaconHelpers {
      *                  however a function method version is required for the spec.
      */
     function method {:axiom} integer_square_root(n:uint64) : uint64
-        //requires n < 0x10000000000000000
+        requires n <= 0xFFFFFFFFFFFFFFFF
         ensures power2(integer_square_root(n) as nat) <= n as nat;
         ensures n >= 4 ==> integer_square_root(n) as nat > 1;
     // {}
@@ -1341,7 +1341,7 @@ module BeaconHelpers {
                 * BASE_REWARD_FACTOR as nat
                 / integer_square_root(total_balance) as nat 
                 / BASE_REWARDS_PER_EPOCH as nat;
-        AssumeNoGweiOverflow(br);
+        AssumeNoGweiOverflow(br as nat);
         
         br as Gwei 
     }
