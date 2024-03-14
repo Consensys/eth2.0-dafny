@@ -879,8 +879,11 @@ module BeaconHelpers {
      *  @note           The balance cannot be negative.
      */
     function method decrease_balance(s: BeaconState, index: ValidatorIndex, delta: Gwei): BeaconState 
+        // check index out of bounds
         requires index as int < |s.balances| 
+        // check delta out of bounds
         ensures |s.balances| == |decrease_balance(s,index,delta).balances|
+        // check balance is not negative
         ensures if s.balances[index] > delta 
                 then decrease_balance(s,index,delta).balances[index] == s.balances[index] - delta
                 else decrease_balance(s,index,delta).balances[index] == 0

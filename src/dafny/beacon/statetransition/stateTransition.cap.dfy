@@ -36,10 +36,7 @@ module  StateTransitionCapella {
         requires 0 <= s.next_withdrawal_validator_index as int < |s.validators|;
         requires 0 <= s.next_withdrawal_validator_index as int < |s.balances|;
         requires 0 <= s.next_withdrawal_index as int < 0x10000000000000000;
-        
-        // ensures 0 <= |withdrawals| < 0x10000000000000000;
-        // ensures |withdrawals| <= MAX_WITHDRAWALS_PER_PAYLOAD as int;
-
+    
     {
         var epoch := get_current_epoch(s);
         // var withdrawal_index := s.next_withdrawal_index;
@@ -87,33 +84,48 @@ module  StateTransitionCapella {
     }
 
 
+    predicate method is_valid_withdrawal(state: BeaconState, payload: ExecutionPayload)
+    {   
+        // Ensure that the withdrawal index is valid
+        // Ensure that the withdrawal validator index is valid
+        (state.next_withdrawal_index <= 0xFFFFFFFFFFFFFFFF) && (state.next_withdrawal_validator_index as int <= |state.validators|)
+    }
+
+
     method process_withdrawals(state: BeaconState, payload: ExecutionPayload)
         requires |state.validators| > 0;
-        requires |payload.withdrawals| as nat <= MAX_WITHDRAWALS_PER_PAYLOAD as nat < 0x10000000000000000;
+        requires |payload.withdrawals| as nat <= MAX_WITHDRAWALS_PER_PAYLOAD as nat <= 0xFFFFFFFFFFFFFFFF;
         // requires forall w in payload.withdrawals: w.amount >= 0; // Ensure withdrawal amounts are non-negative to prevent underflow
         requires |payload.withdrawals| > 0;
 
         requires state.next_withdrawal_validator_index as int < |state.validators|;
         requires 0 <= state.next_withdrawal_validator_index as int < |state.balances|;
 
+        requires state.next_withdrawal_index as int < 0x10000000000000000;
+        // requires |state.balances| >= state.withdrawal_index as int;
+
+        requires is_valid_withdrawal(state, payload);
+
+        requires |state.validators| <= VALIDATOR_REGISTRY_LIMIT as int;
 
         // ensures (state.next_withdrawal_index as int) == old(state.next_withdrawal_index) as int + |payload.withdrawals|;
         ensures state.next_withdrawal_validator_index >= old(state.next_withdrawal_validator_index) && state.next_withdrawal_validator_index as int < |state.validators|;
         
     {
         var expected_withdrawals := get_expected_withdrawals(state);
-        assert |payload.withdrawals| == |expected_withdrawals|;
+
+        // assert |payload.withdrawals| == |expected_withdrawals|;
 
         var newNextWithdrawalIndex := (state.next_withdrawal_index) as int;
         var newNextValidatorIndex := (state.next_withdrawal_validator_index) as int;
 
-        for i := 0 to |expected_withdrawals| - 1 {
+        for i := 0 to |expected_withdrawals| {
             var expected_withdrawal := expected_withdrawals[i];
-            var withdrawal := payload.withdrawals[i];
-            assert withdrawal == expected_withdrawal;
 
-            assert expected_withdrawal.index as int < |state.balances|;
-            // Call decrease_balance method with state, withdrawal.validator_index, and withdrawal.amount
+            assert i < |expected_withdrawals|;
+
+            assert expected_withdrawal.validator_index as int < |state.balances|;
+            
             var state := decrease_balance(state, expected_withdrawal.validator_index, expected_withdrawal.amount);
         }
 

@@ -327,6 +327,9 @@ module Eth2Types {
 
     const DEFAULT_EXECUTION_ADDRESS : ExecutionAddress := Bytes(SEQ_EMPTY_20_BYTES)
 
+    /**Flags */
+    type ParticipationFlags = uint8
+
     /** A fork version number */
     type Version = Bytes4
 

@@ -47,6 +47,7 @@ module BeaconHelpersCapella {
         validator.withdrawal_credentials.bs[0] == ETH1_ADDRESS_WITHDRAWAL_PREFIX
     }
 
+
     /**
      * Check if ``validator`` is fully withdrawable.
      *
