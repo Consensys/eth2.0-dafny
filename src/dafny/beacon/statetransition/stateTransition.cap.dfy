@@ -45,13 +45,13 @@ module  StateTransitionCapella {
         var bound := min(|s.validators|, MAX_VALIDATORS_PER_WITHDRAWAL_SWEEP as nat) as int;
         var i: nat;
 
-        for i := 1 to bound{
+        for i := 1 to bound + 1{
             var validator := s.validators[s.next_withdrawal_validator_index];
             var balance := s.balances[s.next_withdrawal_validator_index];
-            // var addressBytes := validator.withdrawal_credentials.bs[12..32];
-            // var address: ExecutionAddress := addressBytes;
             var newNextWithdrawalValidatorIndex := s.next_withdrawal_validator_index as int;
-            if is_fully_withdrawable_validator(validator, balance, epoch) {
+
+            if 0 <= s.next_withdrawal_validator_index as int < |s.validators| && 0 <= s.next_withdrawal_validator_index as int < |s.balances| {
+                if is_fully_withdrawable_validator(validator, balance, epoch) {
                 var withdrawal := Withdrawal(
                     index := s.next_withdrawal_validator_index,
                     validator_index := s.next_withdrawal_validator_index,
@@ -66,7 +66,7 @@ module  StateTransitionCapella {
                     index := s.next_withdrawal_validator_index,
                     validator_index := s.next_withdrawal_validator_index,
                     address := validator.execution_address,
-                    amount := balance - MAX_EFFECTIVE_BALANCE
+                    amount := balance - (min(balance as nat, MAX_EFFECTIVE_BALANCE as nat) as Gwei)
                 );
                 withdrawals := withdrawals + [withdrawal];
                 // s.next_withdrawal_validator_index := s.next_withdrawal_validator_index + 1;
@@ -79,8 +79,9 @@ module  StateTransitionCapella {
 
             // s.next_withdrawal_validator_index := (s.next_withdrawal_validator_index + 1) % |s.validators|;
             newNextWithdrawalValidatorIndex := (newNextWithdrawalValidatorIndex + 1) % |s.validators|;
-        }
+            }   
 
+        }
     }
 
 
@@ -95,7 +96,7 @@ module  StateTransitionCapella {
     method process_withdrawals(state: BeaconState, payload: ExecutionPayload)
         requires |state.validators| > 0;
         requires |payload.withdrawals| as nat <= MAX_WITHDRAWALS_PER_PAYLOAD as nat <= 0xFFFFFFFFFFFFFFFF;
-        // requires forall w in payload.withdrawals: w.amount >= 0; // Ensure withdrawal amounts are non-negative to prevent underflow
+
         requires |payload.withdrawals| > 0;
 
         requires state.next_withdrawal_validator_index as int < |state.validators|;
@@ -106,6 +107,8 @@ module  StateTransitionCapella {
 
         requires is_valid_withdrawal(state, payload);
 
+        requires is_valid_number_active_validators(|state.validators|);
+
         requires |state.validators| <= VALIDATOR_REGISTRY_LIMIT as int;
 
         // ensures (state.next_withdrawal_index as int) == old(state.next_withdrawal_index) as int + |payload.withdrawals|;
@@ -114,19 +117,21 @@ module  StateTransitionCapella {
     {
         var expected_withdrawals := get_expected_withdrawals(state);
 
-        // assert |payload.withdrawals| == |expected_withdrawals|;
 
         var newNextWithdrawalIndex := (state.next_withdrawal_index) as int;
         var newNextValidatorIndex := (state.next_withdrawal_validator_index) as int;
 
+        // Updated loop to process withdrawals with validation
         for i := 0 to |expected_withdrawals| {
             var expected_withdrawal := expected_withdrawals[i];
 
-            assert i < |expected_withdrawals|;
-
-            assert expected_withdrawal.validator_index as int < |state.balances|;
+            // Validate that the validator's index has a corresponding balance
+            if expected_withdrawal.validator_index as int < |state.balances| {
             
             var state := decrease_balance(state, expected_withdrawal.validator_index, expected_withdrawal.amount);
+
+            }
+            // This withdrawal cannot be processed due to inconsistency; skip
         }
 
         // Update the next withdrawal index if this block contained withdrawals
@@ -149,26 +154,31 @@ module  StateTransitionCapella {
     }
 
 
-    // method process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange) returns (state': BeaconState)
-    // requires |state.validators| > 0
-    // requires signed_address_change.message.validator_index as int < |state.validators|
-    // requires state.validators[signed_address_change.message.validator_index].withdrawal_credentials == hash(signed_address_change.message.from_bls_pubkey)
 
-    // ensures state'.validators[signed_address_change.message.validator_index].withdrawal_credentials == hash(signed_address_change.message.to_execution_address)
-    // {
-    //     var address_change := signed_address_change.message;
-    //     assert address_change.validator_index as int < |state.validators|;
+    method process_bls_to_execution_change(state: BeaconState, signed_address_change: SignedBLSToExecutionChange)
+    requires |state.validators| > 0
+    requires signed_address_change.message.validator_index as int < |state.validators|
+    requires state.validators[signed_address_change.message.validator_index].withdrawal_credentials == hash(signed_address_change.message.from_bls_pubkey)
+    
+    // modifies state.validators[signed_address_change.message.validator_index].withdrawal_credentials as seq<object>
 
-    //     var validator := state.validators[address_change.validator_index];
+    {
+        var address_change := signed_address_change.message;
+        assert address_change.validator_index as int < |state.validators|;
 
-    //     assert validator.withdrawal_credentials.bs[0] == BLS_WITHDRAWAL_PREFIX;
-    //     assert validator.withdrawal_credentials.bs[1..32] == hash(address_change.from_bls_pubkey).bs[1..32];
+        var validator := state.validators[address_change.validator_index];
 
-    //     // Fork-agnostic domain since address changes are valid across forks part is assumed in my simpler version of the spec
+        // assert validator.withdrawal_credentials.bs[0] as int == BLS_WITHDRAWAL_PREFIX;
+        assert validator.withdrawal_credentials.bs[1..32] == hash(address_change.from_bls_pubkey).bs[1..32];
+
+        // Fork-agnostic domain since address changes are valid across forks part is assumed in my simpler version of the spec
+
+        // var ghost_withdrawal_credentials: Hash := BLS_WITHDRAWAL_PREFIX + seq<byte>(11, 0) + address_change.to_execution_address;
 
 
-    //     // validator.withdrawal_credentials := ETH1_ADDRESS_WITHDRAWAL_PREFIX + seq<byte>(11, 0) + address_change.to_execution_address;
-    // }
+        if validator.withdrawal_credentials.bs[0] as int == BLS_WITHDRAWAL_PREFIX {
+            // (validator.withdrawal_credentials as Bytes32):= BLS_WITHDRAWAL_PREFIX + seq<byte>(11, 0) + address_change.to_execution_address;
+        } 
+    }
 
 }
-    

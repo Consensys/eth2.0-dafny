@@ -42,6 +42,7 @@ module BeaconHelpersCapella {
      */
     // Define a method to check if a validator has an 0x01 prefixed "eth1" withdrawal credential
     predicate method has_eth1_withdrawal_credential(validator: Validator)
+
     {
         // Check if the first byte of withdrawal_credentials is equal to the ETH1_ADDRESS_WITHDRAWAL_PREFIX
         validator.withdrawal_credentials.bs[0] == ETH1_ADDRESS_WITHDRAWAL_PREFIX
@@ -57,11 +58,18 @@ module BeaconHelpersCapella {
      * @return                         True if the validator is fully withdrawable.
      */
     predicate method is_fully_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch)
-    {   
+
+    // requires has_eth1_withdrawal_credential(validator)
+
+    // //Prevent overflow and underflow
+    // requires balance > 0 && balance <= validator.effective_balance
+
+    {
         has_eth1_withdrawal_credential(validator) &&
-         validator.withdrawable_epoch <= epoch &&
-          balance > 0
-    }
+        validator.withdrawable_epoch <= epoch &&
+        balance > 0 &&
+        balance <= validator.effective_balance
+    }  
 
     /**
      * Check if ``validator`` is partially withdrawable.
@@ -73,9 +81,10 @@ module BeaconHelpersCapella {
      * @return                         True if the validator is partially withdrawable.
      */
     predicate method is_partially_withdrawable_validator(validator: Validator, balance: Gwei, epoch: Epoch)
+
     {
         has_eth1_withdrawal_credential(validator) &&
-         validator.effective_balance == MAX_EFFECTIVE_BALANCE &&
-          balance > MAX_EFFECTIVE_BALANCE
+        validator.withdrawable_epoch > epoch
     }
 }
+

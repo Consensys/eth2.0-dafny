@@ -467,19 +467,6 @@ module BeaconChainTypes {
         //  Deep history valid from Capella onwards
         historical_summaries: ListOfHistoricalSummaries
     )
-
-    // /** Default value for BeaconState. */
-    // const DEFAULT_BEACON_STATE := 
-    //     BeaconState(
-    //         0 as uint64, 0 as Slot, DEFAULT_BLOCK_HEADER, DEFAULT_HIST_ROOTS, DEFAULT_HIST_ROOTS, 
-    //         DEFAULT_LIST_OF_HIST_ROOTS, DEFAULT_ETH1DATA, DEFAULT_LIST_ETH1DATA, 0 as uint64, 
-    //         DEFAULT_LIST_VALIDATORS, DEFAULT_LIST_BALANCES, DEFAULT_RANDAO_MIX, DEFAULT_SLASHINGS, 
-    //         DEFAULT_LIST_ATTESTATIONS, DEFAULT_LIST_ATTESTATIONS, DEFAULT_JUSTIFICATION_BITVECTOR, 
-    //         DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT, DEFAULT_CHECKPOINT, DEFAULT_LIST_INACTIVITY_SCORES, 
-    //         DEFAULT_SYNC_COMMITTEE, DEFAULT_SYNC_COMMITTEE, DEFAULT_EXECUTION_PAYLOAD_HEADER, 
-    //         0 as WithdrawalIndex, 0 as ValidatorIndex, DEFAULT_LIST_HISTORICAL_SUMMARIES
-    // )
-
     
 
     type ByteList = x : seq<byte> | |x| <= MAX_EXTRA_DATA_BYTES as int 

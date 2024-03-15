@@ -290,4 +290,10 @@ module BeaconHelperSpec {
     }
 
 
+    predicate is_valid_withdrawal_amount(withdrawal_amount: nat)
+    {
+        withdrawal_amount < 0x10000000000000000
+    }
+
+
 }
